@@ -17,15 +17,26 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - Claude tracks them in `docs/hats.md`. That file must ALWAYS be up to date. Its first line states the next hat, e.g. `next: ^123`.
 - Use hats in commit messages where applicable.
 
-## Git
-
-- Small, verifiable steps, steady progress, aware of the roadmap (see `docs/handover.md`).
-- Develop on the branch given by the session. Don't open PRs unless asked.
+## Git and branches
+- `main` always holds a runnable version. Only the user merges into `main` (PRs auto-merge once the user approves). Never push to `main`.
+- Work on topic branches: `feature/`, `bugfix/`, `chore/`, `docs/`, etc. Claude may create, modify, rename and delete any branch except `main`.
+- Merge into `main` via PR, only when something is ready to publish as a new version. Don't open PRs otherwise.
+- PR descriptions are the main review surface (the user rarely reads code): always a summary of what and why, what to test, decisions made, open questions. Max half to one page.
+- Small, verifiable steps, steady progress, aware of the roadmap (see `docs/handover.md`). Use hats in commit messages where applicable.
 
 ## Quality
 
 - Verify with tests (unit, integration, e2e). CI builds, lints, type-checks and tests. Keep it green at all times.
 - Occasionally take and inspect screenshots (costly: do it sparingly), or ask the user to confirm.
+
+## Code
+The user entrusts the details to Claude. Principles:
+- SRP, KISS and DRY at all times.
+- Build infrastructure, then use and combine it. Think library and client: engine/API-like code (pure, testable, no UI or input, e.g. `src/lib/view.ts`, `render.ts`) versus code that uses it (components, input handling).
+- The linter enforces quality limits (complexity, function length, nesting depth, parameter count, statements, file length: see `eslint.config.js`). Fix violations by refactoring. Never disable a rule or raise a limit just to get green; raise one only deliberately and mention it in the PR.
+
+## Dependencies
+- Before pinning or choosing a version, look it up (`npm view <pkg> versions/dist-tags/peerDependencies`). Never guess a version.
 
 ## Context
 
@@ -34,4 +45,4 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 
 ## Commands
 - `bun install`, `bun run dev` (app), `bun run ci` (lint + check + test + build, same as GitHub Actions).
-- TypeScript is pinned to 5.9: typescript-eslint does not support 7 yet.
+- TypeScript is pinned to 6.0.3, the last JS-based release: typescript-eslint and svelte-check do not support 7.0 (no stable programmatic API). Revisit when 7.1 is stable (planned 2026-11-24). (^3)
