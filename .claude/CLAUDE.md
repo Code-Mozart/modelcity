@@ -44,7 +44,7 @@ The user entrusts the details to Claude. Principles:
 ## Context
 
 - Product background and design decisions: `docs/handover.md` (its mention of single-page HTML demos is outdated; we build a real app now).
-- Stack: bun + TypeScript + a JS framework : Svelte 5 + Vite + vitest (^1).
+- Stack: bun + TypeScript + Svelte 5 + Vite + vitest (^1). Code map: `src/lib/curves/` is the pure curve geometry library (^12), `editor.svelte.ts` the interaction engine, `MapCanvas.svelte` view and input dispatch, `render*.ts` drawing.
 
 ## Commands
 - `bun install`, `bun run dev` (app), `bun run ci` (lint + check + test + build, same as GitHub Actions).
