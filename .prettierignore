@@ -1,0 +1,6 @@
+bun.lock
+dist
+node_modules
+docs
+README.md
+.claude
