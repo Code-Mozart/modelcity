@@ -38,6 +38,9 @@ The user entrusts the details to Claude. Principles:
 ## Dependencies
 - Before pinning or choosing a version, look it up (`npm view <pkg> versions/dist-tags/peerDependencies`). Never guess a version.
 
+## Conventions
+- World coordinates: meters, origin at map center, x right, y down (^4).
+
 ## Context
 
 - Product background and design decisions: `docs/handover.md` (its mention of single-page HTML demos is outdated; we build a real app now).
