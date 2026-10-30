@@ -47,7 +47,6 @@ const PAIRS: [string, string, number][] = [
   ['teal', 'bg', 3],
   ['orange', 'bg', 3],
   ['red', 'bg', 3],
-  ['curve', 'bg', 3],
 ];
 
 describe.each(Object.entries(themes))('%s theme contrast', (_name, t) => {

@@ -89,7 +89,7 @@ function drawPreview(f: Frame, hover: Extract<Hover, { kind: 'preview' }>, pal: 
   if (hover.ref) {
     const [from, to] = hover.end === 'end' ? [hover.ref, hover.node] : [hover.node, hover.ref];
     for (const piece of buildEdge(from, to, null, null).pieces) {
-      strokePiece(f, piece, { color: pal.curve, width: 3, dash: [6, 6] });
+      strokePiece(f, piece, { color: pal.ink, width: 3, dash: [6, 6] });
     }
   }
   f.ctx.globalAlpha = 0.6;
@@ -124,7 +124,7 @@ function drawRoad(f: Frame, road: RoadScene, active: boolean[], pal: Palette) {
     drawCircles(f, ref, pal);
   });
   for (const { E } of road.edges) {
-    for (const piece of E.pieces) strokePiece(f, piece, { color: pal.curve, width: CURVE_PX });
+    for (const piece of E.pieces) strokePiece(f, piece, { color: pal.ink, width: CURVE_PX });
   }
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;

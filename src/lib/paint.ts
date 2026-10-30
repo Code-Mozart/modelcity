@@ -20,7 +20,6 @@ export const PALETTE_KEYS = [
   'grid-major',
   'ink',
   'muted',
-  'curve',
   'blue',
   'teal',
   'red',

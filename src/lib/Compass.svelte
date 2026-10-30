@@ -52,35 +52,35 @@
   }
   .ring {
     position: absolute;
-    left: -16px;
-    top: -16px;
-    width: 32px;
-    height: 32px;
+    left: -1.3333em;
+    top: -1.3333em;
+    width: 2.6667em;
+    height: 2.6667em;
     border: 2px solid var(--ink);
     border-radius: 50%;
     background: color-mix(in srgb, var(--panel) 80%, transparent);
   }
   .needle {
     position: absolute;
-    left: -6px;
-    top: -14px;
-    width: 12px;
-    height: 28px;
+    left: -0.5em;
+    top: -1.1667em;
+    width: 1em;
+    height: 2.3333em;
   }
   .needle i {
     position: absolute;
     left: 0;
     width: 0;
     height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
+    border-left: 0.5em solid transparent;
+    border-right: 0.5em solid transparent;
   }
   .north {
     top: 0;
-    border-bottom: 14px solid var(--red);
+    border-bottom: 1.1667em solid var(--red);
   }
   .south {
     bottom: 0;
-    border-top: 14px solid var(--muted);
+    border-top: 1.1667em solid var(--muted);
   }
 </style>
