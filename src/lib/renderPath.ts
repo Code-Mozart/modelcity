@@ -76,7 +76,7 @@ function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
 }
 
 /** Preview of the node a click would create, with the curve to it from the last node (^40). */
-function drawGhost(f: Frame, hover: Extract<Hover, { kind: 'ghost' }>, pal: Palette) {
+function drawPreview(f: Frame, hover: Extract<Hover, { kind: 'preview' }>, pal: Palette) {
   if (hover.ref) {
     const [from, to] = hover.end === 'end' ? [hover.ref, hover.node] : [hover.node, hover.ref];
     for (const piece of buildEdge(from, to, null, null).pieces) {
@@ -90,7 +90,7 @@ function drawGhost(f: Frame, hover: Extract<Hover, { kind: 'ghost' }>, pal: Pale
 }
 
 function drawHover(f: Frame, hover: Hover | null, pal: Palette) {
-  if (hover?.kind === 'ghost') drawGhost(f, hover, pal);
+  if (hover?.kind === 'preview') drawPreview(f, hover, pal);
   if (hover?.kind === 'candidate') {
     const at = toScreen(f, hover.hit.at);
     const { x: tx, y: ty } = screenDir(f, { x: hover.hit.at.tx, y: hover.hit.at.ty });

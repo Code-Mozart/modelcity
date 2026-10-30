@@ -16,7 +16,7 @@ describe('entering draw mode (^48, ^54)', () => {
     expect(ed.roads).toEqual([]);
     expect(ed.cursor).toBe('crosshair');
     ed.pointerMove(at(30, 5));
-    expect(ed.hover).toMatchObject({ kind: 'ghost', ref: null, node: { x: 30, y: 5, th: 0 } });
+    expect(ed.hover).toMatchObject({ kind: 'preview', ref: null, node: { x: 30, y: 5, th: 0 } });
     click(ed, 30, 5);
     expect(ed.roads[0]!.nodes).toEqual([{ x: 30, y: 5, th: 0 }]);
     expect(ed.active).toBe(0);
@@ -77,7 +77,7 @@ describe('select mode and draw mode (^48)', () => {
   it('shows a crosshair and the node preview only in draw mode', () => {
     const ed = draw([[0, 0]]);
     ed.pointerMove(at(60, 60));
-    expect(ed.hover?.kind).toBe('ghost');
+    expect(ed.hover?.kind).toBe('preview');
     expect(ed.cursor).toBe('crosshair');
     ed.key('Escape');
     ed.pointerMove(at(60, 60));

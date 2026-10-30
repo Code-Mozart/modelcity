@@ -49,13 +49,13 @@ const DRAG_TEXT: Record<HandleType, string> = {
 
 /**
  * What the left button does on a handle. In draw mode, clicking the node being drawn from ends the
- * road, and clicking another leaf node continues drawing from it (^65).
+ * road, and clicking another leaf node extends the road from it (^65).
  */
 function handleHints(target: HandleTarget, drawing: boolean): Hint[] {
   const { type, last, leaf } = target;
   const out: Hint[] = [];
   if (type === 'node' && drawing && last) out.push(hint(mouse('lmb'), 'finish road'));
-  else if (type === 'node' && drawing && leaf) out.push(hint(mouse('lmb'), 'continue road'));
+  else if (type === 'node' && drawing && leaf) out.push(hint(mouse('lmb'), 'extend road'));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
   if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
   return out;

@@ -68,9 +68,9 @@ describe('control hints over nodes and handles (^49)', () => {
     ]);
   });
 
-  it('over another leaf node a click continues the road from it (^65)', () => {
+  it('over another leaf node a click extends the road from it (^65)', () => {
     expect(rows(true, node(false, true))).toEqual([
-      'LMB: continue road',
+      'LMB: extend road',
       'LMB drag: move node',
       'RMB: delete node',
       'Esc: finish',

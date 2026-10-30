@@ -38,7 +38,7 @@ export interface PointerInfo {
 export type Hover =
   | { kind: 'handle'; handle: RoadHandle }
   | { kind: 'candidate'; hit: RoadHit }
-  | { kind: 'ghost'; node: PathNode; ref: PathNode | null; end: 'start' | 'end' };
+  | { kind: 'preview'; node: PathNode; ref: PathNode | null; end: 'start' | 'end' };
 
 /** Distance in screen pixels within which a press snaps to a curve. */
 const INSERT_REACH_PX = 18;
@@ -64,9 +64,9 @@ type Press =
       drag: DragState;
       start: Vec;
       moved: boolean;
-      /** A click finishes the road (it is the end being drawn) or continues it (another leaf). */
+      /** A click finishes the road (it is the end being drawn) or extends it from another leaf node. */
       finishes: boolean;
-      continues: boolean;
+      extend: boolean;
       undo: Snapshot;
       target: HintTarget;
     }
@@ -128,7 +128,7 @@ export class Editor {
     return nodes.length === 1 || handle.i === (this.end === 'end' ? nodes.length - 1 : 0);
   }
 
-  /** A node at either end of its road: drawing can continue from it (^65). */
+  /** A node at either end of its road: drawing can extend the road from it (^65). */
   private isLeaf(handle: RoadHandle): boolean {
     const nodes = this.roads[handle.road]?.nodes ?? [];
     return handle.type === 'node' && (handle.i === 0 || handle.i === nodes.length - 1);
@@ -228,7 +228,7 @@ export class Editor {
       start: pt,
       moved: false,
       finishes: this.isActiveEnd(handle),
-      continues: this.drawing && this.isLeaf(handle) && !this.isActiveEnd(handle),
+      extend: this.drawing && this.isLeaf(handle) && !this.isActiveEnd(handle),
       undo: this.snapshot(),
       target: this.targetOf({ kind: 'handle', handle }),
     };
@@ -293,26 +293,26 @@ export class Editor {
     if (handle) return { kind: 'handle', handle };
     if (!this.drawing) return null;
     const hit = this.curveAt(info);
-    return hit ? { kind: 'candidate', hit } : this.ghostAt(info.pt);
+    return hit ? { kind: 'candidate', hit } : this.previewAt(info.pt);
   }
 
   /** The preview of the node a click would add: where, its heading, and the node it attaches to. */
-  private ghostAt(pt: Vec): Hover {
+  private previewAt(pt: Vec): Hover {
     const nodes = this.active === null ? undefined : this.roads[this.active]?.nodes;
     const ref = (this.end === 'end' ? nodes?.[nodes.length - 1] : nodes?.[0]) ?? null;
     const heading = this.end === 'end' ? autoHeading : autoHeadingBefore;
     return {
-      kind: 'ghost',
+      kind: 'preview',
       ref,
       end: this.end,
       node: { x: pt.x, y: pt.y, th: ref ? heading(ref, pt) : 0 },
     };
   }
 
-  /** A click (no drag) on the node being drawn from finishes the road; on another leaf it continues from there. */
+  /** A click (no drag) on the node being drawn from finishes the road; on another leaf node it extends the road from there. */
   private clickedHandle(press: Extract<Press, { kind: 'drag' }>) {
     if (press.finishes) this.finishRoad();
-    else if (press.continues) this.continueFrom({ road: press.road, node: press.drag.handle.i });
+    else if (press.extend) this.extendFrom({ road: press.road, node: press.drag.handle.i });
   }
 
   /**
@@ -320,7 +320,7 @@ export class Editor {
    * road being drawn, at that end. A road being drawn with one node only is dropped, since a road
    * needs two.
    */
-  private continueFrom(ref: NodeRef) {
+  private extendFrom(ref: NodeRef) {
     const road = this.dropLoneRoad(ref.road);
     const nodes = this.roads[road]?.nodes ?? [];
     this.active = road;

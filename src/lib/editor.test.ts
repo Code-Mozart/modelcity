@@ -43,14 +43,18 @@ describe('creating a road with clicks (^40)', () => {
   it('previews the next node with the curve from the last one', () => {
     const ed = draw([[0, 0]]);
     ed.pointerMove(at(20, -10));
-    expect(ed.hover).toMatchObject({ kind: 'ghost', ref: { x: 0, y: 0 }, node: { x: 20, y: -10 } });
+    expect(ed.hover).toMatchObject({
+      kind: 'preview',
+      ref: { x: 0, y: 0 },
+      node: { x: 20, y: -10 },
+    });
   });
 
   it('a node behind the arrow gets a curve, not a straight line, in the preview and when created', () => {
     const ed = draw([[0, 0]]);
     ed.pointerMove(at(-10, 8));
-    const ghost = ed.hover;
-    expect(ghost?.kind).toBe('ghost');
+    const preview = ed.hover;
+    expect(preview?.kind).toBe('preview');
     click(ed, -10, 8);
     expect(ed.edges[0]![0]!.E.kind).not.toBe('line');
   });
@@ -187,7 +191,7 @@ describe('hover and inserting while drawing (^40)', () => {
     ed.pointerMove(at(mid.x, mid.y));
     expect(ed.hover?.kind).toBe('candidate');
     ed.pointerMove(at(80, 80));
-    expect(ed.hover?.kind).toBe('ghost');
+    expect(ed.hover?.kind).toBe('preview');
   });
 
   it('pressing on a curve inserts a node there and keeps drawing', () => {
