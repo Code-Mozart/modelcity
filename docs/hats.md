@@ -1,4 +1,4 @@
-next: ^89
+next: ^90
 
 # Hats
 
@@ -101,3 +101,4 @@ Milestones in the user's order of priority (user's first draft: many need more c
 | ^86 | decision | assumed | **Direction arrows (^80), details:** small chevrons in the curve color along every curve, in the direction the road runs (node order), every 48 screen pixels (so they slide along when zooming), 6 px barbs. The first one sits half a spacing from the start of the road, the spacing continues across segments. They belong to the skeleton (always shown), are not drawn on the preview, and are not interactive. Pure sampling in `src/lib/curves/arrows.ts`. |
 | ^87 | decision | decided; assumed (preview) | **Thinner curves (user):** the curves are drawn 2 px wide, half of the 4 px before (`CURVE_PX` in `renderPath.ts`); the dashed preview follows (3 px to 1.5 px). Only the drawing changes, not how near the pointer must be to a curve (^66). |
 | ^88 | decision | decided (keys, hints); assumed (details) | **Undo / redo (user: Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z; hints at the very top, only if there is something to undo or redo):** assumed details: Cmd works like Ctrl; a step is one finished action that changed the roads or the selection (see `docs/controls.md`), recorded when it ends, so a drag is one step and a click without moving none; selection changes are steps too (user, after the question in PR #9); camera moves and entering draw mode are not; undo restores roads, the road being drawn, its end and the selection (and enters draw mode if a road is being drawn); ignored while the left button is down; at most 200 steps; no history is saved (^82). Pure code in `src/lib/history.ts`; keys in `keymap.ts`. |
+| ^89 | decision | decided | **No plus sign in key combinations (user):** in the hints, keys pressed together (`Ctrl Z`, `Shift` and a mouse symbol, `Alt` and a mouse symbol) are shown side by side with a small gap instead of a `+`. In the docs, `[A]+[B]` is only notation. |
