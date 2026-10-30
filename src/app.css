@@ -9,6 +9,8 @@
   --curve: #7b2fe0;
   /* The one font size of all text (^83); keep equal to FONT_PX in paint.ts. */
   --font-size: 12px;
+  /* Icons scale with the text: sizes in em, which is the font size here (^83). */
+  --symbol-size: 2.8333em;
   --blue: #1c4dff;
   --teal: #0a8f84;
   --red: #d92a3f;
