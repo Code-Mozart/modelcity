@@ -14,7 +14,9 @@ export interface Hint {
 
 /** What the pointer is over, for contextual hints. */
 export type HintTarget =
-  { kind: 'empty' } | { kind: 'curve' } | { kind: 'handle'; type: HandleType; last: boolean };
+  | { kind: 'empty' }
+  | { kind: 'curve' }
+  | { kind: 'handle'; type: HandleType; last: boolean; leaf: boolean };
 
 const mouse = (button: 'lmb' | 'mmb' | 'rmb', drag = false): Input => ({
   kind: 'mouse',
@@ -34,6 +36,8 @@ const CAMERA: Hint[] = [
   hint(mouse('mmb', true), 'rotate'),
 ];
 
+type HandleTarget = Extract<HintTarget, { kind: 'handle' }>;
+
 const DRAG_TEXT: Record<HandleType, string> = {
   node: 'move node',
   head: 'turn heading',
@@ -43,10 +47,15 @@ const DRAG_TEXT: Record<HandleType, string> = {
   rad: 'change radius',
 };
 
-/** What the left button does on a handle; clicking the last node ends the road being drawn. */
-function handleHints(type: HandleType, last: boolean, drawing: boolean): Hint[] {
+/**
+ * What the left button does on a handle. In draw mode, clicking the node being drawn from ends the
+ * road, and clicking another leaf node continues drawing from it (^65).
+ */
+function handleHints(target: HandleTarget, drawing: boolean): Hint[] {
+  const { type, last, leaf } = target;
   const out: Hint[] = [];
-  if (type === 'node' && last && drawing) out.push(hint(mouse('lmb'), 'finish road'));
+  if (type === 'node' && drawing && last) out.push(hint(mouse('lmb'), 'finish road'));
+  else if (type === 'node' && drawing && leaf) out.push(hint(mouse('lmb'), 'continue road'));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
   if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
   return out;
@@ -55,7 +64,7 @@ function handleHints(type: HandleType, last: boolean, drawing: boolean): Hint[] 
 /** Draw mode: a road is being drawn. */
 function drawModeHints(target: HintTarget): Hint[] {
   if (target.kind === 'handle') {
-    const rows = handleHints(target.type, target.last, true);
+    const rows = handleHints(target, true);
     // On a node a right click deletes it, so only Esc finishes there.
     const finish =
       target.type === 'node' ? hint(ESC, 'finish') : hint([ESC, mouse('rmb')], 'finish');
@@ -71,7 +80,7 @@ function drawModeHints(target: HintTarget): Hint[] {
 
 /** Select mode: no road is being drawn. */
 function selectModeHints(target: HintTarget): Hint[] {
-  if (target.kind === 'handle') return [...handleHints(target.type, false, false), ...CAMERA];
+  if (target.kind === 'handle') return [...handleHints(target, false), ...CAMERA];
   return [hint(mouse('lmb'), 'draw mode'), ...CAMERA];
 }
 

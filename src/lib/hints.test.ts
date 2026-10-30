@@ -15,7 +15,12 @@ const show = (h: Hint) =>
 const rows = (drawing: boolean, target: HintTarget) => hintsFor(drawing, target).map(show);
 
 const empty: HintTarget = { kind: 'empty' };
-const node = (last: boolean): HintTarget => ({ kind: 'handle', type: 'node', last });
+const node = (last: boolean, leaf = last): HintTarget => ({
+  kind: 'handle',
+  type: 'node',
+  last,
+  leaf,
+});
 
 describe('control hints (^49)', () => {
   it('select mode shows how to enter draw mode and the camera controls', () => {
@@ -63,11 +68,21 @@ describe('control hints over nodes and handles (^49)', () => {
     ]);
   });
 
+  it('over another leaf node a click continues the road from it (^65)', () => {
+    expect(rows(true, node(false, true))).toEqual([
+      'LMB: continue road',
+      'LMB drag: move node',
+      'RMB: delete node',
+      'Esc: finish',
+    ]);
+  });
+
   it('over other handles: what dragging does, and both ways to finish', () => {
     const h = (type: 'head' | 'ctrl' | 'rad'): HintTarget => ({
       kind: 'handle',
       type,
       last: false,
+      leaf: false,
     });
     expect(rows(true, h('head'))).toEqual(['LMB drag: turn heading', 'Esc or RMB: finish']);
     expect(rows(true, h('ctrl'))).toEqual(['LMB drag: bend curve', 'Esc or RMB: finish']);

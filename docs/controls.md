@@ -11,7 +11,7 @@ Mouse buttons: **LMB** left, **MMB** middle (wheel button), **RMB** right. "Clic
 - **Select mode:** no road is being drawn. The cursor is the default arrow and there is no preview.
 - **Draw mode:** a road is being drawn. The cursor is a crosshair and a preview shows the node a click would add, with the curve to it.
 
-A left click on empty canvas in select mode only enters draw mode (it places no node, ^54); the next click places node 1 of a new road. A left drag in select mode does not enter draw mode: it is reserved for a rubber band selection, later. Leaving draw mode: Esc, an RMB click on empty space, or an LMB click on the road's last node (^43).
+A left click on empty canvas in select mode only enters draw mode (it places no node, ^54); the next click places node 1 of a new road. A left drag in select mode does not enter draw mode: it is reserved for a rubber band selection, later. Leaving draw mode: Esc, an RMB click on empty space, or an LMB click on the node being drawn from (^43).
 
 ## What the left button does
 
@@ -20,6 +20,7 @@ The left button always creates or edits; there are no tools (^44). What happens 
 | Under the pointer | Select mode | Draw mode | Hats |
 |-------------------|-------------|-----------|------|
 | A handle: node, heading arrow tip, blue point, orange ring, turquoise point | The handle is highlighted (blue ring). Click selects a node or heading. Drag edits it: moves the node, turns the heading, drags the blue point or the radius ring | The same, with no node preview | ^9, ^44, ^48 |
+| A leaf node: a node at either end of a road (also the only node of a road) | Same as any handle (below) | **Click continues that road from it (^65):** the node becomes the one the next node attaches to, and the road becomes the road being drawn, at that end. At a road's first node the road is continued backwards: the new node is added before it, and its curve arrives along the first node's heading. The preview shows the curve from the cursor to the node. A drag moves the node as usual. The click does not apply to the node already being drawn from: that click finishes the road | ^65 |
 | A road's curve (within 18 px) | Same as empty canvas (below) | A ring and a small tick on the curve. Click inserts a node there (the curve does not change). Drag inserts a node and sets its heading while dragging, which can turn the curve into an S-curve or hook | ^10, ^44, ^48 |
 | Empty canvas | Click enters draw mode (no node yet). Drag does nothing yet (reserved for a rubber band selection) | A ghost node (and, once the road has nodes, the curve to it from the last one). The first click places node 1 of a new road, heading right (a drag sets its heading). Later clicks add a node at the end of the road, its heading chosen so that the new edge is a single circular arc (a hook beyond 180°, also when the cursor is behind the arrow). Drag adds the node at the press point with the heading pointing to the cursor, previewed live | ^40, ^44, ^46, ^48 |
 
@@ -39,7 +40,7 @@ Details:
 | Del or Backspace | Remove the selected node (same rule) | ^11 |
 | RMB click on empty space | Finish the road being drawn (leaves draw mode); nothing in select mode | ^43 |
 | Esc | Finish the road being drawn. With only one node the road is cancelled, because a road needs at least two nodes | ^43 |
-| LMB click on the road's last node (draw mode) | Same as Esc. A click, not a drag: dragging the last node moves it and keeps drawing | ^43 |
+| LMB click on the node being drawn from (draw mode: the road's last node, or its first node if it was continued backwards; a road with one node: that node) | Same as Esc. A click, not a drag: dragging the node moves it and keeps drawing | ^43 |
 
 ## The control hints (top left)
 
@@ -51,7 +52,7 @@ The corner shows what the mouse and keys do right now, as rows of `[input]: acti
 | Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), `[RMB]: delete node` on a node, then the camera rows |
 | Draw mode, empty canvas | `[LMB]: add node`, `[LMB drag]: add node with heading`, `[Esc] or [RMB]: finish` |
 | Draw mode, over a curve | `[LMB]: insert node`, `[LMB drag]: insert node with heading`, `[Esc] or [RMB]: finish` |
-| Draw mode, over a node | `[LMB drag]: move node`, `[RMB]: delete node`, `[Esc]: finish` (the last node also has `[LMB]: finish road`) |
+| Draw mode, over a node | `[LMB drag]: move node`, `[RMB]: delete node`, `[Esc]: finish`. The node being drawn from also has `[LMB]: finish road`; another leaf node has `[LMB]: continue road` |
 | Draw mode, over another handle | what dragging it does, `[Esc] or [RMB]: finish` |
 
 While a button is held, the rows stay those of where it was pressed.
@@ -95,7 +96,7 @@ The cursor becomes a compass (^33): the needle points to world north; the inner 
 
 ### Camera limits
 
-The camera cannot leave the content (^37, ^38): at least 12 px of the (invisible, screen-aligned) bounding box around all nodes and handles always stay on screen, whatever you pan, zoom or rotate. With nothing drawn, the view does not pan at all.
+The camera cannot leave the content (^37, ^38, ^62): at least 12 px of the (invisible, screen-aligned) bounding box around the skeleton, the curves and the node dots (not the control points), always stay on screen, whatever you pan, zoom or rotate. With nothing drawn, the view does not pan at all.
 
 ## Touch
 

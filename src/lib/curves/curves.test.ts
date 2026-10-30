@@ -7,6 +7,7 @@ import {
   edgesOf,
   insertNode,
   nearestOnCurve,
+  prependNode,
   removeNode,
   type Path,
 } from './path';
@@ -292,5 +293,33 @@ describe('distanceToPiece (^55)', () => {
     const ccw = { ...arc, P: { x: 0, y: 5 }, Q: { x: 5, y: 0 }, a0: Math.PI / 2, da: -Math.PI / 2 };
     expect(distanceToPiece(ccw, { x: 6 * Math.cos(0.7), y: 6 * Math.sin(0.7) })).toBeCloseTo(1);
     expect(distanceToPiece(ccw, { x: -3, y: 0 })).toBeCloseTo(Math.hypot(3, 5));
+  });
+});
+
+describe('prependNode (^65)', () => {
+  it('adds a node before the first one whose curve arrives along the first node heading', () => {
+    const path = fixture('H');
+    const { path: next, sel } = prependNode(path, { x: -150, y: 40 });
+    expect(sel).toBe(0);
+    expect(next.nodes).toHaveLength(path.nodes.length + 1);
+    expect(next.radii).toHaveLength(next.nodes.length - 1);
+    expect(next.nodes[1]).toEqual(path.nodes[0]);
+    const E = edgesOf(next)[0]!.E;
+    expect(E.kind).not.toBe('line');
+    expectConnected(E, next.nodes[0]!, next.nodes[1]!);
+    const end = pointOn(
+      E.pieces.findLast((x) => !isDegenerate(x))!,
+      1,
+    );
+    expect(
+      end.tx * Math.cos(path.nodes[0]!.th) + end.ty * Math.sin(path.nodes[0]!.th),
+    ).toBeGreaterThan(1 - 1e-6);
+  });
+
+  it('works on a road with a single node', () => {
+    const one = { nodes: [{ x: 0, y: 0, th: 0 }], radii: [], shapes: [] };
+    const { path } = prependNode(one, { x: -20, y: 5 });
+    expect(path.nodes).toHaveLength(2);
+    expect(path.radii).toHaveLength(1);
   });
 });

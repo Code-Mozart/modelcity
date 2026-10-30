@@ -71,6 +71,17 @@ export function releaseMiddles(path: Path, edges: number[]): Path {
 /** New heading so that the edge from `prev` to `pt` is a single circular arc (a hook beyond 180 degrees). */
 export const autoHeading = (prev: PathNode, pt: Vec) => 2 * angleOf(sub(pt, prev)) - prev.th;
 
+/** Heading of a node placed before `next` so that the edge to it is a single circular arc (^65). */
+export const autoHeadingBefore = (next: PathNode, pt: Vec) => 2 * angleOf(sub(next, pt)) - next.th;
+
+/** Add a node before the first one; returns the new path and the new node's index, 0 (^65). */
+export function prependNode(path: Path, pt: Vec): { path: Path; sel: number } {
+  const { nodes } = path;
+  const th = nodes.length ? autoHeadingBefore(nodes[0]!, pt) : 0;
+  const added = spliceEdges(path, 0, 0, nodes.length ? FRESH : NONE);
+  return { path: { nodes: [{ x: pt.x, y: pt.y, th }, ...nodes], ...added }, sel: 0 };
+}
+
 /** Add a node after the last one; returns the new path and the new node's index (^40). */
 export function appendNode(path: Path, pt: Vec): { path: Path; sel: number } {
   const { nodes } = path;

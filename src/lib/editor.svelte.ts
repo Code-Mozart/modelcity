@@ -1,6 +1,6 @@
 import { applyDrag, dragHeading, resetRadius, startDrag, type DragState } from './curves/drag';
 import { hitHandle } from './curves/handles';
-import { appendNode, autoHeading, insertNode } from './curves/path';
+import { appendNode, autoHeading, autoHeadingBefore, insertNode, prependNode } from './curves/path';
 import type { PathNode } from './curves/types';
 import {
   edgesOfRoads,
@@ -38,7 +38,7 @@ export interface PointerInfo {
 export type Hover =
   | { kind: 'handle'; handle: RoadHandle }
   | { kind: 'candidate'; hit: RoadHit }
-  | { kind: 'ghost'; node: PathNode; ref: PathNode | null };
+  | { kind: 'ghost'; node: PathNode; ref: PathNode | null; end: 'start' | 'end' };
 
 /** Distance in screen pixels within which a press snaps to a curve. */
 const INSERT_REACH_PX = 18;
@@ -48,6 +48,7 @@ const DRAG_PX = 6;
 interface Snapshot {
   roads: Roads;
   active: number | null;
+  end: 'start' | 'end';
   sel: NodeRef | null;
 }
 
@@ -63,7 +64,9 @@ type Press =
       drag: DragState;
       start: Vec;
       moved: boolean;
+      /** A click finishes the road (it is the end being drawn) or continues it (another leaf). */
       finishes: boolean;
+      continues: boolean;
       undo: Snapshot;
       target: HintTarget;
     }
@@ -84,6 +87,8 @@ export class Editor {
   mode = $state<'select' | 'draw'>('select');
   /** Index of the road being drawn, null in select mode or before its first node. */
   active = $state<number | null>(null);
+  /** The end of the road being drawn that new nodes are added to (^65). */
+  end = $state<'start' | 'end'>('end');
   /** Where the pointer is, for showing handles that are near it (^55). */
   pointer = $state.raw<Pointer | null>(null);
   sel = $state.raw<NodeRef | null>(null);
@@ -116,14 +121,28 @@ export class Editor {
     return h ? { road: h.road, type: h.type, i: h.i } : null;
   }
 
-  private isLastNode(handle: RoadHandle): boolean {
+  /** The node of the road being drawn that new nodes attach to (clicking it finishes the road). */
+  private isActiveEnd(handle: RoadHandle): boolean {
     const nodes = this.roads[handle.road]?.nodes ?? [];
-    return handle.type === 'node' && handle.road === this.active && handle.i === nodes.length - 1;
+    if (handle.type !== 'node' || handle.road !== this.active) return false;
+    return nodes.length === 1 || handle.i === (this.end === 'end' ? nodes.length - 1 : 0);
+  }
+
+  /** A node at either end of its road: drawing can continue from it (^65). */
+  private isLeaf(handle: RoadHandle): boolean {
+    const nodes = this.roads[handle.road]?.nodes ?? [];
+    return handle.type === 'node' && (handle.i === 0 || handle.i === nodes.length - 1);
   }
 
   private targetOf(hover: Hover | null): HintTarget {
     if (hover?.kind === 'handle') {
-      return { kind: 'handle', type: hover.handle.type, last: this.isLastNode(hover.handle) };
+      const { handle } = hover;
+      return {
+        kind: 'handle',
+        type: handle.type,
+        last: this.isActiveEnd(handle),
+        leaf: this.isLeaf(handle),
+      };
     }
     return hover?.kind === 'candidate' ? { kind: 'curve' } : { kind: 'empty' };
   }
@@ -133,7 +152,7 @@ export class Editor {
   }
 
   private snapshot(): Snapshot {
-    return { roads: this.roads, active: this.active, sel: this.sel };
+    return { roads: this.roads, active: this.active, end: this.end, sel: this.sel };
   }
 
   private handleAt({ pt, scale, touch }: PointerInfo): RoadHandle | null {
@@ -160,6 +179,7 @@ export class Editor {
     const r = removeNodeFrom(this.roads, ref, this.active);
     this.roads = r.roads;
     this.active = r.active;
+    if (r.active === null) this.end = 'end';
     this.sel = null;
   }
 
@@ -177,6 +197,7 @@ export class Editor {
     if (road !== null && cancel) this.roads = removeRoad(this.roads, road, road).roads;
     this.mode = 'select';
     this.active = null;
+    this.end = 'end';
     this.sel = null;
   }
 
@@ -206,7 +227,8 @@ export class Editor {
       drag: startDrag(path, handle),
       start: pt,
       moved: false,
-      finishes: this.isLastNode(handle),
+      finishes: this.isActiveEnd(handle),
+      continues: this.drawing && this.isLeaf(handle) && !this.isActiveEnd(handle),
       undo: this.snapshot(),
       target: this.targetOf({ kind: 'handle', handle }),
     };
@@ -229,7 +251,8 @@ export class Editor {
       this.active = r.road;
       this.sel = { road: r.road, node: 0 };
     } else {
-      const r = appendNode(this.roads[this.active]!, pt);
+      const add = this.end === 'end' ? appendNode : prependNode;
+      const r = add(this.roads[this.active]!, pt);
       this.roads = replaceRoad(this.roads, this.active, r.path);
       this.sel = { road: this.active, node: r.sel };
     }
@@ -270,18 +293,54 @@ export class Editor {
     if (handle) return { kind: 'handle', handle };
     if (!this.drawing) return null;
     const hit = this.curveAt(info);
-    if (hit) return { kind: 'candidate', hit };
-    const nodes = this.active === null ? undefined : this.roads[this.active]?.nodes;
-    const ref = nodes?.[nodes.length - 1] ?? null;
-    const th = ref ? autoHeading(ref, info.pt) : 0;
-    return { kind: 'ghost', ref, node: { x: info.pt.x, y: info.pt.y, th } };
+    return hit ? { kind: 'candidate', hit } : this.ghostAt(info.pt);
   }
 
-  /** Left button released; clicking the last node of the road being drawn finishes it. */
+  /** The preview of the node a click would add: where, its heading, and the node it attaches to. */
+  private ghostAt(pt: Vec): Hover {
+    const nodes = this.active === null ? undefined : this.roads[this.active]?.nodes;
+    const ref = (this.end === 'end' ? nodes?.[nodes.length - 1] : nodes?.[0]) ?? null;
+    const heading = this.end === 'end' ? autoHeading : autoHeadingBefore;
+    return {
+      kind: 'ghost',
+      ref,
+      end: this.end,
+      node: { x: pt.x, y: pt.y, th: ref ? heading(ref, pt) : 0 },
+    };
+  }
+
+  /** A click (no drag) on the node being drawn from finishes the road; on another leaf it continues from there. */
+  private clickedHandle(press: Extract<Press, { kind: 'drag' }>) {
+    if (press.finishes) this.finishRoad();
+    else if (press.continues) this.continueFrom({ road: press.road, node: press.drag.handle.i });
+  }
+
+  /**
+   * Make a leaf node the one the next node attaches to (^65): the road it belongs to becomes the
+   * road being drawn, at that end. A road being drawn with one node only is dropped, since a road
+   * needs two.
+   */
+  private continueFrom(ref: NodeRef) {
+    const road = this.dropLoneRoad(ref.road);
+    const nodes = this.roads[road]?.nodes ?? [];
+    this.active = road;
+    this.end = ref.node === 0 && nodes.length > 1 ? 'start' : 'end';
+    this.sel = { road, node: ref.node };
+  }
+
+  /** Remove the road being drawn if it has one node only and is not `keep`; returns keep's new index. */
+  private dropLoneRoad(keep: number): number {
+    const prev = this.active;
+    if (prev === null || prev === keep || (this.roads[prev]?.nodes.length ?? 0) >= 2) return keep;
+    this.roads = removeRoad(this.roads, prev, prev).roads;
+    return prev < keep ? keep - 1 : keep;
+  }
+
+  /** Left button released. */
   pointerUp() {
     const press = this.press;
     this.press = null;
-    if (press?.kind === 'drag' && press.finishes && !press.moved) this.finishRoad();
+    if (press?.kind === 'drag' && !press.moved) this.clickedHandle(press);
     if (press?.kind === 'empty' && !press.moved) this.enterDrawMode();
   }
 
@@ -290,9 +349,10 @@ export class Editor {
     const press = this.press;
     this.press = null;
     if (!press || press.kind === 'empty') return;
-    const { roads, active, sel } = press.undo;
+    const { roads, active, end, sel } = press.undo;
     this.roads = roads;
     this.active = active;
+    this.end = end;
     this.sel = sel;
   }
 
