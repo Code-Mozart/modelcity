@@ -4,13 +4,19 @@
  * World units are meters. World origin (0, 0) is the map center; x points right, y points down
  * (same orientation as the screen). `scale` is pixels per meter; `cx`/`cy` is the world point at
  * the center of the viewport; `rot` rotates the world about that center, in radians, positive =
- * clockwise on screen (rot = 0: world north, -y, points up). The grid does not use `rot` (^30).
+ * clockwise on screen (rot = 0: world north, -y, points up).
+ *
+ * The grid is pinned to the camera (^30): `gx`/`gy` is the grid's own, unrotated "center". Pan and
+ * zoom move it like the content, rotation never touches it, so the grid does not move at all
+ * while rotating (rotating about an off-center pivot does move `cx`/`cy`).
  */
 export interface View {
   cx: number;
   cy: number;
   scale: number;
   rot: number;
+  gx: number;
+  gy: number;
 }
 
 export interface Point {
@@ -29,7 +35,7 @@ export const MAX_SCALE = 400;
 /** The map is 4 x 4 km (±2000 m); the view center may leave it by a margin. */
 export const PAN_LIMIT = 2500;
 
-export const initialView = (): View => ({ cx: 0, cy: 0, scale: 4, rot: 0 });
+export const initialView = (): View => ({ cx: 0, cy: 0, scale: 4, rot: 0, gx: 0, gy: 0 });
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -60,6 +66,7 @@ export function screenToWorld(view: View, size: Size, p: Point): Point {
 
 export function clampView(view: View): View {
   return {
+    ...view,
     cx: clamp(view.cx, -PAN_LIMIT, PAN_LIMIT),
     cy: clamp(view.cy, -PAN_LIMIT, PAN_LIMIT),
     scale: clamp(view.scale, MIN_SCALE, MAX_SCALE),
@@ -70,7 +77,27 @@ export function clampView(view: View): View {
 /** Pan by a screen-space delta (the content follows the pointer). */
 export function panBy(view: View, dxPx: number, dyPx: number): View {
   const d = rotateVec({ x: dxPx / view.scale, y: dyPx / view.scale }, -view.rot);
-  return clampView({ ...view, cx: view.cx - d.x, cy: view.cy - d.y });
+  const panned = { ...view, cx: view.cx - d.x, cy: view.cy - d.y };
+  return clampView({ ...panned, gx: view.gx - dxPx / view.scale, gy: view.gy - dyPx / view.scale });
+}
+
+/**
+ * The grid center after the screen point `from` moved to `to` and the scale changed to `scale`
+ * (the grid point under `from` ends up under `to`; the grid is never rotated).
+ */
+export function moveGrid(
+  view: View,
+  size: Size,
+  move: { from: Point; to: Point },
+  scale: number,
+): Point {
+  const { from, to } = move;
+  const cx = size.width / 2;
+  const cy = size.height / 2;
+  return {
+    x: view.gx + (from.x - cx) / view.scale - (to.x - cx) / scale,
+    y: view.gy + (from.y - cy) / view.scale - (to.y - cy) / scale,
+  };
 }
 
 /** The same view moved so that world point `world` lands on screen point `screen`. */
@@ -83,7 +110,8 @@ export function anchorView(view: View, size: Size, world: Point, screen: Point):
 export function zoomAt(view: View, size: Size, anchor: Point, factor: number): View {
   const world = screenToWorld(view, size, anchor);
   const scale = clamp(view.scale * factor, MIN_SCALE, MAX_SCALE);
-  return anchorView({ ...view, scale }, size, world, anchor);
+  const g = moveGrid(view, size, { from: anchor, to: anchor }, scale);
+  return anchorView({ ...view, scale, gx: g.x, gy: g.y }, size, world, anchor);
 }
 
 /** Set the rotation, keeping the world point under `anchor` (screen px) fixed. */

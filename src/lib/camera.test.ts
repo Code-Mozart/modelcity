@@ -73,16 +73,16 @@ describe('compass', () => {
 
   it('finds the chip under a point', () => {
     const center = { x: 100, y: 100 };
-    expect(chipAt(center, { x: 100, y: 100 - 40 }, 0)?.label).toBe('N');
-    expect(chipAt(center, { x: 100 - 38, y: 102 }, 0)?.label).toBe('W');
+    expect(chipAt(center, { x: 100, y: 100 - 62 }, 0)?.label).toBe('N');
+    expect(chipAt(center, { x: 100 - 60, y: 102 }, 0)?.label).toBe('W');
     expect(chipAt(center, center, 0)).toBeUndefined();
   });
 
   it('places each chip in the on-screen direction of its world direction', () => {
     const north = CARDINALS[0]!;
-    expect(chipOffset(north, 0).y).toBeCloseTo(-40);
+    expect(chipOffset(north, 0).y).toBeCloseTo(-62);
     const turned = chipOffset(north, Math.PI / 2);
-    expect(turned.x).toBeCloseTo(40);
+    expect(turned.x).toBeCloseTo(62);
     expect(chipAt({ x: 0, y: 0 }, turned, Math.PI / 2)?.label).toBe('N');
   });
 });
@@ -111,6 +111,23 @@ describe('two-finger gesture (^30)', () => {
       { x: 600, y: 300 },
     ]);
     expect(zoomed.scale).toBeCloseTo(view.scale * 2);
+  });
+});
+
+describe('two-finger gesture and the grid', () => {
+  const prev: [{ x: number; y: number }, { x: number; y: number }] = [
+    { x: 300, y: 300 },
+    { x: 500, y: 300 },
+  ];
+
+  it('twisting leaves the grid alone', () => {
+    const view = initialView();
+    const next: typeof prev = [
+      { x: 400, y: 200 },
+      { x: 400, y: 400 },
+    ];
+    const v = applyTwoFinger(view, size, prev, next);
+    expect(v).toMatchObject({ gx: view.gx, gy: view.gy });
   });
 
   it('moving both fingers pans', () => {

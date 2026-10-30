@@ -26,8 +26,8 @@
       </span>
     {/each}
     {#each DRAG_HINTS as h (h.id)}
-      <span class="at" style:left="{h.dx}px" style:top="{h.dy}px" title={h.label}>
-        <KeyCap><Icon name={h.icon} /></KeyCap>
+      <span class="at hint" style:left="{h.dx}px" style:top="{h.dy}px" title={h.label}>
+        <Icon name={h.icon} />
       </span>
     {/each}
   </div>
@@ -44,6 +44,11 @@
     position: absolute;
     display: flex;
     transform: translate(-50%, -50%);
+  }
+  /* Monochrome like the compass outline, no background; a halo keeps it readable over the map. */
+  .hint {
+    color: var(--ink);
+    filter: drop-shadow(0 0 1.5px var(--bg)) drop-shadow(0 0 1.5px var(--bg));
   }
   .ring {
     position: absolute;

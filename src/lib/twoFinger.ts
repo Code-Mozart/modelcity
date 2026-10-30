@@ -1,5 +1,6 @@
 import {
   anchorView,
+  moveGrid,
   clampView,
   screenToWorld,
   wrapAngle,
@@ -26,5 +27,6 @@ export function applyTwoFinger(view: View, size: Size, prev: Pair, next: Pair): 
   const k = span(prev) > 1e-6 ? span(next) / span(prev) : 1;
   const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.scale * k));
   const rot = view.rot + wrapAngle(angle(next) - angle(prev));
-  return clampView(anchorView({ ...view, scale, rot }, size, world, mid(next)));
+  const g = moveGrid(view, size, { from: mid(prev), to: mid(next) }, scale);
+  return clampView(anchorView({ ...view, scale, rot, gx: g.x, gy: g.y }, size, world, mid(next)));
 }

@@ -18,8 +18,8 @@ export const CARDINALS: Cardinal[] = [
   { key: 'w', label: 'W', dir: { x: -1, y: 0 }, rot: Math.PI / 2 },
 ];
 
-/** Distance of the N/E/S/W chips from the cursor, pixels. */
-export const CHIP_RADIUS_PX = 40;
+/** Distance of the N/E/S/W key caps (outer ring) from the cursor, pixels. */
+export const CHIP_RADIUS_PX = 62;
 const CHIP_HIT_PX = 15;
 
 export const cardinalForKey = (key: string): Cardinal | undefined =>
@@ -39,7 +39,7 @@ export function chipAt(center: Point, point: Point, viewRot: number): Cardinal |
   });
 }
 
-/** What dragging in each screen direction does while the compass is shown (fixed positions). */
+/** What dragging in each screen direction does while the compass is shown (fixed positions, plain icons). */
 export interface DragHint {
   id: 'ccw' | 'cw' | 'zoomIn' | 'zoomOut';
   icon: 'ccw' | 'cw' | 'plus' | 'minus';
@@ -48,7 +48,8 @@ export interface DragHint {
   dy: number;
 }
 
-export const HINT_RADIUS_PX = 82;
+/** Distance of the drag-hint icons (inner ring) from the cursor, pixels. */
+export const HINT_RADIUS_PX = 34;
 
 export const DRAG_HINTS: DragHint[] = [
   {

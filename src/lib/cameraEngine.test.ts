@@ -41,7 +41,7 @@ describe('Camera rotation keys', () => {
     const c = camera();
     expect(c.key('e')).toBe(false);
     c.startRotate({ x: 300, y: 200 });
-    c.moveRotate({ x: 340, y: 200 });
+    c.moveRotate({ x: 362, y: 200 });
     expect(c.key('E')).toBe(true);
     expect(c.view.rot).toBeCloseTo(-Math.PI / 2);
     expect(c.pressed).toBe('e');
@@ -60,7 +60,7 @@ describe('Camera compass', () => {
     const c = camera();
     c.startRotate({ x: 300, y: 200 });
     c.cursor = { x: 300, y: 200 };
-    expect(c.compassClick({ x: 340, y: 200 })).toBe(true);
+    expect(c.compassClick({ x: 362, y: 200 })).toBe(true);
     expect(c.pressed).toBe('e');
     c.releaseChip();
     expect(c.pressed).toBeNull();

@@ -46,8 +46,12 @@ export function render(frame: Frame, dpr: number, scene: Scene) {
   ctx.fillStyle = pal.bg;
   ctx.fillRect(0, 0, size.width, size.height);
   const minor = gridStep(view.scale, MINOR_GRID_MIN_PX);
-  // The grid is pinned to the camera: it pans and zooms with the world but never rotates (^30).
-  const gridFrame = { ...frame, view: { ...view, rot: 0 } };
+  // The grid is pinned to the camera: it pans and zooms with the content but never moves when
+  // rotating (^30), so it uses its own unrotated center.
+  const gridFrame = {
+    ...frame,
+    view: { cx: view.gx, cy: view.gy, scale: view.scale, rot: 0, gx: 0, gy: 0 },
+  };
   drawGrid(gridFrame, minor, pal['grid-minor']);
   drawGrid(gridFrame, minor * 10, pal['grid-major']);
   drawScene(frame, scene, pal);

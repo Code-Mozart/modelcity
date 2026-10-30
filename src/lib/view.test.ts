@@ -98,3 +98,31 @@ describe('gridStep', () => {
     expect(gridStep(1, 51)).toBe(100);
   });
 });
+
+describe('grid pinned to the camera (^30)', () => {
+  const base = view({ cx: 10, cy: 20, scale: 8, gx: 3, gy: -4 });
+  const anchor = { x: 250, y: 120 };
+
+  it('does not move at all when rotating about any pivot', () => {
+    const turned = rotateAt(base, size, anchor, 1.3);
+    expect(turned.cx).not.toBeCloseTo(base.cx);
+    expect(turned).toMatchObject({ gx: 3, gy: -4, scale: 8 });
+  });
+
+  it('follows panning exactly like the content, in screen directions', () => {
+    const panned = panBy(view({ ...base, rot: 0.8 }), 40, -16);
+    expect(panned.gx).toBeCloseTo(3 - 40 / 8);
+    expect(panned.gy).toBeCloseTo(-4 + 16 / 8);
+  });
+
+  it('keeps the grid point under the cursor fixed while zooming', () => {
+    const gridPoint = (v: View, p: { x: number; y: number }) => ({
+      x: v.gx + (p.x - size.width / 2) / v.scale,
+      y: v.gy + (p.y - size.height / 2) / v.scale,
+    });
+    const zoomed = zoomAt(base, size, anchor, 2.5);
+    const [a, b] = [gridPoint(base, anchor), gridPoint(zoomed, anchor)];
+    expect(b.x).toBeCloseTo(a.x);
+    expect(b.y).toBeCloseTo(a.y);
+  });
+});
