@@ -39,7 +39,9 @@ describe('Editor pointer interaction', () => {
     expect(ed.pointerDown(at(500, 500))).toBe(false);
     expect(ed.sel).toBe(-1);
   });
+});
 
+describe('Editor node and radius edits', () => {
   it('removes a node by right-click and by Delete', () => {
     const ed = new Editor();
     const n = ed.path.nodes[0]!;
