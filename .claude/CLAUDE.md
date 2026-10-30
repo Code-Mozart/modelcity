@@ -47,6 +47,7 @@ The user entrusts the details to Claude. Principles:
 
 ## Context
 
+- Controls: `docs/controls.md` is the current reference; update it together with the hat when a control changes.
 - Product background and design decisions: `docs/handover.md` (its mention of single-page HTML demos is outdated; we build a real app now).
 - Stack: bun + TypeScript + Svelte 5 + Vite + vitest (^1). Code map: `src/lib/curves/` is the pure curve geometry library (^12), `editor.svelte.ts` the interaction engine, `MapCanvas.svelte` view and input dispatch, `render*.ts` drawing.
 
