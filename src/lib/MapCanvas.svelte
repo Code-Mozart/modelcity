@@ -16,7 +16,6 @@
   let size = $state<Size>({ width: 1, height: 1 });
   let dpr = $state(1);
   let panning: { x: number; y: number } | null = $state(null);
-  let spaceDown = $state(false);
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
@@ -64,7 +63,7 @@
   function onPointerDown(e: PointerEvent) {
     if (e.button === 2) return;
     canvas.setPointerCapture(e.pointerId);
-    const wantsPan = e.button === 1 || spaceDown;
+    const wantsPan = e.button === 1;
     // Dragging empty space pans in the Move tool (^14).
     if (wantsPan || !editor.pointerDown(info(e))) {
       if (wantsPan || editor.tool === 'move') panning = { x: e.clientX, y: e.clientY };
@@ -82,12 +81,6 @@
     editor.pointerUp();
   }
 
-  function onKey(e: KeyboardEvent) {
-    if (e.code !== 'Space' || e.target instanceof HTMLInputElement) return;
-    spaceDown = e.type === 'keydown';
-    e.preventDefault();
-  }
-
   onMount(() => {
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
@@ -97,11 +90,9 @@
   });
 </script>
 
-<svelte:window onkeydown={onKey} onkeyup={onKey} />
-
 <canvas
   bind:this={canvas}
-  style:cursor={panning ? 'grabbing' : spaceDown ? 'grab' : editor.cursor}
+  style:cursor={panning ? 'grabbing' : editor.cursor}
   onwheel={onWheel}
   onpointerdown={onPointerDown}
   onpointermove={onPointerMove}

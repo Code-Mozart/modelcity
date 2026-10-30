@@ -20,7 +20,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 ## Git and branches
 - `main` always holds a runnable version. Only the user merges into `main` (PRs auto-merge once the user approves). Never push to `main`.
 - Work on topic branches: `feature/`, `bugfix/`, `chore/`, `docs/`, etc. Claude may create, modify, rename and delete any branch except `main`.
-- Merge into `main` via PR, only when something is ready to publish as a new version. Don't open PRs otherwise.
+- Open a PR right after creating a branch (it will be merged eventually); the user merges when it is ready to publish as a new version.
 - PR descriptions are the main review surface (the user rarely reads code): always a summary of what and why, what to test, decisions made, open questions. Max half to one page.
 - Small, verifiable steps, steady progress, aware of the roadmap (see `docs/handover.md`). Use hats in commit messages where applicable.
 
