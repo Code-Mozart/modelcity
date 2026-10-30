@@ -5,7 +5,6 @@ import {
   edgesOfRoads,
   nearestOnRoads,
   moveNodes,
-  shareRadius,
   removeNodesFrom,
   removeRoad,
   replaceRoad,
@@ -17,11 +16,12 @@ import {
   type Roads,
 } from './curves/roads';
 import { dist, type Vec } from './curves/vec';
-import { dragPress, emptyPress } from './editorPress';
+import { dragPress, emptyPress, sharing, withSharedRadius } from './editorPress';
 import { skeletonAnchors } from './skeletonAnchors';
 import type { Focus } from './focus';
 import { cursorOf, extendTo, isActiveEnd, previewOf, targetOf, type Drawn } from './editorTargets';
-import { KEYMAP, type Action } from './keymap';
+import { actionFor, type Action, type KeyMods } from './keymap';
+import { NO_HISTORY, record, redoStep, undoStep } from './history';
 import type { Pointer } from './proximity';
 import {
   DRAG_PX,
@@ -34,7 +34,7 @@ import {
 import {
   afterCurveClick,
   nodesInBand,
-  selectedSegments,
+  sameSelection,
   withNodes,
   withoutNode,
   type Band,
@@ -66,7 +66,13 @@ export class Editor {
   band = $state.raw<Band | null>(null);
   hover = $state.raw<Hover | null>(null);
   private press = $state.raw<Press | null>(null);
+  /** The steps that can be undone and redone (^81). */
+  history = $state.raw(NO_HISTORY);
+  /** True while the end of a press runs, so everything it does is one step. */
+  private batching = false;
 
+  canUndo = $derived(this.history.past.length > 0);
+  canRedo = $derived(this.history.future.length > 0);
   sel = $derived(this.selection.at(-1) ?? null);
   drawing = $derived(this.mode === 'draw');
   edges = $derived(edgesOfRoads(this.roads));
@@ -113,11 +119,31 @@ export class Editor {
   }
 
   /** Handle a key; true if it was bound. */
-  key(key: string): boolean {
-    const action: Action | undefined = KEYMAP[key];
+  key(key: string, mods: KeyMods = { ctrl: false, shift: false }): boolean {
+    const action: Action | undefined = actionFor(key, mods);
     if (action === 'finishRoad') this.finishRoad();
     else if (action === 'deleteNode') this.deleteSelected();
+    else if (action) this.step(action);
     return action !== undefined;
+  }
+
+  /** Undo or redo one step (^81); not while the left button is down. */
+  private step(action: 'undo' | 'redo') {
+    const go = action === 'undo' ? undoStep : redoStep;
+    const r = this.press ? null : go(this.history, this.snapshot());
+    if (r) [this.history, this.hover] = [r.history, null];
+    if (r) this.restore(r.to);
+  }
+
+  private restore({ roads, active, end, selection }: Snapshot) {
+    [this.roads, this.active, this.end, this.selection] = [roads, active, end, selection];
+    if (active !== null) this.mode = 'draw';
+  }
+
+  /** Make a step undoable if it changed the roads or the selection (^88). Inside a press only its end commits. */
+  private commit(before: Snapshot) {
+    const same = before.roads === this.roads && sameSelection(before.selection, this.selection);
+    if (!same && !this.batching) this.history = record(this.history, before);
   }
 
   deleteSelected() {
@@ -126,11 +152,13 @@ export class Editor {
 
   private removeAll(refs: NodeRef[]) {
     if (!refs.length) return;
+    const before = this.snapshot();
     const r = removeNodesFrom(this.roads, refs, this.active);
     this.roads = r.roads;
     this.active = r.active;
     if (r.active === null) this.end = 'end';
     this.selection = [];
+    this.commit(before);
   }
 
   /** Enter draw mode: the next click places the first node of a new road. */
@@ -143,12 +171,14 @@ export class Editor {
   finishRoad() {
     if (this.mode === 'select') return;
     const road = this.active;
+    const before = this.snapshot();
     const cancel = road !== null && (this.roads[road]?.nodes.length ?? 0) < 2;
     if (road !== null && cancel) this.roads = removeRoad(this.roads, road, road).roads;
     this.mode = 'select';
     this.active = null;
     this.end = 'end';
     this.selection = [];
+    this.commit(before);
   }
 
   /** Left button pressed. */
@@ -212,30 +242,16 @@ export class Editor {
     press.moved = true;
     const road = press.road;
     const path = applyDrag(this.roads[road]!, press.drag, info.pt, { snap: info.shift });
-    const moved = this.shared(replaceRoad(this.roads, road, path), press);
+    const moved = withSharedRadius(replaceRoad(this.roads, road, path), this.selection, press);
     const to = path.nodes[press.drag.handle.i]!;
     const delta = { x: to.x - press.origin.x, y: to.y - press.origin.y };
     const group = press.drag.handle.type === 'node' ? press.group : [];
     this.roads = group.length ? moveNodes(moved, group, delta) : moved;
   }
 
-  /** Dragging the radius of a selected segment sets the radius of all selected segments (^77). */
-  private shared(roads: Roads, press: Extract<Press, { kind: 'drag' }>): Roads {
-    const own = this.sharing(press);
-    return own ? shareRadius(roads, own[0], own[1]) : roads;
-  }
-
-  /** The dragged segment and all selected segments, while a radius is dragged between selected nodes. */
-  private sharing(press: Press | null) {
-    if (press?.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
-    const own = { road: press.road, i: press.drag.handle.i };
-    const all = selectedSegments(this.roads, this.selection);
-    return all.some((s) => s.road === own.road && s.i === own.i) ? ([own, all] as const) : null;
-  }
-
   /** Segments whose scaffold shows besides the focused one: the selected ones while sharing a radius (^77). */
   get extraScaffold() {
-    return this.sharing(this.press)?.[1] ?? [];
+    return sharing(this.roads, this.selection, this.press)?.all ?? [];
   }
 
   /** Moving several nodes hides all scaffolds meanwhile (^78). */
@@ -282,8 +298,9 @@ export class Editor {
   }
 
   private extendFrom(ref: NodeRef) {
-    const d = extendTo(this.drawn, ref);
-    [this.roads, this.active, this.end, this.selection] = [d.roads, d.active, d.end, d.selection];
+    const before = this.snapshot();
+    this.restore(extendTo(this.drawn, ref));
+    this.commit(before);
   }
 
   /** A click (no drag) on the node being drawn from finishes the road; on another leaf node it extends the road from there. */
@@ -301,8 +318,12 @@ export class Editor {
     const press = this.press;
     this.press = null;
     this.band = null;
-    if (press?.kind === 'drag' && !press.moved) this.clickedHandle(press);
-    if (press?.kind === 'empty' && !press.moved) this.clickedEmpty(press);
+    if (!press) return;
+    this.batching = true;
+    if (press.kind === 'drag' && !press.moved) this.clickedHandle(press);
+    if (press.kind === 'empty' && !press.moved) this.clickedEmpty(press);
+    this.batching = false;
+    this.commit(press.undo);
   }
 
   /** Abort what the left button was doing (a second finger came down). */
@@ -311,11 +332,7 @@ export class Editor {
     this.press = null;
     this.band = null;
     if (!press || press.kind === 'empty') return;
-    const { roads, active, end, selection } = press.undo;
-    this.roads = roads;
-    this.active = active;
-    this.end = end;
-    this.selection = selection;
+    this.restore(press.undo);
   }
 
   pointerLeave() {
@@ -335,7 +352,9 @@ export class Editor {
   resetRadiusAt(info: PointerInfo) {
     const handle = this.handleAt(info);
     if (handle?.type !== 'rad') return;
+    const before = this.snapshot();
     const path = this.roads[handle.road]!;
     this.roads = replaceRoad(this.roads, handle.road, resetRadius(path, handle.i));
+    this.commit(before);
   }
 }

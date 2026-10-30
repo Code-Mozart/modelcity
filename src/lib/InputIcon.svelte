@@ -9,34 +9,42 @@
   let { input }: { input: Input } = $props();
 </script>
 
-{#if input.kind === 'mouse' && input.shift}
-  <KeyCap>Shift</KeyCap><span class="plus">+</span>
-{:else if input.kind === 'mouse' && input.alt}
-  <KeyCap>Alt</KeyCap><span class="plus">+</span>
-{/if}
-{#if input.kind === 'key'}
-  <KeyCap>{input.label}</KeyCap>
-{:else if input.kind === 'wheel'}
-  <MouseWheelIcon label="mouse wheel" />
-{:else if input.drag}
-  <MouseDragIcon
-    lmb={input.button === 'lmb'}
-    mmb={input.button === 'mmb'}
-    rmb={input.button === 'rmb'}
-    label="{input.button.toUpperCase()} drag"
-  />
-{:else}
-  <MouseIcon
-    lmb={input.button === 'lmb'}
-    mmb={input.button === 'mmb'}
-    rmb={input.button === 'rmb'}
-    label={input.button.toUpperCase()}
-  />
-{/if}
+<span class="combo">
+  {#if input.kind === 'mouse' && input.shift}
+    <KeyCap>Shift</KeyCap>
+  {:else if input.kind === 'mouse' && input.alt}
+    <KeyCap>Alt</KeyCap>
+  {/if}
+  {#if input.kind === 'key'}
+    <KeyCap>{input.label}</KeyCap>
+  {:else if input.kind === 'keys'}
+    {#each input.labels as label, n (n)}
+      <KeyCap>{label}</KeyCap>
+    {/each}
+  {:else if input.kind === 'wheel'}
+    <MouseWheelIcon label="mouse wheel" />
+  {:else if input.drag}
+    <MouseDragIcon
+      lmb={input.button === 'lmb'}
+      mmb={input.button === 'mmb'}
+      rmb={input.button === 'rmb'}
+      label="{input.button.toUpperCase()} drag"
+    />
+  {:else}
+    <MouseIcon
+      lmb={input.button === 'lmb'}
+      mmb={input.button === 'mmb'}
+      rmb={input.button === 'rmb'}
+      label={input.button.toUpperCase()}
+    />
+  {/if}
+</span>
 
 <style>
-  .plus {
-    color: var(--muted);
-    font-size: var(--font-size);
+  /* Keys pressed together sit close together, with no plus sign between them. */
+  .combo {
+    display: inline-flex;
+    gap: 0.25em;
+    align-items: center;
   }
 </style>

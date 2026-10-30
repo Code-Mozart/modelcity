@@ -65,6 +65,8 @@ Entering draw mode, finishing a road and removing nodes clear the selection.
 
 ## The hints (top left)
 
+At the very top, in every mode and context: `[Ctrl]+[Z]: undo` only while there is something to undo, and `[Ctrl]+[Y] or [Ctrl]+[Shift]+[Z]: redo` only while there is something to redo (^81).
+
 The corner shows what the mouse and keys do right now, as rows of `[input]: action`, with symbols for the inputs (^49, ^50; `MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`, `KeyCap`). The rows change with the mode and with what is under the pointer:
 
 | Mode and context | Rows |
@@ -95,6 +97,15 @@ Only a single segment shows its scaffold at a time (^66), over all roads. Which 
 The heading arrows of the two nodes of the shown segment are shown with it, and no other arrows. A node of a road that has no segment yet always shows its heading arrow. A node being placed counts as dragged.
 
 Looks: blue means selected or user action (selected nodes, the hover ring, the selection box), orange is gizmo. Filled points can be dragged (orange tips and bend points, orange radius points, a hook's yellow points); hollow ones (an S-curve's yellow points) only show derived geometry. On touch there is no hover, so scaffolds appear only while something is grabbed.
+
+## Undo and redo (^81, ^88)
+
+| Input | Action |
+|-------|--------|
+| Ctrl+Z (Cmd+Z) | Undo the last step |
+| Ctrl+Y or Ctrl+Shift+Z | Redo |
+
+A step is one finished action that changed the roads or the selection (^88): a node placed (with its heading drag), a drag of a handle or of several nodes, an inserted node, removing nodes, cancelling a road with one node, extending from a leaf node when it drops a one-node road, resetting a radius. Changing the selection is a step too (a click on a node, the selection box, deselecting, Shift clicks), also finishing a road (it clears the selection). Camera moves and entering draw mode are not steps. Undo and redo restore the roads, the road being drawn and the selection (so undoing a removal selects the nodes again); undoing while drawing stays in draw mode. They are ignored while the left button is down. A new step clears what could be redone. The last 200 steps are kept.
 
 ## Camera (always, in every context)
 

@@ -7,9 +7,11 @@ const show = (h: Hint) =>
     .map((i) =>
       i.kind === 'key'
         ? i.label
-        : i.kind === 'wheel'
-          ? 'Wheel'
-          : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
+        : i.kind === 'keys'
+          ? i.labels.join('+')
+          : i.kind === 'wheel'
+            ? 'Wheel'
+            : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}`;
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
@@ -152,6 +154,22 @@ describe('select mode hints over nodes (^74, ^75)', () => {
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',
+    ]);
+  });
+});
+
+describe('undo and redo hints (^81)', () => {
+  it('come first, and only for what can be undone or redone', () => {
+    expect(rows(false, empty).some((r) => r.includes('undo'))).toBe(false);
+    expect(hintsFor(false, empty, 0, { undo: true, redo: false }).map(show)[0]).toBe(
+      'Ctrl+Z: undo',
+    );
+    expect(hintsFor(true, empty, 0, { undo: false, redo: true }).map(show)[0]).toBe(
+      'Ctrl+Y or Ctrl+Shift+Z: redo',
+    );
+    expect(hintsFor(true, empty, 0, { undo: true, redo: true }).map(show).slice(0, 2)).toEqual([
+      'Ctrl+Z: undo',
+      'Ctrl+Y or Ctrl+Shift+Z: redo',
     ]);
   });
 });

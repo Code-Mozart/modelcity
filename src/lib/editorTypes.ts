@@ -70,5 +70,6 @@ export type Press =
       /** The two nodes of the curve that was pressed (select mode), else none (^74). */
       curve: NodeRef[];
       moved: boolean;
+      undo: Snapshot;
       target: HintTarget;
     };
