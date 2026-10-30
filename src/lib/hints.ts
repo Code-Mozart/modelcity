@@ -15,8 +15,9 @@ export interface Hint {
 /** What the pointer is over, for contextual hints. */
 export type HintTarget =
   | { kind: 'empty' }
-  | { kind: 'curve' }
-  | { kind: 'handle'; type: HandleType; last: boolean; leaf: boolean };
+  /** `picked`: how many of the curve's two nodes are selected. */
+  | { kind: 'curve'; picked?: number }
+  | { kind: 'handle'; type: HandleType; last: boolean; leaf: boolean; selected?: boolean };
 
 const mouse = (button: 'lmb' | 'mmb' | 'rmb', drag = false, shift = false): Input => ({
   kind: 'mouse',
@@ -30,6 +31,7 @@ const hint = (input: Input | Input[], text: string): Hint => ({
 });
 
 const ESC: Input = { kind: 'key', label: 'Esc' };
+const DEL: Input = { kind: 'key', label: 'Del' };
 
 const CAMERA: Hint[] = [
   hint(mouse('rmb', true), 'pan'),
@@ -79,22 +81,41 @@ function drawModeHints(target: HintTarget): Hint[] {
   ];
 }
 
-/** Select mode: no road is being drawn. */
-function selectModeHints(target: HintTarget): Hint[] {
+/** Selecting with the left button, by what is under the pointer (^72, ^74). */
+function pickHints(target: HintTarget): Hint[] {
+  const shift = (text: string) => hint(mouse('lmb', false, true), text);
   if (target.kind === 'handle') {
-    const toggle =
-      target.type === 'node' ? [hint(mouse('lmb', false, true), 'toggle selected')] : [];
-    return [...handleHints(target, false), ...toggle, ...CAMERA];
+    if (target.type !== 'node') return [];
+    return target.selected ? [shift('deselect')] : [hint(mouse('lmb'), 'select'), shift('select')];
   }
+  if (target.kind === 'curve') {
+    const all = target.picked === 2;
+    return [
+      ...(all ? [] : [hint(mouse('lmb'), 'select both nodes')]),
+      shift(all ? 'deselect both nodes' : 'add both nodes to selection'),
+    ];
+  }
+  return [];
+}
+
+/** Select mode: no road is being drawn. */
+function selectModeHints(target: HintTarget, selected: number): Hint[] {
+  const handle = target.kind === 'handle';
+  const box = [hint(mouse('lmb', true), 'select')];
+  if (selected && !handle) box.push(hint(mouse('lmb', true, true), 'add to selection'));
   return [
-    hint(mouse('lmb'), 'draw mode'),
-    hint(mouse('lmb', true), 'select nodes'),
-    hint(mouse('lmb', true, true), 'add to selection'),
+    ...(handle ? [] : target.kind === 'empty' ? [hint(mouse('lmb'), 'draw mode')] : []),
+    ...(handle ? handleHints(target, false) : box),
+    ...pickHints(target),
+    ...(selected ? [hint(DEL, 'delete selected')] : []),
     ...CAMERA,
   ];
 }
 
-/** The control hints for the top left corner, for the current mode and what is under the pointer (^49). */
-export function hintsFor(drawing: boolean, target: HintTarget): Hint[] {
-  return drawing ? drawModeHints(target) : selectModeHints(target);
+/**
+ * The hints for the top left corner, for the current mode, what is under the pointer and how many
+ * nodes are selected (^49).
+ */
+export function hintsFor(drawing: boolean, target: HintTarget, selected = 0): Hint[] {
+  return drawing ? drawModeHints(target) : selectModeHints(target, selected);
 }

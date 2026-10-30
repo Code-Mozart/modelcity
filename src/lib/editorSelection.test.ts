@@ -133,3 +133,37 @@ describe('shift selects (^72)', () => {
     expect(ed.selection).toEqual([]);
   });
 });
+
+describe('selecting by curve (^74)', () => {
+  /** Three quarters along, clear of the heading arrow tip of the first node. */
+  const mid = (ed: Editor) => {
+    const [a, b] = ed.roads[0]!.nodes;
+    return at(a!.x + (b!.x - a!.x) * 0.75, a!.y + (b!.y - a!.y) * 0.75);
+  };
+  const press = (ed: Editor, shift: boolean) => {
+    const m = mid(ed);
+    ed.pointerDown({ ...m, shift });
+    ed.pointerUp();
+  };
+
+  it('LMB selects its two nodes; hovering says how many are selected', () => {
+    const ed = roads();
+    ed.pointerMove(mid(ed));
+    expect(ed.hintTarget).toEqual({ kind: 'curve', picked: 0 });
+    press(ed, false);
+    expect(ed.selection).toEqual([
+      { road: 0, node: 0 },
+      { road: 0, node: 1 },
+    ]);
+    expect(ed.drawing).toBe(false);
+  });
+
+  it('Shift+LMB adds both nodes, or deselects them only if both are selected', () => {
+    const ed = roads();
+    click(ed, 0, 0);
+    press(ed, true);
+    expect(ed.selection).toHaveLength(2);
+    press(ed, true);
+    expect(ed.selection).toEqual([]);
+  });
+});

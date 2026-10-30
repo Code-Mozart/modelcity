@@ -61,4 +61,13 @@ export type Press =
       target: HintTarget;
     }
   | { kind: 'place'; ref: NodeRef; undo: Snapshot; target: HintTarget }
-  | { kind: 'empty'; screen: Vec; base: NodeRef[]; moved: boolean; target: HintTarget };
+  | {
+      kind: 'empty';
+      screen: Vec;
+      base: NodeRef[];
+      shift: boolean;
+      /** The two nodes of the curve that was pressed (select mode), else none (^74). */
+      curve: NodeRef[];
+      moved: boolean;
+      target: HintTarget;
+    };

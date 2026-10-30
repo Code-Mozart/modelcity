@@ -1,4 +1,7 @@
-import type { RoadHandle, Roads } from './curves/roads';
+import { autoHeading, autoHeadingBefore } from './curves/path';
+import type { NodeRef, RoadHandle, Roads } from './curves/roads';
+import type { Vec } from './curves/vec';
+import { curveNodes, isSelected, pickedCount } from './selection';
 import type { Hover } from './editorTypes';
 import type { HintTarget } from './hints';
 
@@ -7,6 +10,7 @@ export interface Drawn {
   roads: Roads;
   active: number | null;
   end: 'start' | 'end';
+  selection: NodeRef[];
 }
 
 /** The node of the road being drawn that new nodes attach to (clicking it finishes the road). */
@@ -24,6 +28,7 @@ export function isLeaf(roads: Roads, handle: RoadHandle): boolean {
 
 /** What the control hints are about (^49). */
 export function targetOf(drawn: Drawn, hover: Hover | null): HintTarget {
+  const { selection } = drawn;
   if (hover?.kind === 'handle') {
     const { handle } = hover;
     return {
@@ -31,7 +36,24 @@ export function targetOf(drawn: Drawn, hover: Hover | null): HintTarget {
       type: handle.type,
       last: isActiveEnd(drawn, handle),
       leaf: isLeaf(drawn.roads, handle),
+      selected: isSelected(selection, { road: handle.road, node: handle.i }),
     };
   }
-  return hover?.kind === 'candidate' ? { kind: 'curve' } : { kind: 'empty' };
+  if (hover?.kind !== 'candidate') return { kind: 'empty' };
+  const { road, ref } = hover.hit;
+  return { kind: 'curve', picked: pickedCount(selection, curveNodes(road, ref.i)) };
+}
+
+export function cursorOf(hover: Hover | null, drawing: boolean): string {
+  if (hover?.kind === 'handle') return 'grab';
+  if (hover?.kind === 'candidate') return drawing ? 'copy' : 'pointer';
+  return drawing ? 'crosshair' : 'default';
+}
+
+/** The preview of the node a click would add: where, its heading, and the node it attaches to. */
+export function previewOf({ roads, active, end }: Drawn, pt: Vec): Hover {
+  const nodes = active === null ? undefined : roads[active]?.nodes;
+  const ref = (end === 'end' ? nodes?.[nodes.length - 1] : nodes?.[0]) ?? null;
+  const heading = end === 'end' ? autoHeading : autoHeadingBefore;
+  return { kind: 'preview', ref, end, node: { x: pt.x, y: pt.y, th: ref ? heading(ref, pt) : 0 } };
 }

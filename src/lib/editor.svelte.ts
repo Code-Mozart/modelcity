@@ -1,6 +1,6 @@
 import { applyDrag, dragHeading, resetRadius, startDrag } from './curves/drag';
 import { hitHandle } from './curves/handles';
-import { appendNode, autoHeading, autoHeadingBefore, insertNode, prependNode } from './curves/path';
+import { appendNode, insertNode, prependNode } from './curves/path';
 import {
   edgesOfRoads,
   nearestOnRoads,
@@ -19,7 +19,7 @@ import {
 import { dist, type Vec } from './curves/vec';
 import { skeletonAnchors } from './skeletonAnchors';
 import type { Focus } from './focus';
-import { isActiveEnd, isLeaf, targetOf, type Drawn } from './editorTargets';
+import { cursorOf, isActiveEnd, isLeaf, previewOf, targetOf, type Drawn } from './editorTargets';
 import { KEYMAP, type Action } from './keymap';
 import type { Pointer } from './proximity';
 import {
@@ -30,7 +30,15 @@ import {
   type Press,
   type Snapshot,
 } from './editorTypes';
-import { isSelected, nodesInBand, withNodes, withoutNode, type Band } from './selection';
+import {
+  afterCurveClick,
+  curveNodes,
+  isSelected,
+  nodesInBand,
+  withNodes,
+  withoutNode,
+  type Band,
+} from './selection';
 
 export type { Hover, PointerInfo } from './editorTypes';
 
@@ -64,17 +72,11 @@ export class Editor {
   edges = $derived(edgesOfRoads(this.roads));
   /** The skeleton of all roads, for the camera bounds (^37, ^62). */
   anchors = $derived(skeletonAnchors(this.roads, this.edges));
-  cursor = $derived(this.pointerCursor());
+  cursor = $derived(cursorOf(this.hover, this.drawing));
   /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
   focus = $derived(this.currentFocus());
   /** What the control hints are about (^49). */
-  hintTarget = $derived(this.press?.target ?? this.targetOf(this.hover));
-
-  private pointerCursor(): string {
-    if (this.hover?.kind === 'handle') return 'grab';
-    if (this.hover?.kind === 'candidate') return 'copy';
-    return this.drawing ? 'crosshair' : 'default';
-  }
+  hintTarget = $derived(this.press?.target ?? targetOf(this.drawn, this.hover));
 
   private currentFocus(): Focus | null {
     const press = this.press;
@@ -87,15 +89,11 @@ export class Editor {
   }
 
   private get drawn(): Drawn {
-    return { roads: this.roads, active: this.active, end: this.end };
+    return { roads: this.roads, active: this.active, end: this.end, selection: this.selection };
   }
 
   private isActiveEnd(handle: RoadHandle) {
     return isActiveEnd(this.drawn, handle);
-  }
-
-  private targetOf(hover: Hover | null) {
-    return targetOf(this.drawn, hover);
   }
 
   handles(scale: number): RoadHandle[] {
@@ -160,19 +158,26 @@ export class Editor {
     const handle = this.handleAt(info);
     if (handle) return this.grab(handle, info);
     if (!this.drawing) {
-      const base = info.shift ? this.selection : [];
-      this.press = {
-        kind: 'empty',
-        screen: info.screen,
-        base,
-        moved: false,
-        target: { kind: 'empty' },
-      };
+      this.pressEmpty(info);
       return;
     }
     const hit = this.curveAt(info);
     if (hit) this.insert(hit);
     else this.create(info.pt);
+  }
+
+  /** Select mode, nothing grabbed: a click enters draw mode or, on a curve, selects; a drag spans a box. */
+  private pressEmpty(info: PointerInfo) {
+    const hit = this.curveAt(info);
+    this.press = {
+      kind: 'empty',
+      screen: info.screen,
+      base: info.shift ? this.selection : [],
+      shift: info.shift,
+      curve: hit ? curveNodes(hit.road, hit.ref.i) : [],
+      moved: false,
+      target: targetOf(this.drawn, hit ? { kind: 'candidate', hit } : null),
+    };
   }
 
   private grab(handle: RoadHandle, { pt, shift }: PointerInfo) {
@@ -181,6 +186,7 @@ export class Editor {
     const isNode = handle.type === 'node';
     const wasSelected = isSelected(this.selection, ref);
     const undo = this.snapshot();
+    const target = targetOf(this.drawn, { kind: 'handle', handle });
     if (isNode || (handle.type === 'head' && !shift)) this.pick(ref, shift);
     const others = this.selection.filter((r) => isNode && !isSelected([ref], r));
     const active = this.isActiveEnd(handle);
@@ -196,7 +202,7 @@ export class Editor {
       origin: { x: path.nodes[handle.i]!.x, y: path.nodes[handle.i]!.y },
       click: shift ? (wasSelected ? 'toggle' : 'keep') : 'collapse',
       undo,
-      target: this.targetOf({ kind: 'handle', handle }),
+      target,
     };
   }
 
@@ -277,22 +283,15 @@ export class Editor {
   private hoverAt(info: PointerInfo): Hover | null {
     const handle = this.handleAt(info);
     if (handle) return { kind: 'handle', handle };
-    if (!this.drawing) return null;
     const hit = this.curveAt(info);
-    return hit ? { kind: 'candidate', hit } : this.previewAt(info.pt);
+    if (hit) return { kind: 'candidate', hit };
+    return this.drawing ? previewOf(this.drawn, info.pt) : null;
   }
 
-  /** The preview of the node a click would add: where, its heading, and the node it attaches to. */
-  private previewAt(pt: Vec): Hover {
-    const nodes = this.active === null ? undefined : this.roads[this.active]?.nodes;
-    const ref = (this.end === 'end' ? nodes?.[nodes.length - 1] : nodes?.[0]) ?? null;
-    const heading = this.end === 'end' ? autoHeading : autoHeadingBefore;
-    return {
-      kind: 'preview',
-      ref,
-      end: this.end,
-      node: { x: pt.x, y: pt.y, th: ref ? heading(ref, pt) : 0 },
-    };
+  private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
+    const { curve, shift } = press;
+    if (curve.length) this.selection = afterCurveClick(this.selection, curve, shift);
+    else if (!press.base.length) this.enterDrawMode();
   }
 
   /** A click (no drag) on the node being drawn from finishes the road; on another leaf node it extends the road from there. */
@@ -332,7 +331,7 @@ export class Editor {
     this.press = null;
     this.band = null;
     if (press?.kind === 'drag' && !press.moved) this.clickedHandle(press);
-    if (press?.kind === 'empty' && !press.moved && !press.base.length) this.enterDrawMode();
+    if (press?.kind === 'empty' && !press.moved) this.clickedEmpty(press);
   }
 
   /** Abort what the left button was doing (a second finger came down). */

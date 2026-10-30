@@ -12,7 +12,8 @@ const show = (h: Hint) =>
           : `${i.shift ? 'Shift+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}`;
-const rows = (drawing: boolean, target: HintTarget) => hintsFor(drawing, target).map(show);
+const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
+  hintsFor(drawing, target, selected).map(show);
 
 const empty: HintTarget = { kind: 'empty' };
 const node = (last: boolean, leaf = last): HintTarget => ({
@@ -23,18 +24,6 @@ const node = (last: boolean, leaf = last): HintTarget => ({
 });
 
 describe('control hints (^49)', () => {
-  it('select mode shows how to enter draw mode and the camera controls', () => {
-    expect(rows(false, empty)).toEqual([
-      'LMB: draw mode',
-      'LMB drag: select nodes',
-      'Shift+LMB drag: add to selection',
-      'RMB drag: pan',
-      'Wheel: zoom',
-      'MMB drag: rotate',
-    ]);
-    expect(rows(false, { kind: 'curve' })).toEqual(rows(false, empty));
-  });
-
   it('draw mode on empty canvas: add a node, with a heading, or finish', () => {
     expect(rows(true, empty)).toEqual([
       'LMB: add node',
@@ -90,12 +79,62 @@ describe('control hints over nodes and handles (^49)', () => {
     expect(rows(true, h('ctrl'))).toEqual(['LMB drag: bend curve', 'Esc or RMB: finish']);
     expect(rows(true, h('rad'))).toEqual(['LMB drag: change radius', 'Esc or RMB: finish']);
   });
+});
 
-  it('select mode over a node: move, delete or toggle it, plus the camera controls', () => {
+describe('select mode hints (^49, ^74)', () => {
+  it('select mode shows how to enter draw mode, the box and the camera controls', () => {
+    expect(rows(false, empty)).toEqual([
+      'LMB: draw mode',
+      'LMB drag: select',
+      'RMB drag: pan',
+      'Wheel: zoom',
+      'MMB drag: rotate',
+    ]);
+  });
+
+  it('select mode with a selection: add to it, delete it (^74)', () => {
+    expect(rows(false, empty, 2)).toEqual([
+      'LMB: draw mode',
+      'LMB drag: select',
+      'Shift+LMB drag: add to selection',
+      'Del: delete selected',
+      'RMB drag: pan',
+      'Wheel: zoom',
+      'MMB drag: rotate',
+    ]);
+  });
+});
+
+describe('select mode hints over curves and nodes (^74)', () => {
+  it('select mode over a curve: select both its nodes, or deselect them (^74)', () => {
+    const camera = ['RMB drag: pan', 'Wheel: zoom', 'MMB drag: rotate'];
+    expect(rows(false, { kind: 'curve', picked: 1 })).toEqual([
+      'LMB drag: select',
+      'LMB: select both nodes',
+      'Shift+LMB: add both nodes to selection',
+      ...camera,
+    ]);
+    expect(rows(false, { kind: 'curve', picked: 2 })).toEqual([
+      'LMB drag: select',
+      'Shift+LMB: deselect both nodes',
+      ...camera,
+    ]);
+  });
+
+  it('select mode over a node: move, delete, select or deselect it, plus the camera controls', () => {
     expect(rows(false, node(false))).toEqual([
       'LMB drag: move node',
       'RMB: delete node',
-      'Shift+LMB: toggle selected',
+      'LMB: select',
+      'Shift+LMB: select',
+      'RMB drag: pan',
+      'Wheel: zoom',
+      'MMB drag: rotate',
+    ]);
+    const selected: HintTarget = { ...node(false), selected: true } as HintTarget;
+    expect(rows(false, selected, 1).slice(2)).toEqual([
+      'Shift+LMB: deselect',
+      'Del: delete selected',
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',
