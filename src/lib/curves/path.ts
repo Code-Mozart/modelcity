@@ -1,5 +1,5 @@
 import { buildEdge, edgeRadius, tagOf, type Edge, type PathNode, type ShapeTag } from './edge';
-import { isDegenerate, pointOn, type Sample } from './piece';
+import { distanceToPiece, isDegenerate, pointOn, type Sample } from './piece';
 import { angleOf, dist, sub, type Vec } from './vec';
 
 /**
@@ -21,7 +21,21 @@ export interface EdgeRef {
 
 export const emptyPath = (): Path => ({ nodes: [], radii: [], shapes: [] });
 
+const edgeCache = new WeakMap<Path, EdgeRef[]>();
+
+/**
+ * The edges of a path. Paths are never mutated, so the result is kept per path object: building an
+ * edge is the expensive part, and a pointer move would otherwise rebuild every road several times.
+ */
 export function edgesOf(path: Path): EdgeRef[] {
+  const cached = edgeCache.get(path);
+  if (cached) return cached;
+  const built = buildEdges(path);
+  edgeCache.set(path, built);
+  return built;
+}
+
+function buildEdges(path: Path): EdgeRef[] {
   const out: EdgeRef[] = [];
   for (let i = 0; i < path.nodes.length - 1; i++) {
     const p = path.nodes[i]!;
@@ -107,7 +121,8 @@ export function nearestOnCurve(path: Path, pt: Vec, maxDist: number): CurveHit |
   let best: CurveHit | null = null;
   for (const ref of edgesOf(path)) {
     ref.E.pieces.forEach((piece, k) => {
-      if (isDegenerate(piece)) return;
+      // A piece farther than `maxDist` has no sample that near: skip sampling it.
+      if (isDegenerate(piece) || distanceToPiece(piece, pt) > maxDist) return;
       for (let n = 0; n <= SAMPLES; n++) {
         const at = pointOn(piece, n / SAMPLES);
         const d = dist(at, pt);
