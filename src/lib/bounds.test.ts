@@ -7,6 +7,16 @@ const size = { width: 800, height: 600 };
 const at = (v: Partial<View>): View => ({ ...initialView(), ...v });
 const point = (x: number, y: number, r = 7): Anchor => ({ kind: 'point', x, y, r });
 const anchors: Anchor[] = [point(-20, -10), point(30, 15, 9)];
+/** A half circle of radius 10 around the origin, from the top to the bottom through the right. */
+const half: Arc = {
+  type: 'arc',
+  P: { x: 0, y: -10 },
+  Q: { x: 0, y: 10 },
+  c: { x: 0, y: 0 },
+  r: 10,
+  a0: -Math.PI / 2,
+  da: Math.PI,
+};
 
 describe('screenBox (^38, ^62)', () => {
   it('is tight and includes the size of each anchor, not only its center', () => {
@@ -44,16 +54,6 @@ describe('screenBox of curve pieces (^62)', () => {
   });
 
   it('includes the bulge of an arc, not only its ends', () => {
-    // A half circle of radius 10 around the origin, from the top to the bottom through the right.
-    const half: Arc = {
-      type: 'arc',
-      P: { x: 0, y: -10 },
-      Q: { x: 0, y: 10 },
-      c: { x: 0, y: 0 },
-      r: 10,
-      a0: -Math.PI / 2,
-      da: Math.PI,
-    };
     const box = screenBox(at({ scale: 10 }), size, [{ kind: 'piece', piece: half, r: 0 }]);
     expect(box.maxX).toBeCloseTo(400 + 100);
     expect(box.minX).toBeCloseTo(400);
@@ -62,15 +62,6 @@ describe('screenBox of curve pieces (^62)', () => {
   });
 
   it('follows the rotation of an arc', () => {
-    const half: Arc = {
-      type: 'arc',
-      P: { x: 0, y: -10 },
-      Q: { x: 0, y: 10 },
-      c: { x: 0, y: 0 },
-      r: 10,
-      a0: -Math.PI / 2,
-      da: Math.PI,
-    };
     const box = screenBox(at({ scale: 10, rot: Math.PI / 2 }), size, [
       { kind: 'piece', piece: half, r: 0 },
     ]);
