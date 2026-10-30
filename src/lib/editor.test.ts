@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Editor, type PointerInfo } from './editor.svelte';
 import { pointOn } from './curves/piece';
+import { toRad } from './curves/vec';
 
 const at = (x: number, y: number, extra: Partial<PointerInfo> = {}): PointerInfo => ({
   pt: { x, y },
@@ -10,106 +11,309 @@ const at = (x: number, y: number, extra: Partial<PointerInfo> = {}): PointerInfo
   ...extra,
 });
 
-describe('Editor pointer interaction', () => {
-  it('drags a node and selects it', () => {
+/** A plain click: press and release without moving. */
+const click = (ed: Editor, x: number, y: number) => {
+  ed.pointerDown(at(x, y));
+  ed.pointerUp();
+};
+
+/** A road drawn by clicking, left unfinished. */
+const draw = (points: [number, number][]) => {
+  const ed = new Editor();
+  for (const [x, y] of points) click(ed, x, y);
+  return ed;
+};
+
+const last = (ed: Editor, road = 0) => ed.roads[road]!.nodes.at(-1)!;
+
+/** A point on a curve that is not close to any handle (so pressing there inserts, not edits). */
+const bareCurvePoint = (ed: Editor) => {
+  const handles = ed.handles(4);
+  const samples = ed.edges
+    .flat()
+    .flatMap(({ E }) =>
+      E.pieces.flatMap((piece) =>
+        Array.from({ length: 19 }, (_, i) => pointOn(piece, (i + 1) / 20)),
+      ),
+    );
+  const bare = samples.find((p) => handles.every((h) => Math.hypot(h.x - p.x, h.y - p.y) > 4));
+  if (!bare) throw new Error('no bare point on the curves');
+  return bare;
+};
+
+describe('a new editor', () => {
+  it('starts with a blank canvas', () => {
     const ed = new Editor();
-    const n = ed.path.nodes[1]!;
-    expect(ed.pointerDown(at(n.x, n.y))).toBe(true);
-    expect(ed.sel).toBe(1);
-    ed.pointerMove(at(n.x + 3, n.y - 2));
-    ed.pointerUp();
-    expect(ed.path.nodes[1]).toMatchObject({ x: n.x + 3, y: n.y - 2 });
-    ed.pointerMove(at(n.x + 50, n.y + 50));
-    expect(ed.path.nodes[1]).toMatchObject({ x: n.x + 3, y: n.y - 2 });
+    expect(ed.roads).toEqual([]);
+    expect(ed.active).toBeNull();
+    expect(ed.anchors).toEqual([]);
   });
 
-  it('clears the hover ring while a handle is dragged (^15)', () => {
+  it('previews the first node heading right, without a curve', () => {
     const ed = new Editor();
-    const n = ed.path.nodes[1]!;
-    ed.pointerMove(at(n.x, n.y));
-    expect(ed.hover?.kind).toBe('handle');
-    ed.pointerDown(at(n.x, n.y));
-    ed.pointerMove(at(n.x + 3, n.y));
-    expect(ed.hover).toBeNull();
-  });
-
-  it('lets the canvas pan when empty space is pressed in Move', () => {
-    const ed = new Editor();
-    ed.sel = 2;
-    expect(ed.pointerDown(at(500, 500))).toBe(false);
-    expect(ed.sel).toBe(-1);
+    ed.pointerMove(at(10, 5));
+    expect(ed.hover).toMatchObject({ kind: 'ghost', ref: null, node: { x: 10, y: 5, th: 0 } });
   });
 });
 
-describe('Editor node and radius edits', () => {
-  it('removes a node by right-click and by Delete', () => {
+describe('creating a road with clicks (^40)', () => {
+  it('the first click starts a road with one node heading right', () => {
+    const ed = draw([[3, 4]]);
+    expect(ed.roads).toHaveLength(1);
+    expect(ed.roads[0]!.nodes).toEqual([{ x: 3, y: 4, th: 0 }]);
+    expect(ed.active).toBe(0);
+    expect(ed.sel).toEqual({ road: 0, node: 0 });
+  });
+
+  it('further clicks extend the road with a curve from the heading to the cursor', () => {
+    const ed = draw([
+      [0, 0],
+      [20, -10],
+      [40, 0],
+    ]);
+    expect(ed.roads[0]!.nodes).toHaveLength(3);
+    expect(ed.edges[0]!.map((e) => e.E.kind)).toEqual(['C', 'C']);
+    expect(ed.sel).toEqual({ road: 0, node: 2 });
+  });
+
+  it('previews the next node with the curve from the last one', () => {
+    const ed = draw([[0, 0]]);
+    ed.pointerMove(at(20, -10));
+    expect(ed.hover).toMatchObject({ kind: 'ghost', ref: { x: 0, y: 0 }, node: { x: 20, y: -10 } });
+  });
+
+  it('a node behind the arrow gets a curve, not a straight line, in the preview and when created', () => {
+    const ed = draw([[0, 0]]);
+    ed.pointerMove(at(-10, 8));
+    const ghost = ed.hover;
+    expect(ghost?.kind).toBe('ghost');
+    click(ed, -10, 8);
+    expect(ed.edges[0]![0]!.E.kind).not.toBe('line');
+  });
+});
+
+describe('creating by dragging the heading (^40)', () => {
+  it('dragging while placing sets the heading from the press point to the cursor', () => {
     const ed = new Editor();
-    const n = ed.path.nodes[0]!;
-    ed.removeAt(at(n.x, n.y));
-    expect(ed.path.nodes).toHaveLength(3);
-    ed.sel = 0;
+    ed.pointerDown(at(0, 0));
+    ed.pointerMove(at(0, 20));
+    expect(last(ed).th).toBeCloseTo(toRad(90));
+    expect(last(ed)).toMatchObject({ x: 0, y: 0 });
+    ed.pointerUp();
+    ed.pointerMove(at(50, 50));
+    expect(last(ed).th).toBeCloseTo(toRad(90));
+  });
+
+  it('ignores a tiny movement, so a click keeps its automatic heading', () => {
+    const ed = new Editor();
+    ed.pointerDown(at(0, 0));
+    ed.pointerMove(at(0.5, 0.5));
+    expect(last(ed).th).toBe(0);
+  });
+});
+
+describe('dragging the heading of later nodes (^40)', () => {
+  it('works for later nodes and can make an S-curve', () => {
+    const ed = draw([[0, 0]]);
+    ed.pointerDown(at(40, -10));
+    ed.pointerMove(at(60, -10));
+    ed.pointerUp();
+    expect(last(ed).th).toBeCloseTo(0);
+    expect(ed.edges[0]![0]!.E.kind).toBe('S');
+  });
+
+  it('snaps the heading to 15 degrees with shift', () => {
+    const ed = new Editor();
+    ed.pointerDown(at(0, 0));
+    ed.pointerMove(at(10 * Math.cos(toRad(33)), 10 * Math.sin(toRad(33)), { shift: true }));
+    expect(last(ed).th).toBeCloseTo(toRad(30));
+  });
+});
+
+describe('starting another road and finishing roads (^40)', () => {
+  it('Esc finishes the road; the next click starts a new one, even on a non-blank canvas', () => {
+    const ed = draw([
+      [0, 0],
+      [20, -10],
+    ]);
+    expect(ed.key('Escape')).toBe(true);
+    expect(ed.active).toBeNull();
+    click(ed, 100, 100);
+    expect(ed.roads).toHaveLength(2);
+    expect(ed.roads[1]!.nodes).toEqual([{ x: 100, y: 100, th: 0 }]);
+    expect(ed.active).toBe(1);
+  });
+});
+
+describe('finishing roads with other inputs (^40)', () => {
+  it('finishing a road with one node cancels it', () => {
+    const ed = draw([[0, 0]]);
+    ed.key('Escape');
+    expect(ed.roads).toEqual([]);
+  });
+
+  it('a right click on empty space finishes the road', () => {
+    const ed = draw([
+      [0, 0],
+      [20, -10],
+    ]);
+    ed.rightClick(at(80, 80));
+    expect(ed.active).toBeNull();
+    expect(ed.roads).toHaveLength(1);
+  });
+
+  it('clicking the last node again finishes the road, or cancels it if it is the only node', () => {
+    const ed = draw([
+      [0, 0],
+      [20, -10],
+    ]);
+    click(ed, 20, -10);
+    expect(ed.active).toBeNull();
+    expect(ed.roads[0]!.nodes).toHaveLength(2);
+    const lone = draw([[0, 0]]);
+    click(lone, 0, 0);
+    expect(lone.roads).toEqual([]);
+    expect(lone.active).toBeNull();
+  });
+
+  it('dragging the last node moves it and keeps drawing', () => {
+    const ed = draw([
+      [0, 0],
+      [20, -10],
+    ]);
+    ed.pointerDown(at(20, -10));
+    ed.pointerMove(at(30, -12));
+    ed.pointerUp();
+    expect(last(ed)).toMatchObject({ x: 30, y: -12 });
+    expect(ed.active).toBe(0);
+  });
+});
+
+describe('editing while drawing (^40)', () => {
+  const road = (): [number, number][] => [
+    [0, 0],
+    [20, -10],
+    [40, 0],
+  ];
+
+  it('pressing on a handle edits it instead of creating a node', () => {
+    const ed = draw(road());
+    ed.pointerDown(at(20, -10));
+    ed.pointerMove(at(22, -16));
+    ed.pointerUp();
+    expect(ed.roads[0]!.nodes).toHaveLength(3);
+    expect(ed.roads[0]!.nodes[1]).toMatchObject({ x: 22, y: -16 });
+    expect(ed.active).toBe(0);
+  });
+});
+
+describe('hover and inserting while drawing (^40)', () => {
+  const road = (): [number, number][] => [
+    [0, 0],
+    [20, -10],
+    [40, 0],
+  ];
+
+  it('shows what is under the pointer: a handle, a curve, else the preview', () => {
+    const ed = draw(road());
+    ed.pointerMove(at(20, -10));
+    expect(ed.hover?.kind).toBe('handle');
+    const mid = bareCurvePoint(ed);
+    ed.pointerMove(at(mid.x, mid.y));
+    expect(ed.hover?.kind).toBe('candidate');
+    ed.pointerMove(at(80, 80));
+    expect(ed.hover?.kind).toBe('ghost');
+  });
+
+  it('pressing on a curve inserts a node there and keeps drawing', () => {
+    const ed = draw(road());
+    const mid = bareCurvePoint(ed);
+    click(ed, mid.x, mid.y);
+    expect(ed.roads[0]!.nodes).toHaveLength(4);
+    expect(ed.sel!.road).toBe(0);
+    expect(ed.active).toBe(0);
+  });
+});
+
+describe('inserting nodes (^40)', () => {
+  const road = (): [number, number][] => [
+    [0, 0],
+    [20, -10],
+    [40, 0],
+  ];
+
+  it('dragging an inserted node sets a different heading', () => {
+    const ed = draw(road());
+    const mid = bareCurvePoint(ed);
+    ed.pointerDown(at(mid.x, mid.y));
+    const node = ed.sel!.node;
+    const before = ed.roads[0]!.nodes[node]!.th;
+    ed.pointerMove(at(mid.x, mid.y + 20));
+    ed.pointerUp();
+    expect(ed.roads[0]!.nodes[node]!.th).toBeCloseTo(toRad(90));
+    expect(ed.roads[0]!.nodes[node]!.th).not.toBeCloseTo(before);
+  });
+
+  it('inserts into a finished road too, without starting to draw', () => {
+    const ed = draw(road());
+    ed.key('Escape');
+    const mid = bareCurvePoint(ed);
+    click(ed, mid.x, mid.y);
+    expect(ed.roads[0]!.nodes).toHaveLength(4);
+    expect(ed.active).toBeNull();
+  });
+});
+
+describe('removing and aborting (^40)', () => {
+  it('a right click on a node removes it, also while drawing', () => {
+    const ed = draw([
+      [0, 0],
+      [20, -10],
+      [40, 0],
+    ]);
+    ed.rightClick(at(20, -10));
+    expect(ed.roads[0]!.nodes).toHaveLength(2);
+    expect(ed.active).toBe(0);
+  });
+});
+
+describe('removing nodes (^40)', () => {
+  it('Delete removes the selected node; a road left with one node disappears', () => {
+    const ed = draw([
+      [0, 0],
+      [20, -10],
+    ]);
+    ed.key('Escape');
+    ed.pointerDown(at(20, -10));
+    ed.pointerUp();
+    expect(ed.sel).toEqual({ road: 0, node: 1 });
     expect(ed.key('Delete')).toBe(true);
-    expect(ed.path.nodes).toHaveLength(2);
-    expect(ed.sel).toBe(-1);
+    expect(ed.roads).toEqual([]);
+    expect(ed.sel).toBeNull();
+  });
+
+  it('cancelPress undoes what the left button did (a second finger came down)', () => {
+    const ed = draw([[0, 0]]);
+    ed.pointerDown(at(20, -10));
+    expect(ed.roads[0]!.nodes).toHaveLength(2);
+    ed.cancelPress();
+    expect(ed.roads[0]!.nodes).toHaveLength(1);
+    expect(ed.active).toBe(0);
+  });
+
+  it('ignores unbound keys', () => {
+    expect(new Editor().key('q')).toBe(false);
   });
 
   it('resets an explicit radius to auto on double-click of its ring', () => {
-    const ed = new Editor();
-    const before = ed.handles(4).find((h) => h.type === 'rad' && h.i === 0)!;
-    ed.path = { ...ed.path, radii: [5, null, null] };
-    const moved = ed.handles(4).find((h) => h.type === 'rad' && h.i === 0)!;
-    expect(moved.x).not.toBe(before.x);
-    ed.resetRadiusAt(at(moved.x, moved.y));
-    expect(ed.path.radii[0]).toBeNull();
-  });
-});
-
-describe('Editor tools', () => {
-  it('inserts a node on the curve', () => {
-    const ed = new Editor();
-    const mid = pointOn(ed.edges[0]!.E.pieces[1]!, 0.5);
-    ed.setTool('insert');
-    ed.pointerMove(at(mid.x, mid.y));
-    expect(ed.hover?.kind).toBe('candidate');
-    expect(ed.pointerDown(at(mid.x, mid.y))).toBe(true);
-    expect(ed.path.nodes).toHaveLength(5);
-    expect(ed.sel).toBe(1);
-  });
-
-  it('ignores an insert click away from the curve but keeps the tool', () => {
-    const ed = new Editor();
-    ed.setTool('insert');
-    expect(ed.pointerDown(at(0, 90))).toBe(true);
-    expect(ed.path.nodes).toHaveLength(4);
-  });
-
-  it('appends at the nearer end and previews the new node', () => {
-    const ed = new Editor();
-    ed.setTool('append');
-    ed.pointerMove(at(120, 30));
-    expect(ed.hover).toMatchObject({ kind: 'ghost', end: 'end' });
-    ed.pointerDown(at(120, 30));
-    expect(ed.path.nodes).toHaveLength(5);
-    expect(ed.sel).toBe(4);
-  });
-});
-
-describe('Editor keys and presets', () => {
-  it('switches tools with the keymap and ignores unbound keys', () => {
-    const ed = new Editor();
-    ed.key('a');
-    expect(ed.tool).toBe('append');
-    ed.key('i');
-    expect(ed.tool).toBe('insert');
+    const ed = draw([
+      [0, 0],
+      [30, -20],
+    ]);
     ed.key('Escape');
-    expect(ed.tool).toBe('move');
-    expect(ed.key('q')).toBe(false);
-  });
-
-  it('loads presets and describes the path in the readout', () => {
-    const ed = new Editor();
-    ed.loadPreset('G');
-    expect(ed.path.nodes).toHaveLength(2);
-    expect(ed.readout).toContain('S-curve');
+    ed.roads = [{ ...ed.roads[0]!, radii: [3] }];
+    const ring = ed.handles(4).find((h) => h.type === 'rad')!;
+    ed.resetRadiusAt(at(ring.x, ring.y));
+    expect(ed.roads[0]!.radii[0]).toBeNull();
   });
 });

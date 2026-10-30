@@ -32,14 +32,10 @@
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
     const scene = {
-      path: editor.path,
-      edges: editor.edges,
+      roads: editor.roads.map((path, i) => ({ path, edges: editor.edges[i] ?? [] })),
       handles: editor.handles(camera.view.scale),
       sel: editor.sel,
       hover: editor.hover,
-      tool: editor.tool,
-      showCircles: editor.showCircles,
-      showLines: editor.showLines,
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
@@ -65,17 +61,16 @@
     camera.zoomWheel(e.deltaY * unit * (e.ctrlKey ? PINCH_BOOST : 1), localPoint(e));
   }
 
-  /** Left press: drag a handle (a box selection will go here later, ^30). */
+  /** Left press: creates or edits (a box selection will go here later, ^30). */
   function leftDown(e: PointerEvent, at: Point) {
     if (camera.rotating) camera.compassClick(at);
     else editor.pointerDown(info(e));
   }
 
+  /** One finger is the left button; a second finger turns the gesture into a camera move. */
   function touchDown(e: PointerEvent, at: Point) {
-    if (camera.touchDown(e.pointerId, at) >= 2) {
-      editor.pointerUp();
-      camera.endPan();
-    } else if (!editor.pointerDown(info(e)) && editor.tool === 'move') camera.startPan(at);
+    if (camera.touchDown(e.pointerId, at) >= 2) editor.cancelPress();
+    else editor.pointerDown(info(e));
   }
 
   function onPointerDown(e: PointerEvent) {
@@ -100,21 +95,20 @@
   function onPointerUp(e: PointerEvent) {
     if (e.pointerType === 'touch') {
       camera.touchUp(e.pointerId);
-      camera.endPan();
       editor.pointerUp();
     } else if (e.button === 0) {
       camera.releaseChip();
       editor.pointerUp();
     } else if (e.button === 1) camera.endRotate();
-    // A right click without movement removes a node, a right drag only pans (^31).
-    else if (e.button === 2 && !camera.endPan()) editor.removeAt(info(e));
+    // A right click without movement removes a node or finishes the road, a right drag only pans.
+    else if (e.button === 2 && !camera.endPan()) editor.rightClick(info(e));
   }
 
   onMount(() => {
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
     // Test hook for e2e/screenshots.
-    (window as unknown as { __camera: Camera }).__camera = camera;
+    Object.assign(window, { __camera: camera, __editor: editor });
     return () => ro.disconnect();
   });
 </script>

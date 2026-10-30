@@ -1,6 +1,8 @@
-import { ghostEdge, type Hover } from './editor.svelte';
-import { ARROW_PX, type Handle } from './curves/handles';
+import type { Hover } from './editor.svelte';
+import { ARROW_PX } from './curves/handles';
+import { buildEdge } from './curves/edge';
 import type { EdgeRef, Path } from './curves/path';
+import type { NodeRef, RoadHandle } from './curves/roads';
 import { fromAngle } from './curves/vec';
 import { drawCircles, drawCorners, drawGuides, drawRadiusLabels } from './guides';
 import {
@@ -15,16 +17,18 @@ import {
   type Palette,
 } from './paint';
 
-/** Everything the path renderer needs to know about the editor. */
-export interface Scene {
+/** A road and its edges. */
+export interface RoadScene {
   path: Path;
   edges: EdgeRef[];
-  handles: Handle[];
-  sel: number;
+}
+
+/** Everything the path renderer needs to know about the editor. */
+export interface Scene {
+  roads: RoadScene[];
+  handles: RoadHandle[];
+  sel: NodeRef | null;
   hover: Hover | null;
-  tool: 'move' | 'append' | 'insert';
-  showCircles: boolean;
-  showLines: boolean;
 }
 
 const CURVE_PX = 4;
@@ -51,21 +55,23 @@ function drawArrow(
   return tip;
 }
 
-function drawNodes(f: Frame, { path, sel }: Scene, pal: Palette) {
+function drawNodes(f: Frame, { path }: RoadScene, selected: number | null, pal: Palette) {
   path.nodes.forEach((n, i) => {
     const tip = drawArrow(f, n, pal.ink, 2.2);
     ring(f.ctx, tip, 5.5, { color: pal.ink, width: 1.6 });
     const a = toScreen(f, n);
-    if (i === sel) ring(f.ctx, a, 11, { color: pal.blue, width: 2.2 });
+    if (i === selected) ring(f.ctx, a, 11, { color: pal.blue, width: 2.2 });
     dot(f.ctx, a, 5.5, pal.ink);
     text(f.ctx, String(i + 1), { x: a.x - 18, y: a.y + 24 }, { color: pal['red-ink'], size: 15 });
   });
 }
 
-function drawGhost(f: Frame, scene: Scene, hover: Extract<Hover, { kind: 'ghost' }>, pal: Palette) {
-  if (scene.path.nodes.length) {
-    for (const piece of ghostEdge(hover).pieces)
+/** Preview of the node a click would create, with the curve to it from the last node (^40). */
+function drawGhost(f: Frame, hover: Extract<Hover, { kind: 'ghost' }>, pal: Palette) {
+  if (hover.ref) {
+    for (const piece of buildEdge(hover.ref, hover.node, null, null).pieces) {
       strokePiece(f, piece, { color: pal.curve, width: 3, dash: [6, 6] });
+    }
   }
   f.ctx.globalAlpha = 0.6;
   drawArrow(f, hover.node, pal.ink, 2);
@@ -73,9 +79,8 @@ function drawGhost(f: Frame, scene: Scene, hover: Extract<Hover, { kind: 'ghost'
   f.ctx.globalAlpha = 1;
 }
 
-function drawHover(f: Frame, scene: Scene, pal: Palette) {
-  const { hover } = scene;
-  if (hover?.kind === 'ghost' && scene.tool === 'append') drawGhost(f, scene, hover, pal);
+function drawHover(f: Frame, hover: Hover | null, pal: Palette) {
+  if (hover?.kind === 'ghost') drawGhost(f, hover, pal);
   if (hover?.kind === 'candidate') {
     const at = toScreen(f, hover.hit.at);
     const { x: tx, y: ty } = screenDir(f, { x: hover.hit.at.tx, y: hover.hit.at.ty });
@@ -91,22 +96,28 @@ function drawHover(f: Frame, scene: Scene, pal: Palette) {
     ring(f.ctx, toScreen(f, hover.handle), 10, { color: pal.blue, width: 1.6 });
 }
 
-/** Draw the edited path with construction geometry, handles and the current hover feedback. */
-export function drawScene(f: Frame, scene: Scene, pal: Palette) {
-  for (const ref of scene.edges) {
-    if (scene.showLines) drawGuides(f, ref, pal);
-    if (scene.showCircles) drawCircles(f, ref, pal);
+function drawRoad(f: Frame, road: RoadScene, pal: Palette) {
+  for (const ref of road.edges) {
+    drawGuides(f, ref, pal);
+    drawCircles(f, ref, pal);
   }
-  for (const { E } of scene.edges) {
+  for (const { E } of road.edges) {
     for (const piece of E.pieces) strokePiece(f, piece, { color: pal.curve, width: CURVE_PX });
   }
-  for (const ref of scene.edges) {
+  for (const ref of road.edges) {
     drawCorners(f, ref, pal);
     drawRadiusLabels(f, ref, pal);
   }
+}
+
+/** Draw all roads with construction geometry, handles and the current hover feedback. */
+export function drawScene(f: Frame, scene: Scene, pal: Palette) {
+  scene.roads.forEach((road) => drawRoad(f, road, pal));
   for (const h of scene.handles) {
     if (h.type === 'rad') ring(f.ctx, toScreen(f, h), 7, { color: pal.orange, width: 2.2 });
   }
-  drawHover(f, scene, pal);
-  drawNodes(f, scene, pal);
+  drawHover(f, scene.hover, pal);
+  scene.roads.forEach((road, i) => {
+    drawNodes(f, road, scene.sel?.road === i ? scene.sel.node : null, pal);
+  });
 }

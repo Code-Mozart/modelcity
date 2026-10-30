@@ -11,11 +11,11 @@ import {
   type Path,
 } from './path';
 import { isDegenerate, pieceLength, pointOn } from './piece';
-import { preset, type PresetName } from './presets';
+import { fixture, type FixtureName } from './testing/paths';
 import { dist, fromAngle, toRad } from './vec';
 
-const NAMES: PresetName[] = ['H', 'G', 'hook'];
-const noMods = { snap: false, equidistant: false };
+const NAMES: FixtureName[] = ['H', 'G', 'hook'];
+const noMods = { snap: false };
 
 const totalLength = (path: Path) =>
   edgesOf(path).reduce((sum, { E }) => sum + E.pieces.reduce((s, p) => s + pieceLength(p), 0), 0);
@@ -35,7 +35,7 @@ function expectConnected(E: Edge, p: Path['nodes'][number], q: Path['nodes'][num
 
 describe('edge geometry', () => {
   it.each(NAMES)('preset %s is connected and leaves nodes along their headings', (name) => {
-    const path = preset(name);
+    const path = fixture(name);
     for (const { p, q, E } of edgesOf(path)) {
       expectConnected(E, p, q);
       const head = pointOn(
@@ -48,9 +48,9 @@ describe('edge geometry', () => {
   });
 
   it('chooses bend, S and hook for the three presets', () => {
-    expect(edgesOf(preset('H')).map((e) => e.E.kind)).toEqual(['C', 'C', 'C']);
-    expect(edgesOf(preset('G'))[0]!.E.kind).toBe('S');
-    expect(edgesOf(preset('hook'))[0]!.E.kind).toBe('H');
+    expect(edgesOf(fixture('H')).map((e) => e.E.kind)).toEqual(['C', 'C', 'C']);
+    expect(edgesOf(fixture('G'))[0]!.E.kind).toBe('S');
+    expect(edgesOf(fixture('hook'))[0]!.E.kind).toBe('H');
   });
 
   it('keeps pieces connected for arbitrary node pairs', () => {
@@ -66,7 +66,7 @@ describe('edge geometry', () => {
 
 describe('radius', () => {
   it('uses the largest fitting radius when auto, and an explicit one never changes headings', () => {
-    const [p, q] = preset('H').nodes;
+    const [p, q] = fixture('H').nodes;
     const auto = buildEdge(p!, q!, null, null);
     if (auto.kind !== 'C') throw new Error('expected a bend');
     expect(auto.auto).toBe(true);
@@ -80,7 +80,7 @@ describe('radius', () => {
   });
 
   it('gives an S-curve two arcs of one radius', () => {
-    const [p, q] = preset('G').nodes;
+    const [p, q] = fixture('G').nodes;
     const E = buildEdge(p!, q!, 8, null);
     const arcs = E.pieces.filter((x) => x.type === 'arc');
     expect(arcs).toHaveLength(2);
@@ -91,7 +91,7 @@ describe('radius', () => {
 
 describe('path edits', () => {
   it('appends at the nearer end with a heading that makes a single bend', () => {
-    const { path, sel } = appendNode(preset('H'), { x: 120, y: 30 });
+    const { path, sel } = appendNode(fixture('H'), { x: 120, y: 30 });
     expect(sel).toBe(path.nodes.length - 1);
     expect(path.radii).toHaveLength(path.nodes.length - 1);
     expect(edgesOf(path).at(-1)!.E.kind).toBe('C');
@@ -104,7 +104,7 @@ describe('path edits', () => {
   });
 
   it.each(NAMES)('inserting a node on %s does not change the curve (^10)', (name) => {
-    const path = preset(name);
+    const path = fixture(name);
     const before = totalLength(path);
     for (const { E } of edgesOf(path)) {
       E.pieces.forEach((piece, k) => {
@@ -119,20 +119,20 @@ describe('path edits', () => {
   });
 
   it('removes nodes at the ends and in the middle', () => {
-    const path = preset('H');
+    const path = fixture('H');
     for (const i of [0, 1, 3]) {
       const next = removeNode(path, i);
       expect(next.nodes).toHaveLength(3);
       expect(next.radii).toHaveLength(2);
       expect(next.shapes).toHaveLength(2);
     }
-    expect(removeNode(removeNode(preset('G'), 0), 0).nodes).toHaveLength(0);
+    expect(removeNode(removeNode(fixture('G'), 0), 0).nodes).toHaveLength(0);
   });
 });
 
 describe('dragging handles', () => {
   it('moves a node', () => {
-    const path = preset('H');
+    const path = fixture('H');
     const next = applyDrag(
       path,
       startDrag(path, { type: 'node', i: 1, x: 0, y: 0 }),
@@ -145,7 +145,7 @@ describe('dragging handles', () => {
 
   it('editing a heading clears the shape tags of its edges (^7)', () => {
     const path = {
-      ...preset('H'),
+      ...fixture('H'),
       shapes: [{ kind: 'C' as const }, { kind: 'C' as const }, { kind: 'C' as const }],
     };
     const next = applyDrag(
@@ -158,7 +158,7 @@ describe('dragging handles', () => {
   });
 
   it('snaps headings to 15 degrees with the modifier', () => {
-    const path = preset('H');
+    const path = fixture('H');
     const n = path.nodes[0]!;
     const pt = { x: n.x + 10 * Math.cos(toRad(33)), y: n.y + 10 * Math.sin(toRad(33)) };
     const next = applyDrag(path, startDrag(path, { type: 'head', i: 0, x: 0, y: 0 }), pt, {
@@ -171,14 +171,14 @@ describe('dragging handles', () => {
 
 describe('dragging radii', () => {
   it('the bend radius gesture reproduces the current radius at the arc midpoint (^8)', () => {
-    const [p, q] = preset('H').nodes;
+    const [p, q] = fixture('H').nodes;
     const E = buildEdge(p!, q!, 6, null);
     if (E.kind !== 'C') throw new Error('expected a bend');
     expect(radiusFromCursor(E, pointOn(E.pieces[1]!, 0.5))).toBeCloseTo(6);
   });
 
   it('setting a radius leaves headings alone and dragging far snaps back to auto', () => {
-    const path = preset('H');
+    const path = fixture('H');
     const handle = { type: 'rad' as const, i: 0, k: -1, x: 0, y: 0 };
     const E = edgesOf(path)[0]!.E;
     if (E.kind !== 'C') throw new Error('expected a bend');
@@ -200,7 +200,7 @@ describe('^16 bend whenever the heading lines meet', () => {
 });
 
 describe('^17 S-curve radius drag follows the cursor', () => {
-  const path: Path = { ...preset('G'), radii: [8] };
+  const path: Path = { ...fixture('G'), radii: [8] };
   const ringAndCorner = (p: Path) => {
     const E = edgesOf(p)[0]!.E;
     if (E.kind !== 'S' || !E.k1) throw new Error('expected an S with a corner');

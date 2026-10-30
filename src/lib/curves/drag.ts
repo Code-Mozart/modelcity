@@ -3,7 +3,7 @@ import type { Handle } from './handles';
 import { clearShapes, releaseMiddles, withNode, withRadius, type Path } from './path';
 import { pointOn, sweeps } from './piece';
 import { AUTO_SNAP, RMIN } from './radius';
-import { add, angleOf, dist, dot, len, mid, mul, perp, sub, toRad, type Vec } from './vec';
+import { angleOf, dist, dot, len, mul, sub, toRad, type Vec } from './vec';
 
 /** Drag state captured when a handle is grabbed. */
 export interface DragState {
@@ -13,8 +13,6 @@ export interface DragState {
 export interface DragModifiers {
   /** Snap headings to 15 degrees (^11). */
   snap: boolean;
-  /** Keep the blue point equidistant from both nodes. */
-  equidistant: boolean;
 }
 
 /** Closest the blue point may get to a node, meters. */
@@ -45,28 +43,21 @@ function dragNode(path: Path, i: number, pt: Vec): Path {
   return releaseMiddles(withNode(path, i, { x: pt.x, y: pt.y }), [i - 1, i]);
 }
 
-function dragHeading(path: Path, i: number, pt: Vec, snap: boolean): Path {
+export function dragHeading(path: Path, i: number, pt: Vec, snap: boolean): Path {
   let th = angleOf(sub(pt, path.nodes[i]!));
   if (snap) th = Math.round(th / SNAP_STEP) * SNAP_STEP;
   return clearShapes(withNode(path, i, { th }), [i - 1, i]);
 }
 
 /** Dragging the blue point sets both headings so their lines meet at the pointer (^9). */
-function dragCorner(path: Path, i: number, pt: Vec, equidistant: boolean): Path {
+function dragCorner(path: Path, i: number, C: Vec): Path {
   const p = path.nodes[i]!;
   const q = path.nodes[i + 1]!;
-  const C = equidistant ? onBisector(p, q, pt) : pt;
   if (dist(C, p) <= CTRL_MIN_DIST || dist(C, q) <= CTRL_MIN_DIST) return path;
   const moved = withNode(withNode(path, i, { th: angleOf(sub(C, p)) }), i + 1, {
     th: angleOf(sub(q, C)),
   });
   return clearShapes(moved, [i - 1, i, i + 1]);
-}
-
-function onBisector(p: Vec, q: Vec, pt: Vec): Vec {
-  const w = sub(q, p);
-  const n = perp(mul(w, 1 / (len(w) || 1)));
-  return add(mid(p, q), mul(n, dot(sub(pt, mid(p, q)), n)));
 }
 
 /** The turquoise corner (1 or 2) of the hook the nodes form at radius R, if it is still a hook. */
@@ -148,7 +139,7 @@ export function applyDrag(path: Path, drag: DragState, pt: Vec, mod: DragModifie
     case 'head':
       return dragHeading(path, i, pt, mod.snap);
     case 'ctrl':
-      return dragCorner(path, i, pt, mod.equidistant);
+      return dragCorner(path, i, pt);
     case 's1':
       return dragHookCorner(path, i, 1, pt);
     case 's2':
