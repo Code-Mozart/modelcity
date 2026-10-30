@@ -1,4 +1,4 @@
-next: ^16
+next: ^18
 
 # Hats
 
@@ -21,3 +21,5 @@ Registry of all hats. Never reuse or renumber. Keep this file up to date.
 | ^13 | milestone | done, awaiting user test | Port the ^5 demo into the app on the pan/zoom canvas (^2): all three tools, handles, presets, readout, legend, dark mode. The ^2 test box is removed. Not ported: touch pinch zoom, undo. Behavior-preserving except: handles keep a constant screen size at any zoom (demo scaled them with the canvas), and hit areas are in screen pixels. |
 | ^14 | decision | decided | **Navigation vs editing input:** wheel/pinch zooms; dragging empty space or middle-button drag pans; dragging a handle edits. In Append/Insert tools a click acts, and panning needs the middle button. Space+drag was removed (did not work). Touch: one-finger on empty space pans. |
 | ^15 | bug | fixed | While dragging a handle, the blue hover ring stayed at the point where the drag started. Fix: clear the hover when a drag starts. Reported by the user while testing ^13. |
+| ^16 | bug | fixed | Nodes 1 (heading up) and 2 (heading east), whose heading lines meet in a proper corner, became an S-curve instead of an L (single bend). Cause: automatic shape choice also required a two-arc approximation not to inflect, which misfires when the nodes are far apart along one heading. Fix: a bend is chosen whenever the heading lines meet properly (refines ^6, ^7); the inflection check now only decides S vs hook. Reported with a screenshot by the user. |
+| ^17 | bug | fixed | Dragging the orange radius ring of an S-curve was inverted (toward the turquoise corner increased the radius). Cause: a linear radius-from-displacement rule with the wrong sign. Fix: for S and hook the radius is now the one whose arc midpoint is nearest the cursor, so the ring follows the cursor (as the bend gesture already did). Refines ^8. |

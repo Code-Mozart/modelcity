@@ -1,15 +1,13 @@
 import { buildEdge, type Edge } from './edge';
 import type { Handle } from './handles';
 import { clearShapes, releaseMiddles, withNode, withRadius, type Path } from './path';
-import { pointOn } from './piece';
+import { pointOn, sweeps } from './piece';
 import { AUTO_SNAP, RMIN } from './radius';
-import { add, angleOf, clamp, dist, dot, len, mid, mul, perp, sub, toRad, type Vec } from './vec';
+import { add, angleOf, dist, dot, len, mid, mul, perp, sub, toRad, type Vec } from './vec';
 
-/** Drag state captured when a handle is grabbed (the radius gesture needs the starting point). */
+/** Drag state captured when a handle is grabbed. */
 export interface DragState {
   handle: Handle;
-  /** Radius gesture on S/hook: starting radius, handle position and radial direction. */
-  radial?: { r0: number; h0: Vec; u: Vec };
 }
 
 export interface DragModifiers {
@@ -27,18 +25,7 @@ const RADIUS_SEARCH_STEPS = 160;
 const edgeAt = (path: Path, i: number) =>
   buildEdge(path.nodes[i]!, path.nodes[i + 1]!, path.radii[i] ?? null, path.shapes[i] ?? null);
 
-export function startDrag(path: Path, handle: Handle): DragState {
-  if (handle.type !== 'rad' || handle.k == null || handle.k < 0) return { handle };
-  const E = edgeAt(path, handle.i);
-  const arc = E.kind === 'line' ? null : E.pieces[handle.k];
-  if (!arc || arc.type !== 'arc') return { handle };
-  const h0 = pointOn(arc, 0.5);
-  const radial = sub(h0, arc.c);
-  return {
-    handle,
-    radial: { r0: E.kind === 'line' ? 0 : E.R, h0, u: mul(radial, 1 / (len(radial) || 1)) },
-  };
-}
+export const startDrag = (_path: Path, handle: Handle): DragState => ({ handle });
 
 /** Radius of the bend whose circle is tangent to both heading lines and passes through `pt`. */
 export function radiusFromCursor(E: Edge & { kind: 'C' }, pt: Vec): number {
@@ -106,8 +93,40 @@ function dragHookCorner(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
   return best == null ? path : withRadius(path, i, toRequested(best, E0.Rmax));
 }
 
+/** The midpoint of arc k of edge i when the edge has radius R, if it is still an arc of the same kind. */
+function arcMidpoint(
+  path: Path,
+  at: { i: number; k: number },
+  R: number,
+  kind: Edge['kind'],
+): Vec | null {
+  const E = buildEdge(path.nodes[at.i]!, path.nodes[at.i + 1]!, R, path.shapes[at.i] ?? null);
+  const piece = E.kind === kind ? E.pieces[at.k] : undefined;
+  return piece && sweeps(piece) ? pointOn(piece, 0.5) : null;
+}
+
+/**
+ * The radius at which the arc's midpoint (where the orange ring sits) is nearest to the pointer,
+ * so the ring follows the cursor whichever way the geometry moves it (^17).
+ */
+function radiusNearest(path: Path, at: { i: number; k: number }, pt: Vec): number | null {
+  const E0 = edgeAt(path, at.i);
+  if (E0.kind === 'line') return null;
+  let best: number | null = null;
+  let bd = Infinity;
+  for (let n = 0; n <= RADIUS_SEARCH_STEPS; n++) {
+    const R = RMIN * Math.pow(E0.Rmax / RMIN, n / RADIUS_SEARCH_STEPS);
+    const m = arcMidpoint(path, at, R, E0.kind);
+    if (m && dist(m, pt) < bd) {
+      bd = dist(m, pt);
+      best = R;
+    }
+  }
+  return best;
+}
+
 function dragRadius(path: Path, drag: DragState, pt: Vec): Path {
-  const { i, k } = drag.handle;
+  const { i, k = -1 } = drag.handle;
   const E = edgeAt(path, i);
   if (E.kind === 'line') return path;
   if (k === -1) {
@@ -115,10 +134,9 @@ function dragRadius(path: Path, drag: DragState, pt: Vec): Path {
     const R = radiusFromCursor(E, pt);
     return withRadius(path, i, R >= AUTO_SNAP * E.Rmax ? null : Math.max(R, RMIN));
   }
-  const { radial } = drag;
-  if (!radial) return path;
-  const R = clamp(radial.r0 + dot(sub(pt, radial.h0), radial.u), RMIN, E.Rmax || 1e6);
-  return withRadius(path, i, E.kind === 'S' && R >= AUTO_SNAP * E.Rmax ? null : R);
+  const R = radiusNearest(path, { i, k }, pt);
+  if (R == null) return path;
+  return withRadius(path, i, E.kind === 'S' ? toRequested(R, E.Rmax) : R);
 }
 
 /** The path after dragging the grabbed handle to `pt`. Headings never change when radii do (^8). */

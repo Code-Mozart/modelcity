@@ -31,7 +31,8 @@ function autoEdge(inp: EdgeInput, cls: Classification): Edge {
   const pieces = biarc(p, q);
   const [f0, f1] = [sweepOf(pieces[0]), sweepOf(pieces[1])];
   const inflect = isInflection(f0, f1);
-  const bend = cls.kind === 'C' && !inflect ? bendEdge(inp, cls) : null;
+  // Whenever the heading lines meet properly a single bend fits; only otherwise do we need two arcs (^16).
+  const bend = bendEdge(inp, cls);
   if (bend) return bend;
   if (pieces.every((x) => x.type === 'line')) return { kind: 'line', pieces };
   const s = firstTurn(f0, f1);

@@ -181,3 +181,44 @@ describe('dragging radii', () => {
     expect(tight.nodes).toEqual(path.nodes);
   });
 });
+
+describe('^16 bend whenever the heading lines meet', () => {
+  it('chooses a single bend for an L shape even when the nodes are far apart along one heading', () => {
+    const p = { x: 0, y: 0, th: -Math.PI / 2 };
+    const q = { x: 18, y: -3, th: 0 };
+    expect(buildEdge(p, q, null, null).kind).toBe('C');
+    expect(buildEdge(p, { ...q, x: 400 }, null, null).kind).toBe('C');
+  });
+});
+
+describe('^17 S-curve radius drag follows the cursor', () => {
+  const path: Path = { ...preset('G'), radii: [8] };
+  const ringAndCorner = (p: Path) => {
+    const E = edgesOf(p)[0]!.E;
+    if (E.kind !== 'S' || !E.k1) throw new Error('expected an S with a corner');
+    return { ring: pointOn(E.pieces[1]!, 0.5), corner: E.k1, R: E.R };
+  };
+  const dragTo = (pt: { x: number; y: number }) =>
+    applyDrag(path, startDrag(path, { type: 'rad', i: 0, k: 1, x: 0, y: 0 }), pt, noMods);
+
+  it('moving the ring toward the corner decreases the radius, away increases it', () => {
+    const { ring, corner } = ringAndCorner(path);
+    const u = { x: corner.x - ring.x, y: corner.y - ring.y };
+    const l = Math.hypot(u.x, u.y);
+    const toward = ringAndCorner(
+      dragTo({ x: ring.x + (u.x / l) * 0.4, y: ring.y + (u.y / l) * 0.4 }),
+    );
+    const away = ringAndCorner(
+      dragTo({ x: ring.x - (u.x / l) * 0.4, y: ring.y - (u.y / l) * 0.4 }),
+    );
+    expect(toward.R).toBeLessThan(8);
+    expect(away.R).toBeGreaterThan(8);
+  });
+
+  it('puts the ring under the cursor', () => {
+    const { ring, corner } = ringAndCorner(path);
+    const pt = { x: ring.x + (ring.x - corner.x) * 0.05, y: ring.y + (ring.y - corner.y) * 0.05 };
+    const next = ringAndCorner(dragTo(pt));
+    expect(dist(next.ring, pt)).toBeLessThan(0.05);
+  });
+});
