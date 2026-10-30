@@ -61,7 +61,9 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Pivot** | The center of an operation: typically of a rotation, but also of a zoom or scaling. For a middle-button drag it is the point where the drag started, which stays fixed | decided | ^30, ^68 |
 | **Dead zone** | The 20 px around where a middle-button drag started in which that axis does nothing yet | decided | ^31 |
 | **Compass** | The cursor while the middle button is held: a needle to north, N/E/S/W key caps, and drag hints | decided | ^33 |
-| **Hints** | The `[input]: action` rows in the top left corner (also "control hints"), which change with mode, context and selection | decided | ^49, ^74 |
+| **Control hints panel** | The HTML div in the top left corner that shows the control hints; it changes with mode, context and selection (formerly "hints") | decided | ^49, ^74, ^111 |
+| **Control hint** | One row of the control hints panel: `[input]: action` | decided | ^49, ^111 |
+| **Recent history panel** | The HTML div in the top right corner that shows the names of the last operations (batches with their steps) and the undo and redo control hints, each item for a few seconds. Planned (^107–^109) | decided | ^107, ^111 |
 | **Key cap** | The raised, key-like symbol for a keyboard key; blue and sunk in while pressed | decided | ^32, ^68 |
 | **Mouse symbols** | The symbols for mouse buttons, drag and the wheel (`MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`) | decided | ^50, ^56 |
 | **Proximity** | The fixed pixel distance within which something counts as "near" the pointer: 20 px to a curve, 48 px to a control point | decided; assumed (the distances) | ^55, ^60 |
