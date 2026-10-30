@@ -1,4 +1,4 @@
-next: ^18
+next: ^19
 
 # Hats
 
@@ -23,3 +23,4 @@ Registry of all hats. Never reuse or renumber. Keep this file up to date.
 | ^15 | bug | fixed | While dragging a handle, the blue hover ring stayed at the point where the drag started. Fix: clear the hover when a drag starts. Reported by the user while testing ^13. |
 | ^16 | bug | fixed | Nodes 1 (heading up) and 2 (heading east), whose heading lines meet in a proper corner, became an S-curve instead of an L (single bend). Cause: automatic shape choice also required a two-arc approximation not to inflect, which misfires when the nodes are far apart along one heading. Fix: a bend is chosen whenever the heading lines meet properly (refines ^6, ^7); the inflection check now only decides S vs hook. Reported with a screenshot by the user. |
 | ^17 | bug | fixed | Dragging the orange radius ring of an S-curve was inverted (toward the turquoise corner increased the radius). Cause: a linear radius-from-displacement rule with the wrong sign. Fix: for S and hook the radius is now the one whose arc midpoint is nearest the cursor, so the ring follows the cursor (as the bend gesture already did). Refines ^8. |
+| ^18 | question | open | User observed that the turquoise points are draggable on the hook preset but not on Fig G (S-curve). By design (^9): on an exact S the corners lie on fixed lines and do not depend on the radius, so there is nothing to drag; on a hook they move with the radius, so dragging picks it. Proposal: draw display-only points differently (e.g. small hollow rings) so they do not look draggable. Awaiting user decision. |
