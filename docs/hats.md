@@ -1,4 +1,4 @@
-next: ^86
+next: ^87
 
 # Hats
 
@@ -40,7 +40,7 @@ Milestones in the user's order of priority (user's first draft: many need more c
 | ^25 | milestone | planned | **Crossings**, e.g. pedestrian path x road. |
 | ^26 | milestone | planned | **Lane types and lane width.** Expected to unlock pedestrian paths, bike paths, tram and rail. |
 | ^27 | milestone | planned | **Traffic islands.** |
-| ^80 | milestone | planned | **Directional arrows along the curve** at regular pixel intervals (user). |
+| ^80 | milestone | done, awaiting user test | **Directional arrows along the curve** at regular pixel intervals (user). |
 | ^81 | milestone | planned | **Undo / redo** (user). The editor already snapshots roads, the road being drawn and the selection for `cancelPress`, which is a start. |
 | ^82 | milestone | planned (later) | **Persistence** (user): saving and loading the document, deliberately later to avoid data migrations while the data model is still changing. |
 | ^28 | question | answered | Camera rotation UX. Answered by the user, see ^30. |
@@ -98,3 +98,4 @@ Milestones in the user's order of priority (user's first draft: many need more c
 | ^83 | decision | decided; assumed (size) | **One font size for all text (user):** the hints, the radius labels and the scale bar use the same small size, 12 px (`--font-size` in `app.css`, `FONT_PX` in `paint.ts`, guarded by a test). Icons scale with it: the mouse symbols, key caps, small icons and the spacing of the hints are sized in `em` (12 px = today's sizes), checked by setting `--font-size` to 20 px. Not scaled: the compass geometry (its ring and key cap positions are computed in pixels) and the canvas text, which follows `FONT_PX`. |
 | ^84 | decision | decided | **Compass sized like the hint icons; curves in node color (user):** the compass (ring, needle, key caps, drag icons, their distances and the key cap hit area) scales with the font size like the icons of the hints (`em` in CSS, `FONT_PX / 12` in `compass.ts`). Curves and the curve preview are drawn in the node color (`ink`); the purple `--curve` token is removed (supersedes the purple curve in ^9). |
 | ^85 | decision | decided; assumed (light mode yellow) | **Yellow instead of turquoise (user):** the S-curve and hook gizmos (axis line, corners, the hook's control points) are yellow, dark mode `#ffd43b`, light mode a dark yellow `#8a6a00` that passes the 3:1 contrast check. The two ticks where a bend's curve meets the radius circle were still blue; they are orange like the circle (tick roles are now `orange` / `yellow`). Replaces turquoise in ^9. |
+| ^86 | decision | assumed | **Direction arrows (^80), details:** small chevrons in the curve color along every curve, in the direction the road runs (node order), every 48 screen pixels (so they slide along when zooming), 6 px barbs. The first one sits half a spacing from the start of the road, the spacing continues across segments. They belong to the skeleton (always shown), are not drawn on the preview, and are not interactive. Pure sampling in `src/lib/curves/arrows.ts`. |
