@@ -1,5 +1,5 @@
 import { samplesAlong } from './curves/arrows';
-import { LANE_WIDTH_M } from './curves/lane';
+import { LANE_WIDTH_M, outlinePx } from './curves/lane';
 import { buildEdge } from './curves/edge';
 import { ARROW_PX } from './curves/handles';
 import type { EdgeRef, Path } from './curves/path';
@@ -51,8 +51,6 @@ const ARROW_STROKE_PX = 2;
 /** Distance between the direction arrows along a curve, and their size (^80). */
 const DIRECTION_SPACING_PX = 48;
 const DIRECTION_BARB_PX = 6;
-/** Width of the outline of a road on each side, screen pixels (^90). */
-const ROAD_OUTLINE_PX = 1.5;
 const NODE_DOT_PX = 5.5;
 /** Selected nodes are blue and 150% larger (^70). */
 const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
@@ -212,9 +210,10 @@ function shownFlags(scene: Scene): boolean[][] {
  */
 function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
   const width = LANE_WIDTH_M * f.view.scale;
+  const outline = outlinePx(width);
   const chains = roads.map((r) => r.edges.flatMap((e) => e.E.pieces));
   for (const pieces of chains) {
-    strokeChain(f, pieces, { color: pal['road-edge'], width: width + 2 * ROAD_OUTLINE_PX });
+    strokeChain(f, pieces, { color: pal['road-edge'], width: width + 2 * outline });
   }
   for (const pieces of chains) strokeChain(f, pieces, { color: pal.road, width });
 }

@@ -120,11 +120,11 @@ export function strokePiece(f: Frame, piece: Piece, s: Stroke) {
   applyStroke(f.ctx, s);
 }
 
-/** Stroke pieces that follow each other as one path: flat ends, round joins (^21). */
+/** Stroke pieces that follow each other as one path: round ends and joins (^21, ^91). */
 export function strokeChain(f: Frame, pieces: Piece[], s: Stroke) {
   f.ctx.beginPath();
   for (const piece of pieces) tracePiece(f, piece);
-  f.ctx.lineCap = 'butt';
+  f.ctx.lineCap = 'round';
   f.ctx.lineJoin = 'round';
   applyStroke(f.ctx, s);
 }

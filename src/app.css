@@ -1,5 +1,5 @@
 :root {
-  --bg: #fafafb;
+  --bg: #f2efe9;
   --panel: #ffffff;
   --ink: #15171c;
   /* The road surface and its outline, after Google Maps (^90). */
@@ -35,7 +35,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #101216;
+    --bg: #242f3e;
     --panel: #171a20;
     --ink: #f1f2f5;
     --road: #38414e;
