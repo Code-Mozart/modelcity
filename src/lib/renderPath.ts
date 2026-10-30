@@ -1,4 +1,5 @@
 import { samplesAlong } from './curves/arrows';
+import { LANE_WIDTH_M, outlinePx } from './curves/lane';
 import { buildEdge } from './curves/edge';
 import { ARROW_PX } from './curves/handles';
 import type { EdgeRef, Path } from './curves/path';
@@ -12,6 +13,7 @@ import {
   ring,
   screenDir,
   segment,
+  strokeChain,
   strokePiece,
   toScreen,
   type Frame,
@@ -202,9 +204,24 @@ function shownFlags(scene: Scene): boolean[][] {
   );
 }
 
+/**
+ * The surface of all roads, 3 m wide with an outline (^90): all outlines first, then all surfaces,
+ * so that roads that cross or touch merge into one shape.
+ */
+function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
+  const width = LANE_WIDTH_M * f.view.scale;
+  const outline = outlinePx(width);
+  const chains = roads.map((r) => r.edges.flatMap((e) => e.E.pieces));
+  for (const pieces of chains) {
+    strokeChain(f, pieces, { color: pal['road-edge'], width: width + 2 * outline });
+  }
+  for (const pieces of chains) strokeChain(f, pieces, { color: pal.road, width });
+}
+
 /** Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const active = shownFlags(scene);
+  drawLanes(f, scene.roads, pal);
   scene.roads.forEach((road, i) => drawRoad(f, road, active[i]!, pal));
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
