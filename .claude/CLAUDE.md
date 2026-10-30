@@ -16,6 +16,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - Hats never collide, only ever increment, and are never reused.
 - Claude tracks them in `docs/hats.md`. That file must ALWAYS be up to date. Its first line states the next hat, e.g. `next: ^123`.
 - Use hats in commit messages where applicable.
+- Status words in the registry: `decided` = the user decided it; `assumed` = Claude filled in a detail and the user has not confirmed it yet (never write "decided by Claude").
 
 ## Git and branches
 - `main` always holds a runnable version. Only the user merges into `main` (PRs auto-merge once the user approves). Never push to `main`.
