@@ -1,5 +1,5 @@
 import { cardinalForKey, chipAt } from './compass';
-import { moveRotate, setRotation, startRotate, type RotateDrag } from './rotateDrag';
+import { movePivot, setRotation, startPivot, type PivotDrag } from './pivotDrag';
 import { applyTwoFinger, type Pair } from './twoFinger';
 import { initialView, panBy, zoomAt, type Point, type Size, type View } from './view';
 
@@ -17,7 +17,9 @@ export class Camera {
   /** Last pointer position, screen pixels; the compass is drawn here while rotating. */
   cursor = $state.raw<Point>({ x: 0, y: 0 });
   panning = $state(false);
-  private rotation = $state.raw<RotateDrag | null>(null);
+  private rotation = $state.raw<PivotDrag | null>(null);
+  /** Key chip (n/e/s/w) currently held or clicked, shown pressed on the compass (^33). */
+  pressed = $state<string | null>(null);
   rotating = $derived(this.rotation !== null);
 
   private pan: { last: Point; travel: number } | null = null;
@@ -50,23 +52,25 @@ export class Camera {
   }
 
   startRotate(at: Point) {
-    this.rotation = startRotate(this.view, at);
+    this.rotation = startPivot(this.view, at);
   }
 
   moveRotate(at: Point) {
     if (!this.rotation) return;
-    this.rotation = moveRotate(this.rotation, this.size, at);
+    this.rotation = movePivot(this.rotation, this.size, at);
     this.view = this.rotation.view;
   }
 
   endRotate() {
     this.rotation = null;
+    this.pressed = null;
   }
 
   /** Abort the rotation and restore the view from before the drag. */
   cancelRotate() {
     if (this.rotation) this.view = this.rotation.view0;
     this.rotation = null;
+    this.pressed = null;
   }
 
   private rotateTo(rot: number) {
@@ -75,23 +79,34 @@ export class Camera {
     this.view = this.rotation.view;
   }
 
-  /** Keys that only mean something during a rotation: Esc cancels, N/E/S/W set the direction. */
+  /** Keys that only mean something during a drag: Esc cancels, N/E/S/W set the direction. */
   key(key: string): boolean {
     if (!this.rotation) return false;
     if (key === 'Escape') this.cancelRotate();
     else {
       const card = cardinalForKey(key);
       if (!card) return false;
+      this.pressed = card.key;
       this.rotateTo(card.rot);
     }
     return true;
   }
 
+  keyUp(key: string) {
+    if (this.pressed === key.toLowerCase()) this.pressed = null;
+  }
+
   /** A click on one of the compass chips while rotating; true if it hit one. */
   compassClick(at: Point): boolean {
-    const chip = this.rotation ? chipAt(this.cursor, at) : undefined;
-    if (chip) this.rotateTo(chip.rot);
-    return chip !== undefined;
+    const chip = this.rotation ? chipAt(this.cursor, at, this.view.rot) : undefined;
+    if (!chip) return false;
+    this.pressed = chip.key;
+    this.rotateTo(chip.rot);
+    return true;
+  }
+
+  releaseChip() {
+    this.pressed = null;
   }
 
   /** A finger went down; returns how many fingers are down now. */

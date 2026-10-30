@@ -34,7 +34,9 @@ describe('Camera rotation', () => {
     expect(c.view.rot).toBe(0);
     expect(c.view.cx).toBe(0);
   });
+});
 
+describe('Camera rotation keys', () => {
   it('N, E, S, W set the direction during a rotation and are ignored otherwise', () => {
     const c = camera();
     expect(c.key('e')).toBe(false);
@@ -42,6 +44,9 @@ describe('Camera rotation', () => {
     c.moveRotate({ x: 340, y: 200 });
     expect(c.key('E')).toBe(true);
     expect(c.view.rot).toBeCloseTo(-Math.PI / 2);
+    expect(c.pressed).toBe('e');
+    c.keyUp('E');
+    expect(c.pressed).toBeNull();
     c.key('s');
     expect(c.view.rot).toBeCloseTo(Math.PI);
     c.key('n');
@@ -55,7 +60,10 @@ describe('Camera compass', () => {
     const c = camera();
     c.startRotate({ x: 300, y: 200 });
     c.cursor = { x: 300, y: 200 };
-    expect(c.compassClick({ x: 346, y: 200 })).toBe(true);
+    expect(c.compassClick({ x: 340, y: 200 })).toBe(true);
+    expect(c.pressed).toBe('e');
+    c.releaseChip();
+    expect(c.pressed).toBeNull();
     expect(c.view.rot).toBeCloseTo(-Math.PI / 2);
     expect(c.compassClick({ x: 500, y: 500 })).toBe(false);
   });

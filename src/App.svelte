@@ -15,7 +15,7 @@
   }
 </script>
 
-<svelte:window onkeydown={onKeyDown} />
+<svelte:window onkeydown={onKeyDown} onkeyup={(e) => camera.keyUp(e.key)} />
 
 <Toolbar {editor} />
 <main>

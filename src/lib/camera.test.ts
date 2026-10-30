@@ -1,39 +1,52 @@
 import { describe, expect, it } from 'vitest';
-import { cardinalForKey, chipAt } from './compass';
-import { moveRotate, sensitivity, setRotation, startRotate } from './rotateDrag';
+import { cardinalForKey, chipAt, chipOffset, CARDINALS } from './compass';
+import { RAD_PER_PX, movePivot, setRotation, startPivot } from './pivotDrag';
 import { applyTwoFinger } from './twoFinger';
 import { initialView, screenToWorld, worldToScreen } from './view';
 
 const size = { width: 800, height: 600 };
 
-describe('rotate drag (^30, ^31)', () => {
+describe('pivot drag (^30, ^31)', () => {
   const start = { x: 200, y: 150 };
 
-  it('rotates clockwise when dragging right and keeps the pivot fixed', () => {
+  it('rotates clockwise when dragging right, at a constant rate, keeping the pivot fixed', () => {
     const world = screenToWorld(initialView(), size, start);
-    const drag = moveRotate(startRotate(initialView(), start), size, { x: 300, y: 150 });
-    expect(drag.view.rot).toBeCloseTo((100 * 0.4 * Math.PI) / 180);
+    const drag = movePivot(startPivot(initialView(), start), size, { x: 300, y: 150 });
+    expect(drag.view.rot).toBeCloseTo(100 * RAD_PER_PX);
     const on = worldToScreen(drag.view, size, world);
+    expect(on.x).toBeCloseTo(start.x);
+    expect(on.y).toBeCloseTo(start.y);
+    const higher = movePivot(startPivot(initialView(), start), size, { x: 300, y: 50 });
+    expect(higher.view.rot).toBeCloseTo(100 * RAD_PER_PX);
+  });
+
+  it('zooms about the pivot: 1% per pixel, up zooms in, down zooms out', () => {
+    const world = screenToWorld(initialView(), size, start);
+    const up = movePivot(startPivot(initialView(), start), size, { x: 200, y: 50 });
+    expect(up.view.scale).toBeCloseTo(initialView().scale * Math.exp(1));
+    const down = movePivot(startPivot(initialView(), start), size, { x: 200, y: 250 });
+    expect(down.view.scale).toBeCloseTo(initialView().scale / Math.exp(1));
+    const on = worldToScreen(up.view, size, world);
     expect(on.x).toBeCloseTo(start.x);
     expect(on.y).toBeCloseTo(start.y);
   });
 
-  it('is faster when the cursor is above the start and finer below it', () => {
-    expect(sensitivity(0)).toBeCloseTo((0.4 * Math.PI) / 180);
-    expect(sensitivity(-150)).toBeCloseTo(2 * sensitivity(0));
-    expect(sensitivity(150)).toBeCloseTo(sensitivity(0) / 2);
-    expect(sensitivity(1e6)).toBeCloseTo(sensitivity(0) / 16);
+  it('returns to the starting zoom when the pointer returns to the starting height', () => {
+    let drag = startPivot(initialView(), start);
+    drag = movePivot(drag, size, { x: 230, y: 60 });
+    drag = movePivot(drag, size, { x: 260, y: 150 });
+    expect(drag.view.scale).toBeCloseTo(initialView().scale);
   });
 });
 
-describe('rotate drag accumulation', () => {
+describe('pivot drag accumulation', () => {
   const start = { x: 200, y: 150 };
 
-  it('accumulates movements and can jump to a cardinal direction', () => {
-    let drag = startRotate(initialView(), start);
-    drag = moveRotate(drag, size, { x: 210, y: 150 });
-    drag = moveRotate(drag, size, { x: 220, y: 150 });
-    expect(drag.view.rot).toBeCloseTo((20 * 0.4 * Math.PI) / 180);
+  it('accumulates rotation and can jump to a cardinal direction', () => {
+    let drag = startPivot(initialView(), start);
+    drag = movePivot(drag, size, { x: 210, y: 150 });
+    drag = movePivot(drag, size, { x: 220, y: 150 });
+    expect(drag.view.rot).toBeCloseTo(20 * RAD_PER_PX);
     expect(setRotation(drag, size, 0).view.rot).toBeCloseTo(0);
     expect(drag.view0).toEqual(initialView());
   });
@@ -60,9 +73,17 @@ describe('compass', () => {
 
   it('finds the chip under a point', () => {
     const center = { x: 100, y: 100 };
-    expect(chipAt(center, { x: 100, y: 100 - 46 })?.label).toBe('N');
-    expect(chipAt(center, { x: 100 - 44, y: 102 })?.label).toBe('W');
-    expect(chipAt(center, center)).toBeUndefined();
+    expect(chipAt(center, { x: 100, y: 100 - 40 }, 0)?.label).toBe('N');
+    expect(chipAt(center, { x: 100 - 38, y: 102 }, 0)?.label).toBe('W');
+    expect(chipAt(center, center, 0)).toBeUndefined();
+  });
+
+  it('places each chip in the on-screen direction of its world direction', () => {
+    const north = CARDINALS[0]!;
+    expect(chipOffset(north, 0).y).toBeCloseTo(-40);
+    const turned = chipOffset(north, Math.PI / 2);
+    expect(turned.x).toBeCloseTo(40);
+    expect(chipAt({ x: 0, y: 0 }, turned, Math.PI / 2)?.label).toBe('N');
   });
 });
 

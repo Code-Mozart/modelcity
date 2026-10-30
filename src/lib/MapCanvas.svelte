@@ -93,8 +93,10 @@
       camera.touchUp(e.pointerId);
       camera.endPan();
       editor.pointerUp();
-    } else if (e.button === 0) editor.pointerUp();
-    else if (e.button === 1) camera.endRotate();
+    } else if (e.button === 0) {
+      camera.releaseChip();
+      editor.pointerUp();
+    } else if (e.button === 1) camera.endRotate();
     // A right click without movement removes a node, a right drag only pans (^31).
     else if (e.button === 2 && !camera.endPan()) editor.removeAt(info(e));
   }

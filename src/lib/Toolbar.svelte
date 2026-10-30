@@ -1,13 +1,14 @@
 <script lang="ts">
   import type { PresetName } from './curves/presets';
   import type { Editor, Tool } from './editor.svelte';
+  import KeyCap from './KeyCap.svelte';
 
   let { editor }: { editor: Editor } = $props();
 
-  const tools: { id: Tool; label: string; title: string }[] = [
-    { id: 'move', label: 'Move', title: 'Move / edit (M)' },
-    { id: 'append', label: 'Append', title: 'Append at an end (A)' },
-    { id: 'insert', label: 'Insert', title: 'Insert on a curve (I)' },
+  const tools: { id: Tool; label: string; title: string; key: string }[] = [
+    { id: 'move', label: 'Move', title: 'Move / edit', key: 'M' },
+    { id: 'append', label: 'Append', title: 'Append at an end', key: 'A' },
+    { id: 'insert', label: 'Insert', title: 'Insert on a curve', key: 'I' },
   ];
   const presets: { id: PresetName; label: string }[] = [
     { id: 'H', label: 'Reset to Fig H' },
@@ -26,13 +27,14 @@
         onclick={() => editor.setTool(t.id)}
       >
         {t.label}
+        <KeyCap>{t.key}</KeyCap>
       </button>
     {/each}
     <button
       title="Delete the selected node (Del) or right-click a node"
       onclick={() => editor.deleteSelected()}
     >
-      Delete node
+      Delete node <KeyCap>Del</KeyCap>
     </button>
   </div>
   <div class="group">
@@ -71,6 +73,9 @@
     align-items: center;
   }
   button {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
     padding: 5px 10px;
     border: 1px solid transparent;
     border-radius: 6px;

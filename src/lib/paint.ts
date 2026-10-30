@@ -25,6 +25,8 @@ export const PALETTE_KEYS = [
   'teal',
   'red',
   'orange',
+  'red-ink',
+  'orange-ink',
 ] as const;
 export type Palette = Record<(typeof PALETTE_KEYS)[number], string>;
 

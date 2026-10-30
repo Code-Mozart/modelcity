@@ -58,7 +58,7 @@ function drawNodes(f: Frame, { path, sel }: Scene, pal: Palette) {
     const a = toScreen(f, n);
     if (i === sel) ring(f.ctx, a, 11, { color: pal.blue, width: 2.2 });
     dot(f.ctx, a, 5.5, pal.ink);
-    text(f.ctx, String(i + 1), { x: a.x - 18, y: a.y + 24 }, { color: pal.red, size: 15 });
+    text(f.ctx, String(i + 1), { x: a.x - 18, y: a.y + 24 }, { color: pal['red-ink'], size: 15 });
   });
 }
 

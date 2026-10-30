@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Camera } from './camera.svelte';
-  import { CARDINALS } from './compass';
+  import { CARDINALS, DRAG_HINTS, chipOffset } from './compass';
+  import Icon from './Icon.svelte';
+  import KeyCap from './KeyCap.svelte';
 
   let { camera }: { camera: Camera } = $props();
 </script>
@@ -18,7 +20,15 @@
       <i class="south"></i>
     </div>
     {#each CARDINALS as c (c.key)}
-      <span class="chip" style:left="{c.dx}px" style:top="{c.dy}px">{c.label}</span>
+      {@const o = chipOffset(c, camera.view.rot)}
+      <span class="at" style:left="{o.x}px" style:top="{o.y}px">
+        <KeyCap pressed={camera.pressed === c.key}>{c.label}</KeyCap>
+      </span>
+    {/each}
+    {#each DRAG_HINTS as h (h.id)}
+      <span class="at" style:left="{h.dx}px" style:top="{h.dy}px" title={h.label}>
+        <KeyCap><Icon name={h.icon} /></KeyCap>
+      </span>
     {/each}
   </div>
 {/if}
@@ -29,6 +39,11 @@
     width: 0;
     height: 0;
     pointer-events: none;
+  }
+  .at {
+    position: absolute;
+    display: flex;
+    transform: translate(-50%, -50%);
   }
   .ring {
     position: absolute;
@@ -62,19 +77,5 @@
   .south {
     bottom: 0;
     border-top: 14px solid var(--muted);
-  }
-  .chip {
-    position: absolute;
-    width: 24px;
-    height: 24px;
-    margin: -12px 0 0 -12px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--panel);
-    color: var(--ink);
-    font:
-      600 12px/22px system-ui,
-      sans-serif;
-    text-align: center;
   }
 </style>

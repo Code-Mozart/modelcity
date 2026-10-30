@@ -1,33 +1,64 @@
-import type { Point } from './view';
+import { rotateVec, type Point } from './view';
 
-/** The compass that replaces the cursor while rotating (^30): N, E, S, W key chips around it. */
+/** The compass that replaces the cursor while rotating (^30, ^33). */
 export interface Cardinal {
   /** Keyboard key and label. */
   key: 'n' | 'e' | 's' | 'w';
   label: 'N' | 'E' | 'S' | 'W';
-  /** Offset of the chip from the cursor, pixels (screen up, right, down, left). */
-  dx: number;
-  dy: number;
+  /** World direction (unit vector, y down). */
+  dir: Point;
   /** View rotation that puts this direction up: N 0, E -90, S 180, W +90 degrees. */
   rot: number;
 }
 
-export const COMPASS_RADIUS_PX = 46;
-const CHIP_HIT_PX = 16;
-
 export const CARDINALS: Cardinal[] = [
-  { key: 'n', label: 'N', dx: 0, dy: -COMPASS_RADIUS_PX, rot: 0 },
-  { key: 'e', label: 'E', dx: COMPASS_RADIUS_PX, dy: 0, rot: -Math.PI / 2 },
-  { key: 's', label: 'S', dx: 0, dy: COMPASS_RADIUS_PX, rot: Math.PI },
-  { key: 'w', label: 'W', dx: -COMPASS_RADIUS_PX, dy: 0, rot: Math.PI / 2 },
+  { key: 'n', label: 'N', dir: { x: 0, y: -1 }, rot: 0 },
+  { key: 'e', label: 'E', dir: { x: 1, y: 0 }, rot: -Math.PI / 2 },
+  { key: 's', label: 'S', dir: { x: 0, y: 1 }, rot: Math.PI },
+  { key: 'w', label: 'W', dir: { x: -1, y: 0 }, rot: Math.PI / 2 },
 ];
+
+/** Distance of the N/E/S/W chips from the cursor, pixels. */
+export const CHIP_RADIUS_PX = 40;
+const CHIP_HIT_PX = 15;
 
 export const cardinalForKey = (key: string): Cardinal | undefined =>
   CARDINALS.find((c) => c.key === key.toLowerCase());
 
-/** The chip under `point` when the compass is centered at `center`, if any. */
-export function chipAt(center: Point, point: Point): Cardinal | undefined {
-  return CARDINALS.find(
-    (c) => Math.hypot(point.x - center.x - c.dx, point.y - center.y - c.dy) <= CHIP_HIT_PX,
-  );
+/** Where a chip sits relative to the cursor: in the on-screen direction of its world direction. */
+export function chipOffset(c: Cardinal, viewRot: number): Point {
+  const d = rotateVec(c.dir, viewRot);
+  return { x: d.x * CHIP_RADIUS_PX, y: d.y * CHIP_RADIUS_PX };
 }
+
+/** The chip under `point` when the compass is centered at `center`, if any. */
+export function chipAt(center: Point, point: Point, viewRot: number): Cardinal | undefined {
+  return CARDINALS.find((c) => {
+    const o = chipOffset(c, viewRot);
+    return Math.hypot(point.x - center.x - o.x, point.y - center.y - o.y) <= CHIP_HIT_PX;
+  });
+}
+
+/** What dragging in each screen direction does while the compass is shown (fixed positions). */
+export interface DragHint {
+  id: 'ccw' | 'cw' | 'zoomIn' | 'zoomOut';
+  icon: 'ccw' | 'cw' | 'plus' | 'minus';
+  label: string;
+  dx: number;
+  dy: number;
+}
+
+export const HINT_RADIUS_PX = 82;
+
+export const DRAG_HINTS: DragHint[] = [
+  {
+    id: 'ccw',
+    icon: 'ccw',
+    label: 'Drag left: rotate counterclockwise',
+    dx: -HINT_RADIUS_PX,
+    dy: 0,
+  },
+  { id: 'cw', icon: 'cw', label: 'Drag right: rotate clockwise', dx: HINT_RADIUS_PX, dy: 0 },
+  { id: 'zoomIn', icon: 'plus', label: 'Drag up: zoom in', dx: 0, dy: -HINT_RADIUS_PX },
+  { id: 'zoomOut', icon: 'minus', label: 'Drag down: zoom out', dx: 0, dy: HINT_RADIUS_PX },
+];

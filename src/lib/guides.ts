@@ -109,15 +109,15 @@ export function drawCorners(f: Frame, { i, E }: EdgeRef, pal: Palette) {
   };
   const main = E.kind === 'C' ? E.C : E.J;
   dot(f.ctx, toScreen(f, main), 6, pal.blue);
-  text(f.ctx, label, at(main, 9, E.kind === 'C' ? -9 : 17), { color: pal.red, size: 14 });
+  text(f.ctx, label, at(main, 9, E.kind === 'C' ? -9 : 17), { color: pal['red-ink'], size: 14 });
   if (E.kind === 'C') return;
   if (E.k1) {
     dot(f.ctx, toScreen(f, E.k1), 6, pal.teal);
-    text(f.ctx, `${label}-s1`, at(E.k1, 9, 17), { color: pal.red });
+    text(f.ctx, `${label}-s1`, at(E.k1, 9, 17), { color: pal['red-ink'] });
   }
   if (E.k2) {
     dot(f.ctx, toScreen(f, E.k2), 6, pal.teal);
-    text(f.ctx, `${label}-s2`, at(E.k2, 9, -9), { color: pal.red });
+    text(f.ctx, `${label}-s2`, at(E.k2, 9, -9), { color: pal['red-ink'] });
   }
 }
 
@@ -132,6 +132,10 @@ export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette) {
     const c = toScreen(f, piece.c);
     const l = Math.hypot(mid.x - c.x, mid.y - c.y) || 1;
     const at = { x: mid.x + ((mid.x - c.x) / l) * 22, y: mid.y + ((mid.y - c.y) / l) * 22 };
-    text(f.ctx, `R ${piece.r.toFixed(1)} m`, at, { color: pal.orange, size: 12, align: 'center' });
+    text(f.ctx, `R ${piece.r.toFixed(1)} m`, at, {
+      color: pal['orange-ink'],
+      size: 12,
+      align: 'center',
+    });
   }
 }
