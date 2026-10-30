@@ -136,8 +136,8 @@ function drawRoad(f: Frame, road: RoadScene, active: boolean[], pal: Palette) {
 const HANDLE_COLOR = (pal: Palette) => ({
   head: pal.orange,
   ctrl: pal.orange,
-  s1: pal.teal,
-  s2: pal.teal,
+  s1: pal.yellow,
+  s2: pal.yellow,
   rad: pal.orange,
 });
 

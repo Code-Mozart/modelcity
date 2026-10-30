@@ -60,14 +60,14 @@ function dragCorner(path: Path, i: number, C: Vec): Path {
   return clearShapes(moved, [i - 1, i, i + 1]);
 }
 
-/** The turquoise corner (1 or 2) of the hook the nodes form at radius R, if it is still a hook. */
+/** The yellow corner (1 or 2) of the hook the nodes form at radius R, if it is still a hook. */
 function hookCorner(path: Path, i: number, R: number, which: 1 | 2): Vec | null {
   const E = buildEdge(path.nodes[i]!, path.nodes[i + 1]!, R, path.shapes[i] ?? null);
   if (E.kind !== 'H') return null;
   return which === 1 ? E.k1 : E.k2;
 }
 
-/** Dragging a hook's turquoise point: pick the radius whose corner is nearest to the pointer. */
+/** Dragging a hook's yellow point: pick the radius whose corner is nearest to the pointer. */
 function dragHookCorner(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
   const E0 = edgeAt(path, i);
   if (E0.kind !== 'H') return path;

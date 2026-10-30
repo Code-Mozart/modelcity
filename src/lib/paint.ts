@@ -21,7 +21,7 @@ export const PALETTE_KEYS = [
   'ink',
   'muted',
   'blue',
-  'teal',
+  'yellow',
   'red',
   'orange',
   'red-ink',

@@ -1,4 +1,4 @@
-next: ^85
+next: ^86
 
 # Hats
 
@@ -97,3 +97,4 @@ Milestones in the user's order of priority (user's first draft: many need more c
 | ^79 | decision | decided | **No insert mark in select mode (user):** the white ring and tick on a hovered curve exist only in draw mode, where a click inserts a node. In select mode the curve gets no mark; the cursor becomes a pointer. |
 | ^83 | decision | decided; assumed (size) | **One font size for all text (user):** the hints, the radius labels and the scale bar use the same small size, 12 px (`--font-size` in `app.css`, `FONT_PX` in `paint.ts`, guarded by a test). Icons scale with it: the mouse symbols, key caps, small icons and the spacing of the hints are sized in `em` (12 px = today's sizes), checked by setting `--font-size` to 20 px. Not scaled: the compass geometry (its ring and key cap positions are computed in pixels) and the canvas text, which follows `FONT_PX`. |
 | ^84 | decision | decided | **Compass sized like the hint icons; curves in node color (user):** the compass (ring, needle, key caps, drag icons, their distances and the key cap hit area) scales with the font size like the icons of the hints (`em` in CSS, `FONT_PX / 12` in `compass.ts`). Curves and the curve preview are drawn in the node color (`ink`); the purple `--curve` token is removed (supersedes the purple curve in ^9). |
+| ^85 | decision | decided; assumed (light mode yellow) | **Yellow instead of turquoise (user):** the S-curve and hook gizmos (axis line, corners, the hook's control points) are yellow, dark mode `#ffd43b`, light mode a dark yellow `#8a6a00` that passes the 3:1 contrast check. The two ticks where a bend's curve meets the radius circle were still blue; they are orange like the circle (tick roles are now `orange` / `yellow`). Replaces turquoise in ^9. |

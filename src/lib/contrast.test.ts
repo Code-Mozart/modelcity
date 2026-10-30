@@ -44,7 +44,7 @@ const PAIRS: [string, string, number][] = [
   ['key-edge', 'key-bg', 3],
   ['key-on-bg', 'bg', 3],
   ['blue', 'bg', 3],
-  ['teal', 'bg', 3],
+  ['yellow', 'bg', 3],
   ['orange', 'bg', 3],
   ['red', 'bg', 3],
 ];

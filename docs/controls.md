@@ -19,7 +19,7 @@ The left button always creates or edits; there are no tools (^44). What happens 
 
 | Under the pointer | Select mode | Draw mode | Hats |
 |-------------------|-------------|-----------|------|
-| A handle: node, heading arrow tip, bend point (orange), orange ring, turquoise point | The handle is highlighted (blue ring). Click selects a node or heading. Drag edits it: moves the node (all selected nodes move with it, see Selection), turns the heading, drags the bend point or the radius ring | The same, with no node preview | ^9, ^44, ^48 |
+| A handle: node, heading arrow tip, bend point (orange), orange ring, yellow point | The handle is highlighted (blue ring). Click selects a node or heading. Drag edits it: moves the node (all selected nodes move with it, see Selection), turns the heading, drags the bend point or the radius ring | The same, with no node preview | ^9, ^44, ^48 |
 | A leaf node: a node at either end of a road (also the only node of a road) | Same as any handle (below) | **Click extends that road from it (^65):** the node becomes the one the next node attaches to, and the road becomes the road being drawn, at that end. At a road's first node the road is extended backwards: the new node is added before it, and its curve arrives along the first node's heading. The preview shows the curve from the cursor to the node. A drag moves the node as usual. The click does not apply to the node already being drawn from: that click finishes the road | ^65 |
 | A road's curve (within 18 px) | No mark (the insert mark only exists in draw mode, ^79). Click selects its two nodes, Shift+click adds them (or deselects both if both are selected, ^74), Alt+click selects the whole road (^76). A drag spans the selection box | The curve gets a ring and a small tick (the white mark). Click inserts a node there (the curve does not change). Drag inserts a node and sets its heading while dragging, which can turn the curve into an S-curve or hook | ^10, ^44, ^48 |
 | Empty canvas | With nothing selected, click enters draw mode (no node yet); with a selection, click deselects all instead (^75); a Shift click does nothing. Drag spans the selection box (see Selection) | A preview of the node (and, once the road has nodes, the curve to it from the last one). The first click places node 1 of a new road, heading right (a drag sets its heading). Later clicks add a node at the end of the road, its heading chosen so that the new edge is a single circular arc (a hook beyond 180°, also when the cursor is behind the arrow). Drag adds the node at the press point with the heading pointing to the cursor, previewed live | ^40, ^44, ^46, ^48 |
@@ -84,17 +84,17 @@ While a button is held, the rows stay those of where it was pressed.
 Two levels of gizmo:
 
 - The **skeleton** is always shown: the curves and the dots of the nodes. There are no numbering labels.
-- The **scaffold** of a segment (the curve between two nodes) is everything else: the orange lines, circle, ticks and control points (the bend's point and the heading tips), the heading arrows (orange), the turquoise lines and points, the orange radius point and its label (`116.7m`). It is shown completely or not at all.
+- The **scaffold** of a segment (the curve between two nodes) is everything else: the orange lines, circle, ticks and control points (the bend's point and the heading tips), the heading arrows (orange), the yellow lines and points, the orange radius point and its label (`116.7m`). It is shown completely or not at all.
 
 Only a single segment shows its scaffold at a time (^66), over all roads. Which one:
 
-1. A hovered or dragged blue, turquoise or orange point keeps its own segment, wherever the pointer is. A hovered or dragged node or heading tip takes the one of its two segments whose curve is closer to the pointer.
+1. A hovered or dragged orange or yellow point keeps its own segment, wherever the pointer is. A hovered or dragged node or heading tip takes the one of its two segments whose curve is closer to the pointer.
 2. Otherwise the segment whose curve the pointer is on (within 20 px of it), the closest curve first.
-3. Otherwise the segment with the control point closest to the pointer (a node, a heading tip, the blue point, a hook's turquoise points, the orange point), within 48 px; nearer curves break ties.
+3. Otherwise the segment with the control point closest to the pointer (a node, a heading tip, the bend point, a hook's yellow points, the orange point), within 48 px; nearer curves break ties.
 
 The heading arrows of the two nodes of the shown segment are shown with it, and no other arrows. A node of a road that has no segment yet always shows its heading arrow. A node being placed counts as dragged.
 
-Looks: blue means selected or user action (selected nodes, the hover ring, the selection box), orange is gizmo. Filled points can be dragged (orange tips and bend points, orange radius points, a hook's turquoise points); hollow ones (an S-curve's turquoise points) only show derived geometry. On touch there is no hover, so scaffolds appear only while something is grabbed.
+Looks: blue means selected or user action (selected nodes, the hover ring, the selection box), orange is gizmo. Filled points can be dragged (orange tips and bend points, orange radius points, a hook's yellow points); hollow ones (an S-curve's yellow points) only show derived geometry. On touch there is no hover, so scaffolds appear only while something is grabbed.
 
 ## Camera (always, in every context)
 

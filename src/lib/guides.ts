@@ -75,7 +75,7 @@ function drawTwoArcGuides(
     AXIS_REACH_PX,
     AXIS_REACH_PX,
   );
-  segment(f.ctx, from, to, { color: pal.teal, width: 1.6 });
+  segment(f.ctx, from, to, { color: pal.yellow, width: 1.6 });
 }
 
 export function drawGuides(f: Frame, ref: EdgeRef, pal: Palette) {
@@ -97,15 +97,15 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
 
 /**
  * Derived construction points, part of the scaffold (^51, ^60): the inflection point of an S or
- * hook (orange) and the turquoise corners of an S, which cannot be dragged and are drawn hollow. The
- * handles (the bend's orange point, a hook's turquoise points, the orange rings) are drawn separately.
+ * hook (orange) and the yellow corners of an S, which cannot be dragged and are drawn hollow. The
+ * handles (the bend's orange point, a hook's yellow points, the orange rings) are drawn separately.
  */
 export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   if (E.kind === 'line' || E.kind === 'C') return;
   dot(f.ctx, toScreen(f, E.J), 6, pal.orange);
   if (E.kind !== 'S') return;
   for (const k of [E.k1, E.k2]) {
-    if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.teal, width: 2 });
+    if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.yellow, width: 2 });
   }
 }
 

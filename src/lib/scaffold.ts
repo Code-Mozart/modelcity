@@ -6,8 +6,8 @@ import { CURVE_NEAR_PX, HANDLE_NEAR_PX, type Pointer } from './proximity';
 
 /**
  * The scaffold of a road segment (the curve between two nodes) is all its construction and
- * control gizmos: the blue lines, circle, ticks and control points, the heading arrows, the
- * turquoise lines and points (filled or hollow), and the orange control point with its label. What
+ * control gizmos: the orange lines, circle, ticks and control points, the heading arrows, the
+ * yellow lines and points (filled or hollow), and the orange control point with its label. What
  * is always shown is the skeleton: the curves and the node dots. The scaffold is all or nothing
  * per segment, and only ever shown for a single segment at a time (^60, ^66).
  */
@@ -55,7 +55,7 @@ const closest = (list: Scores[], by: (s: Scores) => number): Scores | undefined 
   list.reduce<Scores | undefined>((best, s) => (!best || by(s) < by(best) ? s : best), undefined);
 
 /**
- * The segment of the hovered or dragged handle. A blue, turquoise or orange point belongs to one
+ * The segment of the hovered or dragged handle. An orange or yellow point belongs to one
  * segment; a node or heading tip to two, then the one whose curve is closer to the pointer
  * (without a pointer, the one that starts at the node).
  */
