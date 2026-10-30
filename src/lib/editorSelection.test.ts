@@ -44,13 +44,18 @@ describe('selection box (^70)', () => {
     ed.pointerUp();
   });
 
-  it('shift keeps the selection and adds to it; a click on empty canvas clears it and draws', () => {
+  it('shift keeps the selection and adds to it; a click on empty canvas deselects, then draws (^75)', () => {
     const ed = roads();
     band(ed, [-5, -5], [5, 5]);
     band(ed, [15, 35], [25, 45], true);
     expect(ed.selection).toHaveLength(2);
+    ed.pointerDown(at(100, 100, { shift: true }));
+    ed.pointerUp();
+    expect(ed.selection).toHaveLength(2);
     click(ed, 100, 100);
     expect(ed.selection).toEqual([]);
+    expect(ed.drawing).toBe(false);
+    click(ed, 100, 100);
     expect(ed.drawing).toBe(true);
   });
 
@@ -165,5 +170,57 @@ describe('selecting by curve (^74)', () => {
     expect(ed.selection).toHaveLength(2);
     press(ed, true);
     expect(ed.selection).toEqual([]);
+  });
+});
+
+describe('select lane (^76)', () => {
+  it('Alt+LMB on a node or a curve selects the whole road', () => {
+    const ed = roads();
+    ed.pointerDown(at(0, 40, { alt: true }));
+    ed.pointerUp();
+    expect(ed.selection).toHaveLength(2);
+    expect(ed.selection.every((r) => r.road === 1)).toBe(true);
+    ed.pointerDown(at(15, 0, { alt: true }));
+    ed.pointerUp();
+    expect(ed.selection.every((r) => r.road === 0)).toBe(true);
+  });
+});
+
+describe('group move hides scaffolds (^78)', () => {
+  it('only while several nodes are moved', () => {
+    const ed = roads();
+    band(ed, [-5, -5], [25, 5]);
+    ed.pointerDown(at(0, 0));
+    ed.pointerMove(at(10, 7));
+    expect(ed.movingGroup).toBe(true);
+    ed.pointerUp();
+    expect(ed.movingGroup).toBe(false);
+    click(ed, 0, 0);
+    ed.pointerDown(at(10, 7));
+    ed.pointerMove(at(15, 7));
+    expect(ed.movingGroup).toBe(false);
+  });
+});
+
+describe('sharing a radius (^77)', () => {
+  it('dragging the radius of a selected segment sets it for all selected segments', () => {
+    const ed = draw([
+      [0, 0],
+      [30, -20],
+      [60, 0],
+      [90, -20],
+    ]);
+    ed.key('Escape');
+    band(ed, [-5, -90], [100, 10]);
+    const ring = ed.handles(4).find((h) => h.type === 'rad' && h.i === 0)!;
+    ed.pointerDown(at(ring.x, ring.y));
+    expect(ed.extraScaffold).toHaveLength(3);
+    ed.pointerMove(at(ring.x + 4, ring.y + 4));
+    ed.pointerUp();
+    const radii = ed.roads[0]!.radii;
+    expect(radii[0]).not.toBeNull();
+    expect(radii[1]).toBe(radii[0]);
+    expect(radii[2]).toBe(radii[0]);
+    expect(ed.extraScaffold).toEqual([]);
   });
 });

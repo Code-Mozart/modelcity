@@ -36,6 +36,9 @@
       handles: editor.handles(camera.view.scale),
       selection: editor.selection,
       band: editor.band,
+      drawing: editor.drawing,
+      extra: editor.extraScaffold,
+      hideScaffold: editor.movingGroup,
       hover: editor.hover,
       focus: editor.focus,
       pointer: editor.pointer,
@@ -58,6 +61,7 @@
       scale: camera.view.scale,
       touch: 'pointerType' in e && e.pointerType === 'touch',
       shift: e.shiftKey,
+      alt: e.altKey,
     };
   }
 

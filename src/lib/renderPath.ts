@@ -32,6 +32,11 @@ export interface Scene {
   handles: RoadHandle[];
   selection: NodeRef[];
   band: Band | null;
+  drawing: boolean;
+  /** Segments (road, index) that show their scaffold too: the selected ones while a radius is shared (^77). */
+  extra: { road: number; i: number }[];
+  /** All scaffolds are hidden while several nodes are moved (^78). */
+  hideScaffold: boolean;
   hover: Hover | null;
   focus: Focus | null;
   pointer: Pointer | null;
@@ -93,9 +98,10 @@ function drawPreview(f: Frame, hover: Extract<Hover, { kind: 'preview' }>, pal: 
   f.ctx.globalAlpha = 1;
 }
 
-function drawHover(f: Frame, hover: Hover | null, pal: Palette) {
+function drawHover(f: Frame, hover: Hover | null, drawing: boolean, pal: Palette) {
   if (hover?.kind === 'preview') drawPreview(f, hover, pal);
-  if (hover?.kind === 'candidate') {
+  // The mark for inserting a node only exists in draw mode (^79).
+  if (hover?.kind === 'candidate' && drawing) {
     const at = toScreen(f, hover.hit.at);
     const { x: tx, y: ty } = screenDir(f, { x: hover.hit.at.tx, y: hover.hit.at.ty });
     ring(f.ctx, at, 8, { color: pal.ink, width: 2 });
@@ -161,13 +167,25 @@ function drawBand(f: Frame, { a, b }: Band, pal: Palette) {
   ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
 }
 
+/** Which segments show their scaffold: the focused one, the shared-radius ones, or none while moving a group. */
+function shownFlags(scene: Scene): boolean[][] {
+  const { roads, handles, focus, pointer, extra } = scene;
+  const flags = activeFlags({ roads, handles, focus, pointer });
+  return roads.map((r, road) =>
+    r.edges.map(
+      (e, k) =>
+        !scene.hideScaffold &&
+        (flags[road]![k]! || extra.some((x) => x.road === road && x.i === e.i)),
+    ),
+  );
+}
+
 /** Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
-  const { handles, focus, pointer } = scene;
-  const active = activeFlags({ roads: scene.roads, handles, focus, pointer });
+  const active = shownFlags(scene);
   scene.roads.forEach((road, i) => drawRoad(f, road, active[i]!, pal));
   drawHandles(f, scene, active, pal);
-  drawHover(f, scene.hover, pal);
+  drawHover(f, scene.hover, scene.drawing, pal);
   if (scene.band) drawBand(f, scene.band, pal);
   scene.roads.forEach((road, i) => {
     drawNodes(f, road, { active: active[i]!, selected: selectedIn(scene.selection, i) }, pal);

@@ -232,6 +232,9 @@ describe('inserting nodes (^40)', () => {
     expect(ed.drawing).toBe(false);
     expect(ed.selection).toHaveLength(2);
     click(ed, 100, 100);
+    expect(ed.selection).toEqual([]);
+    expect(ed.drawing).toBe(false);
+    click(ed, 100, 100);
     expect(ed.drawing).toBe(true);
     click(ed, 100, 100);
     expect(ed.roads).toHaveLength(2);

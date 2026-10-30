@@ -1,5 +1,5 @@
 import { autoHeading, autoHeadingBefore } from './curves/path';
-import type { NodeRef, RoadHandle, Roads } from './curves/roads';
+import { removeRoad, type NodeRef, type RoadHandle, type Roads } from './curves/roads';
 import type { Vec } from './curves/vec';
 import { curveNodes, isSelected, pickedCount } from './selection';
 import type { Hover } from './editorTypes';
@@ -42,6 +42,23 @@ export function targetOf(drawn: Drawn, hover: Hover | null): HintTarget {
   if (hover?.kind !== 'candidate') return { kind: 'empty' };
   const { road, ref } = hover.hit;
   return { kind: 'curve', picked: pickedCount(selection, curveNodes(road, ref.i)) };
+}
+
+/**
+ * Make a leaf node the one the next node attaches to (^65): the road it belongs to becomes the
+ * road being drawn, at that end. A road being drawn with one node only is dropped, since a road
+ * needs two.
+ */
+const nodeCount = (roads: Roads, road: number) => roads[road]?.nodes.length ?? 0;
+
+export function extendTo(drawn: Drawn, ref: NodeRef): Drawn {
+  const { roads, active } = drawn;
+  const lone = active !== null && active !== ref.road && nodeCount(roads, active) < 2;
+  const kept = lone ? removeRoad(roads, active, active).roads : roads;
+  const road = lone && active < ref.road ? ref.road - 1 : ref.road;
+  const backwards = ref.node === 0 && nodeCount(kept, road) > 1;
+  const end = backwards ? 'start' : 'end';
+  return { roads: kept, active: road, end, selection: [{ road, node: ref.node }] };
 }
 
 export function cursorOf(hover: Hover | null, drawing: boolean): string {

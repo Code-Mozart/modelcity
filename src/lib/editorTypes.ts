@@ -14,6 +14,7 @@ export interface PointerInfo {
   scale: number;
   touch: boolean;
   shift: boolean;
+  alt: boolean;
 }
 
 /**

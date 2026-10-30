@@ -11,6 +11,8 @@
 
 {#if input.kind === 'mouse' && input.shift}
   <KeyCap>Shift</KeyCap><span class="plus">+</span>
+{:else if input.kind === 'mouse' && input.alt}
+  <KeyCap>Alt</KeyCap><span class="plus">+</span>
 {/if}
 {#if input.kind === 'key'}
   <KeyCap>{input.label}</KeyCap>

@@ -1,11 +1,11 @@
-import { applyDrag, dragHeading, resetRadius, startDrag } from './curves/drag';
+import { applyDrag, dragHeading, resetRadius } from './curves/drag';
 import { hitHandle } from './curves/handles';
 import { appendNode, insertNode, prependNode } from './curves/path';
 import {
   edgesOfRoads,
   nearestOnRoads,
   moveNodes,
-  placed,
+  shareRadius,
   removeNodesFrom,
   removeRoad,
   replaceRoad,
@@ -17,9 +17,10 @@ import {
   type Roads,
 } from './curves/roads';
 import { dist, type Vec } from './curves/vec';
+import { dragPress, emptyPress } from './editorPress';
 import { skeletonAnchors } from './skeletonAnchors';
 import type { Focus } from './focus';
-import { cursorOf, isActiveEnd, isLeaf, previewOf, targetOf, type Drawn } from './editorTargets';
+import { cursorOf, extendTo, isActiveEnd, previewOf, targetOf, type Drawn } from './editorTargets';
 import { KEYMAP, type Action } from './keymap';
 import type { Pointer } from './proximity';
 import {
@@ -32,9 +33,8 @@ import {
 } from './editorTypes';
 import {
   afterCurveClick,
-  curveNodes,
-  isSelected,
   nodesInBand,
+  selectedSegments,
   withNodes,
   withoutNode,
   type Band,
@@ -158,7 +158,7 @@ export class Editor {
     const handle = this.handleAt(info);
     if (handle) return this.grab(handle, info);
     if (!this.drawing) {
-      this.pressEmpty(info);
+      this.press = emptyPress(this.drawn, info, this.curveAt(info));
       return;
     }
     const hit = this.curveAt(info);
@@ -166,50 +166,10 @@ export class Editor {
     else this.create(info.pt);
   }
 
-  /** Select mode, nothing grabbed: a click enters draw mode or, on a curve, selects; a drag spans a box. */
-  private pressEmpty(info: PointerInfo) {
-    const hit = this.curveAt(info);
-    this.press = {
-      kind: 'empty',
-      screen: info.screen,
-      base: info.shift ? this.selection : [],
-      shift: info.shift,
-      curve: hit ? curveNodes(hit.road, hit.ref.i) : [],
-      moved: false,
-      target: targetOf(this.drawn, hit ? { kind: 'candidate', hit } : null),
-    };
-  }
-
-  private grab(handle: RoadHandle, { pt, shift }: PointerInfo) {
-    const path = this.roads[handle.road]!;
-    const ref = { road: handle.road, node: handle.i };
-    const isNode = handle.type === 'node';
-    const wasSelected = isSelected(this.selection, ref);
-    const undo = this.snapshot();
-    const target = targetOf(this.drawn, { kind: 'handle', handle });
-    if (isNode || (handle.type === 'head' && !shift)) this.pick(ref, shift);
-    const others = this.selection.filter((r) => isNode && !isSelected([ref], r));
-    const active = this.isActiveEnd(handle);
-    this.press = {
-      kind: 'drag',
-      road: handle.road,
-      drag: startDrag(path, handle),
-      start: pt,
-      moved: false,
-      finishes: active && !shift,
-      extend: this.drawing && isLeaf(this.roads, handle) && !active && !shift,
-      group: placed(this.roads, others),
-      origin: { x: path.nodes[handle.i]!.x, y: path.nodes[handle.i]!.y },
-      click: shift ? (wasSelected ? 'toggle' : 'keep') : 'collapse',
-      undo,
-      target,
-    };
-  }
-
-  /** Pressing a node: it joins the selection with shift, else it becomes the selection unless it is part of it. */
-  private pick(ref: NodeRef, shift: boolean) {
-    if (shift) this.selection = withNodes(this.selection, [ref]);
-    else if (!isSelected(this.selection, ref)) this.selection = [ref];
+  private grab(handle: RoadHandle, info: PointerInfo) {
+    const r = dragPress(this.drawn, this.drawing, handle, info);
+    this.selection = r.selection;
+    this.press = r.press;
   }
 
   private insert(hit: RoadHit) {
@@ -252,11 +212,36 @@ export class Editor {
     press.moved = true;
     const road = press.road;
     const path = applyDrag(this.roads[road]!, press.drag, info.pt, { snap: info.shift });
-    const moved = replaceRoad(this.roads, road, path);
+    const moved = this.shared(replaceRoad(this.roads, road, path), press);
     const to = path.nodes[press.drag.handle.i]!;
     const delta = { x: to.x - press.origin.x, y: to.y - press.origin.y };
     const group = press.drag.handle.type === 'node' ? press.group : [];
     this.roads = group.length ? moveNodes(moved, group, delta) : moved;
+  }
+
+  /** Dragging the radius of a selected segment sets the radius of all selected segments (^77). */
+  private shared(roads: Roads, press: Extract<Press, { kind: 'drag' }>): Roads {
+    const own = this.sharing(press);
+    return own ? shareRadius(roads, own[0], own[1]) : roads;
+  }
+
+  /** The dragged segment and all selected segments, while a radius is dragged between selected nodes. */
+  private sharing(press: Press | null) {
+    if (press?.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
+    const own = { road: press.road, i: press.drag.handle.i };
+    const all = selectedSegments(this.roads, this.selection);
+    return all.some((s) => s.road === own.road && s.i === own.i) ? ([own, all] as const) : null;
+  }
+
+  /** Segments whose scaffold shows besides the focused one: the selected ones while sharing a radius (^77). */
+  get extraScaffold() {
+    return this.sharing(this.press)?.[1] ?? [];
+  }
+
+  /** Moving several nodes hides all scaffolds meanwhile (^78). */
+  get movingGroup() {
+    const press = this.press;
+    return press?.kind === 'drag' && press.moved && press.group.length > 0;
   }
 
   /** Dragging on empty canvas spans the selection box; shift keeps the selection and adds to it (^70, ^72). */
@@ -291,7 +276,14 @@ export class Editor {
   private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
     const { curve, shift } = press;
     if (curve.length) this.selection = afterCurveClick(this.selection, curve, shift);
-    else if (!press.base.length) this.enterDrawMode();
+    else if (shift) return;
+    else if (this.selection.length) this.selection = [];
+    else this.enterDrawMode();
+  }
+
+  private extendFrom(ref: NodeRef) {
+    const d = extendTo(this.drawn, ref);
+    [this.roads, this.active, this.end, this.selection] = [d.roads, d.active, d.end, d.selection];
   }
 
   /** A click (no drag) on the node being drawn from finishes the road; on another leaf node it extends the road from there. */
@@ -302,27 +294,6 @@ export class Editor {
       this.selection = [ref];
     if (press.finishes) this.finishRoad();
     else if (press.extend) this.extendFrom({ road: press.road, node: press.drag.handle.i });
-  }
-
-  /**
-   * Make a leaf node the one the next node attaches to (^65): the road it belongs to becomes the
-   * road being drawn, at that end. A road being drawn with one node only is dropped, since a road
-   * needs two.
-   */
-  private extendFrom(ref: NodeRef) {
-    const road = this.dropLoneRoad(ref.road);
-    const nodes = this.roads[road]?.nodes ?? [];
-    this.active = road;
-    this.end = ref.node === 0 && nodes.length > 1 ? 'start' : 'end';
-    this.selection = [{ road, node: ref.node }];
-  }
-
-  /** Remove the road being drawn if it has one node only and is not `keep`; returns keep's new index. */
-  private dropLoneRoad(keep: number): number {
-    const prev = this.active;
-    if (prev === null || prev === keep || (this.roads[prev]?.nodes.length ?? 0) >= 2) return keep;
-    this.roads = removeRoad(this.roads, prev, prev).roads;
-    return prev < keep ? keep - 1 : keep;
   }
 
   /** Left button released. */

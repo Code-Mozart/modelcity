@@ -9,6 +9,7 @@ export const at = (x: number, y: number, extra: Partial<PointerInfo> = {}): Poin
   scale: 4,
   touch: false,
   shift: false,
+  alt: false,
   ...extra,
 });
 

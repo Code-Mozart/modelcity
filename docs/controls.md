@@ -21,8 +21,8 @@ The left button always creates or edits; there are no tools (^44). What happens 
 |-------------------|-------------|-----------|------|
 | A handle: node, heading arrow tip, bend point (orange), orange ring, turquoise point | The handle is highlighted (blue ring). Click selects a node or heading. Drag edits it: moves the node (all selected nodes move with it, see Selection), turns the heading, drags the bend point or the radius ring | The same, with no node preview | ^9, ^44, ^48 |
 | A leaf node: a node at either end of a road (also the only node of a road) | Same as any handle (below) | **Click extends that road from it (^65):** the node becomes the one the next node attaches to, and the road becomes the road being drawn, at that end. At a road's first node the road is extended backwards: the new node is added before it, and its curve arrives along the first node's heading. The preview shows the curve from the cursor to the node. A drag moves the node as usual. The click does not apply to the node already being drawn from: that click finishes the road | ^65 |
-| A road's curve (within 18 px) | The curve is highlighted. Click selects its two nodes, Shift+click adds them (or deselects both if both are selected, ^74). A drag spans the selection box | A ring and a small tick on the curve. Click inserts a node there (the curve does not change). Drag inserts a node and sets its heading while dragging, which can turn the curve into an S-curve or hook | ^10, ^44, ^48 |
-| Empty canvas | Click enters draw mode (no node yet) and clears the selection (a Shift click does nothing). Drag spans the selection box (see Selection) | A preview of the node (and, once the road has nodes, the curve to it from the last one). The first click places node 1 of a new road, heading right (a drag sets its heading). Later clicks add a node at the end of the road, its heading chosen so that the new edge is a single circular arc (a hook beyond 180°, also when the cursor is behind the arrow). Drag adds the node at the press point with the heading pointing to the cursor, previewed live | ^40, ^44, ^46, ^48 |
+| A road's curve (within 18 px) | No mark (the insert mark only exists in draw mode, ^79). Click selects its two nodes, Shift+click adds them (or deselects both if both are selected, ^74), Alt+click selects the whole road (^76). A drag spans the selection box | The curve gets a ring and a small tick (the white mark). Click inserts a node there (the curve does not change). Drag inserts a node and sets its heading while dragging, which can turn the curve into an S-curve or hook | ^10, ^44, ^48 |
+| Empty canvas | With nothing selected, click enters draw mode (no node yet); with a selection, click deselects all instead (^75); a Shift click does nothing. Drag spans the selection box (see Selection) | A preview of the node (and, once the road has nodes, the curve to it from the last one). The first click places node 1 of a new road, heading right (a drag sets its heading). Later clicks add a node at the end of the road, its heading chosen so that the new edge is a single circular arc (a hook beyond 180°, also when the cursor is behind the arrow). Drag adds the node at the press point with the heading pointing to the cursor, previewed live | ^40, ^44, ^46, ^48 |
 
 Details:
 
@@ -40,8 +40,11 @@ A selection is 0..n nodes, also of different roads. Selected nodes are drawn blu
 |-------|--------|
 | LMB drag on empty canvas (select mode) | Spans the selection box, axis-aligned with the viewport. The nodes inside are the new selection, live while dragging |
 | Shift + LMB drag on empty canvas | Same, but the nodes inside are added to the current selection |
-| LMB on an unselected node | It becomes the whole selection |
-| LMB drag a selected node | All selected nodes move by the same translation. A click without moving reduces the selection to that node |
+| LMB on an unselected node | It becomes the whole selection (select mode only: in draw mode a click on a node does not select, ^75) |
+| Alt + LMB click on a node or curve | Select the whole road, the lane being the road for now (^76); Alt + drag on a node moves the whole road |
+| LMB click on empty canvas (something selected) | Deselect all; with nothing selected it enters draw mode instead (^75) |
+| LMB drag a selected node | All selected nodes move by the same translation; all scaffold gizmos are hidden meanwhile (^78). A click without moving reduces the selection to that node |
+| LMB drag the orange radius point of a segment whose two nodes are selected | The radius of all selected segments (both nodes selected) is set to the dragged value; their scaffolds are shown during the drag only (^77) |
 | Shift + LMB click on a node | Toggle whether the node is selected |
 | LMB click on a curve (select mode) | Select its two nodes (^74) |
 | Shift + LMB click on a curve | Add both nodes to the selection; only if both are selected already, deselect them (^74) |
@@ -66,9 +69,9 @@ The corner shows what the mouse and keys do right now, as rows of `[input]: acti
 
 | Mode and context | Rows |
 |------------------|------|
-| Select mode, empty canvas | `[LMB]: draw mode`, `[LMB drag]: select`, `[Shift]+[LMB drag]: add to selection` (only while something is selected), `[Del]: delete selected` (same), `[RMB drag]: pan`, `[Wheel]: zoom`, `[MMB drag]: rotate` |
-| Select mode, over a curve | `[LMB]: select both nodes` (not if both are selected), `[LMB drag]: select`, `[Shift]+[LMB]: add both nodes to selection` or `deselect both nodes` (if both are selected), `[Del]`, then the camera rows |
-| Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), on a node `[RMB]: delete node`, `[LMB]: select` (not if selected) and `[Shift]+[LMB]: select` or `deselect`, then `[Del]` and the camera rows |
+| Select mode, empty canvas | `[LMB]: draw mode` (with a selection: `[LMB]: deselect all`), `[LMB drag]: select`, `[Shift]+[LMB drag]: add to selection` (only while something is selected), `[Del]: delete selected` (same), `[RMB drag]: pan`, `[Wheel]: zoom`, `[MMB drag]: rotate` |
+| Select mode, over a curve | `[LMB]: select both nodes` (not if both are selected; `… instead` when something else is selected), `[LMB drag]: select`, `[Shift]+[LMB]: add both nodes to selection` or `deselect both nodes` (only with a selection), `[Alt]+[LMB]: select lane`, `[Del]`, then the camera rows |
+| Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), on a node `[RMB]: delete node`, `[LMB]: select` (`select instead` if something else is selected; not if it is selected), `[Shift]+[LMB]: select` (only with a selection) or `deselect`, `[Alt]+[LMB]: select lane`, then `[Del]` and the camera rows |
 | Draw mode, empty canvas | `[LMB]: add node`, `[LMB drag]: add node with heading`, `[Esc] or [RMB]: finish` |
 | Draw mode, over a curve | `[LMB]: insert node`, `[LMB drag]: insert node with heading`, `[Esc] or [RMB]: finish` |
 | Draw mode, over a node | `[LMB drag]: move node`, `[RMB]: delete node`, `[Esc]: finish`. The node being drawn from also has `[LMB]: finish road`; another leaf node has `[LMB]: extend road` |

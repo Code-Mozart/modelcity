@@ -44,6 +44,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Scaffold** | All other gizmos of a segment (orange lines, circle, ticks, control points, heading arrows (orange), turquoise lines and points, the orange point and its label). Shown all or nothing, for a single segment at a time, and only by need | decided | ^60, ^66 |
 | **Selection** | 0..n selected nodes, also of different roads. Selected nodes are blue and 150% larger; dragging one moves all by the same translation | decided; assumed (details) | ^70, ^71, ^72, ^73 |
 | **Selection box** | The rectangle spanned by a left drag on empty canvas in select mode, axis-aligned with the viewport (also "rubber band"); selects the nodes inside it | decided | ^69, ^70 |
+| **Lane** | A strip of road traffic runs in. For now a road is a single lane, so *select lane* selects the whole road; more lanes come later | decided; assumed (that a road is one lane for now) | ^22, ^76 |
 | **Select mode** | No road is being drawn: you edit control points; a click enters draw mode | decided | ^48, ^54 |
 | **Draw mode** | A road is being drawn: clicks place nodes, insert nodes on curves, or extend a road from a leaf node | decided | ^48, ^65 |
 | **Preview** | The translucent preview of the node a click would place, with the curve to it (not called "ghost") | decided | ^40, ^48, ^68 |

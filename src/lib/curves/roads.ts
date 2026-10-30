@@ -101,6 +101,20 @@ export function removeNodesFrom(roads: Roads, refs: NodeRef[], active: number | 
   );
 }
 
+/** Give the listed segments the radius of segment `from`, copying its current value (^77). */
+export function shareRadius(
+  roads: Roads,
+  from: { road: number; i: number },
+  to: { road: number; i: number }[],
+): Roads {
+  const value = roads[from.road]?.radii[from.i] ?? null;
+  return roads.map((path, road) => {
+    const mine = to.filter((t) => t.road === road);
+    if (!mine.length) return path;
+    return { ...path, radii: path.radii.map((r, i) => (mine.some((t) => t.i === i) ? value : r)) };
+  });
+}
+
 /** A node with its position at some moment: what a group move starts from. */
 export interface Placed extends NodeRef {
   x: number;

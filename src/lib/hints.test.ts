@@ -9,7 +9,7 @@ const show = (h: Hint) =>
         ? i.label
         : i.kind === 'wheel'
           ? 'Wheel'
-          : `${i.shift ? 'Shift+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
+          : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}`;
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
@@ -94,7 +94,7 @@ describe('select mode hints (^49, ^74)', () => {
 
   it('select mode with a selection: add to it, delete it (^74)', () => {
     expect(rows(false, empty, 2)).toEqual([
-      'LMB: draw mode',
+      'LMB: deselect all',
       'LMB drag: select',
       'Shift+LMB drag: add to selection',
       'Del: delete selected',
@@ -108,32 +108,46 @@ describe('select mode hints (^49, ^74)', () => {
 describe('select mode hints over curves and nodes (^74)', () => {
   it('select mode over a curve: select both its nodes, or deselect them (^74)', () => {
     const camera = ['RMB drag: pan', 'Wheel: zoom', 'MMB drag: rotate'];
-    expect(rows(false, { kind: 'curve', picked: 1 })).toEqual([
+    expect(rows(false, { kind: 'curve', picked: 1 }, 1)).toEqual([
       'LMB drag: select',
-      'LMB: select both nodes',
+      'Shift+LMB drag: add to selection',
+      'LMB: select both nodes instead',
       'Shift+LMB: add both nodes to selection',
+      'Alt+LMB: select lane',
+      'Del: delete selected',
       ...camera,
     ]);
-    expect(rows(false, { kind: 'curve', picked: 2 })).toEqual([
+    expect(rows(false, { kind: 'curve', picked: 2 }, 2)).toEqual([
       'LMB drag: select',
+      'Shift+LMB drag: add to selection',
       'Shift+LMB: deselect both nodes',
+      'Alt+LMB: select lane',
+      'Del: delete selected',
       ...camera,
     ]);
   });
+});
 
+describe('select mode hints over nodes (^74, ^75)', () => {
   it('select mode over a node: move, delete, select or deselect it, plus the camera controls', () => {
     expect(rows(false, node(false))).toEqual([
       'LMB drag: move node',
       'RMB: delete node',
       'LMB: select',
-      'Shift+LMB: select',
+      'Alt+LMB: select lane',
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',
     ]);
+    expect(rows(false, node(false), 1).slice(2, 5)).toEqual([
+      'LMB: select instead',
+      'Shift+LMB: select',
+      'Alt+LMB: select lane',
+    ]);
     const selected: HintTarget = { ...node(false), selected: true } as HintTarget;
     expect(rows(false, selected, 1).slice(2)).toEqual([
       'Shift+LMB: deselect',
+      'Alt+LMB: select lane',
       'Del: delete selected',
       'RMB drag: pan',
       'Wheel: zoom',
