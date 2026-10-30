@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera.svelte';
   import type { Editor, PointerInfo } from './editor.svelte';
   import { FEATURES } from './features';
@@ -21,6 +21,13 @@
     canvas.width = Math.round(camera.size.width * dpr);
     canvas.height = Math.round(camera.size.height * dpr);
   }
+
+  // Keep the camera on the content (^37); also re-checks when the window size changes.
+  $effect(() => {
+    const anchors = editor.anchors;
+    void camera.size;
+    untrack(() => camera.setAnchors(anchors));
+  });
 
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {

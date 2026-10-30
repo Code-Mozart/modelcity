@@ -16,6 +16,7 @@ import { preset, type PresetName } from './curves/presets';
 import { readoutLines } from './curves/readout';
 import type { PathNode } from './curves/types';
 import type { Vec } from './curves/vec';
+import { contentAnchors } from './contentAnchors';
 import { KEYMAP, type Action } from './keymap';
 
 export type Tool = 'move' | 'append' | 'insert';
@@ -53,6 +54,8 @@ export class Editor {
   equidistant = $state(false);
 
   edges = $derived(edgesOf(this.path));
+  /** Everything the user can grab, for the camera bounds (^37). */
+  anchors = $derived(contentAnchors(this.path, this.edges));
   readout = $derived(readoutLines(this.path, this.edges, this.sel).join('\n'));
   cursor = $derived(
     this.hover?.kind === 'handle'
