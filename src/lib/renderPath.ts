@@ -41,6 +41,8 @@ export interface Scene {
   /** All scaffolds are hidden while several nodes are moved (^78). */
   hideScaffold: boolean;
   hover: Hover | null;
+  /** The curve a merge would add, drawn dashed like the preview of a new node (^125). */
+  mergePreview: Extract<Hover, { kind: 'preview' }> | null;
   focus: Focus | null;
   pointer: Pointer | null;
 }
@@ -62,7 +64,8 @@ const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
 function drawArrow(f: Frame, node: { x: number; y: number; th: number }, color: string) {
   const a = toScreen(f, node);
   const t = screenDir(f, fromAngle(node.th));
-  const tip = { x: a.x + t.x * ARROW_PX, y: a.y + t.y * ARROW_PX };
+  // The control point sits on the stem, half way: the arrow reaches as far beyond it as it is before it (^126).
+  const tip = { x: a.x + t.x * 2 * ARROW_PX, y: a.y + t.y * 2 * ARROW_PX };
   segment(f.ctx, a, tip, { color, width: ARROW_STROKE_PX });
   for (const side of [-1, 1]) {
     const ang = node.th + f.view.rot + Math.PI + side * 0.5;
@@ -91,13 +94,19 @@ function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
 }
 
 /** Preview of the node a click would create, with the curve to it from the last node (^40). */
-function drawPreview(f: Frame, hover: Extract<Hover, { kind: 'preview' }>, pal: Palette) {
+function drawPreview(
+  f: Frame,
+  hover: Extract<Hover, { kind: 'preview' }>,
+  pal: Palette,
+  curveOnly = false,
+) {
   if (hover.ref) {
     const [from, to] = hover.end === 'end' ? [hover.ref, hover.node] : [hover.node, hover.ref];
     for (const piece of buildEdge(from, to, null, null).pieces) {
       strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
     }
   }
+  if (curveOnly) return;
   f.ctx.globalAlpha = 0.6;
   drawArrow(f, hover.node, pal.orange);
   dot(f.ctx, toScreen(f, hover.node), 5, pal.ink);
@@ -225,6 +234,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   scene.roads.forEach((road, i) => drawRoad(f, road, active[i]!, pal));
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
+  if (scene.mergePreview) drawPreview(f, scene.mergePreview, pal, true);
   if (scene.band) drawBand(f, scene.band, pal);
   scene.roads.forEach((road, i) => {
     drawNodes(f, road, { active: active[i]!, selected: selectedIn(scene.selection, i) }, pal);

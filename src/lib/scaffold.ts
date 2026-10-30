@@ -56,7 +56,7 @@ const closest = (list: Scores[], by: (s: Scores) => number): Scores | undefined 
 
 /**
  * The segment of the hovered or dragged handle. An orange or yellow point belongs to one
- * segment; a node or heading tip to two, then the one whose curve is closer to the pointer
+ * segment; a node or heading control point to two, then the one whose curve is closer to the pointer
  * (without a pointer, the one that starts at the node).
  */
 function focusedSegment(input: ScaffoldInput): SegmentRef | null {

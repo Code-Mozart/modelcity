@@ -15,7 +15,7 @@ import { curveNodes, isSelected, pressNode, roadNodes, selectedSegments } from '
 
 type DragPress = Extract<Press, { kind: 'drag' }>;
 
-/** Which presses select: nodes always, heading tips only without a modifier; never in draw mode (^74, ^75). */
+/** Which presses select: nodes always, heading control points only without a modifier; never in draw mode (^74, ^75). */
 function selects(handle: RoadHandle, drawing: boolean, { shift, alt }: PointerInfo): boolean {
   if (drawing) return false;
   return handle.type === 'node' || (handle.type === 'head' && !shift && !alt);

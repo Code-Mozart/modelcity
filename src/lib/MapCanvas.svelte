@@ -40,6 +40,7 @@
       extra: editor.extraScaffold,
       hideScaffold: editor.movingGroup,
       hover: editor.hover,
+      mergePreview: editor.mergePreview,
       focus: editor.focus,
       pointer: editor.pointer,
     };

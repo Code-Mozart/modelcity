@@ -26,7 +26,7 @@ import {
 } from './editorOps';
 import { skeletonAnchors } from './skeletonAnchors';
 import type { Focus } from './focus';
-import { cursorOf, extendTo, previewOf, targetOf, type Drawn } from './editorTargets';
+import { cursorOf, extendTo, mergePreview, previewOf, targetOf, type Drawn } from './editorTargets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { NO_HISTORY, record, redoStep, undoStep } from './history';
 import type { Pointer } from './proximity';
@@ -247,6 +247,11 @@ export class Editor {
   /** Segments whose scaffold shows besides the focused one: the selected ones while sharing a radius (^77). */
   get extraScaffold() {
     return sharing(this.roads, this.selection, this.press)?.all ?? [];
+  }
+
+  /** The curve a merge into the node or curve under the pointer would add (^123, ^125). */
+  get mergePreview() {
+    return mergePreview(this.drawn, this.hover);
   }
 
   /** Moving several nodes hides all scaffolds meanwhile (^78). */

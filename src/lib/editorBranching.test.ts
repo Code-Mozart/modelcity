@@ -128,3 +128,35 @@ describe('undo of splits and merges (^23, ^81)', () => {
     expect(ed.drawing).toBe(false);
   });
 });
+
+describe('preview of a merge (^123, ^125)', () => {
+  it('shows the curve to the node or point under the pointer while a road is being drawn', () => {
+    const ed = base();
+    click(ed, 20, 80);
+    click(ed, 40, 40);
+    ed.pointerMove(at(40, -20));
+    expect(ed.mergePreview).toMatchObject({
+      kind: 'preview',
+      ref: { x: 40, y: 40 },
+      node: { x: 40, y: -20 },
+    });
+    const on = bareCurvePoint(ed);
+    ed.pointerMove(at(on.x, on.y));
+    expect(ed.mergePreview?.node).toMatchObject({
+      x: expect.closeTo(on.x, 0),
+      y: expect.closeTo(on.y, 0),
+    });
+    ed.pointerMove(at(300, 300));
+    expect(ed.mergePreview).toBeNull();
+  });
+
+  it('has none when nothing is being drawn (a split has no curve yet) or over the road itself', () => {
+    const ed = base();
+    ed.pointerMove(at(40, -20));
+    expect(ed.mergePreview).toBeNull();
+    click(ed, 20, 80);
+    click(ed, 40, 40);
+    ed.pointerMove(at(20, 80));
+    expect(ed.mergePreview).toBeNull();
+  });
+});
