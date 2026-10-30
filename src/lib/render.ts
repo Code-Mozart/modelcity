@@ -39,6 +39,7 @@ function drawScaleBar({ ctx, view, size }: Frame, pal: Palette) {
 }
 
 export interface RenderOptions {
+  showGrid: boolean;
   showScaleBar: boolean;
 }
 
@@ -56,8 +57,10 @@ export function render(frame: Frame, dpr: number, scene: Scene, options: RenderO
     ...frame,
     view: { cx: view.gx, cy: view.gy, scale: view.scale, rot: 0, gx: 0, gy: 0 },
   };
-  drawGrid(gridFrame, minor, pal['grid-minor']);
-  drawGrid(gridFrame, minor * 10, pal['grid-major']);
+  if (options.showGrid) {
+    drawGrid(gridFrame, minor, pal['grid-minor']);
+    drawGrid(gridFrame, minor * 10, pal['grid-major']);
+  }
   drawScene(frame, scene, pal);
   if (options.showScaleBar) drawScaleBar(frame, pal);
 }

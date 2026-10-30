@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import type { Camera } from './camera.svelte';
   import type { Editor, PointerInfo } from './editor.svelte';
+  import { FEATURES } from './features';
   import { render } from './render';
   import { screenToWorld, type Point } from './view';
 
@@ -34,7 +35,7 @@
       showLines: editor.showLines,
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
-    render(frame, dpr, scene, { showScaleBar: camera.scaleBarVisible });
+    render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
   });
 
   function localPoint(e: MouseEvent): Point {

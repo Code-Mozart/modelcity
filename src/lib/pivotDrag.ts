@@ -29,7 +29,7 @@ export const ZOOM_PER_PX = 0.01;
  * rotate and vertical movement inside it does not zoom, so a mostly vertical drag does not also
  * rotate a little and vice versa (^31).
  */
-export const DEAD_ZONE_PX = 8;
+export const DEAD_ZONE_PX = 20;
 
 /** A displacement with the dead zone removed (zero inside it, continuous outside). */
 export const beyondDeadZone = (d: number) => Math.sign(d) * Math.max(0, Math.abs(d) - DEAD_ZONE_PX);
