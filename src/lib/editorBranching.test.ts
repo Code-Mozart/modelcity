@@ -101,35 +101,6 @@ describe('shared nodes (^23)', () => {
   });
 });
 
-describe('lanes side by side (^22)', () => {
-  it('a node placed one lane width beside a road snaps to it and runs parallel', () => {
-    const ed = draw([
-      [0, 0],
-      [60, 0],
-    ]);
-    ed.key('Escape');
-    click(ed, 500, 500);
-    click(ed, 10, 3.5);
-    click(ed, 50, 2.6);
-    const [a, b] = ed.roads[1]!.nodes;
-    expect(a).toMatchObject({ x: 10, y: 3 });
-    expect(b!.y).toBeCloseTo(3, 1);
-    expect(a!.th).toBeCloseTo(0);
-    expect(b!.th).toBeCloseTo(0);
-  });
-
-  it('the preview shows the snapped node', () => {
-    const ed = draw([
-      [0, 0],
-      [60, 0],
-    ]);
-    ed.key('Escape');
-    click(ed, 500, 500);
-    ed.pointerMove(at(30, 3.4));
-    expect(ed.hover).toMatchObject({ kind: 'preview', node: { x: 30, y: 3, th: 0 } });
-  });
-});
-
 describe('undo of splits and merges (^23, ^81)', () => {
   const undo = { ctrl: true, shift: false };
 

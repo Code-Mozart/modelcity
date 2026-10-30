@@ -49,7 +49,6 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Shared node** | Nodes of different roads at the same position are one node (a junction): selected, moved, deleted and turned together | decided; assumed (that sharing is by position) | ^23, ^92 |
 | **Split** | A road starts at an existing node, so that node has one edge in and two (or more) out. Draw mode: click a node or a curve | decided | ^23, ^93 |
 | **Merge** | A road ends at an existing node, so that node has two (or more) edges in and one out. Draw mode: click a node or a curve while drawing | decided | ^23, ^93 |
-| **Snap** | A node placed or dragged near the line one lane width beside another road jumps onto it and takes its heading, so lanes run parallel | decided; assumed (reach and details) | ^22, ^94 |
 | **Subject to snapping** | A point or handle that is pulled to snap lines and snap points near it; the pivot crosshair, the rotation handle and moved or placed nodes are | decided | ^112 |
 | **Node ring** | The fixed-size blue ring around a selected node (with more than one node selected); only the closest one in proximity is drawn. Planned | decided | ^114 |
 | **Bounding ring** | The blue ring around all selected nodes, centered at the center of their bounding box. Planned | decided | ^114 |

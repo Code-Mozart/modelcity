@@ -33,6 +33,8 @@ export interface Placement {
   th: number | null;
 }
 
+/** Distance in screen pixels within which a press counts as on a curve. */
+export const INSERT_REACH_PX = 18;
 /** Pointer travel (screen pixels) that turns a press into a drag. */
 export const DRAG_PX = 6;
 

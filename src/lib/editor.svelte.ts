@@ -16,7 +16,6 @@ import {
 import { dist } from './curves/vec';
 import { dragPress, emptyPress, sharing } from './editorPress';
 import {
-  curveReach,
   dragStep,
   insertAt,
   mergeInto,
@@ -31,7 +30,14 @@ import { cursorOf, extendTo, previewOf, targetOf, type Drawn } from './editorTar
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { NO_HISTORY, record, redoStep, undoStep } from './history';
 import type { Pointer } from './proximity';
-import { DRAG_PX, type Hover, type PointerInfo, type Press, type Snapshot } from './editorTypes';
+import {
+  DRAG_PX,
+  INSERT_REACH_PX,
+  type Hover,
+  type PointerInfo,
+  type Press,
+  type Snapshot,
+} from './editorTypes';
 import {
   afterCurveClick,
   nodesInBand,
@@ -112,7 +118,7 @@ export class Editor {
   }
 
   private curveAt({ pt, scale }: PointerInfo): RoadHit | null {
-    return nearestOnRoads(this.roads, pt, curveReach(scale));
+    return nearestOnRoads(this.roads, pt, INSERT_REACH_PX / scale);
   }
 
   /** Handle a key; true if it was bound. */
@@ -218,7 +224,7 @@ export class Editor {
   /** A node at the end of the road being drawn, or the first node of a new road (^40). */
   private place(info: PointerInfo) {
     const undo = this.snapshot();
-    const r = placeNode(this.drawn, placementAt(this.drawn, info.pt, info.scale));
+    const r = placeNode(this.drawn, placementAt(info.pt));
     this.restore(r.drawn);
     this.press = { kind: 'place', ref: r.ref, undo, finish: false, target: { kind: 'empty' } };
   }
@@ -263,9 +269,7 @@ export class Editor {
     if (handle) return { kind: 'handle', handle };
     const hit = this.curveAt(info);
     if (hit) return { kind: 'candidate', hit };
-    return this.drawing
-      ? previewOf(this.drawn, placementAt(this.drawn, info.pt, info.scale))
-      : null;
+    return this.drawing ? previewOf(this.drawn, placementAt(info.pt)) : null;
   }
 
   private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {

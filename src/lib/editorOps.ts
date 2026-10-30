@@ -9,47 +9,13 @@ import {
   type RoadHit,
   type Roads,
 } from './curves/roads';
-import { LANE_WIDTH_M } from './curves/lane';
-import { snapParallel } from './curves/snap';
 import { dist, type Vec } from './curves/vec';
 import { withSharedRadius } from './editorPress';
 import type { Drawn } from './editorTargets';
 import type { Placement, PointerInfo, Press } from './editorTypes';
 
-/** How near (screen pixels) the pointer must be to the line beside another lane to snap to it (^22). */
-export const SNAP_PX = 14;
-
-/** The node of the road being drawn that the next node attaches to, if any. */
-function lastNode(d: Drawn): Vec | null {
-  const nodes = d.active === null ? undefined : d.roads[d.active]?.nodes;
-  return (d.end === 'end' ? nodes?.at(-1) : nodes?.[0]) ?? null;
-}
-
-/** The way the new lane travels: from the node it attaches to to the pointer, or backwards. */
-function travelOf(d: Drawn, pt: Vec): Vec | null {
-  const from = lastNode(d);
-  if (!from) return null;
-  const v = { x: pt.x - from.x, y: pt.y - from.y };
-  return d.end === 'end' ? v : { x: -v.x, y: -v.y };
-}
-
-/**
- * How near (meters) the pointer must be to a curve to count as on it: the half width of the
- * road, but at least 6 and at most 18 screen pixels, so that the line a lane width beside it, where
- * a new lane snaps (^22), can still be reached when zoomed out.
- */
-export const curveReach = (scale: number) =>
-  Math.min(18, Math.max(6, (LANE_WIDTH_M / 2) * scale)) / scale;
-
-/** Where a click at `pt` would place a node: snapped beside a lane if one is near. */
-export function placementAt(d: Drawn, pt: Vec, scale: number): Placement {
-  const snap = snapParallel(d.roads, pt, {
-    reach: SNAP_PX / scale,
-    exclude: d.active,
-    travel: travelOf(d, pt),
-  });
-  return snap ? { pt: snap.pt, th: snap.th } : { pt, th: null };
-}
+/** The node a click at `pt` would place: where the pointer is, with the automatic heading. */
+export const placementAt = (pt: Vec): Placement => ({ pt, th: null });
 
 const withHeading = (roads: Roads, ref: NodeRef, th: number | null): Roads => {
   if (th === null) return roads;
@@ -97,21 +63,14 @@ export function mergeInto(d: Drawn, ref: NodeRef): Drawn {
 }
 
 /**
- * The roads after dragging the grabbed handle to the pointer: a single node snaps beside another
- * lane, a group moves along, a radius is shared, shared nodes keep one heading (^22, ^23, ^71, ^77).
+ * The roads after dragging the grabbed handle to the pointer: a group moves along, a radius is
+ * shared, shared nodes keep one heading (^23, ^71, ^77).
  */
 export function dragStep(d: Drawn, press: Extract<Press, { kind: 'drag' }>, info: PointerInfo) {
   const { road } = press;
   const { handle } = press.drag;
-  const alone = handle.type === 'node' && !press.group.length;
-  const snap = alone
-    ? snapParallel(d.roads, info.pt, { reach: SNAP_PX / info.scale, exclude: road })
-    : null;
   const before = d.roads[road]!;
-  const dragged = applyDrag(before, press.drag, snap?.pt ?? info.pt, { snap: info.shift });
-  const path = snap
-    ? clearShapes(withNode(dragged, handle.i, { th: snap.th }), [handle.i - 1, handle.i])
-    : dragged;
+  const path = applyDrag(before, press.drag, info.pt, { snap: info.shift });
   const next = withSharedRadius(replaceRoad(d.roads, road, path), d.selection, press);
   const to = path.nodes[handle.i]!;
   const delta = { x: to.x - press.origin.x, y: to.y - press.origin.y };
