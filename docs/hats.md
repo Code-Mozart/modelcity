@@ -1,4 +1,4 @@
-next: ^15
+next: ^16
 
 # Hats
 
@@ -20,3 +20,4 @@ Registry of all hats. Never reuse or renumber. Keep this file up to date.
 | ^12 | decision | decided | **Port architecture:** curve geometry is a pure, tested library in `src/lib/curves/` working in meters (the demo's 6 px = 1 m); the editor interaction engine is separate from the canvas component; the canvas component only dispatches input and draws. The demo stays as a reference. Builds on ^4. |
 | ^13 | milestone | done, awaiting user test | Port the ^5 demo into the app on the pan/zoom canvas (^2): all three tools, handles, presets, readout, legend, dark mode. The ^2 test box is removed. Not ported: touch pinch zoom, undo. Behavior-preserving except: handles keep a constant screen size at any zoom (demo scaled them with the canvas), and hit areas are in screen pixels. |
 | ^14 | decision | decided | **Navigation vs editing input:** wheel/pinch zooms; dragging empty space or middle-button drag pans; dragging a handle edits. In Append/Insert tools a click acts, and panning needs the middle button. Space+drag was removed (did not work). Touch: one-finger on empty space pans. |
+| ^15 | bug | fixed | While dragging a handle, the blue hover ring stayed at the point where the drag started. Fix: clear the hover when a drag starts. Reported by the user while testing ^13. |

@@ -23,6 +23,16 @@ describe('Editor pointer interaction', () => {
     expect(ed.path.nodes[1]).toMatchObject({ x: n.x + 3, y: n.y - 2 });
   });
 
+  it('clears the hover ring while a handle is dragged (^15)', () => {
+    const ed = new Editor();
+    const n = ed.path.nodes[1]!;
+    ed.pointerMove(at(n.x, n.y));
+    expect(ed.hover?.kind).toBe('handle');
+    ed.pointerDown(at(n.x, n.y));
+    ed.pointerMove(at(n.x + 3, n.y));
+    expect(ed.hover).toBeNull();
+  });
+
   it('lets the canvas pan when empty space is pressed in Move', () => {
     const ed = new Editor();
     ed.sel = 2;

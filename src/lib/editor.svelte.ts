@@ -112,6 +112,7 @@ export class Editor {
     }
     if (handle.type === 'node' || handle.type === 'head') this.sel = handle.i;
     this.drag = startDrag(this.path, handle);
+    this.hover = null;
     return true;
   }
 
