@@ -50,6 +50,12 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Split** | A road starts at an existing node, so that node has one edge in and two (or more) out. Draw mode: click a node or a curve | decided | ^23, ^93 |
 | **Merge** | A road ends at an existing node, so that node has two (or more) edges in and one out. Draw mode: click a node or a curve while drawing | decided | ^23, ^93 |
 | **Snap** | A node placed or dragged near the line one lane width beside another road jumps onto it and takes its heading, so lanes run parallel | decided; assumed (reach and details) | ^22, ^94 |
+| **Subject to snapping** | A point or handle that is pulled to snap lines and snap points near it; the pivot crosshair, the rotation handle and moved or placed nodes are | decided | ^112 |
+| **Node ring** | The fixed-size blue ring around a selected node (with more than one node selected); only the closest one in proximity is drawn. Planned | decided | ^114 |
+| **Bounding ring** | The blue ring around all selected nodes, centered at the center of their bounding box. Planned | decided | ^114 |
+| **Rotation handle** | The short blue radial line under the cursor on a ring that rotates the selection around the pivot (the user also says "wheel handle"). Planned | decided | ^115 |
+| **Crosshair** | The blue pivot of rotating and scaling a selection, first at the center of its bounding box; its square tips scale. Planned | decided | ^116 |
+| **Extend mode** | The mode while a road is being extended from a node (dashed preview), between draw mode and select mode. Planned | decided | ^120 |
 | **Select mode** | No road is being drawn: you edit control points; a click enters draw mode | decided | ^48, ^54 |
 | **Draw mode** | A road is being drawn: clicks place nodes, insert nodes on curves, or extend a road from a leaf node | decided | ^48, ^65 |
 | **Preview** | The translucent preview of the node a click would place, with the curve to it (not called "ghost") | decided | ^40, ^48, ^68 |
