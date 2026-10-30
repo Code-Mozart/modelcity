@@ -40,7 +40,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Radius** | One per segment: automatic (the largest that fits) or explicit. The general minimum is 0.5 m for now | decided; assumed (0.5 m) | ^8, ^57 |
 | **Control point** | Something you can drag to edit: a node, a heading tip, a bend's orange point, an orange radius point, a hook's yellow points (`handle` in the code) | decided; assumed (the code word) | ^9 |
 | **Gizmo** | Any drawn aid on the canvas that is not map content: the skeleton and the scaffolds | decided | ^60 |
-| **Skeleton** | The gizmos that are always shown: the curves and the node dots | decided | ^60 |
+| **Skeleton** | The gizmos that are always shown: the curves (with their direction arrows) and the node dots | decided | ^60 |
 | **Scaffold** | All other gizmos of a segment (orange lines, circle, ticks, control points, heading arrows (orange), yellow lines and points, the orange point and its label). Shown all or nothing, for a single segment at a time, and only by need | decided | ^60, ^66 |
 | **Selection** | 0..n selected nodes, also of different roads. Selected nodes are blue and 150% larger; dragging one moves all by the same translation | decided; assumed (details) | ^70, ^71, ^72, ^73 |
 | **Selection box** | The rectangle spanned by a left drag on empty canvas in select mode, axis-aligned with the viewport (also "rubber band"); selects the nodes inside it | decided | ^69, ^70 |

@@ -1,3 +1,4 @@
+import { samplesAlong } from './curves/arrows';
 import { buildEdge } from './curves/edge';
 import { ARROW_PX } from './curves/handles';
 import type { EdgeRef, Path } from './curves/path';
@@ -42,9 +43,12 @@ export interface Scene {
   pointer: Pointer | null;
 }
 
-const CURVE_PX = 4;
+const CURVE_PX = 2;
 const HEAD_BARB_PX = 11;
 const ARROW_STROKE_PX = 2;
+/** Distance between the direction arrows along a curve, and their size (^80). */
+const DIRECTION_SPACING_PX = 48;
+const DIRECTION_BARB_PX = 6;
 const NODE_DOT_PX = 5.5;
 /** Selected nodes are blue and 150% larger (^70). */
 const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
@@ -89,7 +93,7 @@ function drawPreview(f: Frame, hover: Extract<Hover, { kind: 'preview' }>, pal: 
   if (hover.ref) {
     const [from, to] = hover.end === 'end' ? [hover.ref, hover.node] : [hover.node, hover.ref];
     for (const piece of buildEdge(from, to, null, null).pieces) {
-      strokePiece(f, piece, { color: pal.ink, width: 3, dash: [6, 6] });
+      strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
     }
   }
   f.ctx.globalAlpha = 0.6;
@@ -116,6 +120,23 @@ function drawHover(f: Frame, hover: Hover | null, drawing: boolean, pal: Palette
     ring(f.ctx, toScreen(f, hover.handle), 10, { color: pal.blue, width: 1.6 });
 }
 
+/** Small chevrons along the curves at regular pixel distances, pointing the way the road runs (^80). */
+function drawDirection(f: Frame, road: RoadScene, pal: Palette) {
+  const pieces = road.edges.flatMap((e) => e.E.pieces);
+  for (const s of samplesAlong(pieces, DIRECTION_SPACING_PX / f.view.scale)) {
+    const at = toScreen(f, s);
+    const t = screenDir(f, { x: s.tx, y: s.ty });
+    for (const side of [-1, 1]) {
+      const a = Math.atan2(t.y, t.x) + Math.PI + side * 0.7;
+      const barb = {
+        x: at.x + DIRECTION_BARB_PX * Math.cos(a),
+        y: at.y + DIRECTION_BARB_PX * Math.sin(a),
+      };
+      segment(f.ctx, at, barb, { color: pal.ink, width: ARROW_STROKE_PX });
+    }
+  }
+}
+
 /** One road: the curves always, the construction of the segments whose scaffold is shown. */
 function drawRoad(f: Frame, road: RoadScene, active: boolean[], pal: Palette) {
   road.edges.forEach((ref, k) => {
@@ -126,6 +147,7 @@ function drawRoad(f: Frame, road: RoadScene, active: boolean[], pal: Palette) {
   for (const { E } of road.edges) {
     for (const piece of E.pieces) strokePiece(f, piece, { color: pal.ink, width: CURVE_PX });
   }
+  drawDirection(f, road, pal);
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawCorners(f, ref, pal);
