@@ -2,7 +2,7 @@ import type { HandleType } from './curves/handles';
 
 /** One way of operating the mouse or keyboard, shown as a symbol (^49). */
 export type Input =
-  | { kind: 'mouse'; button: 'lmb' | 'mmb' | 'rmb'; drag?: boolean }
+  | { kind: 'mouse'; button: 'lmb' | 'mmb' | 'rmb'; drag?: boolean; shift?: boolean }
   | { kind: 'wheel' }
   | { kind: 'key'; label: string };
 
@@ -18,10 +18,11 @@ export type HintTarget =
   | { kind: 'curve' }
   | { kind: 'handle'; type: HandleType; last: boolean; leaf: boolean };
 
-const mouse = (button: 'lmb' | 'mmb' | 'rmb', drag = false): Input => ({
+const mouse = (button: 'lmb' | 'mmb' | 'rmb', drag = false, shift = false): Input => ({
   kind: 'mouse',
   button,
   drag,
+  shift,
 });
 const hint = (input: Input | Input[], text: string): Hint => ({
   inputs: Array.isArray(input) ? input : [input],
@@ -80,8 +81,17 @@ function drawModeHints(target: HintTarget): Hint[] {
 
 /** Select mode: no road is being drawn. */
 function selectModeHints(target: HintTarget): Hint[] {
-  if (target.kind === 'handle') return [...handleHints(target, false), ...CAMERA];
-  return [hint(mouse('lmb'), 'draw mode'), ...CAMERA];
+  if (target.kind === 'handle') {
+    const toggle =
+      target.type === 'node' ? [hint(mouse('lmb', false, true), 'toggle selected')] : [];
+    return [...handleHints(target, false), ...toggle, ...CAMERA];
+  }
+  return [
+    hint(mouse('lmb'), 'draw mode'),
+    hint(mouse('lmb', true), 'select nodes'),
+    hint(mouse('lmb', true, true), 'add to selection'),
+    ...CAMERA,
+  ];
 }
 
 /** The control hints for the top left corner, for the current mode and what is under the pointer (^49). */

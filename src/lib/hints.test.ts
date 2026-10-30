@@ -9,7 +9,7 @@ const show = (h: Hint) =>
         ? i.label
         : i.kind === 'wheel'
           ? 'Wheel'
-          : `${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
+          : `${i.shift ? 'Shift+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}`;
 const rows = (drawing: boolean, target: HintTarget) => hintsFor(drawing, target).map(show);
@@ -26,6 +26,8 @@ describe('control hints (^49)', () => {
   it('select mode shows how to enter draw mode and the camera controls', () => {
     expect(rows(false, empty)).toEqual([
       'LMB: draw mode',
+      'LMB drag: select nodes',
+      'Shift+LMB drag: add to selection',
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',
@@ -89,10 +91,11 @@ describe('control hints over nodes and handles (^49)', () => {
     expect(rows(true, h('rad'))).toEqual(['LMB drag: change radius', 'Esc or RMB: finish']);
   });
 
-  it('select mode over a node: move or delete it, plus the camera controls', () => {
+  it('select mode over a node: move, delete or toggle it, plus the camera controls', () => {
     expect(rows(false, node(false))).toEqual([
       'LMB drag: move node',
       'RMB: delete node',
+      'Shift+LMB: toggle selected',
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',

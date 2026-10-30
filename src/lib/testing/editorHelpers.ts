@@ -4,6 +4,8 @@ import { pointOn } from '../curves/piece';
 /** Helpers for tests of the editor: pointer positions, clicks, roads drawn by clicking. */
 export const at = (x: number, y: number, extra: Partial<PointerInfo> = {}): PointerInfo => ({
   pt: { x, y },
+  screen: { x: x * 4, y: y * 4 },
+  project: (p) => ({ x: p.x * 4, y: p.y * 4 }),
   scale: 4,
   touch: false,
   shift: false,

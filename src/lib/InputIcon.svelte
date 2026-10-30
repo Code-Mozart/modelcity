@@ -9,6 +9,9 @@
   let { input }: { input: Input } = $props();
 </script>
 
+{#if input.kind === 'mouse' && input.shift}
+  <KeyCap>Shift</KeyCap><span class="plus">+</span>
+{/if}
 {#if input.kind === 'key'}
   <KeyCap>{input.label}</KeyCap>
 {:else if input.kind === 'wheel'}
@@ -28,3 +31,10 @@
     label={input.button.toUpperCase()}
   />
 {/if}
+
+<style>
+  .plus {
+    color: var(--muted);
+    font-size: 12px;
+  }
+</style>

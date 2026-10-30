@@ -1,0 +1,64 @@
+import type { DragState } from './curves/drag';
+import type { RoadHandle, RoadHit, NodeRef, Placed, Roads } from './curves/roads';
+import type { PathNode } from './curves/types';
+import type { Vec } from './curves/vec';
+import type { HintTarget } from './hints';
+
+/** What the pointer is doing, as seen by the editor. `pt` is in world meters. */
+export interface PointerInfo {
+  pt: Vec;
+  /** The same position in screen pixels, and the map from world to screen (for the selection box). */
+  screen: Vec;
+  project: (p: Vec) => Vec;
+  /** Pixels per meter, for screen-sized hit areas. */
+  scale: number;
+  touch: boolean;
+  shift: boolean;
+}
+
+/**
+ * What is under the pointer: a handle to edit, and in draw mode also a curve to insert into or
+ * the preview of the node a click would add (^48).
+ */
+export type Hover =
+  | { kind: 'handle'; handle: RoadHandle }
+  | { kind: 'candidate'; hit: RoadHit }
+  | { kind: 'preview'; node: PathNode; ref: PathNode | null; end: 'start' | 'end' };
+
+/** Distance in screen pixels within which a press snaps to a curve. */
+export const INSERT_REACH_PX = 18;
+/** Pointer travel (screen pixels) that turns a press into a drag. */
+export const DRAG_PX = 6;
+
+export interface Snapshot {
+  roads: Roads;
+  active: number | null;
+  end: 'start' | 'end';
+  selection: NodeRef[];
+}
+
+/**
+ * The left button is down: dragging a handle (a node drags the other selected nodes along, ^71),
+ * placing a node (its heading by dragging), or, in select mode on empty canvas, a click that
+ * enters draw mode or a drag that spans the selection box (^70).
+ */
+export type Press =
+  | {
+      kind: 'drag';
+      road: number;
+      drag: DragState;
+      start: Vec;
+      moved: boolean;
+      /** A click finishes the road (it is the end being drawn) or extends it from another leaf node. */
+      finishes: boolean;
+      extend: boolean;
+      /** The other selected nodes, as they were, moving with this one. */
+      group: Placed[];
+      origin: Vec;
+      /** What a click without moving does to the selection (^71, ^72). */
+      click: 'toggle' | 'collapse' | 'keep';
+      undo: Snapshot;
+      target: HintTarget;
+    }
+  | { kind: 'place'; ref: NodeRef; undo: Snapshot; target: HintTarget }
+  | { kind: 'empty'; screen: Vec; base: NodeRef[]; moved: boolean; target: HintTarget };
