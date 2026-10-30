@@ -67,12 +67,49 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 
 this is mostly unstructured, unordered and unregistered (no hats). @claude if you see this, properly register all items and remove them from this scratchpad list please.
 
-- a search bar for operations (this is the "menu", similar to MacOS spotlight search or raycast or Blender), either by RMB when not hovering a node (this control gets a hint) or by pressing the Space key (also gets a hint). its a fuzzy search of sorts. menu items include actions like exporting, clearing the map, etc.
+operations search:
+- a search bar for operations (this is the "menu", similar to MacOS spotlight search or raycast or Blender), either by RMB when not hovering a node (this control gets a hint) or by pressing the Space key (also gets a hint).
+- its a fuzzy search of sorts. items are sorted by how much the string matches and secondary sorting by how recently used
+- menu items include operations like exporting, clearing the map, undo, redo, batch undo, batch redo, etc.
+- the items should show their operation name left-aligned and hotkey (if they have one) right-aligned
+
+rendering:
 - the generated geometry should have different colors, sometimes per segment. when previewed for construction it should be lime green. when both its nodes are selected it should be blue. when its arc radius is changed (arc radius control point dragged) it should be yellow.
 - when hovered, nodes should be at 150% size and segments at 150% thickness
+- selected segments (both nodes selected) should be also drawn at 150% thickness
 
 snapping:
 - there are snap lines (solid turquoise in dark mode) and snap points (solid turquoise rings in dark mode). snap lines still allow for 1 degree of freedom, while snap points dont.
 - the distance to a snap point is just the difference between 2 points in 2D space. the distance to snap lines is the shortest distance between a point and a line.
 - snap suggestions are shown by proximity. their should never be 2 parallel snap lines, because only the the closest one should be shown in that case (im not sure on that decision, it needs a hat)
 - nodes should snap along the normals of other nodes headings, when close to that line (proximity). additionally there should be a snap point where the 2 nodes would touch (or rather at the single point where their respective imagined circles with radius of the lane width intersect)
+
+undo:
+- undo history items can be in batches. batches include a series of selection and deselection operations, the individual nodes of a polyline/chain drawn in draw mode, etc.
+- new controls (control hints, controls.md): batch undo via alt+ctrl-z and batch redo via alt+ctrl+y or alt+ctrl+shift+z
+
+mobile devices (touch):
+- should be in a new mode: view mode
+- in view mode nothing can be selected or modified
+
+data model:
+- the positions of the 2 orange control points in hooks should be derived and should no longer be controllable
+
+the normalized data model should look something like this then:
+```
+project {
+  edges: edge[]
+  ...
+}
+
+edge {
+  from: node
+  to: node
+
+  curve_radius: float
+}
+
+node {
+  position: vec2
+}
+```
