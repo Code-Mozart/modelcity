@@ -62,3 +62,17 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Mouse symbols** | The symbols for mouse buttons, drag and the wheel (`MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`) | decided | ^50, ^56 |
 | **Proximity** | The fixed pixel distance within which something counts as "near" the pointer: 20 px to a curve, 48 px to a control point | decided; assumed (the distances) | ^55, ^60 |
 | **World coordinates** | Meters, origin at the map center, x to the right, y down | decided | ^4 |
+
+## ToDo list
+
+this is unstructured, unordered and unregistered (no hats).
+
+- a search bar for operations (this is the "menu", similar to MacOS spotlight search or raycast or Blender), either by RMB when not hovering a node (this control gets a hint) or by pressing the Space key (also gets a hint). its a fuzzy search of sorts. menu items include actions like exporting, clearing the map, etc.
+- the generated geometry should have different colors, sometimes per segment. when previewed for construction it should be lime green. when both its nodes are selected it should be blue. when its arc radius is changed (arc radius control point dragged) it should be yellow.
+- when hovered, nodes should be at 150% size and segments at 150% thickness
+
+snapping:
+- there are snap lines (solid turquoise in dark mode) and snap points (solid turquoise rings in dark mode). snap lines still allow for 1 degree of freedom, while snap points dont.
+- the distance to a snap point is just the difference between 2 points in 2D space. the distance to snap lines is the shortest distance between a point and a line.
+- snap suggestions are shown by proximity. their should never be 2 parallel snap lines, because only the the closest one should be shown in that case (im not sure on that decision, it needs a hat)
+- nodes should snap along the normals of other nodes headings, when close to that line (proximity). additionally there should be a snap point where the 2 nodes would touch (or rather at the single point where their respective imagined circles with radius of the lane width intersect)
