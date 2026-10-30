@@ -45,8 +45,8 @@ export function handlesOf(path: Path, edges: EdgeRef[], scale: number): Handle[]
 /** Non-node handles in tie-break order: the earlier type wins when equally near. */
 const PRIORITY: HandleType[] = ['head', 'ctrl', 's1', 's2', 'rad'];
 
-function nearest(list: Handle[], pt: Vec, within: number): Handle | null {
-  let best: Handle | null = null;
+function nearest<H extends Handle>(list: H[], pt: Vec, within: number): H | null {
+  let best: H | null = null;
   let bd = within;
   for (const h of list) {
     const d = dist(h, pt);
@@ -59,12 +59,12 @@ function nearest(list: Handle[], pt: Vec, within: number): Handle | null {
 }
 
 /** The handle under the cursor: nodes win when the cursor is right on them, else the nearest. */
-export function hitHandle(
-  handles: Handle[],
+export function hitHandle<H extends Handle>(
+  handles: H[],
   pt: Vec,
   scale: number,
   touch: boolean,
-): Handle | null {
+): H | null {
   const kind = touch ? 'touch' : 'mouse';
   const node = nearest(
     handles.filter((h) => h.type === 'node'),

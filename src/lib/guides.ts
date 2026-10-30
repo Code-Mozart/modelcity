@@ -60,10 +60,6 @@ function drawBendGuides(
 ) {
   drawHeadingLine(f, p, { corner: E.C, sign: 1 }, pal);
   drawHeadingLine(f, q, { corner: E.C, sign: 1 }, pal);
-  const arc = E.pieces[1];
-  if (arc?.type !== 'arc') return;
-  const [from, to] = extend(toScreen(f, E.C), toScreen(f, arc.c), 14, arc.r * f.view.scale * 1.05);
-  segment(f.ctx, from, to, { color: pal.blue, width: 1.2, dash: [6, 5] });
 }
 
 function drawTwoArcGuides(
@@ -99,25 +95,17 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
   f.ctx.globalAlpha = 1;
 }
 
-/** Corner points and edge labels ("1.2" for the edge from node 1 to node 2). */
-export function drawCorners(f: Frame, { i, E }: EdgeRef, pal: Palette) {
-  if (E.kind === 'line') return;
-  const label = `${i + 1}.${i + 2}`;
-  const at = (v: Vec, dx: number, dy: number) => {
-    const s = toScreen(f, v);
-    return { x: s.x + dx, y: s.y + dy };
-  };
-  const main = E.kind === 'C' ? E.C : E.J;
-  dot(f.ctx, toScreen(f, main), 6, pal.blue);
-  text(f.ctx, label, at(main, 9, E.kind === 'C' ? -9 : 17), { color: pal['red-ink'], size: 14 });
-  if (E.kind === 'C') return;
-  if (E.k1) {
-    dot(f.ctx, toScreen(f, E.k1), 6, pal.teal);
-    text(f.ctx, `${label}-s1`, at(E.k1, 9, 17), { color: pal['red-ink'] });
-  }
-  if (E.k2) {
-    dot(f.ctx, toScreen(f, E.k2), 6, pal.teal);
-    text(f.ctx, `${label}-s2`, at(E.k2, 9, -9), { color: pal['red-ink'] });
+/**
+ * Derived construction points, part of the scaffold (^51, ^60): the inflection point of an S or
+ * hook (blue) and the turquoise corners of an S, which cannot be dragged and are drawn hollow. The
+ * handles (the bend's blue point, a hook's turquoise points, the orange rings) are drawn separately.
+ */
+export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
+  if (E.kind === 'line' || E.kind === 'C') return;
+  dot(f.ctx, toScreen(f, E.J), 6, pal.blue);
+  if (E.kind !== 'S') return;
+  for (const k of [E.k1, E.k2]) {
+    if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.teal, width: 2 });
   }
 }
 
@@ -132,7 +120,7 @@ export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette) {
     const c = toScreen(f, piece.c);
     const l = Math.hypot(mid.x - c.x, mid.y - c.y) || 1;
     const at = { x: mid.x + ((mid.x - c.x) / l) * 22, y: mid.y + ((mid.y - c.y) / l) * 22 };
-    text(f.ctx, `R ${piece.r.toFixed(1)} m`, at, {
+    text(f.ctx, `${piece.r.toFixed(1)}m`, at, {
       color: pal['orange-ink'],
       size: 12,
       align: 'center',

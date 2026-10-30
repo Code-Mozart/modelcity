@@ -36,7 +36,9 @@ function autoEdge(inp: EdgeInput, cls: Classification): Edge {
   if (bend) return bend;
   if (pieces.every((x) => x.type === 'line')) return { kind: 'line', pieces };
   const s = firstTurn(f0, f1);
-  const E = twoArcEdge(inp, inflect ? { kind: 'S', s } : { kind: 'H', s });
+  const kind = inflect ? 'S' : 'H';
+  // If that turn sense does not work out, the other one may (^40); only then fall back to a line.
+  const E = twoArcEdge(inp, { kind, s }) ?? twoArcEdge(inp, { kind, s: -s as Dir });
   return E ?? { kind: 'line', pieces: [line(p, q)] };
 }
 

@@ -1,23 +1,17 @@
-import { ARROW_PX } from './curves/handles';
-import { fromAngle } from './curves/vec';
-import { panBy, rotateVec, worldToScreen, type Point, type Size, type View } from './view';
+import { TAU, mod } from './curves/vec';
+import type { Piece } from './curves/types';
+import { panBy, worldToScreen, type Point, type Size, type View } from './view';
 
 /**
- * The content bounds (^37, ^38): the tight box around everything the user can grab, axis-aligned
- * with the viewbox (screen-aligned, like the grid). The camera may never leave it completely: at
- * least MIN_VISIBLE_PX of it always stay on screen, so the user cannot get lost. The box is never
- * drawn.
+ * The content bounds (^37, ^38, ^62): the tight box around the skeleton, the curves and the node
+ * dots (not the control points, which are only shown by need), axis-aligned with the viewbox
+ * (screen-aligned, like the grid). The camera may never leave it completely: at least
+ * MIN_VISIBLE_PX of it always stay on screen, so the user cannot get lost. The box is never drawn.
  */
 
-/** A grabbable thing: its world position, its on-screen radius, and for heading handles the angle. */
-export interface Anchor {
-  x: number;
-  y: number;
-  /** Half the on-screen size of the handle, pixels. */
-  r: number;
-  /** Heading handle: its position is the node plus ARROW_PX along this world angle. */
-  heading?: number;
-}
+/** A node dot, or a piece of a curve; `r` is the extra half size on screen, pixels. */
+export type Anchor =
+  { kind: 'point'; x: number; y: number; r: number } | { kind: 'piece'; piece: Piece; r: number };
 
 /** The bounds must reach this far into the viewport, pixels. */
 export const MIN_VISIBLE_PX = 12;
@@ -31,24 +25,48 @@ export interface Box {
   maxY: number;
 }
 
-function screenCenter(view: View, size: Size, a: Anchor): Point {
-  const at = worldToScreen(view, size, a);
-  if (a.heading === undefined) return at;
-  const tip = rotateVec(fromAngle(a.heading), view.rot);
-  return { x: at.x + tip.x * ARROW_PX, y: at.y + tip.y * ARROW_PX };
+export interface Box {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+const boxOf = (pts: Point[], r: number): Box => ({
+  minX: Math.min(...pts.map((p) => p.x)) - r,
+  maxX: Math.max(...pts.map((p) => p.x)) + r,
+  minY: Math.min(...pts.map((p) => p.y)) - r,
+  maxY: Math.max(...pts.map((p) => p.y)) + r,
+});
+
+/** The screen points that bound a piece: its ends, and for an arc the extremes within its sweep. */
+function pieceExtremes(view: View, size: Size, piece: Piece): Point[] {
+  const ends = [worldToScreen(view, size, piece.P), worldToScreen(view, size, piece.Q)];
+  if (piece.type === 'line') return ends;
+  const c = worldToScreen(view, size, piece.c);
+  const R = piece.r * view.scale;
+  const a0 = piece.a0 + view.rot;
+  const extremes = [0, 1, 2, 3]
+    .map((k) => (k * Math.PI) / 2)
+    .filter((ang) => mod(Math.sign(piece.da) * (ang - a0), TAU) <= Math.abs(piece.da))
+    .map((ang) => ({ x: c.x + R * Math.cos(ang), y: c.y + R * Math.sin(ang) }));
+  return [...ends, ...extremes];
+}
+
+function anchorBox(view: View, size: Size, a: Anchor): Box {
+  if (a.kind === 'point') return boxOf([worldToScreen(view, size, a)], a.r);
+  return boxOf(pieceExtremes(view, size, a.piece), a.r);
 }
 
 /** The tight screen-space box around all anchors, including their own sizes. */
 export function screenBox(view: View, size: Size, anchors: Anchor[]): Box {
-  const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-  for (const a of anchors) {
-    const c = screenCenter(view, size, a);
-    box.minX = Math.min(box.minX, c.x - a.r);
-    box.maxX = Math.max(box.maxX, c.x + a.r);
-    box.minY = Math.min(box.minY, c.y - a.r);
-    box.maxY = Math.max(box.maxY, c.y + a.r);
-  }
-  return box;
+  const boxes = anchors.map((a) => anchorBox(view, size, a));
+  return {
+    minX: Math.min(...boxes.map((b) => b.minX)),
+    maxX: Math.max(...boxes.map((b) => b.maxX)),
+    minY: Math.min(...boxes.map((b) => b.minY)),
+    maxY: Math.max(...boxes.map((b) => b.maxY)),
+  };
 }
 
 /** How far the box must move along one axis to reach MIN_VISIBLE_PX into a viewport of `length`. */

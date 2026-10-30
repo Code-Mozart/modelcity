@@ -68,27 +68,26 @@ export function releaseMiddles(path: Path, edges: number[]): Path {
 
 /* ---------- append ---------- */
 
-/** New heading so that the edge from `prev` to `pt` is a single bend. */
+/** New heading so that the edge from `prev` to `pt` is a single circular arc (a hook beyond 180 degrees). */
 export const autoHeading = (prev: PathNode, pt: Vec) => 2 * angleOf(sub(pt, prev)) - prev.th;
 
-export function nearestEnd(path: Path, pt: Vec): 'start' | 'end' {
+/** Heading of a node placed before `next` so that the edge to it is a single circular arc (^65). */
+export const autoHeadingBefore = (next: PathNode, pt: Vec) => 2 * angleOf(sub(next, pt)) - next.th;
+
+/** Add a node before the first one; returns the new path and the new node's index, 0 (^65). */
+export function prependNode(path: Path, pt: Vec): { path: Path; sel: number } {
   const { nodes } = path;
-  if (nodes.length < 2) return 'end';
-  return dist(pt, nodes[0]!) < dist(pt, nodes[nodes.length - 1]!) ? 'start' : 'end';
+  const th = nodes.length ? autoHeadingBefore(nodes[0]!, pt) : 0;
+  const added = spliceEdges(path, 0, 0, nodes.length ? FRESH : NONE);
+  return { path: { nodes: [{ x: pt.x, y: pt.y, th }, ...nodes], ...added }, sel: 0 };
 }
 
-/** Add a node at the nearer end of the path; returns the new path and the new node's index. */
+/** Add a node after the last one; returns the new path and the new node's index (^40). */
 export function appendNode(path: Path, pt: Vec): { path: Path; sel: number } {
   const { nodes } = path;
-  if (!nodes.length)
-    return { path: { nodes: [{ x: pt.x, y: pt.y, th: 0 }], radii: [], shapes: [] }, sel: 0 };
-  if (nearestEnd(path, pt) === 'end') {
-    const n = { x: pt.x, y: pt.y, th: autoHeading(nodes[nodes.length - 1]!, pt) };
-    const e = spliceEdges(path, path.radii.length, 0, FRESH);
-    return { path: { nodes: [...nodes, n], ...e }, sel: nodes.length };
-  }
-  const n = { x: pt.x, y: pt.y, th: autoHeading(nodes[0]!, pt) };
-  return { path: { nodes: [n, ...nodes], ...spliceEdges(path, 0, 0, FRESH) }, sel: 0 };
+  const th = nodes.length ? autoHeading(nodes[nodes.length - 1]!, pt) : 0;
+  const added = spliceEdges(path, path.radii.length, 0, nodes.length ? FRESH : NONE);
+  return { path: { nodes: [...nodes, { x: pt.x, y: pt.y, th }], ...added }, sel: nodes.length };
 }
 
 /* ---------- insert ---------- */

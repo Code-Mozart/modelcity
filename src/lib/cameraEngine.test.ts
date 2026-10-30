@@ -8,8 +8,8 @@ const camera = () => {
   const c = new Camera();
   c.size = { width: 800, height: 600 };
   c.setAnchors([
-    { x: -5000, y: -5000, r: 7 },
-    { x: 5000, y: 5000, r: 7 },
+    { kind: 'point', x: -5000, y: -5000, r: 7 },
+    { kind: 'point', x: 5000, y: 5000, r: 7 },
   ]);
   return c;
 };
@@ -146,8 +146,8 @@ describe('Camera scale bar visibility (^34)', () => {
 
 describe('Camera stays on the content (^37)', () => {
   const content: Anchor[] = [
-    { x: -20, y: -10, r: 7 },
-    { x: 30, y: 15, r: 9 },
+    { kind: 'point', x: -20, y: -10, r: 7 },
+    { kind: 'point', x: 30, y: 15, r: 9 },
   ];
   const withContent = () => {
     const c = camera();
@@ -167,8 +167,8 @@ describe('Camera stays on the content (^37)', () => {
 
 describe('Camera bounds while zooming and rotating (^37)', () => {
   const content: Anchor[] = [
-    { x: -20, y: -10, r: 7 },
-    { x: 30, y: 15, r: 9 },
+    { kind: 'point', x: -20, y: -10, r: 7 },
+    { kind: 'point', x: 30, y: 15, r: 9 },
   ];
   const withContent = () => {
     const c = camera();
@@ -191,7 +191,7 @@ describe('Camera bounds while zooming and rotating (^37)', () => {
   it('pulls the view back when the content moves away or shrinks', () => {
     const c = withContent();
     c.view = { ...c.view, cx: 100 };
-    const moved: Anchor[] = [{ x: 900, y: 900, r: 7 }];
+    const moved: Anchor[] = [{ kind: 'point', x: 900, y: 900, r: 7 }];
     c.setAnchors(moved);
     expect(isVisible(c.view, c.size, moved)).toBe(true);
   });
