@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { applyDrag, radiusFromCursor, startDrag } from './drag';
 import { buildEdge, type Edge } from './edge';
-import { appendNode, edgesOf, insertNode, nearestOnCurve, removeNode, type Path } from './path';
+import {
+  appendNode,
+  autoHeading,
+  edgesOf,
+  insertNode,
+  nearestOnCurve,
+  removeNode,
+  type Path,
+} from './path';
 import { isDegenerate, pieceLength, pointOn } from './piece';
 import { preset, type PresetName } from './presets';
 import { dist, fromAngle, toRad } from './vec';
@@ -220,5 +228,37 @@ describe('^17 S-curve radius drag follows the cursor', () => {
     const pt = { x: ring.x + (ring.x - corner.x) * 0.05, y: ring.y + (ring.y - corner.y) * 0.05 };
     const next = ringAndCorner(dragTo(pt));
     expect(dist(next.ring, pt)).toBeLessThan(0.05);
+  });
+});
+
+describe('^40 a node placed behind the arrow still gets a curve', () => {
+  const p = { x: 0, y: 0, th: 0 };
+  const angles = [90, 105, 135, 165, 179, 180, -179, -165, -135, -105, -90];
+
+  it.each(angles)('cursor at %f degrees from the heading: a curve, not a straight line', (deg) => {
+    const a = toRad(deg);
+    const pt = { x: 10 * Math.cos(a), y: 10 * Math.sin(a) };
+    const q = { ...pt, th: autoHeading(p, pt) };
+    const E = buildEdge(p, q, null, null);
+    expect(E.kind).not.toBe('line');
+    expectConnected(E, p, q);
+    const head = pointOn(
+      E.pieces.find((x) => !isDegenerate(x))!,
+      0,
+    );
+    expect(head.tx).toBeCloseTo(1);
+  });
+
+  it('turns through one circle: the total sweep is twice the angle to the cursor', () => {
+    const a = toRad(135);
+    const pt = { x: 10 * Math.cos(a), y: 10 * Math.sin(a) };
+    const E = buildEdge(p, { ...pt, th: autoHeading(p, pt) }, null, null);
+    const sweep = E.pieces.reduce((s, x) => s + (x.type === 'arc' ? Math.abs(x.da) : 0), 0);
+    expect(sweep).toBeCloseTo(toRad(270), 3);
+  });
+
+  it('still draws a straight line when the cursor is straight ahead', () => {
+    const pt = { x: 10, y: 0 };
+    expect(buildEdge(p, { ...pt, th: autoHeading(p, pt) }, null, null).kind).toBe('line');
   });
 });
