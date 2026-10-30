@@ -13,7 +13,7 @@ bun run dev
 
 Then open the URL it prints (http://localhost:5173 by default).
 
-Run `bun run ci` before pushing: it runs the same checks as the GitHub Actions workflow.
+`bun install` also enables a pre-push git hook that runs `bun run ci`, the same checks as the GitHub Actions workflow.
 
 ## More
 

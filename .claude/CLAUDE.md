@@ -47,5 +47,6 @@ The user entrusts the details to Claude. Principles:
 - Stack: bun + TypeScript + Svelte 5 + Vite + vitest (^1). Code map: `src/lib/curves/` is the pure curve geometry library (^12), `editor.svelte.ts` the interaction engine, `MapCanvas.svelte` view and input dispatch, `render*.ts` drawing.
 
 ## Commands
-- `bun install`, `bun run dev` (app), `bun run ci` (lint + check + test + build, same as GitHub Actions).
+- `bun install` (also enables the git hooks in `.githooks/`), `bun run dev` (app), `bun run ci` (lint + check + test + build, same as GitHub Actions).
+- `.githooks/pre-push` runs `bun run ci`, so a push only goes out green. Never bypass it (`--no-verify`).
 - TypeScript is pinned to 6.0.3, the last JS-based release: typescript-eslint and svelte-check do not support 7.0 (no stable programmatic API). Revisit when 7.1 is stable (planned 2026-11-24). (^3)

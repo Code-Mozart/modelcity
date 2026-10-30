@@ -10,7 +10,8 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "ci": "bun run lint && bun run check && bun run test && bun run build"
+    "ci": "bun run lint && bun run check && bun run test && bun run build",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
