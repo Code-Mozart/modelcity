@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cardinalForKey, chipAt, chipOffset, CARDINALS } from './compass';
-import { RAD_PER_PX, movePivot, setRotation, startPivot } from './pivotDrag';
+import { DEAD_ZONE_PX, RAD_PER_PX, movePivot, setRotation, startPivot } from './pivotDrag';
 import { applyTwoFinger } from './twoFinger';
 import { initialView, screenToWorld, worldToScreen } from './view';
 
@@ -8,24 +8,25 @@ const size = { width: 800, height: 600 };
 
 describe('pivot drag (^30, ^31)', () => {
   const start = { x: 200, y: 150 };
+  const dz = DEAD_ZONE_PX;
 
   it('rotates clockwise when dragging right, at a constant rate, keeping the pivot fixed', () => {
     const world = screenToWorld(initialView(), size, start);
     const drag = movePivot(startPivot(initialView(), start), size, { x: 300, y: 150 });
-    expect(drag.view.rot).toBeCloseTo(100 * RAD_PER_PX);
+    expect(drag.view.rot).toBeCloseTo((100 - dz) * RAD_PER_PX);
     const on = worldToScreen(drag.view, size, world);
     expect(on.x).toBeCloseTo(start.x);
     expect(on.y).toBeCloseTo(start.y);
     const higher = movePivot(startPivot(initialView(), start), size, { x: 300, y: 50 });
-    expect(higher.view.rot).toBeCloseTo(100 * RAD_PER_PX);
+    expect(higher.view.rot).toBeCloseTo((100 - dz) * RAD_PER_PX);
   });
 
   it('zooms about the pivot: 1% per pixel, up zooms in, down zooms out', () => {
     const world = screenToWorld(initialView(), size, start);
     const up = movePivot(startPivot(initialView(), start), size, { x: 200, y: 50 });
-    expect(up.view.scale).toBeCloseTo(initialView().scale * Math.exp(1));
+    expect(up.view.scale).toBeCloseTo(initialView().scale * Math.exp((100 - dz) * 0.01));
     const down = movePivot(startPivot(initialView(), start), size, { x: 200, y: 250 });
-    expect(down.view.scale).toBeCloseTo(initialView().scale / Math.exp(1));
+    expect(down.view.scale).toBeCloseTo(initialView().scale / Math.exp((100 - dz) * 0.01));
     const on = worldToScreen(up.view, size, world);
     expect(on.x).toBeCloseTo(start.x);
     expect(on.y).toBeCloseTo(start.y);
@@ -39,15 +40,44 @@ describe('pivot drag (^30, ^31)', () => {
   });
 });
 
+describe('pivot drag dead zone (^31)', () => {
+  const start = { x: 200, y: 150 };
+
+  it('does nothing while the pointer stays inside the dead zone', () => {
+    const drag = movePivot(startPivot(initialView(), start), size, { x: 206, y: 144 });
+    expect(drag.view).toEqual(initialView());
+  });
+
+  it('a vertical drag does not rotate and a horizontal drag does not zoom', () => {
+    const vertical = movePivot(startPivot(initialView(), start), size, { x: 205, y: 50 });
+    expect(vertical.view.rot).toBe(0);
+    expect(vertical.view.scale).toBeGreaterThan(initialView().scale);
+    const horizontal = movePivot(startPivot(initialView(), start), size, { x: 300, y: 155 });
+    expect(horizontal.view.scale).toBe(initialView().scale);
+    expect(horizontal.view.rot).toBeGreaterThan(0);
+  });
+
+  it('is continuous at the edge and rotation returns to zero when coming back in', () => {
+    let drag = startPivot(initialView(), start);
+    drag = movePivot(drag, size, { x: 200 + DEAD_ZONE_PX + 1, y: 150 });
+    expect(drag.view.rot).toBeCloseTo(RAD_PER_PX);
+    drag = movePivot(drag, size, { x: 203, y: 150 });
+    expect(drag.view.rot).toBe(0);
+  });
+});
+
 describe('pivot drag accumulation', () => {
   const start = { x: 200, y: 150 };
 
-  it('accumulates rotation and can jump to a cardinal direction', () => {
+  it('rotates from the cardinal direction after a key jump, with a fresh dead zone', () => {
     let drag = startPivot(initialView(), start);
-    drag = movePivot(drag, size, { x: 210, y: 150 });
-    drag = movePivot(drag, size, { x: 220, y: 150 });
-    expect(drag.view.rot).toBeCloseTo(20 * RAD_PER_PX);
-    expect(setRotation(drag, size, 0).view.rot).toBeCloseTo(0);
+    drag = movePivot(drag, size, { x: 260, y: 150 });
+    drag = setRotation(drag, size, Math.PI / 2);
+    expect(drag.view.rot).toBeCloseTo(Math.PI / 2);
+    drag = movePivot(drag, size, { x: 262, y: 150 });
+    expect(drag.view.rot).toBeCloseTo(Math.PI / 2);
+    drag = movePivot(drag, size, { x: 260 + DEAD_ZONE_PX + 10, y: 150 });
+    expect(drag.view.rot).toBeCloseTo(Math.PI / 2 + 10 * RAD_PER_PX);
     expect(drag.view0).toEqual(initialView());
   });
 });

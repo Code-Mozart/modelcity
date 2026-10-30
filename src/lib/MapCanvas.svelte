@@ -33,7 +33,8 @@
       showCircles: editor.showCircles,
       showLines: editor.showLines,
     };
-    render({ ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size }, dpr, scene);
+    const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
+    render(frame, dpr, scene, { showScaleBar: camera.scaleBarVisible });
   });
 
   function localPoint(e: MouseEvent): Point {

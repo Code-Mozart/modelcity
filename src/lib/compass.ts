@@ -42,7 +42,7 @@ export function chipAt(center: Point, point: Point, viewRot: number): Cardinal |
 /** What dragging in each screen direction does while the compass is shown (fixed positions, plain icons). */
 export interface DragHint {
   id: 'ccw' | 'cw' | 'zoomIn' | 'zoomOut';
-  icon: 'ccw' | 'cw' | 'plus' | 'minus';
+  icon: 'ccw' | 'cw' | 'zoomIn' | 'zoomOut';
   label: string;
   dx: number;
   dy: number;
@@ -60,6 +60,6 @@ export const DRAG_HINTS: DragHint[] = [
     dy: 0,
   },
   { id: 'cw', icon: 'cw', label: 'Drag right: rotate clockwise', dx: HINT_RADIUS_PX, dy: 0 },
-  { id: 'zoomIn', icon: 'plus', label: 'Drag up: zoom in', dx: 0, dy: -HINT_RADIUS_PX },
-  { id: 'zoomOut', icon: 'minus', label: 'Drag down: zoom out', dx: 0, dy: HINT_RADIUS_PX },
+  { id: 'zoomIn', icon: 'zoomIn', label: 'Drag up: zoom in', dx: 0, dy: -HINT_RADIUS_PX },
+  { id: 'zoomOut', icon: 'zoomOut', label: 'Drag down: zoom out', dx: 0, dy: HINT_RADIUS_PX },
 ];

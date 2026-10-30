@@ -6,6 +6,8 @@ import { initialView, panBy, zoomAt, type Point, type Size, type View } from './
 const ZOOM_PER_WHEEL_PX = 0.0015;
 /** Pointer travel below which a right-button press still counts as a click (^31). */
 const CLICK_SLOP_PX = 4;
+/** How long the scale bar stays visible after the last wheel or pinch zoom (^34). */
+export const SCALE_BAR_HOLD_MS = 2000;
 
 /**
  * The camera: view, pan, zoom and rotate interaction (^30). No DOM and no document logic: the
@@ -21,13 +23,24 @@ export class Camera {
   /** Key chip (n/e/s/w) currently held or clicked, shown pressed on the compass (^33). */
   pressed = $state<string | null>(null);
   rotating = $derived(this.rotation !== null);
+  private recentZoom = $state(false);
+  /** The scale bar is only shown while it is useful: during a middle drag and shortly after zooming (^34). */
+  scaleBarVisible = $derived(this.rotating || this.recentZoom);
 
   private pan: { last: Point; travel: number } | null = null;
   private touches: { id: number; at: Point }[] = [];
+  private zoomTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Zoom at `anchor` by a wheel delta in pixels (positive deltaY zooms out). */
   zoomWheel(deltaPx: number, anchor: Point) {
     this.view = zoomAt(this.view, this.size, anchor, Math.exp(-deltaPx * ZOOM_PER_WHEEL_PX));
+    this.flashScaleBar();
+  }
+
+  private flashScaleBar() {
+    this.recentZoom = true;
+    clearTimeout(this.zoomTimer);
+    this.zoomTimer = setTimeout(() => (this.recentZoom = false), SCALE_BAR_HOLD_MS);
   }
 
   startPan(at: Point) {
@@ -122,7 +135,9 @@ export class Camera {
     this.touches = this.touches.map((t) => (t.id === id ? { id, at } : t));
     if (this.touches.length !== 2) return false;
     const next = this.touches.map((t) => t.at);
+    const before = this.view.scale;
     this.view = applyTwoFinger(this.view, this.size, prev as Pair, next as Pair);
+    if (this.view.scale !== before) this.flashScaleBar();
     return true;
   }
 

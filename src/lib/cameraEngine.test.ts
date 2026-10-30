@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { Camera } from './camera.svelte';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Camera, SCALE_BAR_HOLD_MS } from './camera.svelte';
 import { screenToWorld } from './view';
 
 const camera = () => {
@@ -96,5 +96,44 @@ describe('Camera pan and touch', () => {
     const c = camera();
     c.zoomWheel(-300, { x: 400, y: 300 });
     expect(c.view.scale).toBeGreaterThan(4);
+  });
+});
+
+describe('Camera scale bar visibility (^34)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('is hidden by default and shown during a middle drag', () => {
+    const c = camera();
+    expect(c.scaleBarVisible).toBe(false);
+    c.startRotate({ x: 300, y: 200 });
+    expect(c.scaleBarVisible).toBe(true);
+    c.endRotate();
+    expect(c.scaleBarVisible).toBe(false);
+  });
+
+  it('stays visible for a while after wheel zoom, and the timer restarts on each zoom', () => {
+    vi.useFakeTimers();
+    const c = camera();
+    c.zoomWheel(-100, { x: 400, y: 300 });
+    expect(c.scaleBarVisible).toBe(true);
+    vi.advanceTimersByTime(SCALE_BAR_HOLD_MS - 100);
+    c.zoomWheel(-100, { x: 400, y: 300 });
+    vi.advanceTimersByTime(SCALE_BAR_HOLD_MS - 100);
+    expect(c.scaleBarVisible).toBe(true);
+    vi.advanceTimersByTime(200);
+    expect(c.scaleBarVisible).toBe(false);
+  });
+
+  it('is shown after a pinch but not after a plain pan', () => {
+    vi.useFakeTimers();
+    const c = camera();
+    c.startPan({ x: 100, y: 100 });
+    c.movePan({ x: 160, y: 100 });
+    c.endPan();
+    expect(c.scaleBarVisible).toBe(false);
+    c.touchDown(1, { x: 300, y: 300 });
+    c.touchDown(2, { x: 500, y: 300 });
+    c.touchMove(2, { x: 600, y: 300 });
+    expect(c.scaleBarVisible).toBe(true);
   });
 });

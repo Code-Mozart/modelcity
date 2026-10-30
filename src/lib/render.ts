@@ -38,8 +38,12 @@ function drawScaleBar({ ctx, view, size }: Frame, pal: Palette) {
   text(ctx, formatLength(meters), { x: 16, y: size.height - 32 }, { color: pal.ink, size: 12 });
 }
 
+export interface RenderOptions {
+  showScaleBar: boolean;
+}
+
 /** Draw one frame. `dpr` is the device pixel ratio of the backing canvas. */
-export function render(frame: Frame, dpr: number, scene: Scene) {
+export function render(frame: Frame, dpr: number, scene: Scene, options: RenderOptions) {
   const { ctx, view, size } = frame;
   const pal = readPalette();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -55,5 +59,5 @@ export function render(frame: Frame, dpr: number, scene: Scene) {
   drawGrid(gridFrame, minor, pal['grid-minor']);
   drawGrid(gridFrame, minor * 10, pal['grid-major']);
   drawScene(frame, scene, pal);
-  drawScaleBar(frame, pal);
+  if (options.showScaleBar) drawScaleBar(frame, pal);
 }
