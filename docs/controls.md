@@ -28,6 +28,10 @@ While the middle button is held:
 
 The cursor becomes a compass (^33): the needle points to world north; the inner ring shows what dragging does (counterclockwise left, clockwise right, zoom in above, zoom out below); the N, E, S, W key caps on the outer ring sit in the on-screen direction of the real world direction, so they turn with the world, and turn blue while pressed.
 
+## Camera limits
+
+The camera cannot leave the content (^37, ^38): a dashed outline marks the bounding box around all nodes and handles, and at least 12 px of it always stay on screen, whatever you pan, zoom or rotate. With nothing drawn, the view center stays within 2.5 km of the origin.
+
 ## Keyboard
 
 | Key | Action | Hats |

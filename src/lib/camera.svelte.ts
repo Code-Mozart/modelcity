@@ -1,3 +1,4 @@
+import { constrainView, type Rect } from './bounds';
 import { cardinalForKey, chipAt } from './compass';
 import { movePivot, setRotation, startPivot, type PivotDrag } from './pivotDrag';
 import { applyTwoFinger, type Pair } from './twoFinger';
@@ -27,13 +28,26 @@ export class Camera {
   /** The scale bar is only shown while it is useful: during a middle drag and shortly after zooming (^34). */
   scaleBarVisible = $derived(this.rotating || this.recentZoom);
 
+  /** Content bounds the view must stay on (^37); null while nothing is drawn. */
+  private bounds: Rect | null = null;
   private pan: { last: Point; travel: number } | null = null;
   private touches: { id: number; at: Point }[] = [];
   private zoomTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** Every view change goes through here so the camera cannot leave the content (^37). */
+  private setView(view: View) {
+    this.view = constrainView(view, this.size, this.bounds);
+  }
+
+  /** The content moved or the window resized: keep the view on the content. */
+  setBounds(bounds: Rect | null) {
+    this.bounds = bounds;
+    this.setView(this.view);
+  }
+
   /** Zoom at `anchor` by a wheel delta in pixels (positive deltaY zooms out). */
   zoomWheel(deltaPx: number, anchor: Point) {
-    this.view = zoomAt(this.view, this.size, anchor, Math.exp(-deltaPx * ZOOM_PER_WHEEL_PX));
+    this.setView(zoomAt(this.view, this.size, anchor, Math.exp(-deltaPx * ZOOM_PER_WHEEL_PX)));
     this.flashScaleBar();
   }
 
@@ -52,7 +66,7 @@ export class Camera {
     if (!this.pan) return;
     const dx = at.x - this.pan.last.x;
     const dy = at.y - this.pan.last.y;
-    this.view = panBy(this.view, dx, dy);
+    this.setView(panBy(this.view, dx, dy));
     this.pan = { last: at, travel: this.pan.travel + Math.hypot(dx, dy) };
   }
 
@@ -71,7 +85,7 @@ export class Camera {
   moveRotate(at: Point) {
     if (!this.rotation) return;
     this.rotation = movePivot(this.rotation, this.size, at);
-    this.view = this.rotation.view;
+    this.syncRotation();
   }
 
   endRotate() {
@@ -81,7 +95,7 @@ export class Camera {
 
   /** Abort the rotation and restore the view from before the drag. */
   cancelRotate() {
-    if (this.rotation) this.view = this.rotation.view0;
+    if (this.rotation) this.setView(this.rotation.view0);
     this.rotation = null;
     this.pressed = null;
   }
@@ -89,7 +103,14 @@ export class Camera {
   private rotateTo(rot: number) {
     if (!this.rotation) return;
     this.rotation = setRotation(this.rotation, this.size, rot);
-    this.view = this.rotation.view;
+    this.syncRotation();
+  }
+
+  /** Show the drag's view, kept on the content, and let the drag carry on from what is shown. */
+  private syncRotation() {
+    if (!this.rotation) return;
+    this.setView(this.rotation.view);
+    this.rotation = { ...this.rotation, view: this.view };
   }
 
   /** Keys that only mean something during a drag: Esc cancels, N/E/S/W set the direction. */
@@ -136,7 +157,7 @@ export class Camera {
     if (this.touches.length !== 2) return false;
     const next = this.touches.map((t) => t.at);
     const before = this.view.scale;
-    this.view = applyTwoFinger(this.view, this.size, prev as Pair, next as Pair);
+    this.setView(applyTwoFinger(this.view, this.size, prev as Pair, next as Pair));
     if (this.view.scale !== before) this.flashScaleBar();
     return true;
   }

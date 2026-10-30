@@ -1,3 +1,4 @@
+import { screenCorners, type Rect } from './bounds';
 import { ghostEdge, type Hover } from './editor.svelte';
 import { ARROW_PX, type Handle } from './curves/handles';
 import type { EdgeRef, Path } from './curves/path';
@@ -25,6 +26,7 @@ export interface Scene {
   tool: 'move' | 'append' | 'insert';
   showCircles: boolean;
   showLines: boolean;
+  bounds: Rect | null;
 }
 
 const CURVE_PX = 4;
@@ -91,8 +93,24 @@ function drawHover(f: Frame, scene: Scene, pal: Palette) {
     ring(f.ctx, toScreen(f, hover.handle), 10, { color: pal.blue, width: 1.6 });
 }
 
+/** The content bounds the camera cannot leave (^37), as a thin dashed outline. */
+function drawBounds(f: Frame, rect: Rect | null, pal: Palette) {
+  if (!rect) return;
+  const [a, ...rest] = screenCorners(f.view, f.size, rect);
+  f.ctx.beginPath();
+  f.ctx.moveTo(a!.x, a!.y);
+  for (const p of rest) f.ctx.lineTo(p.x, p.y);
+  f.ctx.closePath();
+  f.ctx.strokeStyle = pal.muted;
+  f.ctx.lineWidth = 1;
+  f.ctx.setLineDash([4, 6]);
+  f.ctx.stroke();
+  f.ctx.setLineDash([]);
+}
+
 /** Draw the edited path with construction geometry, handles and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
+  drawBounds(f, scene.bounds, pal);
   for (const ref of scene.edges) {
     if (scene.showLines) drawGuides(f, ref, pal);
     if (scene.showCircles) drawCircles(f, ref, pal);

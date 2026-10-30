@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera.svelte';
   import type { Editor, PointerInfo } from './editor.svelte';
   import { FEATURES } from './features';
@@ -22,6 +22,13 @@
     canvas.height = Math.round(camera.size.height * dpr);
   }
 
+  // Keep the camera on the content (^37); also re-checks when the window size changes.
+  $effect(() => {
+    const bounds = editor.bounds;
+    void camera.size;
+    untrack(() => camera.setBounds(bounds));
+  });
+
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
     const scene = {
@@ -33,6 +40,7 @@
       tool: editor.tool,
       showCircles: editor.showCircles,
       showLines: editor.showLines,
+      bounds: editor.bounds,
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });

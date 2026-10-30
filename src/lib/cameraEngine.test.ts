@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Camera, SCALE_BAR_HOLD_MS } from './camera.svelte';
+import { isVisible } from './bounds';
 import { screenToWorld } from './view';
 
 const camera = () => {
@@ -135,5 +136,50 @@ describe('Camera scale bar visibility (^34)', () => {
     c.touchDown(2, { x: 500, y: 300 });
     c.touchMove(2, { x: 600, y: 300 });
     expect(c.scaleBarVisible).toBe(true);
+  });
+});
+
+describe('Camera stays on the content (^37)', () => {
+  const content = { minX: -20, minY: -10, maxX: 30, maxY: 15 };
+  const withBounds = () => {
+    const c = camera();
+    c.setBounds(content);
+    return c;
+  };
+
+  it('cannot be panned away from the content', () => {
+    const c = withBounds();
+    c.startPan({ x: 400, y: 300 });
+    c.movePan({ x: 400 - 5000, y: 300 });
+    c.movePan({ x: 400 - 90000, y: 300 + 90000 });
+    expect(isVisible(c.view, c.size, content)).toBe(true);
+    expect(c.endPan()).toBe(true);
+  });
+
+  it('keeps the content visible when zooming and rotating far from it', () => {
+    const c = withBounds();
+    c.view = { ...c.view, cx: 1500, cy: -1500 };
+    c.zoomWheel(500, { x: 700, y: 100 });
+    expect(isVisible(c.view, c.size, content)).toBe(true);
+    c.startRotate({ x: 700, y: 100 });
+    c.moveRotate({ x: 900, y: 40 });
+    expect(isVisible(c.view, c.size, content)).toBe(true);
+    c.key('s');
+    expect(isVisible(c.view, c.size, content)).toBe(true);
+  });
+
+  it('pulls the view back when the content moves away or shrinks', () => {
+    const c = withBounds();
+    c.view = { ...c.view, cx: 100 };
+    c.setBounds({ minX: 900, minY: 900, maxX: 910, maxY: 905 });
+    expect(isVisible(c.view, c.size, { minX: 900, minY: 900, maxX: 910, maxY: 905 })).toBe(true);
+  });
+
+  it('does not restrict the view while nothing is drawn', () => {
+    const c = camera();
+    c.setBounds(null);
+    c.startPan({ x: 400, y: 300 });
+    c.movePan({ x: 100, y: 300 });
+    expect(c.view.cx).toBeGreaterThan(0);
   });
 });

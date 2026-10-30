@@ -75,3 +75,8 @@ export function hitHandle(
   const others = PRIORITY.flatMap((t) => handles.filter((h) => h.type === t));
   return nearest(others, pt, HIT_PX[kind] / scale);
 }
+
+/** World positions of everything the user can grab, except the heading tips (those depend on zoom). */
+export function contentPoints(path: Path, edges: EdgeRef[]): Vec[] {
+  return handlesOf(path, edges, 1).filter((h) => h.type !== 'head');
+}
