@@ -20,6 +20,7 @@ import { contentAnchors } from './contentAnchors';
 import type { Focus } from './focus';
 import type { HintTarget } from './hints';
 import { KEYMAP, type Action } from './keymap';
+import type { Pointer } from './proximity';
 
 /** What the pointer is doing, as seen by the editor. Positions are world meters. */
 export interface PointerInfo {
@@ -50,7 +51,11 @@ interface Snapshot {
   sel: NodeRef | null;
 }
 
-/** The left button is down: either dragging a handle, or placing a node (its heading by dragging). */
+/**
+ * The left button is down: dragging a handle, placing a node (its heading by dragging), or, in
+ * select mode on empty canvas, a click that enters draw mode (a drag there is reserved for a
+ * rubber band selection, later).
+ */
 type Press =
   | {
       kind: 'drag';
@@ -62,26 +67,30 @@ type Press =
       undo: Snapshot;
       target: HintTarget;
     }
-  | { kind: 'place'; ref: NodeRef; undo: Snapshot; target: HintTarget };
+  | { kind: 'place'; ref: NodeRef; undo: Snapshot; target: HintTarget }
+  | { kind: 'empty'; start: Vec; moved: boolean; target: HintTarget };
 
 /**
  * The road editor: roads, the road being drawn, selection and pointer interaction (^40, ^42). No
  * drawing and no view (zoom/pan) logic: the canvas component feeds it pointer events in world
  * coordinates (^12).
  *
- * Two modes (^48): in select mode (no road being drawn) the left button edits handles, and a
- * press on empty canvas starts a road and enters draw mode. In draw mode it adds nodes to the
- * road, inserts nodes on curves, and still edits handles.
+ * Two modes (^48, ^54): in select mode the left button edits handles, and a click on empty
+ * canvas enters draw mode (it does not place a node yet). In draw mode it places nodes, the first
+ * one starting a new road, inserts nodes on curves, and still edits handles.
  */
 export class Editor {
   roads = $state.raw<Roads>([]);
-  /** Index of the road being drawn, null in select mode. */
+  mode = $state<'select' | 'draw'>('select');
+  /** Index of the road being drawn, null in select mode or before its first node. */
   active = $state<number | null>(null);
+  /** Where the pointer is, for showing handles that are near it (^55). */
+  pointer = $state.raw<Pointer | null>(null);
   sel = $state.raw<NodeRef | null>(null);
   hover = $state.raw<Hover | null>(null);
   private press = $state.raw<Press | null>(null);
 
-  drawing = $derived(this.active !== null);
+  drawing = $derived(this.mode === 'draw');
   edges = $derived(edgesOfRoads(this.roads));
   /** Everything the user can grab, for the camera bounds (^37). */
   anchors = $derived(contentAnchors(this.roads, this.edges));
@@ -154,12 +163,19 @@ export class Editor {
     this.sel = null;
   }
 
-  /** Leave draw mode; a road with fewer than two nodes is cancelled. */
+  /** Enter draw mode: the next click places the first node of a new road. */
+  enterDrawMode() {
+    this.mode = 'draw';
+    this.sel = null;
+  }
+
+  /** Leave draw mode; a road being drawn with fewer than two nodes is cancelled. */
   finishRoad() {
+    if (this.mode === 'select') return;
     const road = this.active;
-    if (road === null) return;
-    const cancel = (this.roads[road]?.nodes.length ?? 0) < 2;
-    if (cancel) this.roads = removeRoad(this.roads, road, road).roads;
+    const cancel = road !== null && (this.roads[road]?.nodes.length ?? 0) < 2;
+    if (road !== null && cancel) this.roads = removeRoad(this.roads, road, road).roads;
+    this.mode = 'select';
     this.active = null;
     this.sel = null;
   }
@@ -167,9 +183,14 @@ export class Editor {
   /** Left button pressed. */
   pointerDown(info: PointerInfo) {
     this.hover = null;
+    this.pointer = { pt: info.pt, scale: info.scale };
     const handle = this.handleAt(info);
     if (handle) return this.grab(handle, info);
-    const hit = this.drawing ? this.curveAt(info) : null;
+    if (!this.drawing) {
+      this.press = { kind: 'empty', start: info.pt, moved: false, target: { kind: 'empty' } };
+      return;
+    }
+    const hit = this.curveAt(info);
     if (hit) this.insert(hit);
     else this.create(info.pt);
   }
@@ -216,10 +237,12 @@ export class Editor {
   }
 
   pointerMove(info: PointerInfo) {
+    this.pointer = { pt: info.pt, scale: info.scale };
     const press = this.press;
     if (!press) this.hover = this.hoverAt(info);
     else if (press.kind === 'drag') this.moveDrag(press, info);
-    else this.placeHeading(press.ref, info);
+    else if (press.kind === 'place') this.placeHeading(press.ref, info);
+    else if (dist(info.pt, press.start) > DRAG_PX / info.scale) press.moved = true;
   }
 
   private moveDrag(press: Extract<Press, { kind: 'drag' }>, info: PointerInfo) {
@@ -248,7 +271,7 @@ export class Editor {
     if (!this.drawing) return null;
     const hit = this.curveAt(info);
     if (hit) return { kind: 'candidate', hit };
-    const nodes = this.roads[this.active!]?.nodes;
+    const nodes = this.active === null ? undefined : this.roads[this.active]?.nodes;
     const ref = nodes?.[nodes.length - 1] ?? null;
     const th = ref ? autoHeading(ref, info.pt) : 0;
     return { kind: 'ghost', ref, node: { x: info.pt.x, y: info.pt.y, th } };
@@ -259,20 +282,24 @@ export class Editor {
     const press = this.press;
     this.press = null;
     if (press?.kind === 'drag' && press.finishes && !press.moved) this.finishRoad();
+    if (press?.kind === 'empty' && !press.moved) this.enterDrawMode();
   }
 
   /** Abort what the left button was doing (a second finger came down). */
   cancelPress() {
-    if (!this.press) return;
-    const { roads, active, sel } = this.press.undo;
+    const press = this.press;
+    this.press = null;
+    if (!press || press.kind === 'empty') return;
+    const { roads, active, sel } = press.undo;
     this.roads = roads;
     this.active = active;
     this.sel = sel;
-    this.press = null;
   }
 
   pointerLeave() {
-    if (!this.press) this.hover = null;
+    if (this.press) return;
+    this.hover = null;
+    this.pointer = null;
   }
 
   /** Right click without moving: removes the node under the pointer, else finishes the road. */

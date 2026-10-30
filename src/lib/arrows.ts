@@ -7,9 +7,9 @@ export interface Pt {
   y: number;
 }
 
-const BARB_ANGLE = 0.5;
+const BARB_ANGLE = 0.6;
 
-export function arrowPath(from: Pt, to: Pt, barb = 3.2): string {
+export function arrowPath(from: Pt, to: Pt, barb = 3.4): string {
   const th = Math.atan2(to.y - from.y, to.x - from.x);
   const side = (s: number) => {
     const a = th + Math.PI + s * BARB_ANGLE;

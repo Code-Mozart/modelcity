@@ -27,8 +27,8 @@ describe('revealed (^51)', () => {
     }
   });
 
-  it('the orange ring reveals the radius labels of its edge only', () => {
-    expect(revealed(at('rad', 1), 0, 1)).toEqual({ guides: false, labels: true });
+  it('the orange ring reveals the guides and the radius labels of its edge only (^55)', () => {
+    expect(revealed(at('rad', 1), 0, 1)).toEqual(both);
     expect(revealed(at('rad', 1), 0, 2)).toEqual(none);
   });
 });

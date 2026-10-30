@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Editor } from './editor.svelte';
 import { at, click, draw } from './testing/editorHelpers';
 
 const road = (): [number, number][] => [
@@ -7,8 +8,61 @@ const road = (): [number, number][] => [
   [40, 0],
 ];
 
+describe('entering draw mode (^48, ^54)', () => {
+  it('the first click only enters draw mode; the second places the first node', () => {
+    const ed = new Editor();
+    click(ed, 10, 10);
+    expect(ed.drawing).toBe(true);
+    expect(ed.roads).toEqual([]);
+    expect(ed.cursor).toBe('crosshair');
+    ed.pointerMove(at(30, 5));
+    expect(ed.hover).toMatchObject({ kind: 'ghost', ref: null, node: { x: 30, y: 5, th: 0 } });
+    click(ed, 30, 5);
+    expect(ed.roads[0]!.nodes).toEqual([{ x: 30, y: 5, th: 0 }]);
+    expect(ed.active).toBe(0);
+  });
+
+  it('a drag in select mode does not enter draw mode, it is reserved for a rubber band', () => {
+    const ed = new Editor();
+    ed.pointerDown(at(10, 10));
+    ed.pointerMove(at(40, 30));
+    ed.pointerUp();
+    expect(ed.drawing).toBe(false);
+    expect(ed.roads).toEqual([]);
+  });
+});
+
+describe('leaving draw mode early (^54)', () => {
+  it('Esc or a right click leave draw mode before any node is placed', () => {
+    const ed = new Editor();
+    click(ed, 10, 10);
+    ed.key('Escape');
+    expect(ed.drawing).toBe(false);
+    click(ed, 10, 10);
+    ed.rightClick(at(50, 50));
+    expect(ed.drawing).toBe(false);
+    expect(ed.roads).toEqual([]);
+  });
+
+  it('a second finger after the first click changes nothing', () => {
+    const ed = new Editor();
+    ed.pointerDown(at(10, 10));
+    ed.cancelPress();
+    ed.pointerUp();
+    expect(ed.drawing).toBe(false);
+  });
+
+  it('remembers where the pointer is, until it leaves', () => {
+    const ed = new Editor();
+    ed.pointerMove(at(5, 6, { scale: 8 }));
+    expect(ed.pointer).toEqual({ pt: { x: 5, y: 6 }, scale: 8 });
+    ed.pointerLeave();
+    expect(ed.pointer).toBeNull();
+  });
+});
+
 describe('select mode and draw mode (^48)', () => {
-  it('a click on empty canvas enters draw mode; Esc, a right click or the last node leave it', () => {
+  it('Esc, a right click or the last node leave draw mode', () => {
     const ed = draw([[0, 0]]);
     expect(ed.drawing).toBe(true);
     click(ed, 20, -10);

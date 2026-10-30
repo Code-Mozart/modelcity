@@ -10,7 +10,7 @@ import {
   removeNode,
   type Path,
 } from './path';
-import { isDegenerate, pieceLength, pointOn } from './piece';
+import { distanceToPiece, isDegenerate, pieceLength, pointOn } from './piece';
 import { fixture, type FixtureName } from './testing/paths';
 import { dist, fromAngle, toRad } from './vec';
 
@@ -260,5 +260,37 @@ describe('^40 a node placed behind the arrow still gets a curve', () => {
   it('still draws a straight line when the cursor is straight ahead', () => {
     const pt = { x: 10, y: 0 };
     expect(buildEdge(p, { ...pt, th: autoHeading(p, pt) }, null, null).kind).toBe('line');
+  });
+});
+
+describe('distanceToPiece (^55)', () => {
+  const line = { type: 'line' as const, P: { x: 0, y: 0 }, Q: { x: 10, y: 0 } };
+  const arc = {
+    type: 'arc' as const,
+    P: { x: 5, y: 0 },
+    Q: { x: 0, y: 5 },
+    c: { x: 0, y: 0 },
+    r: 5,
+    a0: 0,
+    da: Math.PI / 2,
+  };
+
+  it('measures to a line segment, with its end points', () => {
+    expect(distanceToPiece(line, { x: 4, y: 3 })).toBeCloseTo(3);
+    expect(distanceToPiece(line, { x: 13, y: 4 })).toBeCloseTo(5);
+    expect(distanceToPiece(line, { x: -3, y: 0 })).toBeCloseTo(3);
+  });
+
+  it('measures to an arc only within its sweep, else to its end points', () => {
+    expect(distanceToPiece(arc, { x: 6 * Math.cos(0.7), y: 6 * Math.sin(0.7) })).toBeCloseTo(1);
+    expect(distanceToPiece(arc, { x: 2 * Math.cos(0.7), y: 2 * Math.sin(0.7) })).toBeCloseTo(3);
+    expect(distanceToPiece(arc, { x: 5, y: -3 })).toBeCloseTo(3);
+    expect(distanceToPiece(arc, { x: -4, y: 5 })).toBeCloseTo(4);
+  });
+
+  it('handles arcs that sweep counterclockwise', () => {
+    const ccw = { ...arc, P: { x: 0, y: 5 }, Q: { x: 5, y: 0 }, a0: Math.PI / 2, da: -Math.PI / 2 };
+    expect(distanceToPiece(ccw, { x: 6 * Math.cos(0.7), y: 6 * Math.sin(0.7) })).toBeCloseTo(1);
+    expect(distanceToPiece(ccw, { x: -3, y: 0 })).toBeCloseTo(Math.hypot(3, 5));
   });
 });

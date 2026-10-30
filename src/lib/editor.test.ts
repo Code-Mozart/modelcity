@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Editor } from './editor.svelte';
-import { at, bareCurvePoint, click, draw, last } from './testing/editorHelpers';
+import { at, bareCurvePoint, click, draw, drawMode, last } from './testing/editorHelpers';
 import { toRad } from './curves/vec';
 
 describe('a new editor', () => {
@@ -58,7 +58,7 @@ describe('creating a road with clicks (^40)', () => {
 
 describe('creating by dragging the heading (^40)', () => {
   it('dragging while placing sets the heading from the press point to the cursor', () => {
-    const ed = new Editor();
+    const ed = drawMode();
     ed.pointerDown(at(0, 0));
     ed.pointerMove(at(0, 20));
     expect(last(ed).th).toBeCloseTo(toRad(90));
@@ -69,7 +69,7 @@ describe('creating by dragging the heading (^40)', () => {
   });
 
   it('ignores a tiny movement, so a click keeps its automatic heading', () => {
-    const ed = new Editor();
+    const ed = drawMode();
     ed.pointerDown(at(0, 0));
     ed.pointerMove(at(0.5, 0.5));
     expect(last(ed).th).toBe(0);
@@ -87,7 +87,7 @@ describe('dragging the heading of later nodes (^40)', () => {
   });
 
   it('snaps the heading to 15 degrees with shift', () => {
-    const ed = new Editor();
+    const ed = drawMode();
     ed.pointerDown(at(0, 0));
     ed.pointerMove(at(10 * Math.cos(toRad(33)), 10 * Math.sin(toRad(33)), { shift: true }));
     expect(last(ed).th).toBeCloseTo(toRad(30));
@@ -102,6 +102,7 @@ describe('starting another road and finishing roads (^40)', () => {
     ]);
     expect(ed.key('Escape')).toBe(true);
     expect(ed.active).toBeNull();
+    click(ed, 100, 100);
     click(ed, 100, 100);
     expect(ed.roads).toHaveLength(2);
     expect(ed.roads[1]!.nodes).toEqual([{ x: 100, y: 100, th: 0 }]);
@@ -218,12 +219,15 @@ describe('inserting nodes (^40)', () => {
     expect(ed.roads[0]!.nodes[node]!.th).not.toBeCloseTo(before);
   });
 
-  it('in select mode a click on a curve starts a new road instead of inserting', () => {
+  it('in select mode a click on a curve enters draw mode instead of inserting', () => {
     const ed = draw(road());
     ed.key('Escape');
     const mid = bareCurvePoint(ed);
     click(ed, mid.x, mid.y);
     expect(ed.roads[0]!.nodes).toHaveLength(3);
+    expect(ed.drawing).toBe(true);
+    expect(ed.roads).toHaveLength(1);
+    click(ed, 100, 100);
     expect(ed.roads).toHaveLength(2);
     expect(ed.active).toBe(1);
   });

@@ -16,9 +16,16 @@ export const click = (ed: Editor, x: number, y: number) => {
   ed.pointerUp();
 };
 
-/** A road drawn by clicking, left unfinished. */
-export const draw = (points: [number, number][]) => {
+/** An editor in draw mode: one click on empty canvas in select mode enters it (^54). */
+export const drawMode = () => {
   const ed = new Editor();
+  click(ed, 500, 500);
+  return ed;
+};
+
+/** A road drawn by clicking, left unfinished (the editor is in draw mode). */
+export const draw = (points: [number, number][]) => {
+  const ed = drawMode();
   for (const [x, y] of points) click(ed, x, y);
   return ed;
 };

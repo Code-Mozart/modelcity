@@ -1,5 +1,6 @@
 import type { Hover } from './editor.svelte';
 import { revealed, type Focus, type Reveal } from './focus';
+import { nearEdge, nearHandle, type Pointer } from './proximity';
 import { ARROW_PX } from './curves/handles';
 import { buildEdge } from './curves/edge';
 import type { EdgeRef, Path } from './curves/path';
@@ -30,6 +31,7 @@ export interface Scene {
   sel: NodeRef | null;
   hover: Hover | null;
   focus: Focus | null;
+  pointer: Pointer | null;
 }
 
 const CURVE_PX = 4;
@@ -58,8 +60,7 @@ function drawArrow(
 
 function drawNodes(f: Frame, { path }: RoadScene, selected: number | null, pal: Palette) {
   path.nodes.forEach((n, i) => {
-    const tip = drawArrow(f, n, pal.ink, 2.2);
-    ring(f.ctx, tip, 5.5, { color: pal.ink, width: 1.6 });
+    drawArrow(f, n, pal.ink, 2.2);
     const a = toScreen(f, n);
     if (i === selected) ring(f.ctx, a, 11, { color: pal.blue, width: 2.2 });
     dot(f.ctx, a, 5.5, pal.ink);
@@ -107,9 +108,54 @@ function drawRoad(f: Frame, road: RoadScene, shown: Reveal[], pal: Palette) {
     for (const piece of E.pieces) strokePiece(f, piece, { color: pal.curve, width: CURVE_PX });
   }
   road.edges.forEach((ref, k) => {
-    drawCorners(f, ref, shown[k]!.guides, pal);
+    if (shown[k]!.guides) drawCorners(f, ref, pal);
     if (shown[k]!.labels) drawRadiusLabels(f, ref, pal);
   });
+}
+
+/** The heading tip of a node, where its arrow ends. */
+function tipOf(f: Frame, scene: Scene, h: RoadHandle) {
+  const n = scene.roads[h.road]!.path.nodes[h.i]!;
+  const a = toScreen(f, n);
+  const t = screenDir(f, fromAngle(n.th));
+  return { x: a.x + t.x * ARROW_PX, y: a.y + t.y * ARROW_PX };
+}
+
+/** Which focus on the same node or edge counts as hovering or dragging this handle. */
+const OWN_FOCUS: Record<RoadHandle['type'], RoadHandle['type'][]> = {
+  node: [],
+  head: ['head', 'node'],
+  ctrl: ['ctrl'],
+  s1: ['s1'],
+  s2: ['s2'],
+  rad: ['rad'],
+};
+
+const isFocused = ({ focus }: Scene, h: RoadHandle) =>
+  focus?.road === h.road && focus.i === h.i && OWN_FOCUS[h.type].includes(focus.type);
+
+/**
+ * Handles are shown only when needed (^55): a heading tip (blue), the blue point of a bend and a
+ * hook's turquoise points when the pointer is near (a hook's also with the guides of its edge);
+ * the orange rings when the pointer is near their curve. Whatever is hovered or dragged is
+ * always shown. All are filled, because they can be dragged.
+ */
+function handleShown(scene: Scene, h: RoadHandle, guides: boolean): boolean {
+  if (isFocused(scene, h)) return true;
+  if (h.type === 'rad') return nearEdge(scene.roads[h.road]!.edges[h.i]!.E, scene.pointer);
+  const hook = h.type === 's1' || h.type === 's2';
+  return nearHandle(h, scene.pointer) || (hook && guides);
+}
+
+function drawHandles(f: Frame, scene: Scene, pal: Palette) {
+  const colors = { head: pal.blue, ctrl: pal.blue, s1: pal.teal, s2: pal.teal, rad: pal.orange };
+  for (const h of scene.handles) {
+    if (h.type === 'node') continue;
+    const guides = revealed(scene.focus, h.road, h.type === 'head' ? -1 : h.i).guides;
+    if (!handleShown(scene, h, guides)) continue;
+    const at = h.type === 'head' ? tipOf(f, scene, h) : toScreen(f, h);
+    dot(f.ctx, at, h.type === 'rad' ? 6.5 : 5.5, colors[h.type]);
+  }
 }
 
 /** Draw all roads with construction geometry, handles and the current hover feedback. */
@@ -118,9 +164,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
     const shown = road.edges.map((ref) => revealed(scene.focus, i, ref.i));
     drawRoad(f, road, shown, pal);
   });
-  for (const h of scene.handles) {
-    if (h.type === 'rad') ring(f.ctx, toScreen(f, h), 7, { color: pal.orange, width: 2.2 });
-  }
+  drawHandles(f, scene, pal);
   drawHover(f, scene.hover, pal);
   scene.roads.forEach((road, i) => {
     drawNodes(f, road, scene.sel?.road === i ? scene.sel.node : null, pal);

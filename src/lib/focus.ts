@@ -22,8 +22,8 @@ const NONE: Reveal = { guides: false, labels: false };
 
 /**
  * Edge `edge` of road `road` shows its construction only while it is being worked on: its own
- * blue or turquoise points or one of its two nodes are hovered or dragged (guides), and its
- * radius labels while its orange ring or one of its two nodes is (labels).
+ * blue or turquoise points, its orange ring or one of its two nodes are hovered or dragged
+ * (guides, ^55), and its radius labels while its orange ring or one of its two nodes is (labels).
  */
 export function revealed(focus: Focus | null, road: number, edge: number): Reveal {
   if (!focus || focus.road !== road) return NONE;
@@ -33,5 +33,5 @@ export function revealed(focus: Focus | null, road: number, edge: number): Revea
     return touches ? { guides: true, labels: true } : NONE;
   }
   if (i !== edge) return NONE;
-  return type === 'rad' ? { guides: false, labels: true } : { guides: true, labels: false };
+  return type === 'rad' ? { guides: true, labels: true } : { guides: true, labels: false };
 }

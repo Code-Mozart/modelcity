@@ -11,7 +11,7 @@ Mouse buttons: **LMB** left, **MMB** middle (wheel button), **RMB** right. "Clic
 - **Select mode:** no road is being drawn. The cursor is the default arrow and there is no preview.
 - **Draw mode:** a road is being drawn. The cursor is a crosshair and a preview shows the node a click would add, with the curve to it.
 
-A left click on empty canvas in select mode starts a road and enters draw mode. Leaving draw mode: Esc, an RMB click on empty space, or an LMB click on the road's last node (^43).
+A left click on empty canvas in select mode only enters draw mode (it places no node, ^54); the next click places node 1 of a new road. A left drag in select mode does not enter draw mode: it is reserved for a rubber band selection, later. Leaving draw mode: Esc, an RMB click on empty space, or an LMB click on the road's last node (^43).
 
 ## What the left button does
 
@@ -21,7 +21,7 @@ The left button always creates or edits; there are no tools (^44). What happens 
 |-------------------|-------------|-----------|------|
 | A handle: node, heading arrow tip, blue point, orange ring, turquoise point | The handle is highlighted (blue ring). Click selects a node or heading. Drag edits it: moves the node, turns the heading, drags the blue point or the radius ring | The same, with no node preview | ^9, ^44, ^48 |
 | A road's curve (within 18 px) | Same as empty canvas (below) | A ring and a small tick on the curve. Click inserts a node there (the curve does not change). Drag inserts a node and sets its heading while dragging, which can turn the curve into an S-curve or hook | ^10, ^44, ^48 |
-| Empty canvas | Click starts a new road: node 1, heading right, and enters draw mode. Drag does the same with the heading pointing from the press point to the cursor | A ghost node and the curve to it from the road's last node. Click adds a node at the end of the road, its heading chosen so that the new edge is a single circular arc (a hook beyond 180°, also when the cursor is behind the arrow). Drag adds the node at the press point with the heading pointing to the cursor, previewed live | ^40, ^44, ^46, ^48 |
+| Empty canvas | Click enters draw mode (no node yet). Drag does nothing yet (reserved for a rubber band selection) | A ghost node (and, once the road has nodes, the curve to it from the last one). The first click places node 1 of a new road, heading right (a drag sets its heading). Later clicks add a node at the end of the road, its heading chosen so that the new edge is a single circular arc (a hook beyond 180°, also when the cursor is behind the arrow). Drag adds the node at the press point with the heading pointing to the cursor, previewed live | ^40, ^44, ^46, ^48 |
 
 Details:
 
@@ -29,6 +29,7 @@ Details:
 - Double-click on an orange ring resets that radius to auto (^8).
 - Dragging less than 6 px while placing a node does not set a heading, so a click keeps the automatic one.
 - Roads are independent of each other (^42).
+- Entering draw mode and placing the first node are two clicks (^54).
 
 ## Removing and finishing
 
@@ -55,12 +56,22 @@ The corner shows what the mouse and keys do right now, as rows of `[input]: acti
 
 While a button is held, the rows stay those of where it was pressed.
 
-## What is shown on the canvas (^51)
+## What is shown on the canvas (^51, ^55)
 
-- No numbering labels.
-- The curve, the orange rings and the blue points of bends are always shown (they are handles).
-- The construction of an edge (blue lines, dashed bisector, circle, ticks, turquoise lines and dots) is shown only while the edge's blue or turquoise points or one of its two nodes (or their heading tips) are hovered or dragged; a node being placed counts as dragged.
-- The orange radius labels are shown only while the edge's orange ring or one of its two nodes is hovered or dragged.
+Always: the curves, the nodes, the heading arrows (the line, not its tip) and the scale bar when it applies. No numbering labels.
+
+Shown by need, so the canvas stays calm:
+
+| What | Shown when |
+|------|------------|
+| Heading tip (blue, filled) | The pointer is within 48 px of it, or its node is hovered or dragged |
+| Blue point of a bend (blue, filled) | The pointer is within 48 px of it, or it is hovered or dragged |
+| Turquoise points of a hook (turquoise, filled, draggable) | The pointer is within 48 px, or the edge's guides are shown, or they are hovered or dragged |
+| Orange radius points (orange, filled, draggable) | The pointer is within 20 px of that edge's curve, or the point is hovered or dragged |
+| Guides of an edge: blue lines, dashed bisector, circle, ticks, turquoise lines, the blue inflection point of an S or hook, and the hollow turquoise points of an S (derived, not draggable) | One of the edge's two nodes (or their heading tips), its blue or turquoise point, or its orange radius point is hovered or dragged. A node being placed counts as dragged |
+| Radius labels (`116.7m`) | One of the edge's two nodes or its orange radius point is hovered or dragged |
+
+Filled points can be dragged; hollow ones only show derived geometry. On touch there is no hover, so the shown-by-need handles appear only while grabbed.
 
 ## Camera (always, in every context)
 

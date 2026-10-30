@@ -100,15 +100,17 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
 }
 
 /**
- * The blue point of a bend is a handle and always drawn; the inflection point of an S or hook and
- * the turquoise points are construction geometry, drawn with the guides (^51).
+ * Derived construction points, drawn with the guides (^51, ^55): the inflection point of an S or
+ * hook (blue) and the turquoise corners of an S, which cannot be dragged and are drawn hollow. The
+ * handles (the bend's blue point, a hook's turquoise points, the orange rings) are drawn separately.
  */
-export function drawCorners(f: Frame, { E }: EdgeRef, guides: boolean, pal: Palette) {
-  if (E.kind === 'line') return;
-  if (E.kind === 'C') return void dot(f.ctx, toScreen(f, E.C), 6, pal.blue);
-  if (!guides) return;
+export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
+  if (E.kind === 'line' || E.kind === 'C') return;
   dot(f.ctx, toScreen(f, E.J), 6, pal.blue);
-  for (const k of [E.k1, E.k2]) if (k) dot(f.ctx, toScreen(f, k), 6, pal.teal);
+  if (E.kind !== 'S') return;
+  for (const k of [E.k1, E.k2]) {
+    if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.teal, width: 2 });
+  }
 }
 
 /** Radius labels at the middle of each arc. */
@@ -122,7 +124,7 @@ export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette) {
     const c = toScreen(f, piece.c);
     const l = Math.hypot(mid.x - c.x, mid.y - c.y) || 1;
     const at = { x: mid.x + ((mid.x - c.x) / l) * 22, y: mid.y + ((mid.y - c.y) / l) * 22 };
-    text(f.ctx, `R ${piece.r.toFixed(1)} m`, at, {
+    text(f.ctx, `${piece.r.toFixed(1)}m`, at, {
       color: pal['orange-ink'],
       size: 12,
       align: 'center',

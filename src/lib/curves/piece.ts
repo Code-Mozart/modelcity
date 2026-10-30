@@ -1,5 +1,5 @@
 import type { Arc, Line, Piece } from './types';
-import { add, cross, dist, dot, mul, perp, type Vec } from './vec';
+import { TAU, add, angleOf, cross, dist, dot, mod, mul, perp, sub, type Vec } from './vec';
 
 /**
  * The corner arc from P with start tangent T to end tangent U, where both tangent lengths are d.
@@ -52,3 +52,17 @@ export function pointOn(piece: Piece, t: number): Sample {
 
 export const pieceLength = (p: Piece) =>
   p.type === 'line' ? dist(p.P, p.Q) : p.r * Math.abs(p.da);
+
+/** Distance from a point to the nearest point of a piece (exact, not sampled). */
+export function distanceToPiece(piece: Piece, p: Vec): number {
+  if (piece.type === 'line') {
+    const d = sub(piece.Q, piece.P);
+    const l2 = dot(d, d);
+    const t = l2 > 0 ? Math.max(0, Math.min(1, dot(sub(p, piece.P), d) / l2)) : 0;
+    return dist(p, add(piece.P, mul(d, t)));
+  }
+  const sweep = Math.abs(piece.da);
+  const along = mod(Math.sign(piece.da) * (angleOf(sub(p, piece.c)) - piece.a0), TAU);
+  if (along <= sweep) return Math.abs(dist(p, piece.c) - piece.r);
+  return Math.min(dist(p, piece.P), dist(p, piece.Q));
+}
