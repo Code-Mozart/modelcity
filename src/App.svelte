@@ -8,7 +8,7 @@
 
   const editor = new Editor();
   const camera = new Camera();
-  const hints = $derived(hintsFor(editor.drawing, editor.hintTarget));
+  const hints = $derived(hintsFor(editor.drawing, editor.hintTarget, editor.selection.length));
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return;

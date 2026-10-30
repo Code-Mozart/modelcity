@@ -80,7 +80,7 @@ describe('only a single segment at a time (^66)', () => {
 describe('a hovered or dragged handle decides (^66)', () => {
   const far = { x: 0, y: 500 };
 
-  it('the blue, turquoise and orange points keep their own segment wherever the pointer is', () => {
+  it('the orange and yellow points keep their own segment wherever the pointer is', () => {
     for (const type of ['ctrl', 'rad'] as const) {
       expect(activeSegment(inputFor(far, { road: 0, type, i: 2 }))).toEqual({ road: 0, edge: 2 });
     }

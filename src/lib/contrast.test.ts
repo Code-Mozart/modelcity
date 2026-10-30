@@ -44,10 +44,9 @@ const PAIRS: [string, string, number][] = [
   ['key-edge', 'key-bg', 3],
   ['key-on-bg', 'bg', 3],
   ['blue', 'bg', 3],
-  ['teal', 'bg', 3],
+  ['yellow', 'bg', 3],
   ['orange', 'bg', 3],
   ['red', 'bg', 3],
-  ['curve', 'bg', 3],
 ];
 
 describe.each(Object.entries(themes))('%s theme contrast', (_name, t) => {
@@ -55,5 +54,12 @@ describe.each(Object.entries(themes))('%s theme contrast', (_name, t) => {
     expect(t[fg], `--${fg}`).toBeDefined();
     expect(t[bg], `--${bg}`).toBeDefined();
     expect(ratio(t[fg]!, t[bg]!)).toBeGreaterThanOrEqual(min);
+  });
+});
+
+describe('one font size for all text (^83)', () => {
+  it('app.css and the canvas text use the same size', async () => {
+    const { FONT_PX } = await import('./paint');
+    expect(css).toContain(`--font-size: ${FONT_PX}px;`);
   });
 });

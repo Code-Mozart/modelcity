@@ -67,11 +67,11 @@ describe('extending from the other end and finishing (^65)', () => {
     expect(ed.roads[0]!.nodes).toHaveLength(3);
   });
 
-  it('a click on a node in the middle only selects it, a drag moves it', () => {
+  it('a click on a node in the middle does nothing in draw mode, a drag moves it', () => {
     const ed = roadThenDrawMode();
     click(ed, 20, -10);
     expect(ed.active).toBeNull();
-    expect(ed.sel).toEqual({ road: 0, node: 1 });
+    expect(ed.selection).toEqual([]);
     ed.pointerDown(at(40, 0));
     ed.pointerMove(at(46, 4));
     ed.pointerUp();

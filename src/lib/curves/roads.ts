@@ -1,7 +1,9 @@
 import {
   edgesOf,
   nearestOnCurve,
+  releaseMiddles,
   removeNode,
+  withNode,
   type CurveHit,
   type EdgeRef,
   type Path,
@@ -64,14 +66,83 @@ export function removeRoad(roads: Roads, road: number, active: number | null) {
 }
 
 /**
- * Remove a node. A road needs two nodes, so one that would be left with fewer is removed
- * entirely, unless it is the road being drawn (it may have one node while drawing).
+ * Remove nodes of one road. A road needs two nodes, so one that would be left with fewer is
+ * removed entirely, unless it is the road being drawn (it may have one node while drawing).
  */
-export function removeNodeFrom(roads: Roads, ref: NodeRef, active: number | null) {
-  const path = roads[ref.road];
+export function removeNodesOfRoad(
+  roads: Roads,
+  road: number,
+  nodes: number[],
+  active: number | null,
+) {
+  const path = roads[road];
   if (!path) return { roads, active };
-  const left = removeNode(path, ref.node);
-  const tooShort = left.nodes.length < 2 && !(ref.road === active && left.nodes.length === 1);
-  if (tooShort) return removeRoad(roads, ref.road, active);
-  return { roads: replaceRoad(roads, ref.road, left), active };
+  const left = [...nodes].sort((a, b) => b - a).reduce(removeNode, path);
+  const tooShort = left.nodes.length < 2 && !(road === active && left.nodes.length === 1);
+  if (tooShort) return removeRoad(roads, road, active);
+  return { roads: replaceRoad(roads, road, left), active };
+}
+
+export const removeNodeFrom = (roads: Roads, ref: NodeRef, active: number | null) =>
+  removeNodesOfRoad(roads, ref.road, [ref.node], active);
+
+/** Remove any nodes, road by road (highest road first, so the indices of the others stay valid). */
+export function removeNodesFrom(roads: Roads, refs: NodeRef[], active: number | null) {
+  const byRoad = [...new Set(refs.map((r) => r.road))].sort((a, b) => b - a);
+  return byRoad.reduce(
+    (s, road) =>
+      removeNodesOfRoad(
+        s.roads,
+        road,
+        refs.filter((r) => r.road === road).map((r) => r.node),
+        s.active,
+      ),
+    { roads, active },
+  );
+}
+
+/** Give the listed segments the radius of segment `from`, copying its current value (^77). */
+export function shareRadius(
+  roads: Roads,
+  from: { road: number; i: number },
+  to: { road: number; i: number }[],
+): Roads {
+  const value = roads[from.road]?.radii[from.i] ?? null;
+  return roads.map((path, road) => {
+    const mine = to.filter((t) => t.road === road);
+    if (!mine.length) return path;
+    return { ...path, radii: path.radii.map((r, i) => (mine.some((t) => t.i === i) ? value : r)) };
+  });
+}
+
+/** A node with its position at some moment: what a group move starts from. */
+export interface Placed extends NodeRef {
+  x: number;
+  y: number;
+}
+
+export function placed(roads: Roads, refs: NodeRef[]): Placed[] {
+  return refs.flatMap((r) => {
+    const n = roads[r.road]?.nodes[r.node];
+    return n ? [{ ...r, x: n.x, y: n.y }] : [];
+  });
+}
+
+/**
+ * Move nodes (possibly of several roads) by the same translation from where they were (^71).
+ * Headings stay; the fixed middle line of an S-curve next to a moved node is released.
+ */
+export function moveNodes(roads: Roads, group: Placed[], delta: Vec): Roads {
+  return roads.map((path, road) => {
+    const mine = group.filter((g) => g.road === road);
+    if (!mine.length) return path;
+    const moved = mine.reduce(
+      (p, g) => withNode(p, g.node, { x: g.x + delta.x, y: g.y + delta.y }),
+      path,
+    );
+    return releaseMiddles(
+      moved,
+      mine.flatMap((g) => [g.node - 1, g.node]),
+    );
+  });
 }

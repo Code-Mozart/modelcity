@@ -23,11 +23,11 @@
 <style>
   .hints {
     position: absolute;
-    left: 14px;
-    top: 12px;
+    left: 1.1667em;
+    top: 1em;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 1.1667em;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -38,21 +38,21 @@
   }
   li {
     display: flex;
-    gap: 8px;
+    gap: 0.6667em;
     align-items: center;
-    min-height: 34px;
+    min-height: var(--symbol-size);
     font:
-      500 14px/1.3 system-ui,
+      500 var(--font-size) / 1.3 system-ui,
       sans-serif;
   }
   .inputs {
     display: flex;
-    gap: 6px;
+    gap: 0.5em;
     align-items: center;
     justify-content: flex-start;
   }
   .or {
     color: var(--muted);
-    font-size: 12px;
+    font-size: var(--font-size);
   }
 </style>

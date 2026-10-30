@@ -141,18 +141,31 @@ describe('hint target for the control hints (^49)', () => {
     const ed = draw(road());
     expect(ed.hintTarget).toEqual({ kind: 'empty' });
     ed.pointerMove(at(40, 0));
-    expect(ed.hintTarget).toEqual({ kind: 'handle', type: 'node', last: true, leaf: true });
+    expect(ed.hintTarget).toEqual({
+      kind: 'handle',
+      type: 'node',
+      last: true,
+      leaf: true,
+      selected: true,
+    });
+    const middle = { kind: 'handle', type: 'node', last: false, leaf: false, selected: false };
     ed.pointerMove(at(20, -10));
-    expect(ed.hintTarget).toEqual({ kind: 'handle', type: 'node', last: false, leaf: false });
+    expect(ed.hintTarget).toEqual(middle);
     ed.pointerDown(at(20, -10));
     ed.pointerMove(at(80, 80));
-    expect(ed.hintTarget).toEqual({ kind: 'handle', type: 'node', last: false, leaf: false });
+    expect(ed.hintTarget).toEqual(middle);
   });
 
   it('is not "last" in select mode', () => {
     const ed = draw(road());
     ed.key('Escape');
     ed.pointerMove(at(40, 0));
-    expect(ed.hintTarget).toEqual({ kind: 'handle', type: 'node', last: false, leaf: true });
+    expect(ed.hintTarget).toEqual({
+      kind: 'handle',
+      type: 'node',
+      last: false,
+      leaf: true,
+      selected: false,
+    });
   });
 });

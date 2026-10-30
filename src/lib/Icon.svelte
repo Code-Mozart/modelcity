@@ -17,8 +17,7 @@
 
 <svg
   viewBox="0 0 24 24"
-  width="16"
-  height="16"
+  style="width: 1.3333em; height: 1.3333em"
   fill="none"
   stroke="currentColor"
   stroke-width="2.4"

@@ -16,6 +16,7 @@ import {
   type Frame,
   type Palette,
 } from './paint';
+import type { Band } from './selection';
 import type { Pointer } from './proximity';
 import { activeFlags, arrowShown } from './scaffold';
 
@@ -29,7 +30,13 @@ export interface RoadScene {
 export interface Scene {
   roads: RoadScene[];
   handles: RoadHandle[];
-  sel: NodeRef | null;
+  selection: NodeRef[];
+  band: Band | null;
+  drawing: boolean;
+  /** Segments (road, index) that show their scaffold too: the selected ones while a radius is shared (^77). */
+  extra: { road: number; i: number }[];
+  /** All scaffolds are hidden while several nodes are moved (^78). */
+  hideScaffold: boolean;
   hover: Hover | null;
   focus: Focus | null;
   pointer: Pointer | null;
@@ -38,6 +45,9 @@ export interface Scene {
 const CURVE_PX = 4;
 const HEAD_BARB_PX = 11;
 const ARROW_STROKE_PX = 2;
+const NODE_DOT_PX = 5.5;
+/** Selected nodes are blue and 150% larger (^70). */
+const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
 
 /**
  * Two levels of gizmo (^60): the skeleton (curves and node dots) is always drawn; the scaffold of
@@ -61,17 +71,16 @@ function drawArrow(f: Frame, node: { x: number; y: number; th: number }, color: 
 /** Which segments of a road show their scaffold, and which node is selected. */
 interface NodeState {
   active: boolean[];
-  sel: number | null;
+  selected: number[];
 }
 
 /** The node dots (skeleton) and, with the scaffold, the heading arrows. */
 function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
-  const { active, sel } = state;
+  const { active, selected } = state;
   road.path.nodes.forEach((n, i) => {
-    if (arrowShown(active, i)) drawArrow(f, n, pal.blue);
-    const a = toScreen(f, n);
-    if (i === sel) ring(f.ctx, a, 11, { color: pal.blue, width: 2.2 });
-    dot(f.ctx, a, 5.5, pal.ink);
+    if (arrowShown(active, i)) drawArrow(f, n, pal.orange);
+    const picked = selected.includes(i);
+    dot(f.ctx, toScreen(f, n), picked ? SELECTED_DOT_PX : NODE_DOT_PX, picked ? pal.blue : pal.ink);
   });
 }
 
@@ -80,18 +89,19 @@ function drawPreview(f: Frame, hover: Extract<Hover, { kind: 'preview' }>, pal: 
   if (hover.ref) {
     const [from, to] = hover.end === 'end' ? [hover.ref, hover.node] : [hover.node, hover.ref];
     for (const piece of buildEdge(from, to, null, null).pieces) {
-      strokePiece(f, piece, { color: pal.curve, width: 3, dash: [6, 6] });
+      strokePiece(f, piece, { color: pal.ink, width: 3, dash: [6, 6] });
     }
   }
   f.ctx.globalAlpha = 0.6;
-  drawArrow(f, hover.node, pal.blue);
+  drawArrow(f, hover.node, pal.orange);
   dot(f.ctx, toScreen(f, hover.node), 5, pal.ink);
   f.ctx.globalAlpha = 1;
 }
 
-function drawHover(f: Frame, hover: Hover | null, pal: Palette) {
+function drawHover(f: Frame, hover: Hover | null, drawing: boolean, pal: Palette) {
   if (hover?.kind === 'preview') drawPreview(f, hover, pal);
-  if (hover?.kind === 'candidate') {
+  // The mark for inserting a node only exists in draw mode (^79).
+  if (hover?.kind === 'candidate' && drawing) {
     const at = toScreen(f, hover.hit.at);
     const { x: tx, y: ty } = screenDir(f, { x: hover.hit.at.tx, y: hover.hit.at.ty });
     ring(f.ctx, at, 8, { color: pal.ink, width: 2 });
@@ -114,7 +124,7 @@ function drawRoad(f: Frame, road: RoadScene, active: boolean[], pal: Palette) {
     drawCircles(f, ref, pal);
   });
   for (const { E } of road.edges) {
-    for (const piece of E.pieces) strokePiece(f, piece, { color: pal.curve, width: CURVE_PX });
+    for (const piece of E.pieces) strokePiece(f, piece, { color: pal.ink, width: CURVE_PX });
   }
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
@@ -124,10 +134,10 @@ function drawRoad(f: Frame, road: RoadScene, active: boolean[], pal: Palette) {
 }
 
 const HANDLE_COLOR = (pal: Palette) => ({
-  head: pal.blue,
-  ctrl: pal.blue,
-  s1: pal.teal,
-  s2: pal.teal,
+  head: pal.orange,
+  ctrl: pal.orange,
+  s1: pal.yellow,
+  s2: pal.yellow,
   rad: pal.orange,
 });
 
@@ -142,19 +152,42 @@ function drawHandles(f: Frame, scene: Scene, active: boolean[][], pal: Palette) 
   }
 }
 
+const selectedIn = (selection: NodeRef[], road: number) =>
+  selection.filter((s) => s.road === road).map((s) => s.node);
+
+/** The selection box, in screen pixels. */
+function drawBand(f: Frame, { a, b }: Band, pal: Palette) {
+  const { ctx } = f;
+  ctx.fillStyle = pal.blue;
+  ctx.globalAlpha = 0.12;
+  ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = pal.blue;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+}
+
+/** Which segments show their scaffold: the focused one, the shared-radius ones, or none while moving a group. */
+function shownFlags(scene: Scene): boolean[][] {
+  const { roads, handles, focus, pointer, extra } = scene;
+  const flags = activeFlags({ roads, handles, focus, pointer });
+  return roads.map((r, road) =>
+    r.edges.map(
+      (e, k) =>
+        !scene.hideScaffold &&
+        (flags[road]![k]! || extra.some((x) => x.road === road && x.i === e.i)),
+    ),
+  );
+}
+
 /** Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
-  const { handles, focus, pointer } = scene;
-  const active = activeFlags({ roads: scene.roads, handles, focus, pointer });
+  const active = shownFlags(scene);
   scene.roads.forEach((road, i) => drawRoad(f, road, active[i]!, pal));
   drawHandles(f, scene, active, pal);
-  drawHover(f, scene.hover, pal);
+  drawHover(f, scene.hover, scene.drawing, pal);
+  if (scene.band) drawBand(f, scene.band, pal);
   scene.roads.forEach((road, i) => {
-    drawNodes(
-      f,
-      road,
-      { active: active[i]!, sel: scene.sel?.road === i ? scene.sel.node : null },
-      pal,
-    );
+    drawNodes(f, road, { active: active[i]!, selected: selectedIn(scene.selection, i) }, pal);
   });
 }

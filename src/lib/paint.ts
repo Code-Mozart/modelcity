@@ -20,9 +20,8 @@ export const PALETTE_KEYS = [
   'grid-major',
   'ink',
   'muted',
-  'curve',
   'blue',
-  'teal',
+  'yellow',
   'red',
   'orange',
   'red-ink',
@@ -81,14 +80,16 @@ export function ring(ctx: CanvasRenderingContext2D, p: Point, r: number, s: Stro
   applyStroke(ctx, s);
 }
 
+/** The one font size of all text, in px; the same as `--font-size` in app.css (^83). */
+export const FONT_PX = 12;
+
 export interface TextStyle {
   color: string;
-  size?: number;
   align?: CanvasTextAlign;
 }
 
 export function text(ctx: CanvasRenderingContext2D, s: string, p: Point, t: TextStyle) {
-  ctx.font = `italic ${t.size ?? 13}px system-ui, sans-serif`;
+  ctx.font = `italic ${FONT_PX}px system-ui, sans-serif`;
   ctx.fillStyle = t.color;
   ctx.textAlign = t.align ?? 'left';
   ctx.fillText(s, p.x, p.y);

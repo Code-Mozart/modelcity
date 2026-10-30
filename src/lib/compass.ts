@@ -1,3 +1,4 @@
+import { FONT_PX } from './paint';
 import { rotateVec, type Point } from './view';
 
 /** The compass that replaces the cursor while rotating (^30, ^33). */
@@ -18,9 +19,12 @@ export const CARDINALS: Cardinal[] = [
   { key: 'w', label: 'W', dir: { x: -1, y: 0 }, rot: Math.PI / 2 },
 ];
 
+/** The compass is sized like the icons of the hints: pixel values below are for 12 px text and grow with `FONT_PX` (^83). */
+const UI = FONT_PX / 12;
+
 /** Distance of the N/E/S/W key caps (outer ring) from the cursor, pixels. */
-export const CHIP_RADIUS_PX = 62;
-const CHIP_HIT_PX = 15;
+export const CHIP_RADIUS_PX = 62 * UI;
+const CHIP_HIT_PX = 15 * UI;
 
 export const cardinalForKey = (key: string): Cardinal | undefined =>
   CARDINALS.find((c) => c.key === key.toLowerCase());
@@ -49,7 +53,7 @@ export interface DragHint {
 }
 
 /** Distance of the drag-hint icons (inner ring) from the cursor, pixels. */
-export const HINT_RADIUS_PX = 34;
+export const HINT_RADIUS_PX = 34 * UI;
 
 export const DRAG_HINTS: DragHint[] = [
   {

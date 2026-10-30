@@ -1,11 +1,12 @@
-import { applyDrag, dragHeading, resetRadius, startDrag, type DragState } from './curves/drag';
+import { applyDrag, dragHeading, resetRadius } from './curves/drag';
 import { hitHandle } from './curves/handles';
-import { appendNode, autoHeading, autoHeadingBefore, insertNode, prependNode } from './curves/path';
-import type { PathNode } from './curves/types';
+import { appendNode, insertNode, prependNode } from './curves/path';
 import {
   edgesOfRoads,
   nearestOnRoads,
-  removeNodeFrom,
+  moveNodes,
+  shareRadius,
+  removeNodesFrom,
   removeRoad,
   replaceRoad,
   roadHandles,
@@ -16,62 +17,30 @@ import {
   type Roads,
 } from './curves/roads';
 import { dist, type Vec } from './curves/vec';
+import { dragPress, emptyPress } from './editorPress';
 import { skeletonAnchors } from './skeletonAnchors';
 import type { Focus } from './focus';
-import type { HintTarget } from './hints';
+import { cursorOf, extendTo, isActiveEnd, previewOf, targetOf, type Drawn } from './editorTargets';
 import { KEYMAP, type Action } from './keymap';
 import type { Pointer } from './proximity';
+import {
+  DRAG_PX,
+  INSERT_REACH_PX,
+  type Hover,
+  type PointerInfo,
+  type Press,
+  type Snapshot,
+} from './editorTypes';
+import {
+  afterCurveClick,
+  nodesInBand,
+  selectedSegments,
+  withNodes,
+  withoutNode,
+  type Band,
+} from './selection';
 
-/** What the pointer is doing, as seen by the editor. Positions are world meters. */
-export interface PointerInfo {
-  pt: Vec;
-  /** Pixels per meter, for screen-sized hit areas. */
-  scale: number;
-  touch: boolean;
-  shift: boolean;
-}
-
-/**
- * What is under the pointer: a handle to edit, and in draw mode also a curve to insert into or
- * the preview of the node a click would add (^48).
- */
-export type Hover =
-  | { kind: 'handle'; handle: RoadHandle }
-  | { kind: 'candidate'; hit: RoadHit }
-  | { kind: 'preview'; node: PathNode; ref: PathNode | null; end: 'start' | 'end' };
-
-/** Distance in screen pixels within which a press snaps to a curve. */
-const INSERT_REACH_PX = 18;
-/** Pointer travel (screen pixels) that turns a press into a drag. */
-const DRAG_PX = 6;
-
-interface Snapshot {
-  roads: Roads;
-  active: number | null;
-  end: 'start' | 'end';
-  sel: NodeRef | null;
-}
-
-/**
- * The left button is down: dragging a handle, placing a node (its heading by dragging), or, in
- * select mode on empty canvas, a click that enters draw mode (a drag there is reserved for a
- * rubber band selection, later).
- */
-type Press =
-  | {
-      kind: 'drag';
-      road: number;
-      drag: DragState;
-      start: Vec;
-      moved: boolean;
-      /** A click finishes the road (it is the end being drawn) or extends it from another leaf node. */
-      finishes: boolean;
-      extend: boolean;
-      undo: Snapshot;
-      target: HintTarget;
-    }
-  | { kind: 'place'; ref: NodeRef; undo: Snapshot; target: HintTarget }
-  | { kind: 'empty'; start: Vec; moved: boolean; target: HintTarget };
+export type { Hover, PointerInfo } from './editorTypes';
 
 /**
  * The road editor: roads, the road being drawn, selection and pointer interaction (^40, ^42). No
@@ -91,25 +60,23 @@ export class Editor {
   end = $state<'start' | 'end'>('end');
   /** Where the pointer is, for showing handles that are near it (^55). */
   pointer = $state.raw<Pointer | null>(null);
-  sel = $state.raw<NodeRef | null>(null);
+  /** The selected nodes (^70); the last one is `sel`. */
+  selection = $state.raw<NodeRef[]>([]);
+  /** The selection box while it is dragged, in screen pixels. */
+  band = $state.raw<Band | null>(null);
   hover = $state.raw<Hover | null>(null);
   private press = $state.raw<Press | null>(null);
 
+  sel = $derived(this.selection.at(-1) ?? null);
   drawing = $derived(this.mode === 'draw');
   edges = $derived(edgesOfRoads(this.roads));
   /** The skeleton of all roads, for the camera bounds (^37, ^62). */
   anchors = $derived(skeletonAnchors(this.roads, this.edges));
-  cursor = $derived(this.pointerCursor());
+  cursor = $derived(cursorOf(this.hover, this.drawing));
   /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
   focus = $derived(this.currentFocus());
   /** What the control hints are about (^49). */
-  hintTarget = $derived(this.press?.target ?? this.targetOf(this.hover));
-
-  private pointerCursor(): string {
-    if (this.hover?.kind === 'handle') return 'grab';
-    if (this.hover?.kind === 'candidate') return 'copy';
-    return this.drawing ? 'crosshair' : 'default';
-  }
+  hintTarget = $derived(this.press?.target ?? targetOf(this.drawn, this.hover));
 
   private currentFocus(): Focus | null {
     const press = this.press;
@@ -121,30 +88,12 @@ export class Editor {
     return h ? { road: h.road, type: h.type, i: h.i } : null;
   }
 
-  /** The node of the road being drawn that new nodes attach to (clicking it finishes the road). */
-  private isActiveEnd(handle: RoadHandle): boolean {
-    const nodes = this.roads[handle.road]?.nodes ?? [];
-    if (handle.type !== 'node' || handle.road !== this.active) return false;
-    return nodes.length === 1 || handle.i === (this.end === 'end' ? nodes.length - 1 : 0);
+  private get drawn(): Drawn {
+    return { roads: this.roads, active: this.active, end: this.end, selection: this.selection };
   }
 
-  /** A node at either end of its road: drawing can extend the road from it (^65). */
-  private isLeaf(handle: RoadHandle): boolean {
-    const nodes = this.roads[handle.road]?.nodes ?? [];
-    return handle.type === 'node' && (handle.i === 0 || handle.i === nodes.length - 1);
-  }
-
-  private targetOf(hover: Hover | null): HintTarget {
-    if (hover?.kind === 'handle') {
-      const { handle } = hover;
-      return {
-        kind: 'handle',
-        type: handle.type,
-        last: this.isActiveEnd(handle),
-        leaf: this.isLeaf(handle),
-      };
-    }
-    return hover?.kind === 'candidate' ? { kind: 'curve' } : { kind: 'empty' };
+  private isActiveEnd(handle: RoadHandle) {
+    return isActiveEnd(this.drawn, handle);
   }
 
   handles(scale: number): RoadHandle[] {
@@ -152,7 +101,7 @@ export class Editor {
   }
 
   private snapshot(): Snapshot {
-    return { roads: this.roads, active: this.active, end: this.end, sel: this.sel };
+    return { roads: this.roads, active: this.active, end: this.end, selection: this.selection };
   }
 
   private handleAt({ pt, scale, touch }: PointerInfo): RoadHandle | null {
@@ -172,21 +121,22 @@ export class Editor {
   }
 
   deleteSelected() {
-    if (this.sel) this.removeAt(this.sel);
+    this.removeAll(this.selection);
   }
 
-  private removeAt(ref: NodeRef) {
-    const r = removeNodeFrom(this.roads, ref, this.active);
+  private removeAll(refs: NodeRef[]) {
+    if (!refs.length) return;
+    const r = removeNodesFrom(this.roads, refs, this.active);
     this.roads = r.roads;
     this.active = r.active;
     if (r.active === null) this.end = 'end';
-    this.sel = null;
+    this.selection = [];
   }
 
   /** Enter draw mode: the next click places the first node of a new road. */
   enterDrawMode() {
     this.mode = 'draw';
-    this.sel = null;
+    this.selection = [];
   }
 
   /** Leave draw mode; a road being drawn with fewer than two nodes is cancelled. */
@@ -198,7 +148,7 @@ export class Editor {
     this.mode = 'select';
     this.active = null;
     this.end = 'end';
-    this.sel = null;
+    this.selection = [];
   }
 
   /** Left button pressed. */
@@ -208,7 +158,7 @@ export class Editor {
     const handle = this.handleAt(info);
     if (handle) return this.grab(handle, info);
     if (!this.drawing) {
-      this.press = { kind: 'empty', start: info.pt, moved: false, target: { kind: 'empty' } };
+      this.press = emptyPress(this.drawn, info, this.curveAt(info));
       return;
     }
     const hit = this.curveAt(info);
@@ -216,30 +166,19 @@ export class Editor {
     else this.create(info.pt);
   }
 
-  private grab(handle: RoadHandle, { pt }: PointerInfo) {
-    const path = this.roads[handle.road]!;
-    if (handle.type === 'node' || handle.type === 'head') {
-      this.sel = { road: handle.road, node: handle.i };
-    }
-    this.press = {
-      kind: 'drag',
-      road: handle.road,
-      drag: startDrag(path, handle),
-      start: pt,
-      moved: false,
-      finishes: this.isActiveEnd(handle),
-      extend: this.drawing && this.isLeaf(handle) && !this.isActiveEnd(handle),
-      undo: this.snapshot(),
-      target: this.targetOf({ kind: 'handle', handle }),
-    };
+  private grab(handle: RoadHandle, info: PointerInfo) {
+    const r = dragPress(this.drawn, this.drawing, handle, info);
+    this.selection = r.selection;
+    this.press = r.press;
   }
 
   private insert(hit: RoadHit) {
     const undo = this.snapshot();
     const r = insertNode(this.roads[hit.road]!, hit);
     this.roads = replaceRoad(this.roads, hit.road, r.path);
-    this.sel = { road: hit.road, node: r.sel };
-    this.press = { kind: 'place', ref: this.sel, undo, target: { kind: 'curve' } };
+    const ref = { road: hit.road, node: r.sel };
+    this.selection = [ref];
+    this.press = { kind: 'place', ref, undo, target: { kind: 'curve' } };
   }
 
   /** A node at the end of the road being drawn, or the first node of a new road (enters draw mode). */
@@ -249,14 +188,14 @@ export class Editor {
       const r = startRoad(this.roads, pt);
       this.roads = r.roads;
       this.active = r.road;
-      this.sel = { road: r.road, node: 0 };
+      this.selection = [{ road: r.road, node: 0 }];
     } else {
       const add = this.end === 'end' ? appendNode : prependNode;
       const r = add(this.roads[this.active]!, pt);
       this.roads = replaceRoad(this.roads, this.active, r.path);
-      this.sel = { road: this.active, node: r.sel };
+      this.selection = [{ road: this.active, node: r.sel }];
     }
-    this.press = { kind: 'place', ref: this.sel, undo, target: { kind: 'empty' } };
+    this.press = { kind: 'place', ref: this.selection[0]!, undo, target: { kind: 'empty' } };
   }
 
   pointerMove(info: PointerInfo) {
@@ -265,7 +204,7 @@ export class Editor {
     if (!press) this.hover = this.hoverAt(info);
     else if (press.kind === 'drag') this.moveDrag(press, info);
     else if (press.kind === 'place') this.placeHeading(press.ref, info);
-    else if (dist(info.pt, press.start) > DRAG_PX / info.scale) press.moved = true;
+    else this.moveBand(press, info);
   }
 
   private moveDrag(press: Extract<Press, { kind: 'drag' }>, info: PointerInfo) {
@@ -273,7 +212,45 @@ export class Editor {
     press.moved = true;
     const road = press.road;
     const path = applyDrag(this.roads[road]!, press.drag, info.pt, { snap: info.shift });
-    this.roads = replaceRoad(this.roads, road, path);
+    const moved = this.shared(replaceRoad(this.roads, road, path), press);
+    const to = path.nodes[press.drag.handle.i]!;
+    const delta = { x: to.x - press.origin.x, y: to.y - press.origin.y };
+    const group = press.drag.handle.type === 'node' ? press.group : [];
+    this.roads = group.length ? moveNodes(moved, group, delta) : moved;
+  }
+
+  /** Dragging the radius of a selected segment sets the radius of all selected segments (^77). */
+  private shared(roads: Roads, press: Extract<Press, { kind: 'drag' }>): Roads {
+    const own = this.sharing(press);
+    return own ? shareRadius(roads, own[0], own[1]) : roads;
+  }
+
+  /** The dragged segment and all selected segments, while a radius is dragged between selected nodes. */
+  private sharing(press: Press | null) {
+    if (press?.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
+    const own = { road: press.road, i: press.drag.handle.i };
+    const all = selectedSegments(this.roads, this.selection);
+    return all.some((s) => s.road === own.road && s.i === own.i) ? ([own, all] as const) : null;
+  }
+
+  /** Segments whose scaffold shows besides the focused one: the selected ones while sharing a radius (^77). */
+  get extraScaffold() {
+    return this.sharing(this.press)?.[1] ?? [];
+  }
+
+  /** Moving several nodes hides all scaffolds meanwhile (^78). */
+  get movingGroup() {
+    const press = this.press;
+    return press?.kind === 'drag' && press.moved && press.group.length > 0;
+  }
+
+  /** Dragging on empty canvas spans the selection box; shift keeps the selection and adds to it (^70, ^72). */
+  private moveBand(press: Extract<Press, { kind: 'empty' }>, info: PointerInfo) {
+    if (!press.moved && dist(info.screen, press.screen) <= DRAG_PX) return;
+    press.moved = true;
+    this.band = { a: press.screen, b: info.screen };
+    const inside = nodesInBand(this.roads, this.band, info.project);
+    this.selection = withNodes(press.base, inside);
   }
 
   /** Dragging while a node is placed sets its heading, from where it was placed (^40). */
@@ -291,69 +268,54 @@ export class Editor {
   private hoverAt(info: PointerInfo): Hover | null {
     const handle = this.handleAt(info);
     if (handle) return { kind: 'handle', handle };
-    if (!this.drawing) return null;
     const hit = this.curveAt(info);
-    return hit ? { kind: 'candidate', hit } : this.previewAt(info.pt);
+    if (hit) return { kind: 'candidate', hit };
+    return this.drawing ? previewOf(this.drawn, info.pt) : null;
   }
 
-  /** The preview of the node a click would add: where, its heading, and the node it attaches to. */
-  private previewAt(pt: Vec): Hover {
-    const nodes = this.active === null ? undefined : this.roads[this.active]?.nodes;
-    const ref = (this.end === 'end' ? nodes?.[nodes.length - 1] : nodes?.[0]) ?? null;
-    const heading = this.end === 'end' ? autoHeading : autoHeadingBefore;
-    return {
-      kind: 'preview',
-      ref,
-      end: this.end,
-      node: { x: pt.x, y: pt.y, th: ref ? heading(ref, pt) : 0 },
-    };
+  private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
+    const { curve, shift } = press;
+    if (curve.length) this.selection = afterCurveClick(this.selection, curve, shift);
+    else if (shift) return;
+    else if (this.selection.length) this.selection = [];
+    else this.enterDrawMode();
+  }
+
+  private extendFrom(ref: NodeRef) {
+    const d = extendTo(this.drawn, ref);
+    [this.roads, this.active, this.end, this.selection] = [d.roads, d.active, d.end, d.selection];
   }
 
   /** A click (no drag) on the node being drawn from finishes the road; on another leaf node it extends the road from there. */
   private clickedHandle(press: Extract<Press, { kind: 'drag' }>) {
+    const ref = { road: press.road, node: press.drag.handle.i };
+    if (press.click === 'toggle') this.selection = withoutNode(this.selection, ref);
+    else if (press.click === 'collapse' && press.group.length && !press.extend)
+      this.selection = [ref];
     if (press.finishes) this.finishRoad();
     else if (press.extend) this.extendFrom({ road: press.road, node: press.drag.handle.i });
-  }
-
-  /**
-   * Make a leaf node the one the next node attaches to (^65): the road it belongs to becomes the
-   * road being drawn, at that end. A road being drawn with one node only is dropped, since a road
-   * needs two.
-   */
-  private extendFrom(ref: NodeRef) {
-    const road = this.dropLoneRoad(ref.road);
-    const nodes = this.roads[road]?.nodes ?? [];
-    this.active = road;
-    this.end = ref.node === 0 && nodes.length > 1 ? 'start' : 'end';
-    this.sel = { road, node: ref.node };
-  }
-
-  /** Remove the road being drawn if it has one node only and is not `keep`; returns keep's new index. */
-  private dropLoneRoad(keep: number): number {
-    const prev = this.active;
-    if (prev === null || prev === keep || (this.roads[prev]?.nodes.length ?? 0) >= 2) return keep;
-    this.roads = removeRoad(this.roads, prev, prev).roads;
-    return prev < keep ? keep - 1 : keep;
   }
 
   /** Left button released. */
   pointerUp() {
     const press = this.press;
     this.press = null;
+    this.band = null;
     if (press?.kind === 'drag' && !press.moved) this.clickedHandle(press);
-    if (press?.kind === 'empty' && !press.moved) this.enterDrawMode();
+    if (press?.kind === 'empty' && !press.moved) this.clickedEmpty(press);
   }
 
   /** Abort what the left button was doing (a second finger came down). */
   cancelPress() {
     const press = this.press;
     this.press = null;
+    this.band = null;
     if (!press || press.kind === 'empty') return;
-    const { roads, active, end, sel } = press.undo;
+    const { roads, active, end, selection } = press.undo;
     this.roads = roads;
     this.active = active;
     this.end = end;
-    this.sel = sel;
+    this.selection = selection;
   }
 
   pointerLeave() {
@@ -365,7 +327,7 @@ export class Editor {
   /** Right click without moving: removes the node under the pointer, else finishes the road. */
   rightClick(info: PointerInfo) {
     const handle = this.handleAt(info);
-    if (handle?.type === 'node') this.removeAt({ road: handle.road, node: handle.i });
+    if (handle?.type === 'node') this.removeAll([{ road: handle.road, node: handle.i }]);
     else this.finishRoad();
   }
 

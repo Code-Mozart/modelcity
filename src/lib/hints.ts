@@ -2,7 +2,7 @@ import type { HandleType } from './curves/handles';
 
 /** One way of operating the mouse or keyboard, shown as a symbol (^49). */
 export type Input =
-  | { kind: 'mouse'; button: 'lmb' | 'mmb' | 'rmb'; drag?: boolean }
+  | { kind: 'mouse'; button: 'lmb' | 'mmb' | 'rmb'; drag?: boolean; shift?: boolean; alt?: boolean }
   | { kind: 'wheel' }
   | { kind: 'key'; label: string };
 
@@ -15,13 +15,16 @@ export interface Hint {
 /** What the pointer is over, for contextual hints. */
 export type HintTarget =
   | { kind: 'empty' }
-  | { kind: 'curve' }
-  | { kind: 'handle'; type: HandleType; last: boolean; leaf: boolean };
+  /** `picked`: how many of the curve's two nodes are selected. */
+  | { kind: 'curve'; picked?: number }
+  | { kind: 'handle'; type: HandleType; last: boolean; leaf: boolean; selected?: boolean };
 
-const mouse = (button: 'lmb' | 'mmb' | 'rmb', drag = false): Input => ({
+const mouse = (button: 'lmb' | 'mmb' | 'rmb', drag = false, mod?: 'shift' | 'alt'): Input => ({
   kind: 'mouse',
   button,
   drag,
+  shift: mod === 'shift',
+  alt: mod === 'alt',
 });
 const hint = (input: Input | Input[], text: string): Hint => ({
   inputs: Array.isArray(input) ? input : [input],
@@ -29,6 +32,7 @@ const hint = (input: Input | Input[], text: string): Hint => ({
 });
 
 const ESC: Input = { kind: 'key', label: 'Esc' };
+const DEL: Input = { kind: 'key', label: 'Del' };
 
 const CAMERA: Hint[] = [
   hint(mouse('rmb', true), 'pan'),
@@ -78,13 +82,47 @@ function drawModeHints(target: HintTarget): Hint[] {
   ];
 }
 
-/** Select mode: no road is being drawn. */
-function selectModeHints(target: HintTarget): Hint[] {
-  if (target.kind === 'handle') return [...handleHints(target, false), ...CAMERA];
-  return [hint(mouse('lmb'), 'draw mode'), ...CAMERA];
+/**
+ * Selecting with the left button, by what is under the pointer (^72, ^74, ^75, ^76). With nothing
+ * selected, Shift would add nothing to what LMB does, so no Shift row then.
+ */
+function pickHints(target: HintTarget, selected: number): Hint[] {
+  const shift = (text: string) => hint(mouse('lmb', false, 'shift'), text);
+  const lane = hint(mouse('lmb', false, 'alt'), 'select lane');
+  const instead = selected > 0 ? ' instead' : '';
+  if (target.kind === 'handle' && target.type === 'node') {
+    if (target.selected) return [shift('deselect'), lane];
+    const add = selected > 0 ? [shift('select')] : [];
+    return [hint(mouse('lmb'), `select${instead}`), ...add, lane];
+  }
+  if (target.kind !== 'curve') return [];
+  const all = target.picked === 2;
+  return [
+    ...(all ? [] : [hint(mouse('lmb'), `select both nodes${instead}`)]),
+    ...(selected > 0 ? [shift(all ? 'deselect both nodes' : 'add both nodes to selection')] : []),
+    lane,
+  ];
 }
 
-/** The control hints for the top left corner, for the current mode and what is under the pointer (^49). */
-export function hintsFor(drawing: boolean, target: HintTarget): Hint[] {
-  return drawing ? drawModeHints(target) : selectModeHints(target);
+/** Select mode: no road is being drawn. */
+function selectModeHints(target: HintTarget, selected: number): Hint[] {
+  const handle = target.kind === 'handle';
+  const empty = target.kind === 'empty';
+  const box = [hint(mouse('lmb', true), 'select')];
+  if (selected && !handle) box.push(hint(mouse('lmb', true, 'shift'), 'add to selection'));
+  const click = empty ? [hint(mouse('lmb'), selected ? 'deselect all' : 'draw mode')] : [];
+  return [
+    ...(handle ? handleHints(target, false) : [...click, ...box]),
+    ...pickHints(target, selected),
+    ...(selected ? [hint(DEL, 'delete selected')] : []),
+    ...CAMERA,
+  ];
+}
+
+/**
+ * The hints for the top left corner, for the current mode, what is under the pointer and how many
+ * nodes are selected (^49).
+ */
+export function hintsFor(drawing: boolean, target: HintTarget, selected = 0): Hint[] {
+  return drawing ? drawModeHints(target) : selectModeHints(target, selected);
 }

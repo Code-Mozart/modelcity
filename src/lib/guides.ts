@@ -43,7 +43,7 @@ function drawTick(f: Frame, t: Tick, pal: Palette) {
 function drawHeadingLine(f: Frame, node: Vec & { th: number }, end: HeadEnd, pal: Palette) {
   const { corner, sign } = end;
   const a = toScreen(f, node);
-  const stroke = { color: pal.blue, width: 1.6 };
+  const stroke = { color: pal.orange, width: 1.6 };
   if (corner) {
     const [from, to] = extend(a, toScreen(f, corner), 0, HEAD_REACH_PX);
     segment(f.ctx, from, to, stroke);
@@ -75,7 +75,7 @@ function drawTwoArcGuides(
     AXIS_REACH_PX,
     AXIS_REACH_PX,
   );
-  segment(f.ctx, from, to, { color: pal.teal, width: 1.6 });
+  segment(f.ctx, from, to, { color: pal.yellow, width: 1.6 });
 }
 
 export function drawGuides(f: Frame, ref: EdgeRef, pal: Palette) {
@@ -90,22 +90,22 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
   f.ctx.globalAlpha = 0.7;
   for (const piece of E.pieces) {
     if (sweeps(piece))
-      ring(f.ctx, toScreen(f, piece.c), piece.r * f.view.scale, { color: pal.blue, width: 1.5 });
+      ring(f.ctx, toScreen(f, piece.c), piece.r * f.view.scale, { color: pal.orange, width: 1.5 });
   }
   f.ctx.globalAlpha = 1;
 }
 
 /**
  * Derived construction points, part of the scaffold (^51, ^60): the inflection point of an S or
- * hook (blue) and the turquoise corners of an S, which cannot be dragged and are drawn hollow. The
- * handles (the bend's blue point, a hook's turquoise points, the orange rings) are drawn separately.
+ * hook (orange) and the yellow corners of an S, which cannot be dragged and are drawn hollow. The
+ * handles (the bend's orange point, a hook's yellow points, the orange rings) are drawn separately.
  */
 export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   if (E.kind === 'line' || E.kind === 'C') return;
-  dot(f.ctx, toScreen(f, E.J), 6, pal.blue);
+  dot(f.ctx, toScreen(f, E.J), 6, pal.orange);
   if (E.kind !== 'S') return;
   for (const k of [E.k1, E.k2]) {
-    if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.teal, width: 2 });
+    if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.yellow, width: 2 });
   }
 }
 
@@ -122,7 +122,6 @@ export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette) {
     const at = { x: mid.x + ((mid.x - c.x) / l) * 22, y: mid.y + ((mid.y - c.y) / l) * 22 };
     text(f.ctx, `${piece.r.toFixed(1)}m`, at, {
       color: pal['orange-ink'],
-      size: 12,
       align: 'center',
     });
   }

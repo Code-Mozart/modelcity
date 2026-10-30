@@ -41,7 +41,7 @@ export type Piece = Line | Arc;
 export interface Tick {
   at: Vec;
   dir: Vec;
-  role: 'blue' | 'teal';
+  role: 'orange' | 'yellow';
 }
 
 /** Input shared by all edge builders: both end nodes and the requested radius (null = auto). */

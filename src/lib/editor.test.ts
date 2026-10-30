@@ -223,14 +223,19 @@ describe('inserting nodes (^40)', () => {
     expect(ed.roads[0]!.nodes[node]!.th).not.toBeCloseTo(before);
   });
 
-  it('in select mode a click on a curve enters draw mode instead of inserting', () => {
+  it('in select mode a click on a curve selects its two nodes instead of inserting (^74)', () => {
     const ed = draw(road());
     ed.key('Escape');
     const mid = bareCurvePoint(ed);
     click(ed, mid.x, mid.y);
     expect(ed.roads[0]!.nodes).toHaveLength(3);
+    expect(ed.drawing).toBe(false);
+    expect(ed.selection).toHaveLength(2);
+    click(ed, 100, 100);
+    expect(ed.selection).toEqual([]);
+    expect(ed.drawing).toBe(false);
+    click(ed, 100, 100);
     expect(ed.drawing).toBe(true);
-    expect(ed.roads).toHaveLength(1);
     click(ed, 100, 100);
     expect(ed.roads).toHaveLength(2);
     expect(ed.active).toBe(1);

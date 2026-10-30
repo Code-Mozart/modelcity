@@ -18,8 +18,7 @@
 
 <svg
   viewBox="0 0 30 30"
-  width="34"
-  height="34"
+  style="width: var(--symbol-size); height: var(--symbol-size)"
   role={label ? 'img' : undefined}
   aria-label={label}
   aria-hidden={label ? undefined : 'true'}

@@ -4,7 +4,7 @@
   import type { Editor, PointerInfo } from './editor.svelte';
   import { FEATURES } from './features';
   import { render } from './render';
-  import { screenToWorld, type Point } from './view';
+  import { screenToWorld, worldToScreen, type Point } from './view';
 
   let { editor, camera }: { editor: Editor; camera: Camera } = $props();
 
@@ -34,7 +34,11 @@
     const scene = {
       roads: editor.roads.map((path, i) => ({ path, edges: editor.edges[i] ?? [] })),
       handles: editor.handles(camera.view.scale),
-      sel: editor.sel,
+      selection: editor.selection,
+      band: editor.band,
+      drawing: editor.drawing,
+      extra: editor.extraScaffold,
+      hideScaffold: editor.movingGroup,
       hover: editor.hover,
       focus: editor.focus,
       pointer: editor.pointer,
@@ -49,11 +53,15 @@
   }
 
   function info(e: PointerEvent | MouseEvent): PointerInfo {
+    const screen = localPoint(e);
     return {
-      pt: screenToWorld(camera.view, camera.size, localPoint(e)),
+      pt: screenToWorld(camera.view, camera.size, screen),
+      screen,
+      project: (p) => worldToScreen(camera.view, camera.size, p),
       scale: camera.view.scale,
       touch: 'pointerType' in e && e.pointerType === 'touch',
       shift: e.shiftKey,
+      alt: e.altKey,
     };
   }
 
@@ -63,7 +71,7 @@
     camera.zoomWheel(e.deltaY * unit * (e.ctrlKey ? PINCH_BOOST : 1), localPoint(e));
   }
 
-  /** Left press: creates or edits (a box selection will go here later, ^30). */
+  /** Left press: creates or edits, or spans the selection box (^70). */
   function leftDown(e: PointerEvent, at: Point) {
     if (camera.rotating) camera.compassClick(at);
     else editor.pointerDown(info(e));
