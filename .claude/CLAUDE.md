@@ -20,7 +20,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 ## Git and branches
 - `main` always holds a runnable version. Only the user merges into `main` (PRs auto-merge once the user approves). Never push to `main`.
 - Work on topic branches: `feature/`, `bugfix/`, `chore/`, `docs/`, etc. Claude may create, modify, rename and delete any branch except `main`.
-- Merge into `main` via PR, only when something is ready to publish as a new version. Don't open PRs otherwise.
+- Open a PR right after creating a branch (it will be merged eventually); the user merges when it is ready to publish as a new version.
 - PR descriptions are the main review surface (the user rarely reads code): always a summary of what and why, what to test, decisions made, open questions. Max half to one page.
 - Small, verifiable steps, steady progress, aware of the roadmap (see `docs/handover.md`). Use hats in commit messages where applicable.
 
@@ -44,7 +44,7 @@ The user entrusts the details to Claude. Principles:
 ## Context
 
 - Product background and design decisions: `docs/handover.md` (its mention of single-page HTML demos is outdated; we build a real app now).
-- Stack: bun + TypeScript + a JS framework : Svelte 5 + Vite + vitest (^1).
+- Stack: bun + TypeScript + Svelte 5 + Vite + vitest (^1). Code map: `src/lib/curves/` is the pure curve geometry library (^12), `editor.svelte.ts` the interaction engine, `MapCanvas.svelte` view and input dispatch, `render*.ts` drawing.
 
 ## Commands
 - `bun install`, `bun run dev` (app), `bun run ci` (lint + check + test + build, same as GitHub Actions).

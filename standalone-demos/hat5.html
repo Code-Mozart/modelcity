@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Through-node curves: Figs G and H demo</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#fafafb; --panel:#ffffff; --ink:#15171c; --muted:#5d6472; --line:#d8dbe2;
+  --curve:#7b2fe0; --blue:#1c4dff; --teal:#0fb3a4; --red:#d92a3f; --orange:#e5780a;
+  --btn:#eceef2; --btnon:#15171c; --btnontext:#ffffff;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --panel:#171a20; --ink:#f1f2f5; --muted:#a3aab7; --line:#2b303a;
+    --curve:#b78dff; --blue:#7f9cff; --teal:#3fdccb; --red:#ff7a88; --orange:#ffa94d;
+    --btn:#232832; --btnon:#f1f2f5; --btnontext:#101216;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --panel:#171a20; --ink:#f1f2f5; --muted:#a3aab7; --line:#2b303a;
+  --curve:#b78dff; --blue:#7f9cff; --teal:#3fdccb; --red:#ff7a88; --orange:#ffa94d;
+  --btn:#232832; --btnon:#f1f2f5; --btnontext:#101216;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%}
+body{height:100%;margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);
+  font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+h1{font-size:15px;font-weight:650;margin:0 6px 0 0;letter-spacing:.01em}
+.group{display:flex;gap:4px;align-items:center}
+button{font:inherit;color:var(--ink);background:var(--btn);border:1px solid transparent;border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--line)}
+button[aria-pressed="true"]{background:var(--btnon);color:var(--btnontext)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+label{display:flex;gap:5px;align-items:center;color:var(--muted);cursor:pointer;white-space:nowrap}
+main{position:relative;flex:1;min-height:0}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#readout{position:absolute;left:10px;top:8px;margin:0;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--panel) 88%,transparent);
+  border:1px solid var(--line);font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted);pointer-events:none;max-width:70%;white-space:pre}
+footer{display:flex;flex-wrap:wrap;gap:4px 16px;padding:7px 12px;background:var(--panel);border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.sq{border-radius:2px}
+.ring{background:transparent!important;border:2px solid var(--orange)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Through-node curves</h1>
+  <div class="group" role="group" aria-label="Tool">
+    <button id="t-move" aria-pressed="true" title="Move / edit (M)">Move</button>
+    <button id="t-append" aria-pressed="false" title="Append at an end (A)">Append</button>
+    <button id="t-insert" aria-pressed="false" title="Insert on a curve (I)">Insert</button>
+    <button id="del" title="Delete the selected node (Del) or right-click a node">Delete node</button>
+  </div>
+  <div class="group">
+    <label><input type="checkbox" id="o-circles" checked>circles</label>
+    <label><input type="checkbox" id="o-lines" checked>tangent lines</label>
+    <label><input type="checkbox" id="o-bis">blue point stays equidistant from both nodes</label>
+  </div>
+  <div class="group">
+    <button id="p-h">Reset to Fig H</button>
+    <button id="p-g">Fig G (S-curve)</button>
+    <button id="p-k">Hook</button>
+  </div>
+</header>
+<main><canvas id="cv" aria-label="Curve editor canvas"></canvas><pre id="readout"></pre></main>
+<footer>
+  <span><i class="sw" style="background:var(--ink)"></i>node (drag)</span>
+  <span><i class="sw ring" style="border-color:var(--ink)"></i>arrow tip: heading</span>
+  <span><i class="sw" style="background:var(--blue)"></i>blue: where the two heading lines meet (drag: sets both headings); on an S-curve the inflection point, generated</span>
+  <span><i class="sw" style="background:var(--teal)"></i>turquoise: corners of the control polygon (S-curve: where the heading lines meet the middle straight)</span>
+  <span><i class="sw ring"></i>orange ring: radius (drag; headings stay; both arcs of an S-curve share it; double-click resets to the largest that fits)</span>
+  <span>Right-click or Del removes a node. Esc returns to Move.</span>
+</footer>
+<script>
+"use strict";
+const hyp=Math.hypot;
+function biarc(p1,th1,p2,th2,l){
+  const T1={x:Math.cos(th1),y:Math.sin(th1)},T2={x:Math.cos(th2),y:Math.sin(th2)};
+  const w={x:p2.x-p1.x,y:p2.y-p1.y};
+  const m={x:l*T1.x+(1-l)*T2.x,y:l*T1.y+(1-l)*T2.y};
+  const A=m.x*m.x+m.y*m.y-1,wm=w.x*m.x+w.y*m.y,C=w.x*w.x+w.y*w.y;
+  const S=Math.sqrt(Math.max(0,wm*wm-A*C));
+  let L=(wm+S)>1e-9?C/(wm+S):Math.sqrt(C)/2;
+  if(!(L>1e-9))L=Math.sqrt(C)/2;
+  const d1=l*L,d2=(1-l)*L;
+  const s1={x:p1.x+d1*T1.x,y:p1.y+d1*T1.y},s2={x:p2.x-d2*T2.x,y:p2.y-d2*T2.y};
+  let ux=s2.x-s1.x,uy=s2.y-s1.y;const ul=hyp(ux,uy);
+  if(ul>1e-9){ux/=ul;uy/=ul}else{ux=T1.x;uy=T1.y}
+  const u={x:ux,y:uy},J={x:s1.x+d1*ux,y:s1.y+d1*uy};
+  return{T1,T2,s1,s2,J,u,L,d1,d2,arcs:[mkArc(p1,T1,u,d1,J),mkArc(J,u,T2,d2,p2)]};
+}
+function mkArc(P,T,U,d,Q){
+  const cr=T.x*U.y-T.y*U.x,dt=T.x*U.x+T.y*U.y,phi=Math.atan2(cr,dt);
+  if(Math.abs(phi)<1e-5)return{type:'line',P,Q,T};
+  const r=d/Math.tan(Math.abs(phi)/2),sg=Math.sign(phi);
+  const c={x:P.x+sg*r*(-T.y),y:P.y+sg*r*T.x};
+  return{type:'arc',P,Q,c,r,a0:Math.atan2(P.y-c.y,P.x-c.x),da:phi,d};
+}
+function arcPt(a,t){
+  if(a.type==='line'){const dx=a.Q.x-a.P.x,dy=a.Q.y-a.P.y,l=hyp(dx,dy)||1;
+    return{x:a.P.x+dx*t,y:a.P.y+dy*t,tx:dx/l,ty:dy/l}}
+  const an=a.a0+a.da*t,sg=Math.sign(a.da);
+  return{x:a.c.x+a.r*Math.cos(an),y:a.c.y+a.r*Math.sin(an),tx:-sg*Math.sin(an),ty:sg*Math.cos(an)};
+}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function classify(p1,th1,p2,th2){
+  const T1={x:Math.cos(th1),y:Math.sin(th1)},T2={x:Math.cos(th2),y:Math.sin(th2)};
+  const w={x:p2.x-p1.x,y:p2.y-p1.y},wl=hyp(w.x,w.y),den=T1.x*T2.y-T1.y*T2.x;
+  if(Math.abs(den)<1e-4)return{kind:'S'};
+  const a=(w.x*T2.y-w.y*T2.x)/den,b=(T1.x*w.y-T1.y*w.x)/den;
+  if(a>1e-3&&b>1e-3&&a<8*wl&&b<8*wl)return{kind:'C',a,b,C:{x:p1.x+a*T1.x,y:p1.y+a*T1.y}};
+  return{kind:'S',a,b};
+}
+const TAU=Math.PI*2,mod=x=>((x%TAU)+TAU)%TAU;
+// two equal-radius arcs anchored at the nodes, joined by a straight piece (inner tangent for S, outer tangent for hooks)
+function twoArc(p,q,R,s1,same){
+  const th1=p.th,th2=q.th,n1={x:-Math.sin(th1),y:Math.cos(th1)},n2={x:-Math.sin(th2),y:Math.cos(th2)};
+  const s2=same?s1:-s1;
+  const c1={x:p.x+s1*R*n1.x,y:p.y+s1*R*n1.y},c2={x:q.x+s2*R*n2.x,y:q.y+s2*R*n2.y};
+  const dx=c2.x-c1.x,dy=c2.y-c1.y,D=hyp(dx,dy);
+  let psi;
+  if(same){if(D<1e-9)return null;psi=Math.atan2(dy,dx)}
+  else{if(D<2*R*(1-1e-12))return null;psi=Math.atan2(dy,dx)+s1*Math.asin(Math.min(1,2*R/D))}
+  const u={x:Math.cos(psi),y:Math.sin(psi)},nu={x:-u.y,y:u.x};
+  const Ta={x:c1.x-s1*R*nu.x,y:c1.y-s1*R*nu.y},Tb={x:c2.x-s2*R*nu.x,y:c2.y-s2*R*nu.y};
+  let m1=mod(s1*(psi-th1)),m2=mod(s2*(th2-psi));
+  if(m1>TAU-1e-3)m1=0;if(m2>TAU-1e-3)m2=0;
+  const a1={type:'arc',P:p,Q:Ta,c:c1,r:R,a0:Math.atan2(p.y-c1.y,p.x-c1.x),da:s1*m1};
+  const a2={type:'arc',P:Tb,Q:q,c:c2,r:R,a0:Math.atan2(Tb.y-c2.y,Tb.x-c2.x),da:s2*m2};
+  return{u,Ta,Tb,c1,c2,m1,m2,len:hyp(Tb.x-Ta.x,Tb.y-Ta.y),pieces:[a1,{type:'line',P:Ta,Q:Tb},a2]};
+}
+function sMax(p,q,s1){
+  const n1={x:-Math.sin(p.th),y:Math.cos(p.th)},n2={x:-Math.sin(q.th),y:Math.cos(q.th)};
+  const qq={x:s1*(n1.x+n2.x),y:s1*(n1.y+n2.y)},w={x:q.x-p.x,y:q.y-p.y};
+  const A=qq.x*qq.x+qq.y*qq.y-4,wq=w.x*qq.x+w.y*qq.y,C0=w.x*w.x+w.y*w.y;
+  const S=Math.sqrt(Math.max(0,wq*wq-A*C0)),den=wq+S;
+  return den>1e-9?C0/den:null;
+}
+function hookAuto(p,q,s1){
+  const n1={x:-Math.sin(p.th),y:Math.cos(p.th)},n2={x:-Math.sin(q.th),y:Math.cos(q.th)};
+  const dn={x:n1.x-n2.x,y:n1.y-n2.y},w={x:q.x-p.x,y:q.y-p.y},d2=dn.x*dn.x+dn.y*dn.y,wl=hyp(w.x,w.y);
+  let R=d2>1e-9?s1*(w.x*dn.x+w.y*dn.y)/d2:0;if(!(R>1))R=wl/4;
+  return{R,cap:Math.max(R,wl)*3};
+}
+
+function radiusFromCursor(E,pt){
+  const e0={x:E.T2.x-E.T1.x,y:E.T2.y-E.T1.y},el=Math.hypot(e0.x,e0.y)||1,e={x:e0.x/el,y:e0.y/el};
+  const h=Math.abs(E.D)/2,c2=Math.sin(h)*Math.sin(h),mm={x:pt.x-E.C.x,y:pt.y-E.C.y},me=mm.x*e.x+mm.y*e.y;
+  const disc=Math.max(0,me*me-(mm.x*mm.x+mm.y*mm.y)*c2);
+  return (me+Math.sqrt(disc))/c2*Math.cos(h);
+}
+
+/* ---------- state ---------- */
+const PX_PER_M=6, W=1100, H=640, ARROW=40, RMIN=3;
+let nodes=[],rad=[],shape=[],tool="move",sel=-1,drag=null,ghost=null,mouse={x:0,y:0};
+const opts={circles:true,lines:true,bis:false};
+const cv=document.getElementById("cv"),ctx=cv.getContext("2d"),ro=document.getElementById("readout");
+let scale=1,ox=0,oy=0,dpr=1,cw=1,ch=1;
+const rad2=d=>d*Math.PI/180, deg=r=>((r*180/Math.PI+180)%360+360)%360-180;
+
+function presetH(){
+  const th=[52,-34,-30,50].map(rad2),g=[(th[0]+th[1])/2,(th[1]+th[2])/2,(th[2]+th[3])/2],len=[290,190,430];
+  let p={x:140,y:250};nodes=[{x:p.x,y:p.y,th:th[0]}];
+  for(let i=0;i<3;i++){p={x:p.x+len[i]*Math.cos(g[i]),y:p.y+len[i]*Math.sin(g[i])};nodes.push({x:p.x,y:p.y,th:th[i+1]})}
+  rad=[null,null,null];shape=[null,null,null];sel=-1;
+}
+function presetG(){nodes=[{x:260,y:400,th:0},{x:840,y:240,th:0}];rad=[null];shape=[null];sel=-1}
+function presetHook(){nodes=[{x:700,y:420,th:rad2(3)},{x:400,y:240,th:rad2(-75)}];rad=[null];shape=[null];sel=-1}
+
+/* ---------- edge geometry ----------
+   line   straight
+   C      one bend: line, arc, line (circle tangent to both heading lines); slack = straight stubs at the ends
+   S      reverse curve: arc, straight through the inflection point, arc; both arcs have the same radius, anchored at the nodes
+   H      hook (same direction, no single bend): same construction with the outer tangent (provisional)  */
+function crossXY(a,b){return a.x*b.y-a.y*b.x}
+function filletEdge(p,q,Rs,cls){
+  if(!cls||cls.kind!=="C")return null;
+  const T1={x:Math.cos(p.th),y:Math.sin(p.th)},T2={x:Math.cos(q.th),y:Math.sin(q.th)};
+  const D=Math.atan2(crossXY(T1,T2),T1.x*T2.x+T1.y*T2.y),tn=Math.tan(Math.abs(D)/2);
+  const Rmax=Math.min(Math.min(cls.a,cls.b)/tn,1e6);
+  let R=Rs==null?Rmax:Math.min(Rs,Rmax);R=Math.max(R,Math.min(Rmax,RMIN));
+  const t=R*tn,Cc=cls.C,A1={x:Cc.x-t*T1.x,y:Cc.y-t*T1.y},A2={x:Cc.x+t*T2.x,y:Cc.y+t*T2.y};
+  const arc=mkArc(A1,T1,T2,t,A2);
+  return{kind:"C",C:Cc,D,R,Rmax,A1,A2,T1,T2,auto:Rs==null,pieces:[{type:"line",P:p,Q:A1},arc,{type:"line",P:A2,Q:q}]};
+}
+function sEdge(p,q,Rs,s1,mid){
+  const T1={x:Math.cos(p.th),y:Math.sin(p.th)},T2={x:Math.cos(q.th),y:Math.sin(q.th)};
+  let M=mid;
+  if(!M){                                   // middle line = where the arcs touch at the largest radius
+    const Rm=sMax(p,q,s1);if(!Rm)return null;const e0=twoArc(p,q,Rm,s1,false);if(!e0)return null;
+    M={x:(e0.Ta.x+e0.Tb.x)/2,y:(e0.Ta.y+e0.Tb.y)/2,ux:e0.u.x,uy:e0.u.y};
+  }
+  const u={x:M.ux,y:M.uy},d1=crossXY(T1,u),d2=crossXY(T2,u);
+  if(Math.abs(d1)<1e-4||Math.abs(d2)<1e-4)return null;
+  const a1=crossXY({x:M.x-p.x,y:M.y-p.y},u)/d1,b2=-crossXY({x:M.x-q.x,y:M.y-q.y},u)/d2;
+  if(!(a1>1e-6&&b2>1e-6))return null;
+  const k1={x:p.x+a1*T1.x,y:p.y+a1*T1.y},k2={x:q.x-b2*T2.x,y:q.y-b2*T2.y};
+  const L=(k2.x-k1.x)*u.x+(k2.y-k1.y)*u.y;if(!(L>1e-6))return null;
+  const f1=Math.atan2(crossXY(T1,u),T1.x*u.x+T1.y*u.y),f2=Math.atan2(crossXY(u,T2),u.x*T2.x+u.y*T2.y);
+  if(Math.sign(f1)!==s1||Math.sign(f2)!==-s1)return null;
+  const tn1=Math.tan(Math.abs(f1)/2),tn2=Math.tan(Math.abs(f2)/2);
+  const Rmax=Math.min(a1/tn1,b2/tn2,L/(tn1+tn2));
+  let R=Rs==null?Rmax:Math.min(Rs,Rmax);R=Math.max(R,Math.min(Rmax,RMIN));
+  const t1=R*tn1,t2=R*tn2;
+  const A1={x:k1.x-t1*T1.x,y:k1.y-t1*T1.y},B1={x:k1.x+t1*u.x,y:k1.y+t1*u.y};
+  const A2={x:k2.x-t2*u.x,y:k2.y-t2*u.y},B2={x:k2.x+t2*T2.x,y:k2.y+t2*T2.y};
+  const arc1=mkArc(A1,T1,u,t1,B1),arc2=mkArc(A2,u,T2,t2,B2);
+  return{kind:"S",R,Rmax,auto:Rs==null,s1,mid:M,k1,k2,J:{x:M.x,y:M.y},u,T1,T2,A1,B1,A2,B2,
+    e:{Ta:B1,Tb:A2,len:Math.hypot(A2.x-B1.x,A2.y-B1.y),u,m1:Math.abs(f1),m2:Math.abs(f2)},
+    pieces:[{type:"line",P:p,Q:A1},arc1,{type:"line",P:B1,Q:A2},arc2,{type:"line",P:B2,Q:q}]};
+}
+function twoArcEdge(p,q,Rs,kind,s1,mid){
+  if(kind==="S"){const E=sEdge(p,q,Rs,s1,mid);if(E)return E}   // otherwise the anchored version below
+  let Rmax,R,e;
+  if(kind==="S"){
+    Rmax=sMax(p,q,s1);if(!Rmax)return null;
+    R=Rs==null?Rmax:Math.min(Rs,Rmax);R=Math.max(R,Math.min(Rmax,RMIN));e=twoArc(p,q,R,s1,false);
+  }else{
+    const hk=hookAuto(p,q,s1);Rmax=hk.cap;
+    R=Rs==null?hk.R:Math.min(Rs,hk.cap);R=Math.max(R,RMIN);e=twoArc(p,q,R,s1,true);
+  }
+  if(!e)return null;
+  // control polygon corners (turquoise): where each heading line meets the middle straight
+  const T1={x:Math.cos(p.th),y:Math.sin(p.th)},T2={x:Math.cos(q.th),y:Math.sin(q.th)};
+  let k1=null,k2=null;
+  const d1=crossXY(T1,e.u),d2=crossXY(T2,e.u);
+  if(Math.abs(d1)>1e-3){const a=crossXY({x:e.Ta.x-p.x,y:e.Ta.y-p.y},e.u)/d1;k1={x:p.x+a*T1.x,y:p.y+a*T1.y}}
+  if(Math.abs(d2)>1e-3){const a=crossXY({x:e.Tb.x-q.x,y:e.Tb.y-q.y},e.u)/d2;k2={x:q.x+a*T2.x,y:q.y+a*T2.y}}
+  const J={x:(e.Ta.x+e.Tb.x)/2,y:(e.Ta.y+e.Tb.y)/2};
+  return{kind,R,Rmax,auto:Rs==null,s1,e,k1,k2,J,u:e.u,pieces:e.pieces};
+}
+function buildEdge(p,q,Rs,sh){
+  const cls=classify(p,p.th,q,q.th);
+  if(sh){                                   // a stored shape tag wins while it is still valid
+    const E=sh.k==="C"?filletEdge(p,q,Rs,cls):twoArcEdge(p,q,Rs,sh.k,sh.s,sh.mid);
+    if(E)return E;
+  }
+  const b=biarc(p,p.th,q,q.th,.5);
+  const f0=b.arcs[0].type==="arc"?b.arcs[0].da:0,f1=b.arcs[1].type==="arc"?b.arcs[1].da:0;
+  const inflect=(f0>1e-3&&f1<-1e-3)||(f0<-1e-3&&f1>1e-3);
+  if(cls.kind==="C"&&!inflect){const E=filletEdge(p,q,Rs,cls);if(E)return E}
+  if(b.arcs.every(a=>a.type==="line"))return{kind:"line",pieces:b.arcs};
+  const s1=Math.abs(f0)>1e-3?Math.sign(f0):-Math.sign(f1);
+  const E=twoArcEdge(p,q,Rs,inflect?"S":"H",s1);
+  return E||{kind:"line",pieces:[{type:"line",P:p,Q:q}]};
+}
+function geom(){
+  const out=[];
+  for(let i=0;i<nodes.length-1;i++)out.push({i,p:nodes[i],q:nodes[i+1],E:buildEdge(nodes[i],nodes[i+1],rad[i],shape[i])});
+  return out;
+}
+const plen=a=>Math.hypot(a.Q.x-a.P.x,a.Q.y-a.P.y);
+const sweepOK=a=>a.type==="arc"&&Math.abs(a.da)>1e-3;
+function handles(G){
+  const Hs=[];
+  nodes.forEach((n,i)=>Hs.push({type:"node",i,x:n.x,y:n.y}));
+  nodes.forEach((n,i)=>Hs.push({type:"head",i,x:n.x+ARROW*Math.cos(n.th),y:n.y+ARROW*Math.sin(n.th)}));
+  for(const e of G){
+    const E=e.E;
+    if(E.kind==="C"){Hs.push({type:"ctrl",i:e.i,x:E.C.x,y:E.C.y});const m=arcPt(E.pieces[1],.5);Hs.push({type:"rad",i:e.i,k:-1,x:m.x,y:m.y})}
+    else if(E.kind==="S"||E.kind==="H"){
+      if(E.kind==="H"){if(E.k1)Hs.push({type:"s1",i:e.i,x:E.k1.x,y:E.k1.y});if(E.k2)Hs.push({type:"s2",i:e.i,x:E.k2.x,y:E.k2.y})}
+      (E.kind==="S"?[1,3]:[0,2]).forEach(k=>{if(sweepOK(E.pieces[k])){const m=arcPt(E.pieces[k],.5);Hs.push({type:"rad",i:e.i,k,x:m.x,y:m.y})}});
+    }
+  }
+  return Hs;
+}
+function hit(x,y,touch){
+  const Hs=handles(geom()),r=(touch?20:11)/scale,rn=Math.min(r,9/scale*(touch?1.8:1));
+  let best=null,bd=rn;
+  for(const h of Hs)if(h.type==="node"){const d=Math.hypot(h.x-x,h.y-y);if(d<bd){bd=d;best=h}}
+  if(best)return best;                                   // nodes win when the cursor is right on them
+  bd=r;
+  for(const t of["head","ctrl","s1","s2","rad"])         // otherwise the nearest handle wins; the list order breaks ties
+    for(const h of Hs)if(h.type===t){const d=Math.hypot(h.x-x,h.y-y);if(d<bd-1e-9){bd=d;best=h}}
+  return best;
+}
+
+/* ---------- edits ---------- */
+function autoHeading(prev,pt){const g=Math.atan2(pt.y-prev.y,pt.x-prev.x);return 2*g-prev.th}
+function nearestEnd(pt){
+  if(nodes.length<2)return"end";
+  const a=Math.hypot(pt.x-nodes[0].x,pt.y-nodes[0].y),b=Math.hypot(pt.x-nodes[nodes.length-1].x,pt.y-nodes[nodes.length-1].y);
+  return a<b?"start":"end";
+}
+function doAppend(pt){
+  const which=nearestEnd(pt);
+  if(!nodes.length){nodes.push({x:pt.x,y:pt.y,th:0});sel=0;return}
+  if(which==="end"){const prev=nodes[nodes.length-1];nodes.push({x:pt.x,y:pt.y,th:autoHeading(prev,pt)});rad.push(null);shape.push(null);sel=nodes.length-1}
+  else{const nx=nodes[0];nodes.unshift({x:pt.x,y:pt.y,th:autoHeading(nx,pt)});rad.unshift(null);shape.unshift(null);sel=0}
+}
+function nearestOnCurve(pt){
+  let best=null,bd=1e18;
+  for(const e of geom())e.E.pieces.forEach((a,k)=>{
+    if(a.type==="line"&&plen(a)<1e-3)return;
+    if(a.type==="arc"&&Math.abs(a.da)<1e-3)return;
+    for(let n=0;n<=160;n++){const t=n/160,m=arcPt(a,t),d=Math.hypot(m.x-pt.x,m.y-pt.y);if(d<bd){bd=d;best={e,k,t,m,d}}}});
+  return best&&best.d<18/scale?best:null;
+}
+function doInsert(c){
+  const {e,k,m}=c,E=e.E,Rn=E.kind==="line"?null:E.R;     // both halves keep the radius and a shape tag, so the curve does not change
+  let sl=null,sr=null;
+  if(E.kind==="C"){sl=k===0?null:{k:"C"};sr=k===2?null:{k:"C"}}
+  else if(E.kind==="S"){
+    const own={k:"S",s:E.s1,mid:E.mid};
+    if(k===0){sl=null;sr=own}else if(k===1){sl={k:"C"};sr=own}else if(k===2){sl={k:"C"};sr={k:"C"}}else if(k===3){sl=own;sr={k:"C"}}else{sl=own;sr=null}
+  }
+  else if(E.kind==="H"){
+    const own={k:"H",s:E.s1};
+    if(k===0){sl={k:"C"};sr=own}else if(k===1){sl={k:"C"};sr={k:"C"}}else{sl=own;sr={k:"C"}}
+  }
+  nodes.splice(e.i+1,0,{x:m.x,y:m.y,th:Math.atan2(m.ty,m.tx)});
+  rad.splice(e.i,1,Rn,Rn);shape.splice(e.i,1,sl,sr);sel=e.i+1;
+}
+function removeNode(i){
+  if(i<0||i>=nodes.length)return;
+  const n=nodes.length;nodes.splice(i,1);
+  if(n===1){rad=[];shape=[]}
+  else if(i===0){rad.splice(0,1);shape.splice(0,1)}
+  else if(i===n-1){rad.splice(n-2,1);shape.splice(n-2,1)}
+  else{rad.splice(i-1,2,null);shape.splice(i-1,2,null)}
+  sel=-1;
+}
+function setRadiusFromCorner(i,which,pt){            // drag a turquoise point: pick the radius whose corner is nearest
+  const p=nodes[i],q=nodes[i+1],E0=buildEdge(p,q,rad[i],shape[i]);if(E0.kind!=="H")return;
+  const lo=RMIN,hi=E0.Rmax;let best=null,bd=1e18;
+  for(let n=0;n<=160;n++){
+    const R=lo*Math.pow(hi/lo,n/160),E=buildEdge(p,q,R,shape[i]),c=which===1?E.k1:E.k2;
+    if(!c||(E.kind!==E0.kind))continue;
+    const d=Math.hypot(c.x-pt.x,c.y-pt.y);if(d<bd){bd=d;best=R}
+  }
+  if(best!=null)rad[i]=best>=.995*E0.Rmax?null:best;
+}
+
+/* ---------- drawing ---------- */
+let C={};
+function readColors(){const s=getComputedStyle(document.documentElement);for(const k of["bg","ink","muted","line","curve","blue","teal","red","orange"])C[k]=s.getPropertyValue("--"+k).trim()}
+function resize(){
+  const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;cw=r.width;ch=r.height;
+  cv.width=Math.max(1,Math.round(cw*dpr));cv.height=Math.max(1,Math.round(ch*dpr));
+  scale=Math.min(cw/W,ch/H);ox=(cw-W*scale)/2;oy=(ch-H*scale)/2;draw();
+}
+function lw(px){return px/scale}
+function line(a,b,col,w,dash){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=col;ctx.lineWidth=lw(w);ctx.setLineDash(dash?dash.map(lw):[]);ctx.stroke();ctx.setLineDash([])}
+function ext(a,b,before,after){const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1,ux=dx/l,uy=dy/l;return[{x:a.x-ux*before,y:a.y-uy*before},{x:b.x+ux*after,y:b.y+uy*after}]}
+function dot(p,r,fill){ctx.beginPath();ctx.arc(p.x,p.y,lw(r),0,Math.PI*2);ctx.fillStyle=fill;ctx.fill()}
+function ring(p,r,col,w){ctx.beginPath();ctx.arc(p.x,p.y,lw(r),0,Math.PI*2);ctx.strokeStyle=col;ctx.lineWidth=lw(w||2);ctx.stroke()}
+function text(s,p,col,size,align){ctx.font="italic "+lw(size||13)+"px system-ui,sans-serif";ctx.fillStyle=col;ctx.textAlign=align||"left";ctx.fillText(s,p.x,p.y)}
+function tick(p,T,col){const n={x:-T.y,y:T.x};line({x:p.x-n.x*9,y:p.y-n.y*9},{x:p.x+n.x*9,y:p.y+n.y*9},col,2)}
+function strokePiece(a,col,w,dash){
+  if(a.type==="line"&&plen(a)<.5)return;
+  if(a.type==="arc"&&Math.abs(a.da)<1e-4)return;
+  ctx.beginPath();
+  if(a.type==="line"){ctx.moveTo(a.P.x,a.P.y);ctx.lineTo(a.Q.x,a.Q.y)}
+  else ctx.arc(a.c.x,a.c.y,a.r,a.a0,a.a0+a.da,a.da<0);
+  ctx.strokeStyle=col;ctx.lineWidth=lw(w);ctx.lineCap="round";ctx.setLineDash(dash?dash.map(lw):[]);ctx.stroke();ctx.setLineDash([]);
+}
+function arrow(p,th,col,w){
+  const T={x:Math.cos(th),y:Math.sin(th)},tip={x:p.x+ARROW*T.x,y:p.y+ARROW*T.y},hl=11,ha=.5;
+  line(p,tip,col,w);
+  for(const s of[-1,1]){const a=th+Math.PI+s*ha;line(tip,{x:tip.x+hl*Math.cos(a),y:tip.y+hl*Math.sin(a)},col,w)}
+}
+function draw(){
+  readColors();
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.setTransform(dpr*scale,0,0,dpr*scale,dpr*ox,dpr*oy);
+  line({x:W-100,y:H-22},{x:W-100+10*PX_PER_M,y:H-22},C.muted,2);text("10 m",{x:W-100+5*PX_PER_M,y:H-30},C.muted,12,"center");
+  const G=geom();
+  for(const e of G){
+    const {p,q,E}=e;
+    if(opts.lines){
+      if(E.kind==="C"){
+        const a1=ext(p,E.C,0,26),a2=ext(q,E.C,0,26);
+        line(a1[0],a1[1],C.blue,1.6);line(a2[0],a2[1],C.blue,1.6);
+        const ar=E.pieces[1],bs=ext(E.C,ar.c,14,ar.r*1.05);line(bs[0],bs[1],C.blue,1.2,[6,5]);
+        tick(E.A1,E.T1,C.blue);tick(E.A2,E.T2,C.blue);
+      }else if(E.kind==="S"||E.kind==="H"){
+        const T1={x:Math.cos(p.th),y:Math.sin(p.th)},T2={x:Math.cos(q.th),y:Math.sin(q.th)};
+        const e1=E.k1?ext(p,E.k1,0,28):[p,{x:p.x+T1.x*60,y:p.y+T1.y*60}],e2=E.k2?ext(q,E.k2,0,28):[q,{x:q.x-T2.x*60,y:q.y-T2.y*60}];
+        line(e1[0],e1[1],C.blue,1.6);line(e2[0],e2[1],C.blue,1.6);
+        if(E.kind==="S"){
+          const dg=ext(E.k1,E.k2,46,46);line(dg[0],dg[1],C.teal,1.6);
+          tick(E.A1,E.T1,C.blue);tick(E.B1,E.u,C.teal);tick(E.A2,E.u,C.teal);tick(E.B2,E.T2,C.blue);
+        }else{
+          const dg=ext(E.e.Ta,E.e.Tb,60,60);line(dg[0],dg[1],C.teal,1.6);
+          tick(E.e.Ta,E.u,C.teal);tick(E.e.Tb,E.u,C.teal);
+        }
+      }
+    }
+    if(opts.circles)for(const a of E.pieces)if(sweepOK(a)){ctx.beginPath();ctx.arc(a.c.x,a.c.y,a.r,0,Math.PI*2);ctx.strokeStyle=C.blue;ctx.globalAlpha=.7;ctx.lineWidth=lw(1.5);ctx.stroke();ctx.globalAlpha=1}
+  }
+  for(const e of G)for(const a of e.E.pieces)strokePiece(a,C.curve,4);
+  for(const e of G){
+    const {E}=e,j=e.i+1,lab=j+"."+(j+1);
+    if(E.kind==="C"){dot(E.C,6,C.blue);text(lab,{x:E.C.x+9,y:E.C.y-9},C.red,14)}
+    if(E.kind==="S"||E.kind==="H"){
+      dot(E.J,6,C.blue);text(lab,{x:E.J.x+9,y:E.J.y+17},C.red,14);
+      if(E.k1){dot(E.k1,6,C.teal);text(lab+"-s1",{x:E.k1.x+9,y:E.k1.y+17},C.red,13)}
+      if(E.k2){dot(E.k2,6,C.teal);text(lab+"-s2",{x:E.k2.x+9,y:E.k2.y-9},C.red,13)}
+    }
+    for(const a of E.pieces)if(sweepOK(a)){
+      const m=arcPt(a,.5),ux=m.x-a.c.x,uy=m.y-a.c.y,l=Math.hypot(ux,uy)||1;
+      text("R "+(a.r/PX_PER_M).toFixed(1)+" m",{x:m.x+ux/l*22,y:m.y+uy/l*22},C.orange,12,"center");
+    }
+  }
+  for(const h of handles(G))if(h.type==="rad")ring(h,7,C.orange,2.2);
+  if(ghost&&tool==="append"){
+    const which=nearestEnd(ghost);let g={x:ghost.x,y:ghost.y,th:0};
+    if(nodes.length){const ref=which==="end"?nodes[nodes.length-1]:nodes[0];g.th=autoHeading(ref,ghost);
+      const E=which==="end"?buildEdge(ref,g,null):buildEdge(g,ref,null);
+      for(const a of E.pieces)strokePiece(a,C.curve,3,[6,6])}
+    ctx.globalAlpha=.6;arrow(g,g.th,C.ink,2);dot(g,5,C.ink);ctx.globalAlpha=1;
+  }
+  if(ghost&&tool==="insert"&&ghost.cand){const m=ghost.cand.m;ring(m,8,C.ink,2);
+    line({x:m.x-14*m.tx,y:m.y-14*m.ty},{x:m.x+14*m.tx,y:m.y+14*m.ty},C.ink,2)}
+  nodes.forEach((n,i)=>{
+    arrow(n,n.th,C.ink,2.2);ring({x:n.x+ARROW*Math.cos(n.th),y:n.y+ARROW*Math.sin(n.th)},5.5,C.ink,1.6);
+    if(i===sel)ring(n,11,C.blue,2.2);
+    dot(n,5.5,C.ink);
+    text(String(i+1),{x:n.x-18,y:n.y+24},C.red,15);
+  });
+  if(!drag&&tool==="move"&&ghost&&ghost.h)ring(ghost.h,10,C.blue,1.6);
+  readout(G);
+}
+function readout(G){
+  const L=[];
+  if(sel>=0&&nodes[sel])L.push("node "+(sel+1)+"  heading "+deg(nodes[sel].th).toFixed(1)+"°  at "+nodes[sel].x.toFixed(0)+", "+nodes[sel].y.toFixed(0));
+  for(const e of G){
+    const E=e.E,name=(e.i+1)+"–"+(e.i+2);
+    if(E.kind==="C")L.push(name+"  one bend: line, arc, line  R "+(E.R/PX_PER_M).toFixed(1)+" m"+(E.auto?" (auto = max)":"")+"  max "+(E.Rmax/PX_PER_M).toFixed(1)+" m");
+    else if(E.kind==="S")L.push(name+"  S-curve: arc, straight, arc  R "+(E.R/PX_PER_M).toFixed(1)+" m"+(E.auto?" (auto = max)":"")+"  max "+(E.Rmax/PX_PER_M).toFixed(1)+" m  straight "+(E.e.len/PX_PER_M).toFixed(1)+" m");
+    else if(E.kind==="H")L.push(name+"  hook (same direction, provisional)  R "+(E.R/PX_PER_M).toFixed(1)+" m"+(E.auto?" (auto)":"")+"  straight "+(E.e.len/PX_PER_M).toFixed(1)+" m");
+    else L.push(name+"  straight");
+  }
+  if(!nodes.length)L.push("no nodes: use Append to add the first one");
+  ro.textContent=L.join("\n");
+}
+
+/* ---------- interaction ---------- */
+function world(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left-ox)/scale,y:(e.clientY-r.top-oy)/scale}}
+cv.addEventListener("pointerdown",e=>{
+  if(e.button===2)return;
+  const pt=world(e),touch=e.pointerType==="touch";mouse=pt;
+  if(tool==="append"){doAppend(pt);draw();return}
+  if(tool==="insert"){const c=nearestOnCurve(pt);if(c){doInsert(c);ghost=null;draw()}return}
+  const h=hit(pt.x,pt.y,touch);
+  if(!h){sel=-1;draw();return}
+  cv.setPointerCapture(e.pointerId);
+  if(h.type==="node"||h.type==="head")sel=h.i;
+  drag={type:h.type,i:h.i,k:h.k};
+  if(h.type==="rad"&&h.k>=0){const E=geom()[h.i].E,a=E.pieces[h.k],m=arcPt(a,.5),ux=m.x-a.c.x,uy=m.y-a.c.y,l=Math.hypot(ux,uy)||1;
+    drag.r0=E.R;drag.h0=m;drag.ux=ux/l;drag.uy=uy/l}
+  draw();
+});
+cv.addEventListener("pointermove",e=>{
+  const pt=world(e);mouse=pt;
+  if(drag){applyDrag(pt,e);draw();return}
+  if(tool==="move"){const h=hit(pt.x,pt.y,e.pointerType==="touch");ghost=h?{h}:null;cv.style.cursor=h?"grab":"default"}
+  else if(tool==="append"){ghost={x:pt.x,y:pt.y};cv.style.cursor="crosshair"}
+  else{const c=nearestOnCurve(pt);ghost={cand:c};cv.style.cursor=c?"copy":"crosshair"}
+  draw();
+});
+cv.addEventListener("pointerup",()=>{drag=null;draw()});
+cv.addEventListener("pointercancel",()=>{drag=null;draw()});
+cv.addEventListener("pointerleave",()=>{if(!drag){ghost=null;draw()}});
+cv.addEventListener("contextmenu",e=>{
+  e.preventDefault();const pt=world(e),h=hit(pt.x,pt.y,false);
+  if(h&&h.type==="node"){removeNode(h.i);draw()}
+});
+cv.addEventListener("dblclick",e=>{
+  const pt=world(e),h=hit(pt.x,pt.y,false);
+  if(h&&h.type==="rad"){rad[h.i]=null;draw()}   // back to the largest radius that fits
+});
+function applyDrag(pt,e){
+  const d=drag,p=nodes[d.i],q=nodes[d.i+1];
+  switch(d.type){
+    case"node":p.x=pt.x;p.y=pt.y;for(const j of[d.i-1,d.i])if(shape[j]&&shape[j].mid)shape[j]={k:shape[j].k,s:shape[j].s};break;
+    case"head":{let a=Math.atan2(pt.y-p.y,pt.x-p.x);if(e.shiftKey)a=Math.round(a/rad2(15))*rad2(15);p.th=a;shape[d.i-1]=null;shape[d.i]=null;break}
+    case"ctrl":{
+      let Cc={x:pt.x,y:pt.y};
+      if(opts.bis){const M={x:(p.x+q.x)/2,y:(p.y+q.y)/2},w={x:q.x-p.x,y:q.y-p.y},l=Math.hypot(w.x,w.y)||1,n={x:-w.y/l,y:w.x/l},s=(Cc.x-M.x)*n.x+(Cc.y-M.y)*n.y;Cc={x:M.x+n.x*s,y:M.y+n.y*s}}
+      if(Math.hypot(Cc.x-p.x,Cc.y-p.y)>4&&Math.hypot(Cc.x-q.x,Cc.y-q.y)>4){p.th=Math.atan2(Cc.y-p.y,Cc.x-p.x);q.th=Math.atan2(q.y-Cc.y,q.x-Cc.x);shape[d.i-1]=null;shape[d.i]=null;shape[d.i+1]=null}
+      break}
+    case"s1":setRadiusFromCorner(d.i,1,pt);break;
+    case"s2":setRadiusFromCorner(d.i,2,pt);break;
+    case"rad":{
+      // headings never change here
+      if(d.k<0){const E=buildEdge(p,q,rad[d.i],shape[d.i]);if(E.kind==="C"){const R=radiusFromCursor(E,pt);rad[d.i]=R>=.995*E.Rmax?null:Math.max(R,RMIN)}}
+      else{const E0=buildEdge(p,q,rad[d.i],shape[d.i]);const R=clamp(d.r0+((pt.x-d.h0.x)*d.ux+(pt.y-d.h0.y)*d.uy),RMIN,E0.Rmax||1e6);rad[d.i]=(E0.kind==="S"&&R>=.995*E0.Rmax)?null:R}
+      break}
+  }
+}
+function setTool(t){
+  tool=t;ghost=null;
+  for(const k of["move","append","insert"])document.getElementById("t-"+k).setAttribute("aria-pressed",String(k===t));
+  cv.style.cursor=t==="move"?"default":"crosshair";draw();
+}
+document.getElementById("t-move").onclick=()=>setTool("move");
+document.getElementById("t-append").onclick=()=>setTool("append");
+document.getElementById("t-insert").onclick=()=>setTool("insert");
+document.getElementById("del").onclick=()=>{removeNode(sel);draw()};
+document.getElementById("p-h").onclick=()=>{presetH();draw()};
+document.getElementById("p-g").onclick=()=>{presetG();draw()};
+document.getElementById("p-k").onclick=()=>{presetHook();draw()};
+document.getElementById("o-circles").onchange=e=>{opts.circles=e.target.checked;draw()};
+document.getElementById("o-lines").onchange=e=>{opts.lines=e.target.checked;draw()};
+document.getElementById("o-bis").onchange=e=>{opts.bis=e.target.checked};
+window.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT")return;
+  if(e.key==="Delete"||e.key==="Backspace"){removeNode(sel);draw();e.preventDefault()}
+  else if(e.key==="Escape")setTool("move");
+  else if(e.key==="m")setTool("move");else if(e.key==="a")setTool("append");else if(e.key==="i")setTool("insert");
+});
+new ResizeObserver(resize).observe(cv);
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+presetH();resize();
+</script>
+</body>
+</html>

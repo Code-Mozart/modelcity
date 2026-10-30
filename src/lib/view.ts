@@ -27,7 +27,7 @@ export const MAX_SCALE = 400;
 /** The map is 4 x 4 km (±2000 m); the view center may leave it by a margin. */
 export const PAN_LIMIT = 2500;
 
-export const initialView = (): View => ({ cx: 0, cy: 0, scale: 100 });
+export const initialView = (): View => ({ cx: 0, cy: 0, scale: 4 });
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 

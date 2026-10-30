@@ -1,8 +1,69 @@
+:root {
+  --bg: #fafafb;
+  --panel: #ffffff;
+  --ink: #15171c;
+  --muted: #5d6472;
+  --line: #d8dbe2;
+  --grid-minor: #eceef2;
+  --grid-major: #dde0e6;
+  --curve: #7b2fe0;
+  --blue: #1c4dff;
+  --teal: #0fb3a4;
+  --red: #d92a3f;
+  --orange: #e5780a;
+  --btn: #eceef2;
+  --btn-on: #15171c;
+  --btn-on-text: #ffffff;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101216;
+    --panel: #171a20;
+    --ink: #f1f2f5;
+    --muted: #a3aab7;
+    --line: #2b303a;
+    --grid-minor: #181b22;
+    --grid-major: #232832;
+    --curve: #b78dff;
+    --blue: #7f9cff;
+    --teal: #3fdccb;
+    --red: #ff7a88;
+    --orange: #ffa94d;
+    --btn: #232832;
+    --btn-on: #f1f2f5;
+    --btn-on-text: #101216;
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
 body,
 #app {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  font-family: system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    14px/1.4 system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
 }
