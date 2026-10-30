@@ -83,3 +83,47 @@ export function junctions(roads: Roads): Junction[] {
   );
   return out;
 }
+
+/**
+ * What a click on a node does in draw mode (^23, ^65). On the end being drawn from it finishes the
+ * road. While a road is being drawn, on a node of another road it merges into it, and on the other
+ * end of the same road it extends from there. With no road being drawn, on a lone end node it
+ * extends that road, else it splits a new road off the node.
+ */
+export type NodeAction = 'finish' | 'extend' | 'split' | 'merge' | null;
+
+/** What a click on a curve does in draw mode: split a new road off, merge into it, or only insert a node. */
+export type CurveAction = 'split' | 'merge' | 'insert' | null;
+
+/** The state of drawing that decides the actions. */
+export interface DrawState {
+  roads: Roads;
+  active: number | null;
+  end: 'start' | 'end';
+}
+
+/** The node of the road being drawn that new nodes attach to. */
+export function activeEnd({ roads, active, end }: DrawState): NodeRef | null {
+  const nodes = active === null ? undefined : roads[active]?.nodes;
+  if (!nodes?.length) return null;
+  return { road: active!, node: end === 'end' ? nodes.length - 1 : 0 };
+}
+
+const isEnd = (roads: Roads, ref: NodeRef) =>
+  ref.node === 0 || ref.node === (roads[ref.road]?.nodes.length ?? 0) - 1;
+
+export function nodeAction(d: DrawState, ref: NodeRef): NodeAction {
+  const end = activeEnd(d);
+  if (end && coincident(d.roads, end).some((c) => c.road === ref.road && c.node === ref.node)) {
+    return 'finish';
+  }
+  const leaf = isEnd(d.roads, ref);
+  if (d.active === null) return leaf && coincident(d.roads, ref).length === 1 ? 'extend' : 'split';
+  if (ref.road !== d.active) return 'merge';
+  return leaf ? 'extend' : null;
+}
+
+export function curveAction(d: DrawState, road: number): CurveAction {
+  if (d.active === null) return 'split';
+  return road === d.active ? 'insert' : 'merge';
+}

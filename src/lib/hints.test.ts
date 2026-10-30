@@ -21,8 +21,7 @@ const empty: HintTarget = { kind: 'empty' };
 const node = (last: boolean, leaf = last): HintTarget => ({
   kind: 'handle',
   type: 'node',
-  last,
-  leaf,
+  act: last ? 'finish' : leaf ? 'extend' : null,
 });
 
 describe('control hints (^49)', () => {
@@ -74,8 +73,7 @@ describe('control hints over nodes and handles (^49)', () => {
     const h = (type: 'head' | 'ctrl' | 'rad'): HintTarget => ({
       kind: 'handle',
       type,
-      last: false,
-      leaf: false,
+      act: null,
     });
     expect(rows(true, h('head'))).toEqual(['LMB drag: turn heading', 'Esc or RMB: finish']);
     expect(rows(true, h('ctrl'))).toEqual(['LMB drag: bend curve', 'Esc or RMB: finish']);
@@ -171,5 +169,21 @@ describe('undo and redo hints (^81)', () => {
       'Ctrl+Z: undo',
       'Ctrl+Y or Ctrl+Shift+Z: redo',
     ]);
+  });
+});
+
+describe('split and merge hints (^23)', () => {
+  const act = (a: 'split' | 'merge'): HintTarget => ({ kind: 'handle', type: 'node', act: a });
+
+  it('over a node: split a road off it, or merge the road being drawn into it', () => {
+    expect(rows(true, act('split'))[0]).toBe('LMB: split road');
+    expect(rows(true, act('merge'))[0]).toBe('LMB: merge road');
+  });
+
+  it('over a curve: split here, merge here, or insert a node', () => {
+    const curve = (a: 'split' | 'merge' | 'insert'): HintTarget => ({ kind: 'curve', act: a });
+    expect(rows(true, curve('split'))[0]).toBe('LMB: split here');
+    expect(rows(true, curve('merge'))[1]).toBe('LMB drag: merge here with heading');
+    expect(rows(true, curve('insert'))[0]).toBe('LMB: insert node');
   });
 });

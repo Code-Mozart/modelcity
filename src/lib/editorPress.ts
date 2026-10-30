@@ -7,7 +7,9 @@ import {
   type RoadHit,
   type Roads,
 } from './curves/roads';
-import { isActiveEnd, isLeaf, targetOf, type Drawn } from './editorTargets';
+import { closeOver } from './curves/junctions';
+import { nodeAction } from './curves/junctions';
+import { targetOf, type Drawn } from './editorTargets';
 import type { PointerInfo, Press } from './editorTypes';
 import { curveNodes, isSelected, pressNode, roadNodes, selectedSegments } from './selection';
 
@@ -34,23 +36,23 @@ export function dragPress(
   const path = roads[handle.road]!;
   const picks = selects(handle, drawing, info);
   const rule = pressNode(drawn.selection, ref, roadNodes(roads, ref.road), info);
-  const selection = picks ? rule.selection : drawn.selection;
+  const selection = picks ? closeOver(roads, rule.selection) : drawn.selection;
   const others =
     picks && handle.type === 'node' ? selection.filter((r) => !isSelected([ref], r)) : [];
-  const active = isActiveEnd(drawn, handle);
+  const node = handle.type === 'node' && drawing;
+  const act = node && !info.shift ? nodeAction(drawn, ref) : null;
   const press: DragPress = {
     kind: 'drag',
     road: handle.road,
     drag: startDrag(path, handle),
     start: info.pt,
     moved: false,
-    finishes: active && !info.shift,
-    extend: drawing && isLeaf(roads, handle) && !active && !info.shift,
+    act,
     group: placed(roads, others),
     origin: { x: path.nodes[handle.i]!.x, y: path.nodes[handle.i]!.y },
     click: picks ? rule.click : 'keep',
     undo: drawn,
-    target: targetOf(drawn, { kind: 'handle', handle }),
+    target: targetOf(drawn, { kind: 'handle', handle }, drawing),
   };
   return { press, selection };
 }
@@ -66,7 +68,7 @@ export function emptyPress(drawn: Drawn, info: PointerInfo, hit: RoadHit | null)
     curve: !hit ? [] : lane ? roadNodes(drawn.roads, hit.road) : curveNodes(hit.road, hit.ref.i),
     moved: false,
     undo: drawn,
-    target: targetOf(drawn, hit ? { kind: 'candidate', hit } : null),
+    target: targetOf(drawn, hit ? { kind: 'candidate', hit } : null, false),
   };
 }
 

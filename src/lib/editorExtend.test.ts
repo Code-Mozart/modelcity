@@ -67,44 +67,18 @@ describe('extending from the other end and finishing (^65)', () => {
     expect(ed.roads[0]!.nodes).toHaveLength(3);
   });
 
-  it('a click on a node in the middle does nothing in draw mode, a drag moves it', () => {
+  it('a click on a node in the middle splits a road off it in draw mode, a drag moves it', () => {
     const ed = roadThenDrawMode();
     click(ed, 20, -10);
-    expect(ed.active).toBeNull();
-    expect(ed.selection).toEqual([]);
+    expect(ed.active).toBe(1);
+    expect(ed.roads[1]!.nodes).toHaveLength(1);
+    ed.key('Escape');
+    expect(ed.roads).toHaveLength(1);
     ed.pointerDown(at(40, 0));
     ed.pointerMove(at(46, 4));
     ed.pointerUp();
     expect(ed.roads[0]!.nodes[2]).toMatchObject({ x: 46, y: 4 });
     expect(ed.active).toBeNull();
-  });
-});
-
-describe('extending a road after drawing another (^65)', () => {
-  it('switching to another road drops a road that has only one node so far', () => {
-    const ed = roadThenDrawMode();
-    click(ed, 300, 300);
-    expect(ed.roads).toHaveLength(2);
-    click(ed, 40, 0);
-    expect(ed.roads).toHaveLength(1);
-    expect(ed.active).toBe(0);
-  });
-
-  it('keeps the other roads and fixes the index when an earlier road is dropped', () => {
-    const ed = roadThenDrawMode();
-    click(ed, 40, 0);
-    ed.key('Escape');
-    click(ed, 500, 500);
-    click(ed, 200, 200);
-    click(ed, 260, 230);
-    ed.key('Escape');
-    click(ed, 500, 500);
-    click(ed, 400, 400);
-    expect(ed.roads).toHaveLength(3);
-    click(ed, 260, 230);
-    expect(ed.roads).toHaveLength(2);
-    expect(ed.active).toBe(1);
-    expect(ed.roads[ed.active!]!.nodes).toHaveLength(2);
   });
 });
 

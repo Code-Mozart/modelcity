@@ -46,6 +46,10 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Selection box** | The rectangle spanned by a left drag on empty canvas in select mode, axis-aligned with the viewport (also "rubber band"); selects the nodes inside it | decided | ^69, ^70 |
 | **Lane** | A strip of road traffic runs in, 3 m wide for now (`LANE_WIDTH_M`). For now a road is a single lane, so *select lane* selects the whole road; more lanes come later | decided; assumed (that a road is one lane for now) | ^22, ^76 |
 | **Step** | One undoable change of the roads (a placed node, a drag, a removal, ...), see `docs/controls.md` | assumed | ^81, ^88 |
+| **Shared node** | Nodes of different roads at the same position are one node (a junction): selected, moved, deleted and turned together | decided; assumed (that sharing is by position) | ^23, ^92 |
+| **Split** | A road starts at an existing node, so that node has one edge in and two (or more) out. Draw mode: click a node or a curve | decided | ^23, ^93 |
+| **Merge** | A road ends at an existing node, so that node has two (or more) edges in and one out. Draw mode: click a node or a curve while drawing | decided | ^23, ^93 |
+| **Snap** | A node placed or dragged near the line one lane width beside another road jumps onto it and takes its heading, so lanes run parallel | decided; assumed (reach and details) | ^22, ^94 |
 | **Select mode** | No road is being drawn: you edit control points; a click enters draw mode | decided | ^48, ^54 |
 | **Draw mode** | A road is being drawn: clicks place nodes, insert nodes on curves, or extend a road from a leaf node | decided | ^48, ^65 |
 | **Preview** | The translucent preview of the node a click would place, with the curve to it (not called "ghost") | decided | ^40, ^48, ^68 |

@@ -2,6 +2,7 @@ import type { DragState } from './curves/drag';
 import type { RoadHandle, RoadHit, NodeRef, Placed, Roads } from './curves/roads';
 import type { PathNode } from './curves/types';
 import type { Vec } from './curves/vec';
+import type { NodeAction } from './curves/junctions';
 import type { HintTarget } from './hints';
 
 /** What the pointer is doing, as seen by the editor. `pt` is in world meters. */
@@ -26,8 +27,12 @@ export type Hover =
   | { kind: 'candidate'; hit: RoadHit }
   | { kind: 'preview'; node: PathNode; ref: PathNode | null; end: 'start' | 'end' };
 
-/** Distance in screen pixels within which a press snaps to a curve. */
-export const INSERT_REACH_PX = 18;
+/** Where a node would be placed: the pointer, or beside another lane with its heading (^22). */
+export interface Placement {
+  pt: Vec;
+  th: number | null;
+}
+
 /** Pointer travel (screen pixels) that turns a press into a drag. */
 export const DRAG_PX = 6;
 
@@ -50,9 +55,8 @@ export type Press =
       drag: DragState;
       start: Vec;
       moved: boolean;
-      /** A click finishes the road (it is the end being drawn) or extends it from another leaf node. */
-      finishes: boolean;
-      extend: boolean;
+      /** What a click does to the roads: finish, extend, split or merge (^23, ^65). */
+      act: NodeAction;
       /** The other selected nodes, as they were, moving with this one. */
       group: Placed[];
       origin: Vec;
@@ -61,7 +65,7 @@ export type Press =
       undo: Snapshot;
       target: HintTarget;
     }
-  | { kind: 'place'; ref: NodeRef; undo: Snapshot; target: HintTarget }
+  | { kind: 'place'; ref: NodeRef; undo: Snapshot; finish: boolean; target: HintTarget }
   | {
       kind: 'empty';
       screen: Vec;
