@@ -1,4 +1,5 @@
 import type { HandleType } from './curves/handles';
+import type { CurveAction, NodeAction } from './curves/junctions';
 
 /** One way of operating the mouse or keyboard, shown as a symbol (^49). */
 export type Input =
@@ -18,8 +19,8 @@ export interface Hint {
 export type HintTarget =
   | { kind: 'empty' }
   /** `picked`: how many of the curve's two nodes are selected. */
-  | { kind: 'curve'; picked?: number }
-  | { kind: 'handle'; type: HandleType; last: boolean; leaf: boolean; selected?: boolean };
+  | { kind: 'curve'; picked?: number; act?: CurveAction }
+  | { kind: 'handle'; type: HandleType; act: NodeAction; selected?: boolean };
 
 const mouse = (button: 'lmb' | 'mmb' | 'rmb', drag = false, mod?: 'shift' | 'alt'): Input => ({
   kind: 'mouse',
@@ -55,29 +56,35 @@ const DRAG_TEXT: Record<HandleType, string> = {
 };
 
 /**
- * What the left button does on a handle. In draw mode, clicking the node being drawn from ends the
- * road, and clicking another leaf node extends the road from it (^65).
+ * What the left button does on a handle. In draw mode a click on a node finishes, extends, splits or
+ * merges the road (^23, ^65).
  */
-function handleHints(target: HandleTarget, drawing: boolean): Hint[] {
-  const { type, last, leaf } = target;
+function handleHints(target: HandleTarget): Hint[] {
+  const { type, act } = target;
   const out: Hint[] = [];
-  if (type === 'node' && drawing && last) out.push(hint(mouse('lmb'), 'finish road'));
-  else if (type === 'node' && drawing && leaf) out.push(hint(mouse('lmb'), 'extend road'));
+  if (act) out.push(hint(mouse('lmb'), `${act} road`));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
   if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
   return out;
 }
 
+/** What a left click on a curve or on empty canvas does in draw mode (^23). */
+function curveText(target: HintTarget): string {
+  if (target.kind !== 'curve') return 'add node';
+  if (target.act === 'split') return 'split here';
+  return target.act === 'merge' ? 'merge here' : 'insert node';
+}
+
 /** Draw mode: a road is being drawn. */
 function drawModeHints(target: HintTarget): Hint[] {
   if (target.kind === 'handle') {
-    const rows = handleHints(target, true);
+    const rows = handleHints(target);
     // On a node a right click deletes it, so only Esc finishes there.
     const finish =
       target.type === 'node' ? hint(ESC, 'finish') : hint([ESC, mouse('rmb')], 'finish');
     return [...rows, finish];
   }
-  const what = target.kind === 'curve' ? 'insert node' : 'add node';
+  const what = curveText(target);
   return [
     hint(mouse('lmb'), what),
     hint(mouse('lmb', true), `${what} with heading`),
@@ -115,7 +122,7 @@ function selectModeHints(target: HintTarget, selected: number): Hint[] {
   if (selected && !handle) box.push(hint(mouse('lmb', true, 'shift'), 'add to selection'));
   const click = empty ? [hint(mouse('lmb'), selected ? 'deselect all' : 'draw mode')] : [];
   return [
-    ...(handle ? handleHints(target, false) : [...click, ...box]),
+    ...(handle ? handleHints(target) : [...click, ...box]),
     ...pickHints(target, selected),
     ...(selected ? [hint(DEL, 'delete selected')] : []),
     ...CAMERA,

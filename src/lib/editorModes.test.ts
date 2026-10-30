@@ -144,11 +144,10 @@ describe('hint target for the control hints (^49)', () => {
     expect(ed.hintTarget).toEqual({
       kind: 'handle',
       type: 'node',
-      last: true,
-      leaf: true,
+      act: 'finish',
       selected: true,
     });
-    const middle = { kind: 'handle', type: 'node', last: false, leaf: false, selected: false };
+    const middle = { kind: 'handle', type: 'node', act: null, selected: false };
     ed.pointerMove(at(20, -10));
     expect(ed.hintTarget).toEqual(middle);
     ed.pointerDown(at(20, -10));
@@ -156,15 +155,14 @@ describe('hint target for the control hints (^49)', () => {
     expect(ed.hintTarget).toEqual(middle);
   });
 
-  it('is not "last" in select mode', () => {
+  it('has no click action in select mode', () => {
     const ed = draw(road());
     ed.key('Escape');
     ed.pointerMove(at(40, 0));
     expect(ed.hintTarget).toEqual({
       kind: 'handle',
       type: 'node',
-      last: false,
-      leaf: true,
+      act: null,
       selected: false,
     });
   });
