@@ -43,7 +43,7 @@ export interface Scene {
   pointer: Pointer | null;
 }
 
-const CURVE_PX = 4;
+const CURVE_PX = 2;
 const HEAD_BARB_PX = 11;
 const ARROW_STROKE_PX = 2;
 /** Distance between the direction arrows along a curve, and their size (^80). */
@@ -93,7 +93,7 @@ function drawPreview(f: Frame, hover: Extract<Hover, { kind: 'preview' }>, pal: 
   if (hover.ref) {
     const [from, to] = hover.end === 'end' ? [hover.ref, hover.node] : [hover.node, hover.ref];
     for (const piece of buildEdge(from, to, null, null).pieces) {
-      strokePiece(f, piece, { color: pal.ink, width: 3, dash: [6, 6] });
+      strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
     }
   }
   f.ctx.globalAlpha = 0.6;
