@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Static legend of the handle vocabulary (^9).
+  import KeyCap from './KeyCap.svelte';
 </script>
 
 <footer>
@@ -17,8 +17,12 @@
     it; double-click resets to the largest that fits)
   </span>
   <span>
-    Right-click or Del removes a node. Esc returns to Move. Wheel zooms; drag empty space or the
-    middle button pans.
+    <KeyCap>Del</KeyCap> or a right click removes a node. <KeyCap>Esc</KeyCap> returns to Move. Wheel
+    zooms, right-drag pans, middle-drag rotates (left/right) and zooms (up/down); during it
+    <KeyCap>Esc</KeyCap> cancels and <KeyCap>N</KeyCap>
+    <KeyCap>E</KeyCap>
+    <KeyCap>S</KeyCap>
+    <KeyCap>W</KeyCap> set the direction.
   </span>
 </footer>
 
@@ -26,7 +30,8 @@
   footer {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 16px;
+    gap: 6px 16px;
+    align-items: center;
     padding: 7px 12px;
     border-top: 1px solid var(--line);
     background: var(--panel);

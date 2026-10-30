@@ -3,7 +3,17 @@ import { ARROW_PX, type Handle } from './curves/handles';
 import type { EdgeRef, Path } from './curves/path';
 import { fromAngle } from './curves/vec';
 import { drawCircles, drawCorners, drawGuides, drawRadiusLabels } from './guides';
-import { dot, ring, segment, strokePiece, text, toScreen, type Frame, type Palette } from './paint';
+import {
+  dot,
+  ring,
+  screenDir,
+  segment,
+  strokePiece,
+  text,
+  toScreen,
+  type Frame,
+  type Palette,
+} from './paint';
 
 /** Everything the path renderer needs to know about the editor. */
 export interface Scene {
@@ -27,11 +37,11 @@ function drawArrow(
   width: number,
 ) {
   const a = toScreen(f, node);
-  const t = fromAngle(node.th);
+  const t = screenDir(f, fromAngle(node.th));
   const tip = { x: a.x + t.x * ARROW_PX, y: a.y + t.y * ARROW_PX };
   segment(f.ctx, a, tip, { color, width });
   for (const side of [-1, 1]) {
-    const ang = node.th + Math.PI + side * 0.5;
+    const ang = node.th + f.view.rot + Math.PI + side * 0.5;
     const barb = {
       x: tip.x + HEAD_BARB_PX * Math.cos(ang),
       y: tip.y + HEAD_BARB_PX * Math.sin(ang),
@@ -48,7 +58,7 @@ function drawNodes(f: Frame, { path, sel }: Scene, pal: Palette) {
     const a = toScreen(f, n);
     if (i === sel) ring(f.ctx, a, 11, { color: pal.blue, width: 2.2 });
     dot(f.ctx, a, 5.5, pal.ink);
-    text(f.ctx, String(i + 1), { x: a.x - 18, y: a.y + 24 }, { color: pal.red, size: 15 });
+    text(f.ctx, String(i + 1), { x: a.x - 18, y: a.y + 24 }, { color: pal['red-ink'], size: 15 });
   });
 }
 
@@ -68,7 +78,7 @@ function drawHover(f: Frame, scene: Scene, pal: Palette) {
   if (hover?.kind === 'ghost' && scene.tool === 'append') drawGhost(f, scene, hover, pal);
   if (hover?.kind === 'candidate') {
     const at = toScreen(f, hover.hit.at);
-    const { tx, ty } = hover.hit.at;
+    const { x: tx, y: ty } = screenDir(f, { x: hover.hit.at.tx, y: hover.hit.at.ty });
     ring(f.ctx, at, 8, { color: pal.ink, width: 2 });
     segment(
       f.ctx,

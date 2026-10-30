@@ -38,16 +38,29 @@ function drawScaleBar({ ctx, view, size }: Frame, pal: Palette) {
   text(ctx, formatLength(meters), { x: 16, y: size.height - 32 }, { color: pal.ink, size: 12 });
 }
 
+export interface RenderOptions {
+  showGrid: boolean;
+  showScaleBar: boolean;
+}
+
 /** Draw one frame. `dpr` is the device pixel ratio of the backing canvas. */
-export function render(frame: Frame, dpr: number, scene: Scene) {
+export function render(frame: Frame, dpr: number, scene: Scene, options: RenderOptions) {
   const { ctx, view, size } = frame;
   const pal = readPalette();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = pal.bg;
   ctx.fillRect(0, 0, size.width, size.height);
   const minor = gridStep(view.scale, MINOR_GRID_MIN_PX);
-  drawGrid(frame, minor, pal['grid-minor']);
-  drawGrid(frame, minor * 10, pal['grid-major']);
+  // The grid is pinned to the camera: it pans and zooms with the content but never moves when
+  // rotating (^30), so it uses its own unrotated center.
+  const gridFrame = {
+    ...frame,
+    view: { cx: view.gx, cy: view.gy, scale: view.scale, rot: 0, gx: 0, gy: 0 },
+  };
+  if (options.showGrid) {
+    drawGrid(gridFrame, minor, pal['grid-minor']);
+    drawGrid(gridFrame, minor * 10, pal['grid-major']);
+  }
   drawScene(frame, scene, pal);
-  drawScaleBar(frame, pal);
+  if (options.showScaleBar) drawScaleBar(frame, pal);
 }

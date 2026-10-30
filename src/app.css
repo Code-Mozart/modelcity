@@ -8,12 +8,22 @@
   --grid-major: #dde0e6;
   --curve: #7b2fe0;
   --blue: #1c4dff;
-  --teal: #0fb3a4;
+  --teal: #0a8f84;
   --red: #d92a3f;
-  --orange: #e5780a;
+  --orange: #c75f00;
+  /* Text variants: graphics need 3:1, text needs 4.5:1 against the background. */
+  --red-ink: #c4182c;
+  --orange-ink: #a64d00;
   --btn: #eceef2;
   --btn-on: #15171c;
   --btn-on-text: #ffffff;
+  /* Key caps (KeyCap.svelte): raised caps; pressed = blue and sunk in. */
+  --key-bg: #ffffff;
+  --key-edge: #6b7280;
+  --key-ink: #15171c;
+  --key-on-bg: #1c4dff;
+  --key-on-edge: #10309c;
+  --key-on-ink: #ffffff;
   color-scheme: light;
 }
 
@@ -31,9 +41,17 @@
     --teal: #3fdccb;
     --red: #ff7a88;
     --orange: #ffa94d;
+    --red-ink: #ff7a88;
+    --orange-ink: #ffa94d;
     --btn: #232832;
     --btn-on: #f1f2f5;
     --btn-on-text: #101216;
+    --key-bg: #232832;
+    --key-edge: #8b93a3;
+    --key-ink: #f1f2f5;
+    --key-on-bg: #7f9cff;
+    --key-on-edge: #5575e8;
+    --key-on-ink: #101216;
     color-scheme: dark;
   }
 }

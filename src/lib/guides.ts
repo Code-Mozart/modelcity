@@ -2,7 +2,17 @@ import type { Edge, Tick } from './curves/types';
 import type { EdgeRef } from './curves/path';
 import { sweeps } from './curves/piece';
 import { fromAngle, type Vec } from './curves/vec';
-import { dot, extend, ring, segment, text, toScreen, type Frame, type Palette } from './paint';
+import {
+  dot,
+  extend,
+  ring,
+  screenDir,
+  segment,
+  text,
+  toScreen,
+  type Frame,
+  type Palette,
+} from './paint';
 
 /** Construction geometry drawn behind the curve (^9): heading lines, circles, ticks, corner points. */
 const HEAD_REACH_PX = 28;
@@ -18,8 +28,9 @@ interface HeadEnd {
 
 function drawTick(f: Frame, t: Tick, pal: Palette) {
   const at = toScreen(f, t.at);
-  const nx = -t.dir.y * TICK_PX;
-  const ny = t.dir.x * TICK_PX;
+  const d = screenDir(f, t.dir);
+  const nx = -d.y * TICK_PX;
+  const ny = d.x * TICK_PX;
   segment(
     f.ctx,
     { x: at.x - nx, y: at.y - ny },
@@ -38,7 +49,7 @@ function drawHeadingLine(f: Frame, node: Vec & { th: number }, end: HeadEnd, pal
     segment(f.ctx, from, to, stroke);
     return;
   }
-  const t = fromAngle(node.th);
+  const t = screenDir(f, fromAngle(node.th));
   segment(f.ctx, a, { x: a.x + sign * t.x * STUB_PX, y: a.y + sign * t.y * STUB_PX }, stroke);
 }
 
@@ -98,15 +109,15 @@ export function drawCorners(f: Frame, { i, E }: EdgeRef, pal: Palette) {
   };
   const main = E.kind === 'C' ? E.C : E.J;
   dot(f.ctx, toScreen(f, main), 6, pal.blue);
-  text(f.ctx, label, at(main, 9, E.kind === 'C' ? -9 : 17), { color: pal.red, size: 14 });
+  text(f.ctx, label, at(main, 9, E.kind === 'C' ? -9 : 17), { color: pal['red-ink'], size: 14 });
   if (E.kind === 'C') return;
   if (E.k1) {
     dot(f.ctx, toScreen(f, E.k1), 6, pal.teal);
-    text(f.ctx, `${label}-s1`, at(E.k1, 9, 17), { color: pal.red });
+    text(f.ctx, `${label}-s1`, at(E.k1, 9, 17), { color: pal['red-ink'] });
   }
   if (E.k2) {
     dot(f.ctx, toScreen(f, E.k2), 6, pal.teal);
-    text(f.ctx, `${label}-s2`, at(E.k2, 9, -9), { color: pal.red });
+    text(f.ctx, `${label}-s2`, at(E.k2, 9, -9), { color: pal['red-ink'] });
   }
 }
 
@@ -121,6 +132,10 @@ export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette) {
     const c = toScreen(f, piece.c);
     const l = Math.hypot(mid.x - c.x, mid.y - c.y) || 1;
     const at = { x: mid.x + ((mid.x - c.x) / l) * 22, y: mid.y + ((mid.y - c.y) / l) * 22 };
-    text(f.ctx, `R ${piece.r.toFixed(1)} m`, at, { color: pal.orange, size: 12, align: 'center' });
+    text(f.ctx, `R ${piece.r.toFixed(1)} m`, at, {
+      color: pal['orange-ink'],
+      size: 12,
+      align: 'center',
+    });
   }
 }

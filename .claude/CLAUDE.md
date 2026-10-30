@@ -16,6 +16,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - Hats never collide, only ever increment, and are never reused.
 - Claude tracks them in `docs/hats.md`. That file must ALWAYS be up to date. Its first line states the next hat, e.g. `next: ^123`.
 - Use hats in commit messages where applicable.
+- Status words in the registry: `decided` = the user decided it; `assumed` = Claude filled in a detail and the user has not confirmed it yet (never write "decided by Claude", and no "please confirm" either: `assumed` already says it).
 
 ## Git and branches
 - `main` always holds a runnable version. Only the user merges into `main` (PRs auto-merge once the user approves). Never push to `main`.
@@ -35,6 +36,9 @@ The user entrusts the details to Claude. Principles:
 - Build infrastructure, then use and combine it. Think library and client: engine/API-like code (pure, testable, no UI or input, e.g. `src/lib/view.ts`, `render.ts`) versus code that uses it (components, input handling).
 - The linter enforces quality limits (complexity, function length, nesting depth, parameter count, statements, file length: see `eslint.config.js`). Fix violations by refactoring. Never disable a rule or raise a limit just to get green; raise one only deliberately and mention it in the PR.
 
+## Hidden features
+- No always-hidden features: anything built but switched off must be listed in `src/lib/features.ts` and have a hat that says why and what decides its return.
+
 ## Dependencies
 - Before pinning or choosing a version, look it up (`npm view <pkg> versions/dist-tags/peerDependencies`). Never guess a version.
 
@@ -43,9 +47,11 @@ The user entrusts the details to Claude. Principles:
 
 ## Context
 
+- Controls: `docs/controls.md` is the current reference; update it together with the hat when a control changes.
 - Product background and design decisions: `docs/handover.md` (its mention of single-page HTML demos is outdated; we build a real app now).
 - Stack: bun + TypeScript + Svelte 5 + Vite + vitest (^1). Code map: `src/lib/curves/` is the pure curve geometry library (^12), `editor.svelte.ts` the interaction engine, `MapCanvas.svelte` view and input dispatch, `render*.ts` drawing.
 
 ## Commands
-- `bun install`, `bun run dev` (app), `bun run ci` (lint + check + test + build, same as GitHub Actions).
+- `bun install` (also enables the git hooks in `.githooks/`), `bun run dev` (app), `bun run ci` (lint + check + test + build, same as GitHub Actions).
+- `.githooks/pre-push` runs `bun run ci`, so a push only goes out green. Never bypass it (`--no-verify`).
 - TypeScript is pinned to 6.0.3, the last JS-based release: typescript-eslint and svelte-check do not support 7.0 (no stable programmatic API). Revisit when 7.1 is stable (planned 2026-11-24). (^3)

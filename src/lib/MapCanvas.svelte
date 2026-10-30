@@ -1,53 +1,52 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import type { Camera } from './camera.svelte';
   import type { Editor, PointerInfo } from './editor.svelte';
+  import { FEATURES } from './features';
   import { render } from './render';
-  import { initialView, panBy, screenToWorld, zoomAt, type Size, type View } from './view';
+  import { screenToWorld, type Point } from './view';
 
-  let { editor }: { editor: Editor } = $props();
+  let { editor, camera }: { editor: Editor; camera: Camera } = $props();
 
-  const ZOOM_PER_WHEEL_PX = 0.0015;
   const LINE_PX = 16;
   const PAGE_PX = 400;
   const PINCH_BOOST = 4;
 
   let canvas: HTMLCanvasElement;
-  let view = $state<View>(initialView());
-  let size = $state<Size>({ width: 1, height: 1 });
   let dpr = $state(1);
-  let panning: { x: number; y: number } | null = $state(null);
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
-    size = { width: canvas.clientWidth, height: canvas.clientHeight };
-    canvas.width = Math.round(size.width * dpr);
-    canvas.height = Math.round(size.height * dpr);
+    camera.size = { width: canvas.clientWidth, height: canvas.clientHeight };
+    canvas.width = Math.round(camera.size.width * dpr);
+    canvas.height = Math.round(camera.size.height * dpr);
   }
 
-  // Redraw whenever the view, the size or anything the editor exposes changes.
+  // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
     const scene = {
       path: editor.path,
       edges: editor.edges,
-      handles: editor.handles(view.scale),
+      handles: editor.handles(camera.view.scale),
       sel: editor.sel,
       hover: editor.hover,
       tool: editor.tool,
       showCircles: editor.showCircles,
       showLines: editor.showLines,
     };
-    render({ ctx: canvas.getContext('2d')!, view, size }, dpr, scene);
+    const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
+    render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
   });
 
-  function localPoint(e: MouseEvent) {
+  function localPoint(e: MouseEvent): Point {
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
   function info(e: PointerEvent | MouseEvent): PointerInfo {
     return {
-      pt: screenToWorld(view, size, localPoint(e)),
-      scale: view.scale,
+      pt: screenToWorld(camera.view, camera.size, localPoint(e)),
+      scale: camera.view.scale,
       touch: 'pointerType' in e && e.pointerType === 'touch',
       shift: e.shiftKey,
     };
@@ -56,53 +55,74 @@
   function onWheel(e: WheelEvent) {
     e.preventDefault();
     const unit = e.deltaMode === 1 ? LINE_PX : e.deltaMode === 2 ? PAGE_PX : 1;
-    const px = e.deltaY * unit * (e.ctrlKey ? PINCH_BOOST : 1);
-    view = zoomAt(view, size, localPoint(e), Math.exp(-px * ZOOM_PER_WHEEL_PX));
+    camera.zoomWheel(e.deltaY * unit * (e.ctrlKey ? PINCH_BOOST : 1), localPoint(e));
+  }
+
+  /** Left press: drag a handle (a box selection will go here later, ^30). */
+  function leftDown(e: PointerEvent, at: Point) {
+    if (camera.rotating) camera.compassClick(at);
+    else editor.pointerDown(info(e));
+  }
+
+  function touchDown(e: PointerEvent, at: Point) {
+    if (camera.touchDown(e.pointerId, at) >= 2) {
+      editor.pointerUp();
+      camera.endPan();
+    } else if (!editor.pointerDown(info(e)) && editor.tool === 'move') camera.startPan(at);
   }
 
   function onPointerDown(e: PointerEvent) {
-    if (e.button === 2) return;
     canvas.setPointerCapture(e.pointerId);
-    const wantsPan = e.button === 1;
-    // Dragging empty space pans in the Move tool (^14).
-    if (wantsPan || !editor.pointerDown(info(e))) {
-      if (wantsPan || editor.tool === 'move') panning = { x: e.clientX, y: e.clientY };
-    }
+    const at = localPoint(e);
+    camera.cursor = at;
+    if (e.pointerType === 'touch') touchDown(e, at);
+    else if (e.button === 0) leftDown(e, at);
+    else if (e.button === 1) camera.startRotate(at);
+    else if (e.button === 2) camera.startPan(at);
   }
 
   function onPointerMove(e: PointerEvent) {
-    if (!panning) return editor.pointerMove(info(e));
-    view = panBy(view, e.clientX - panning.x, e.clientY - panning.y);
-    panning = { x: e.clientX, y: e.clientY };
+    const at = localPoint(e);
+    camera.cursor = at;
+    if (e.pointerType === 'touch' && camera.touchMove(e.pointerId, at)) return;
+    if (camera.rotating) camera.moveRotate(at);
+    else if (camera.panning) camera.movePan(at);
+    else editor.pointerMove(info(e));
   }
 
-  function endPointer() {
-    panning = null;
-    editor.pointerUp();
+  function onPointerUp(e: PointerEvent) {
+    if (e.pointerType === 'touch') {
+      camera.touchUp(e.pointerId);
+      camera.endPan();
+      editor.pointerUp();
+    } else if (e.button === 0) {
+      camera.releaseChip();
+      editor.pointerUp();
+    } else if (e.button === 1) camera.endRotate();
+    // A right click without movement removes a node, a right drag only pans (^31).
+    else if (e.button === 2 && !camera.endPan()) editor.removeAt(info(e));
   }
 
   onMount(() => {
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
     // Test hook for e2e/screenshots.
-    (window as unknown as { __view: () => View }).__view = () => view;
+    (window as unknown as { __camera: Camera }).__camera = camera;
     return () => ro.disconnect();
   });
 </script>
 
 <canvas
   bind:this={canvas}
-  style:cursor={panning ? 'grabbing' : editor.cursor}
+  style:cursor={camera.rotating ? 'none' : camera.panning ? 'grabbing' : editor.cursor}
   onwheel={onWheel}
   onpointerdown={onPointerDown}
   onpointermove={onPointerMove}
-  onpointerup={endPointer}
-  onpointercancel={endPointer}
+  onpointerup={onPointerUp}
+  onpointercancel={onPointerUp}
   onpointerleave={() => editor.pointerLeave()}
-  oncontextmenu={(e) => {
-    e.preventDefault();
-    editor.removeAt(info(e));
-  }}
+  onmousedown={(e) => e.button === 1 && e.preventDefault()}
+  oncontextmenu={(e) => e.preventDefault()}
   ondblclick={(e) => editor.resetRadiusAt(info(e))}
 ></canvas>
 
