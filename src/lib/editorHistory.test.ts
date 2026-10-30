@@ -38,12 +38,13 @@ describe('undo and redo in the editor (^81)', () => {
 });
 
 describe('undo steps of dragging (^81)', () => {
-  it('a drag is one step, a click without moving none; new work clears redo', () => {
+  it('a drag is one step, a click that changes nothing none; new work clears redo', () => {
     const ed = draw([
       [0, 0],
       [20, -10],
     ]);
     ed.key('Escape');
+    click(ed, 20, -10);
     const steps = ed.history.past.length;
     click(ed, 20, -10);
     expect(ed.history.past).toHaveLength(steps);
@@ -88,5 +89,25 @@ describe('undo of removing and cancelling (^81)', () => {
     ed.pointerDown(at(30, 0));
     ed.key('z', undo);
     expect(ed.roads[0]!.nodes).toHaveLength(2);
+  });
+});
+
+describe('undo of selecting (^88)', () => {
+  it('selection changes are steps, a box select too, and undo restores the selection', () => {
+    const ed = draw([
+      [0, 0],
+      [20, 0],
+    ]);
+    ed.key('Escape');
+    const before = ed.history.past.length;
+    ed.pointerDown(at(-5, -5));
+    ed.pointerMove(at(25, 5));
+    ed.pointerUp();
+    expect(ed.selection).toHaveLength(2);
+    expect(ed.history.past).toHaveLength(before + 1);
+    ed.key('z', undo);
+    expect(ed.selection).toEqual([]);
+    ed.key('z', redo);
+    expect(ed.selection).toHaveLength(2);
   });
 });

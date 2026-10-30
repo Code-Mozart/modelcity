@@ -65,6 +65,7 @@ export function emptyPress(drawn: Drawn, info: PointerInfo, hit: RoadHit | null)
     shift: info.shift && !info.alt,
     curve: !hit ? [] : lane ? roadNodes(drawn.roads, hit.road) : curveNodes(hit.road, hit.ref.i),
     moved: false,
+    undo: drawn,
     target: targetOf(drawn, hit ? { kind: 'candidate', hit } : null),
   };
 }

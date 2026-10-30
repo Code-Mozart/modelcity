@@ -31,7 +31,14 @@ import {
   type Press,
   type Snapshot,
 } from './editorTypes';
-import { afterCurveClick, nodesInBand, withNodes, withoutNode, type Band } from './selection';
+import {
+  afterCurveClick,
+  nodesInBand,
+  sameSelection,
+  withNodes,
+  withoutNode,
+  type Band,
+} from './selection';
 
 export type { Hover, PointerInfo } from './editorTypes';
 
@@ -61,6 +68,8 @@ export class Editor {
   private press = $state.raw<Press | null>(null);
   /** The steps that can be undone and redone (^81). */
   history = $state.raw(NO_HISTORY);
+  /** True while the end of a press runs, so everything it does is one step. */
+  private batching = false;
 
   canUndo = $derived(this.history.past.length > 0);
   canRedo = $derived(this.history.future.length > 0);
@@ -131,9 +140,10 @@ export class Editor {
     if (active !== null) this.mode = 'draw';
   }
 
-  /** Make a step undoable if it changed the roads. */
+  /** Make a step undoable if it changed the roads or the selection (^88). Inside a press only its end commits. */
   private commit(before: Snapshot) {
-    if (before.roads !== this.roads) this.history = record(this.history, before);
+    const same = before.roads === this.roads && sameSelection(before.selection, this.selection);
+    if (!same && !this.batching) this.history = record(this.history, before);
   }
 
   deleteSelected() {
@@ -308,9 +318,12 @@ export class Editor {
     const press = this.press;
     this.press = null;
     this.band = null;
-    if (press && press.kind !== 'empty') this.commit(press.undo);
-    if (press?.kind === 'drag' && !press.moved) this.clickedHandle(press);
-    if (press?.kind === 'empty' && !press.moved) this.clickedEmpty(press);
+    if (!press) return;
+    this.batching = true;
+    if (press.kind === 'drag' && !press.moved) this.clickedHandle(press);
+    if (press.kind === 'empty' && !press.moved) this.clickedEmpty(press);
+    this.batching = false;
+    this.commit(press.undo);
   }
 
   /** Abort what the left button was doing (a second finger came down). */

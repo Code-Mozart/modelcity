@@ -9,6 +9,9 @@ export interface Band {
 
 export const sameNode = (p: NodeRef, q: NodeRef) => p.road === q.road && p.node === q.node;
 
+export const sameSelection = (a: NodeRef[], b: NodeRef[]) =>
+  a.length === b.length && a.every((r, i) => sameNode(r, b[i]!));
+
 export const isSelected = (sel: NodeRef[], ref: NodeRef) => sel.some((s) => sameNode(s, ref));
 
 /** The selection with the nodes added; nodes already selected keep their place. */

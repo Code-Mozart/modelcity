@@ -105,7 +105,7 @@ Looks: blue means selected or user action (selected nodes, the hover ring, the s
 | Ctrl+Z (Cmd+Z) | Undo the last step |
 | Ctrl+Y or Ctrl+Shift+Z | Redo |
 
-A step is one finished action that changed the roads: a node placed (with its heading drag), a drag of a handle or of several nodes, an inserted node, removing nodes, cancelling a road with one node, extending from a leaf node when it drops a one-node road, resetting a radius. Selecting, the selection box, camera moves, entering draw mode and finishing a road with two nodes or more are not steps. Undo and redo restore the roads, the road being drawn and the selection (so undoing a removal selects the nodes again); undoing while drawing stays in draw mode. They are ignored while the left button is down. A new step clears what could be redone. The last 200 steps are kept.
+A step is one finished action that changed the roads or the selection (^88): a node placed (with its heading drag), a drag of a handle or of several nodes, an inserted node, removing nodes, cancelling a road with one node, extending from a leaf node when it drops a one-node road, resetting a radius. Changing the selection is a step too (a click on a node, the selection box, deselecting, Shift clicks), also finishing a road (it clears the selection). Camera moves and entering draw mode are not steps. Undo and redo restore the roads, the road being drawn and the selection (so undoing a removal selects the nodes again); undoing while drawing stays in draw mode. They are ignored while the left button is down. A new step clears what could be redone. The last 200 steps are kept.
 
 ## Camera (always, in every context)
 
