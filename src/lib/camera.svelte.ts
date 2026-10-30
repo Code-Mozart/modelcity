@@ -1,4 +1,4 @@
-import { constrainView, type Rect } from './bounds';
+import { constrainView, type Anchor } from './bounds';
 import { cardinalForKey, chipAt } from './compass';
 import { movePivot, setRotation, startPivot, type PivotDrag } from './pivotDrag';
 import { applyTwoFinger, type Pair } from './twoFinger';
@@ -28,20 +28,20 @@ export class Camera {
   /** The scale bar is only shown while it is useful: during a middle drag and shortly after zooming (^34). */
   scaleBarVisible = $derived(this.rotating || this.recentZoom);
 
-  /** Content bounds the view must stay on (^37); null while nothing is drawn. */
-  private bounds: Rect | null = null;
+  /** Everything grabbable; the view must stay on it (^37). */
+  private anchors: Anchor[] = [];
   private pan: { last: Point; travel: number } | null = null;
   private touches: { id: number; at: Point }[] = [];
   private zoomTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Every view change goes through here so the camera cannot leave the content (^37). */
   private setView(view: View) {
-    this.view = constrainView(view, this.size, this.bounds);
+    this.view = constrainView(view, this.size, this.anchors);
   }
 
   /** The content moved or the window resized: keep the view on the content. */
-  setBounds(bounds: Rect | null) {
-    this.bounds = bounds;
+  setAnchors(anchors: Anchor[]) {
+    this.anchors = anchors;
     this.setView(this.view);
   }
 

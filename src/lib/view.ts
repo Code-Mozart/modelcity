@@ -32,8 +32,6 @@ export interface Size {
 /** Pixels per meter: 0.02 shows ~50 km across 1000 px, 400 shows 2.5 m across 1000 px. */
 export const MIN_SCALE = 0.02;
 export const MAX_SCALE = 400;
-/** The map is 4 x 4 km (±2000 m); the view center may leave it by a margin. */
-export const PAN_LIMIT = 2500;
 
 export const initialView = (): View => ({ cx: 0, cy: 0, scale: 4, rot: 0, gx: 0, gy: 0 });
 
@@ -67,8 +65,6 @@ export function screenToWorld(view: View, size: Size, p: Point): Point {
 export function clampView(view: View): View {
   return {
     ...view,
-    cx: clamp(view.cx, -PAN_LIMIT, PAN_LIMIT),
-    cy: clamp(view.cy, -PAN_LIMIT, PAN_LIMIT),
     scale: clamp(view.scale, MIN_SCALE, MAX_SCALE),
     rot: wrapAngle(view.rot),
   };

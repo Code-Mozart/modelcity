@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_SCALE,
   MIN_SCALE,
-  PAN_LIMIT,
   gridStep,
   initialView,
   panBy,
@@ -48,11 +47,10 @@ describe('view transform', () => {
 });
 
 describe('view panning', () => {
-  it('pans so content follows the pointer, and clamps', () => {
+  it('pans so content follows the pointer', () => {
     const v = panBy(view({ scale: 10 }), 50, -20);
     expect(v.cx).toBeCloseTo(-5);
     expect(v.cy).toBeCloseTo(2);
-    expect(panBy(initialView(), -1e12, 1e12)).toMatchObject({ cx: PAN_LIMIT, cy: -PAN_LIMIT });
   });
 
   it('pans along the screen axes even when rotated', () => {

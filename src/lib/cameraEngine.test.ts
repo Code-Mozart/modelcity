@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Camera, SCALE_BAR_HOLD_MS } from './camera.svelte';
-import { isVisible } from './bounds';
+import { isVisible, type Anchor } from './bounds';
 import { screenToWorld } from './view';
 
+/** A camera over a big piece of content, so the bounds do not get in the way of the tests. */
 const camera = () => {
   const c = new Camera();
   c.size = { width: 800, height: 600 };
+  c.setAnchors([
+    { x: -5000, y: -5000, r: 7 },
+    { x: 5000, y: 5000, r: 7 },
+  ]);
   return c;
 };
 
@@ -140,24 +145,39 @@ describe('Camera scale bar visibility (^34)', () => {
 });
 
 describe('Camera stays on the content (^37)', () => {
-  const content = { minX: -20, minY: -10, maxX: 30, maxY: 15 };
-  const withBounds = () => {
+  const content: Anchor[] = [
+    { x: -20, y: -10, r: 7 },
+    { x: 30, y: 15, r: 9 },
+  ];
+  const withContent = () => {
     const c = camera();
-    c.setBounds(content);
+    c.setAnchors(content);
     return c;
   };
 
   it('cannot be panned away from the content', () => {
-    const c = withBounds();
+    const c = withContent();
     c.startPan({ x: 400, y: 300 });
     c.movePan({ x: 400 - 5000, y: 300 });
     c.movePan({ x: 400 - 90000, y: 300 + 90000 });
     expect(isVisible(c.view, c.size, content)).toBe(true);
     expect(c.endPan()).toBe(true);
   });
+});
+
+describe('Camera bounds while zooming and rotating (^37)', () => {
+  const content: Anchor[] = [
+    { x: -20, y: -10, r: 7 },
+    { x: 30, y: 15, r: 9 },
+  ];
+  const withContent = () => {
+    const c = camera();
+    c.setAnchors(content);
+    return c;
+  };
 
   it('keeps the content visible when zooming and rotating far from it', () => {
-    const c = withBounds();
+    const c = withContent();
     c.view = { ...c.view, cx: 1500, cy: -1500 };
     c.zoomWheel(500, { x: 700, y: 100 });
     expect(isVisible(c.view, c.size, content)).toBe(true);
@@ -169,17 +189,22 @@ describe('Camera stays on the content (^37)', () => {
   });
 
   it('pulls the view back when the content moves away or shrinks', () => {
-    const c = withBounds();
+    const c = withContent();
     c.view = { ...c.view, cx: 100 };
-    c.setBounds({ minX: 900, minY: 900, maxX: 910, maxY: 905 });
-    expect(isVisible(c.view, c.size, { minX: 900, minY: 900, maxX: 910, maxY: 905 })).toBe(true);
+    const moved: Anchor[] = [{ x: 900, y: 900, r: 7 }];
+    c.setAnchors(moved);
+    expect(isVisible(c.view, c.size, moved)).toBe(true);
   });
 
-  it('does not restrict the view while nothing is drawn', () => {
+  it('does not pan while nothing is drawn, but still zooms', () => {
     const c = camera();
-    c.setBounds(null);
+    c.setAnchors([]);
     c.startPan({ x: 400, y: 300 });
     c.movePan({ x: 100, y: 300 });
-    expect(c.view.cx).toBeGreaterThan(0);
+    expect(c.view.cx).toBe(0);
+    c.zoomWheel(-300, { x: 700, y: 100 });
+    expect(c.view.scale).toBeGreaterThan(4);
+    expect(c.view.cx).toBe(0);
+    expect(c.view.cy).toBe(0);
   });
 });

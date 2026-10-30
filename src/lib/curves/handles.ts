@@ -76,7 +76,5 @@ export function hitHandle(
   return nearest(others, pt, HIT_PX[kind] / scale);
 }
 
-/** World positions of everything the user can grab, except the heading tips (those depend on zoom). */
-export function contentPoints(path: Path, edges: EdgeRef[]): Vec[] {
-  return handlesOf(path, edges, 1).filter((h) => h.type !== 'head');
-}
+/** Every handle of the path (heading handles at scale 1: their world position is not used). */
+export const contentHandles = (path: Path, edges: EdgeRef[]): Handle[] => handlesOf(path, edges, 1);

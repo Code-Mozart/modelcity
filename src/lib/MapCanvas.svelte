@@ -24,9 +24,9 @@
 
   // Keep the camera on the content (^37); also re-checks when the window size changes.
   $effect(() => {
-    const bounds = editor.bounds;
+    const anchors = editor.anchors;
     void camera.size;
-    untrack(() => camera.setBounds(bounds));
+    untrack(() => camera.setAnchors(anchors));
   });
 
   // Redraw whenever the camera or anything the editor exposes changes.
@@ -40,7 +40,6 @@
       tool: editor.tool,
       showCircles: editor.showCircles,
       showLines: editor.showLines,
-      bounds: editor.bounds,
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
