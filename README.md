@@ -65,7 +65,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 
 ## ToDo list
 
-this is unstructured, unordered and unregistered (no hats).
+this is mostly unstructured, unordered and unregistered (no hats). @claude if you see this, properly register all items and remove them from this scratchpad list please.
 
 - a search bar for operations (this is the "menu", similar to MacOS spotlight search or raycast or Blender), either by RMB when not hovering a node (this control gets a hint) or by pressing the Space key (also gets a hint). its a fuzzy search of sorts. menu items include actions like exporting, clearing the map, etc.
 - the generated geometry should have different colors, sometimes per segment. when previewed for construction it should be lime green. when both its nodes are selected it should be blue. when its arc radius is changed (arc radius control point dragged) it should be yellow.
