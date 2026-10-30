@@ -16,6 +16,10 @@
 {/if}
 {#if input.kind === 'key'}
   <KeyCap>{input.label}</KeyCap>
+{:else if input.kind === 'keys'}
+  {#each input.labels as label, n (n)}
+    {#if n > 0}<span class="plus">+</span>{/if}<KeyCap>{label}</KeyCap>
+  {/each}
 {:else if input.kind === 'wheel'}
   <MouseWheelIcon label="mouse wheel" />
 {:else if input.drag}

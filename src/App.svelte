@@ -8,11 +8,17 @@
 
   const editor = new Editor();
   const camera = new Camera();
-  const hints = $derived(hintsFor(editor.drawing, editor.hintTarget, editor.selection.length));
+  const hints = $derived(
+    hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
+      undo: editor.canUndo,
+      redo: editor.canRedo,
+    }),
+  );
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return;
-    if (camera.key(e.key) || editor.key(e.key)) e.preventDefault();
+    if (camera.key(e.key) || editor.key(e.key, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey }))
+      e.preventDefault();
   }
 </script>
 

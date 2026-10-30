@@ -1,4 +1,4 @@
-next: ^88
+next: ^89
 
 # Hats
 
@@ -41,7 +41,7 @@ Milestones in the user's order of priority (user's first draft: many need more c
 | ^26 | milestone | planned | **Lane types and lane width.** Expected to unlock pedestrian paths, bike paths, tram and rail. |
 | ^27 | milestone | planned | **Traffic islands.** |
 | ^80 | milestone | done, awaiting user test | **Directional arrows along the curve** at regular pixel intervals (user). |
-| ^81 | milestone | planned | **Undo / redo** (user). The editor already snapshots roads, the road being drawn and the selection for `cancelPress`, which is a start. |
+| ^81 | milestone | in progress (PR for ^88) | **Undo / redo** (user). The editor already snapshots roads, the road being drawn and the selection for `cancelPress`, which is a start. |
 | ^82 | milestone | planned (later) | **Persistence** (user): saving and loading the document, deliberately later to avoid data migrations while the data model is still changing. |
 | ^28 | question | answered | Camera rotation UX. Answered by the user, see ^30. |
 | ^29 | decision | decided (principles) | **UI design principles:** minimal chrome, canvas (almost) full-screen; progressive disclosure (show tools, options and handles only when relevant, e.g. only for the selection or active tool); Fitts's law (frequent targets big and near the pointer, edges and corners are cheap targets); Hick's law (few choices at a time, group and hide the rest; the user wrote "Higgs law", read as Hick's); consistency with the handle vocabulary (^9) and keymap (^11); discoverability through hover hints rather than permanent legends. The current toolbar and legend of ^13 are provisional and will be replaced in ^20. |
@@ -100,3 +100,4 @@ Milestones in the user's order of priority (user's first draft: many need more c
 | ^85 | decision | decided; assumed (light mode yellow) | **Yellow instead of turquoise (user):** the S-curve and hook gizmos (axis line, corners, the hook's control points) are yellow, dark mode `#ffd43b`, light mode a dark yellow `#8a6a00` that passes the 3:1 contrast check. The two ticks where a bend's curve meets the radius circle were still blue; they are orange like the circle (tick roles are now `orange` / `yellow`). Replaces turquoise in ^9. |
 | ^86 | decision | assumed | **Direction arrows (^80), details:** small chevrons in the curve color along every curve, in the direction the road runs (node order), every 48 screen pixels (so they slide along when zooming), 6 px barbs. The first one sits half a spacing from the start of the road, the spacing continues across segments. They belong to the skeleton (always shown), are not drawn on the preview, and are not interactive. Pure sampling in `src/lib/curves/arrows.ts`. |
 | ^87 | decision | decided; assumed (preview) | **Thinner curves (user):** the curves are drawn 2 px wide, half of the 4 px before (`CURVE_PX` in `renderPath.ts`); the dashed preview follows (3 px to 1.5 px). Only the drawing changes, not how near the pointer must be to a curve (^66). |
+| ^88 | decision | decided (keys, hints); assumed (details) | **Undo / redo (user: Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z; hints at the very top, only if there is something to undo or redo):** assumed details: Cmd works like Ctrl; a step is one finished action that changed the roads (see `docs/controls.md`), recorded when it ends, so a drag is one step and a click without moving none; selecting, camera moves and entering or leaving draw mode are not steps; undo restores roads, the road being drawn, its end and the selection (and enters draw mode if a road is being drawn); ignored while the left button is down; at most 200 steps; no history is saved (^82). Pure code in `src/lib/history.ts`; keys in `keymap.ts`. |

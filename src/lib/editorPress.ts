@@ -1,8 +1,15 @@
 import { startDrag } from './curves/drag';
-import { placed, type RoadHandle, type RoadHit } from './curves/roads';
+import {
+  placed,
+  shareRadius,
+  type NodeRef,
+  type RoadHandle,
+  type RoadHit,
+  type Roads,
+} from './curves/roads';
 import { isActiveEnd, isLeaf, targetOf, type Drawn } from './editorTargets';
 import type { PointerInfo, Press } from './editorTypes';
-import { curveNodes, isSelected, pressNode, roadNodes } from './selection';
+import { curveNodes, isSelected, pressNode, roadNodes, selectedSegments } from './selection';
 
 type DragPress = Extract<Press, { kind: 'drag' }>;
 
@@ -60,4 +67,18 @@ export function emptyPress(drawn: Drawn, info: PointerInfo, hit: RoadHit | null)
     moved: false,
     target: targetOf(drawn, hit ? { kind: 'candidate', hit } : null),
   };
+}
+
+/** The dragged segment and all selected segments, while a radius is dragged between selected nodes (^77). */
+export function sharing(roads: Roads, selection: NodeRef[], press: Press | null) {
+  if (press?.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
+  const own = { road: press.road, i: press.drag.handle.i };
+  const all = selectedSegments(roads, selection);
+  return all.some((s) => s.road === own.road && s.i === own.i) ? { own, all } : null;
+}
+
+/** The radius of the dragged segment is given to all selected segments. */
+export function withSharedRadius(roads: Roads, selection: NodeRef[], press: Press): Roads {
+  const s = sharing(roads, selection, press);
+  return s ? shareRadius(roads, s.own, s.all) : roads;
 }

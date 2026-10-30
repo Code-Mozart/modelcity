@@ -4,7 +4,9 @@ import type { HandleType } from './curves/handles';
 export type Input =
   | { kind: 'mouse'; button: 'lmb' | 'mmb' | 'rmb'; drag?: boolean; shift?: boolean; alt?: boolean }
   | { kind: 'wheel' }
-  | { kind: 'key'; label: string };
+  | { kind: 'key'; label: string }
+  /** Keys pressed together, e.g. Ctrl+Z. */
+  | { kind: 'keys'; labels: string[] };
 
 /** A control hint: the inputs (alternatives) and what they do, e.g. [Esc] or [RMB]: finish. */
 export interface Hint {
@@ -33,6 +35,7 @@ const hint = (input: Input | Input[], text: string): Hint => ({
 
 const ESC: Input = { kind: 'key', label: 'Esc' };
 const DEL: Input = { kind: 'key', label: 'Del' };
+const keys = (...labels: string[]): Input => ({ kind: 'keys', labels });
 
 const CAMERA: Hint[] = [
   hint(mouse('rmb', true), 'pan'),
@@ -119,10 +122,30 @@ function selectModeHints(target: HintTarget, selected: number): Hint[] {
   ];
 }
 
+/** What can be undone or redone right now (^81). */
+export interface HistoryState {
+  undo: boolean;
+  redo: boolean;
+}
+
+/** Undo and redo come first, and only while there is something to undo or redo (^81). */
+function historyHints({ undo, redo }: HistoryState): Hint[] {
+  return [
+    ...(undo ? [hint(keys('Ctrl', 'Z'), 'undo')] : []),
+    ...(redo ? [hint([keys('Ctrl', 'Y'), keys('Ctrl', 'Shift', 'Z')], 'redo')] : []),
+  ];
+}
+
 /**
- * The hints for the top left corner, for the current mode, what is under the pointer and how many
- * nodes are selected (^49).
+ * The hints for the top left corner, for the current mode, what is under the pointer, how many
+ * nodes are selected and what can be undone (^49).
  */
-export function hintsFor(drawing: boolean, target: HintTarget, selected = 0): Hint[] {
-  return drawing ? drawModeHints(target) : selectModeHints(target, selected);
+export function hintsFor(
+  drawing: boolean,
+  target: HintTarget,
+  selected = 0,
+  history: HistoryState = { undo: false, redo: false },
+): Hint[] {
+  const rows = drawing ? drawModeHints(target) : selectModeHints(target, selected);
+  return [...historyHints(history), ...rows];
 }
