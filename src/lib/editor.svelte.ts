@@ -16,7 +16,7 @@ import {
   type Roads,
 } from './curves/roads';
 import { dist, type Vec } from './curves/vec';
-import { contentAnchors } from './contentAnchors';
+import { skeletonAnchors } from './skeletonAnchors';
 import type { Focus } from './focus';
 import type { HintTarget } from './hints';
 import { KEYMAP, type Action } from './keymap';
@@ -92,8 +92,8 @@ export class Editor {
 
   drawing = $derived(this.mode === 'draw');
   edges = $derived(edgesOfRoads(this.roads));
-  /** Everything the user can grab, for the camera bounds (^37). */
-  anchors = $derived(contentAnchors(this.roads, this.edges));
+  /** The skeleton of all roads, for the camera bounds (^37, ^62). */
+  anchors = $derived(skeletonAnchors(this.roads, this.edges));
   cursor = $derived(this.pointerCursor());
   /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
   focus = $derived(this.currentFocus());

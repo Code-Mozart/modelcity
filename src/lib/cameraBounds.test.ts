@@ -1,26 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { type Anchor } from './bounds';
 import { Camera } from './camera.svelte';
+import { pointOn } from './curves/piece';
+import type { Arc } from './curves/types';
 import { worldToScreen } from './view';
+
+/** Screen points that stand for an anchor: its center, or samples along the piece. */
+function samples(c: Camera, a: Anchor): { x: number; y: number }[] {
+  if (a.kind === 'point') return [worldToScreen(c.view, c.size, a)];
+  return Array.from({ length: 201 }, (_, i) =>
+    worldToScreen(c.view, c.size, pointOn(a.piece, i / 200)),
+  );
+}
 
 /** Independent of bounds.ts: at least 12 px of the anchors' screen box must be inside the viewport. */
 function onScreen(c: Camera, anchors: Anchor[]) {
-  const xs: number[] = [];
-  const ys: number[] = [];
-  for (const a of anchors) {
-    const s = worldToScreen(c.view, c.size, a);
-    const dx = a.heading === undefined ? 0 : Math.cos(a.heading + c.view.rot) * 40;
-    const dy = a.heading === undefined ? 0 : Math.sin(a.heading + c.view.rot) * 40;
-    xs.push(s.x + dx - a.r, s.x + dx + a.r);
-    ys.push(s.y + dy - a.r, s.y + dy + a.r);
-  }
+  const pts = anchors.flatMap((a) => samples(c, a).map((p) => ({ p, r: a.r })));
   const { width, height } = c.size;
-  const near = (v: number) => v - 12 >= -1e-3;
+  // Samples of an arc fall slightly inside its true extent (at most about half a pixel at 400 px/m).
+  const near = (v: number) => v - 12 >= -1;
   return (
-    near(Math.max(...xs)) &&
-    near(width - Math.min(...xs)) &&
-    near(Math.max(...ys)) &&
-    near(height - Math.min(...ys))
+    near(Math.max(...pts.map(({ p, r }) => p.x + r))) &&
+    near(width - Math.min(...pts.map(({ p, r }) => p.x - r))) &&
+    near(Math.max(...pts.map(({ p, r }) => p.y + r))) &&
+    near(height - Math.min(...pts.map(({ p, r }) => p.y - r)))
   );
 }
 
@@ -46,11 +49,19 @@ function randomCamera(rnd: () => number, anchors: Anchor[]) {
 
 describe('the camera never leaves the content (^37, ^61)', () => {
   const rnd = random(5);
+  const arc: Arc = {
+    type: 'arc',
+    P: { x: 0, y: -30 },
+    Q: { x: 0, y: 30 },
+    c: { x: 0, y: 0 },
+    r: 30,
+    a0: -Math.PI / 2,
+    da: Math.PI,
+  };
   const anchors: Anchor[] = [
-    { x: -60, y: -20, r: 7 },
-    { x: -20, y: 10, r: 7, heading: 0.3 },
-    { x: 40, y: -30, r: 9 },
-    { x: 70, y: 30, r: 7 },
+    { kind: 'point', x: -60, y: -20, r: 7 },
+    { kind: 'point', x: 70, y: 30, r: 7 },
+    { kind: 'piece', piece: arc, r: 2.5 },
   ];
 
   it('holds for zooming toward any cursor position, at any zoom level and rotation', () => {

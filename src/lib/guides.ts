@@ -60,10 +60,6 @@ function drawBendGuides(
 ) {
   drawHeadingLine(f, p, { corner: E.C, sign: 1 }, pal);
   drawHeadingLine(f, q, { corner: E.C, sign: 1 }, pal);
-  const arc = E.pieces[1];
-  if (arc?.type !== 'arc') return;
-  const [from, to] = extend(toScreen(f, E.C), toScreen(f, arc.c), 14, arc.r * f.view.scale * 1.05);
-  segment(f.ctx, from, to, { color: pal.blue, width: 1.2, dash: [6, 5] });
 }
 
 function drawTwoArcGuides(
