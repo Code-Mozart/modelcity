@@ -17,8 +17,8 @@
     it; double-click resets to the largest that fits)
   </span>
   <span>
-    Right-click or Del removes a node. Esc returns to Move. Wheel zooms; drag empty space or the
-    middle button pans.
+    Del or a right click removes a node. Esc returns to Move. Wheel zooms, right-drag pans,
+    middle-drag rotates (up/down changes sensitivity; Esc cancels; N, E, S, W set the direction).
   </span>
 </footer>
 

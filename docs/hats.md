@@ -31,7 +31,7 @@ Milestones in the user's order of priority (user's first draft: many need more c
 
 | Hat | Type | Status | Summary |
 |-----|------|--------|---------|
-| ^19 | milestone | in progress | **Camera rotation:** a third camera operation besides pan and zoom: rotate the world. The grid is pinned to the camera, so it does not rotate with the world. Open: ^28. |
+| ^19 | milestone | done, awaiting user test | **Camera rotation:** a third camera operation besides pan and zoom: rotate the world. The grid is pinned to the camera, so it does not rotate with the world. Open: ^28. |
 | ^20 | milestone | planned | **Basic road creation:** a single continuous path as in the demo (^5, ^13), including UI and a visible gizmo. Design the HUD: minimal or non-existent, canvas (almost) full-screen. Follows ^29. |
 | ^21 | milestone | planned | **Road geometry and markings generated** from the path (generate rather than store, see handover). |
 | ^22 | milestone | planned | **Multi-lane roads** (e.g. 1+1, or one-way with more than one lane): how tools work (creation, selection, moving, ...), how geometry and markings are generated. |

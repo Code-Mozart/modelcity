@@ -1,14 +1,17 @@
 <script lang="ts">
+  import { Camera } from './lib/camera.svelte';
+  import Compass from './lib/Compass.svelte';
   import { Editor } from './lib/editor.svelte';
   import Legend from './lib/Legend.svelte';
   import MapCanvas from './lib/MapCanvas.svelte';
   import Toolbar from './lib/Toolbar.svelte';
 
   const editor = new Editor();
+  const camera = new Camera();
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return;
-    if (editor.key(e.key)) e.preventDefault();
+    if (camera.key(e.key) || editor.key(e.key)) e.preventDefault();
   }
 </script>
 
@@ -16,7 +19,8 @@
 
 <Toolbar {editor} />
 <main>
-  <MapCanvas {editor} />
+  <MapCanvas {editor} {camera} />
+  <Compass {camera} />
   <pre class="readout">{editor.readout}</pre>
 </main>
 <Legend />

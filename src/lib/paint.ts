@@ -1,4 +1,4 @@
-import { worldToScreen, type Point, type Size, type View } from './view';
+import { rotateVec, worldToScreen, type Point, type Size, type View } from './view';
 import type { Piece } from './curves/types';
 
 /** Canvas 2D primitives in screen pixels, plus the world-to-screen mapping of a frame. */
@@ -34,6 +34,9 @@ export function readPalette(): Palette {
   const entries = PALETTE_KEYS.map((k) => [k, style.getPropertyValue(`--${k}`).trim()]);
   return Object.fromEntries(entries) as Palette;
 }
+
+/** A world-space direction as a screen-space direction (the view may be rotated). */
+export const screenDir = ({ view }: Frame, v: Point): Point => rotateVec(v, view.rot);
 
 export const toScreen = ({ view, size }: Frame, p: Point): Point => worldToScreen(view, size, p);
 
@@ -100,7 +103,8 @@ export function strokePiece(f: Frame, piece: Piece, s: Stroke) {
     ctx.lineTo(b.x, b.y);
   } else {
     const c = toScreen(f, piece.c);
-    ctx.arc(c.x, c.y, piece.r * f.view.scale, piece.a0, piece.a0 + piece.da, piece.da < 0);
+    const a0 = piece.a0 + f.view.rot;
+    ctx.arc(c.x, c.y, piece.r * f.view.scale, a0, a0 + piece.da, piece.da < 0);
   }
   ctx.lineCap = 'round';
   applyStroke(ctx, s);

@@ -2,7 +2,17 @@ import type { Edge, Tick } from './curves/types';
 import type { EdgeRef } from './curves/path';
 import { sweeps } from './curves/piece';
 import { fromAngle, type Vec } from './curves/vec';
-import { dot, extend, ring, segment, text, toScreen, type Frame, type Palette } from './paint';
+import {
+  dot,
+  extend,
+  ring,
+  screenDir,
+  segment,
+  text,
+  toScreen,
+  type Frame,
+  type Palette,
+} from './paint';
 
 /** Construction geometry drawn behind the curve (^9): heading lines, circles, ticks, corner points. */
 const HEAD_REACH_PX = 28;
@@ -18,8 +28,9 @@ interface HeadEnd {
 
 function drawTick(f: Frame, t: Tick, pal: Palette) {
   const at = toScreen(f, t.at);
-  const nx = -t.dir.y * TICK_PX;
-  const ny = t.dir.x * TICK_PX;
+  const d = screenDir(f, t.dir);
+  const nx = -d.y * TICK_PX;
+  const ny = d.x * TICK_PX;
   segment(
     f.ctx,
     { x: at.x - nx, y: at.y - ny },
@@ -38,7 +49,7 @@ function drawHeadingLine(f: Frame, node: Vec & { th: number }, end: HeadEnd, pal
     segment(f.ctx, from, to, stroke);
     return;
   }
-  const t = fromAngle(node.th);
+  const t = screenDir(f, fromAngle(node.th));
   segment(f.ctx, a, { x: a.x + sign * t.x * STUB_PX, y: a.y + sign * t.y * STUB_PX }, stroke);
 }
 

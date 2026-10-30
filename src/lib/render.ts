@@ -46,8 +46,10 @@ export function render(frame: Frame, dpr: number, scene: Scene) {
   ctx.fillStyle = pal.bg;
   ctx.fillRect(0, 0, size.width, size.height);
   const minor = gridStep(view.scale, MINOR_GRID_MIN_PX);
-  drawGrid(frame, minor, pal['grid-minor']);
-  drawGrid(frame, minor * 10, pal['grid-major']);
+  // The grid is pinned to the camera: it pans and zooms with the world but never rotates (^30).
+  const gridFrame = { ...frame, view: { ...view, rot: 0 } };
+  drawGrid(gridFrame, minor, pal['grid-minor']);
+  drawGrid(gridFrame, minor * 10, pal['grid-major']);
   drawScene(frame, scene, pal);
   drawScaleBar(frame, pal);
 }
