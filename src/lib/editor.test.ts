@@ -1,45 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { Editor, type PointerInfo } from './editor.svelte';
-import { pointOn } from './curves/piece';
+import { Editor } from './editor.svelte';
+import { at, bareCurvePoint, click, draw, last } from './testing/editorHelpers';
 import { toRad } from './curves/vec';
-
-const at = (x: number, y: number, extra: Partial<PointerInfo> = {}): PointerInfo => ({
-  pt: { x, y },
-  scale: 4,
-  touch: false,
-  shift: false,
-  ...extra,
-});
-
-/** A plain click: press and release without moving. */
-const click = (ed: Editor, x: number, y: number) => {
-  ed.pointerDown(at(x, y));
-  ed.pointerUp();
-};
-
-/** A road drawn by clicking, left unfinished. */
-const draw = (points: [number, number][]) => {
-  const ed = new Editor();
-  for (const [x, y] of points) click(ed, x, y);
-  return ed;
-};
-
-const last = (ed: Editor, road = 0) => ed.roads[road]!.nodes.at(-1)!;
-
-/** A point on a curve that is not close to any handle (so pressing there inserts, not edits). */
-const bareCurvePoint = (ed: Editor) => {
-  const handles = ed.handles(4);
-  const samples = ed.edges
-    .flat()
-    .flatMap(({ E }) =>
-      E.pieces.flatMap((piece) =>
-        Array.from({ length: 19 }, (_, i) => pointOn(piece, (i + 1) / 20)),
-      ),
-    );
-  const bare = samples.find((p) => handles.every((h) => Math.hypot(h.x - p.x, h.y - p.y) > 4));
-  if (!bare) throw new Error('no bare point on the curves');
-  return bare;
-};
 
 describe('a new editor', () => {
   it('starts with a blank canvas', () => {
@@ -49,10 +11,12 @@ describe('a new editor', () => {
     expect(ed.anchors).toEqual([]);
   });
 
-  it('previews the first node heading right, without a curve', () => {
+  it('starts in select mode: no preview of a node, a default cursor', () => {
     const ed = new Editor();
     ed.pointerMove(at(10, 5));
-    expect(ed.hover).toMatchObject({ kind: 'ghost', ref: null, node: { x: 10, y: 5, th: 0 } });
+    expect(ed.drawing).toBe(false);
+    expect(ed.hover).toBeNull();
+    expect(ed.cursor).toBe('default');
   });
 });
 
@@ -254,13 +218,14 @@ describe('inserting nodes (^40)', () => {
     expect(ed.roads[0]!.nodes[node]!.th).not.toBeCloseTo(before);
   });
 
-  it('inserts into a finished road too, without starting to draw', () => {
+  it('in select mode a click on a curve starts a new road instead of inserting', () => {
     const ed = draw(road());
     ed.key('Escape');
     const mid = bareCurvePoint(ed);
     click(ed, mid.x, mid.y);
-    expect(ed.roads[0]!.nodes).toHaveLength(4);
-    expect(ed.active).toBeNull();
+    expect(ed.roads[0]!.nodes).toHaveLength(3);
+    expect(ed.roads).toHaveLength(2);
+    expect(ed.active).toBe(1);
   });
 });
 

@@ -36,6 +36,7 @@
       handles: editor.handles(camera.view.scale),
       sel: editor.sel,
       hover: editor.hover,
+      focus: editor.focus,
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });

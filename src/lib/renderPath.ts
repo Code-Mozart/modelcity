@@ -1,4 +1,5 @@
 import type { Hover } from './editor.svelte';
+import { revealed, type Focus, type Reveal } from './focus';
 import { ARROW_PX } from './curves/handles';
 import { buildEdge } from './curves/edge';
 import type { EdgeRef, Path } from './curves/path';
@@ -11,7 +12,6 @@ import {
   screenDir,
   segment,
   strokePiece,
-  text,
   toScreen,
   type Frame,
   type Palette,
@@ -29,6 +29,7 @@ export interface Scene {
   handles: RoadHandle[];
   sel: NodeRef | null;
   hover: Hover | null;
+  focus: Focus | null;
 }
 
 const CURVE_PX = 4;
@@ -62,7 +63,6 @@ function drawNodes(f: Frame, { path }: RoadScene, selected: number | null, pal: 
     const a = toScreen(f, n);
     if (i === selected) ring(f.ctx, a, 11, { color: pal.blue, width: 2.2 });
     dot(f.ctx, a, 5.5, pal.ink);
-    text(f.ctx, String(i + 1), { x: a.x - 18, y: a.y + 24 }, { color: pal['red-ink'], size: 15 });
   });
 }
 
@@ -96,23 +96,28 @@ function drawHover(f: Frame, hover: Hover | null, pal: Palette) {
     ring(f.ctx, toScreen(f, hover.handle), 10, { color: pal.blue, width: 1.6 });
 }
 
-function drawRoad(f: Frame, road: RoadScene, pal: Palette) {
-  for (const ref of road.edges) {
+/** One road; each edge shows its construction only while it is worked on (^51). */
+function drawRoad(f: Frame, road: RoadScene, shown: Reveal[], pal: Palette) {
+  road.edges.forEach((ref, k) => {
+    if (!shown[k]!.guides) return;
     drawGuides(f, ref, pal);
     drawCircles(f, ref, pal);
-  }
+  });
   for (const { E } of road.edges) {
     for (const piece of E.pieces) strokePiece(f, piece, { color: pal.curve, width: CURVE_PX });
   }
-  for (const ref of road.edges) {
-    drawCorners(f, ref, pal);
-    drawRadiusLabels(f, ref, pal);
-  }
+  road.edges.forEach((ref, k) => {
+    drawCorners(f, ref, shown[k]!.guides, pal);
+    if (shown[k]!.labels) drawRadiusLabels(f, ref, pal);
+  });
 }
 
 /** Draw all roads with construction geometry, handles and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
-  scene.roads.forEach((road) => drawRoad(f, road, pal));
+  scene.roads.forEach((road, i) => {
+    const shown = road.edges.map((ref) => revealed(scene.focus, i, ref.i));
+    drawRoad(f, road, shown, pal);
+  });
   for (const h of scene.handles) {
     if (h.type === 'rad') ring(f.ctx, toScreen(f, h), 7, { color: pal.orange, width: 2.2 });
   }

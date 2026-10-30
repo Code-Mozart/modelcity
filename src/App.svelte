@@ -3,10 +3,12 @@
   import Compass from './lib/Compass.svelte';
   import { Editor } from './lib/editor.svelte';
   import Hints from './lib/Hints.svelte';
+  import { hintsFor } from './lib/hints';
   import MapCanvas from './lib/MapCanvas.svelte';
 
   const editor = new Editor();
   const camera = new Camera();
+  const hints = $derived(hintsFor(editor.drawing, editor.hintTarget));
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return;
@@ -18,7 +20,7 @@
 
 <main>
   <MapCanvas {editor} {camera} />
-  <Hints />
+  <Hints {hints} />
   <Compass {camera} />
 </main>
 

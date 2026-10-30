@@ -99,26 +99,16 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
   f.ctx.globalAlpha = 1;
 }
 
-/** Corner points and edge labels ("1.2" for the edge from node 1 to node 2). */
-export function drawCorners(f: Frame, { i, E }: EdgeRef, pal: Palette) {
+/**
+ * The blue point of a bend is a handle and always drawn; the inflection point of an S or hook and
+ * the turquoise points are construction geometry, drawn with the guides (^51).
+ */
+export function drawCorners(f: Frame, { E }: EdgeRef, guides: boolean, pal: Palette) {
   if (E.kind === 'line') return;
-  const label = `${i + 1}.${i + 2}`;
-  const at = (v: Vec, dx: number, dy: number) => {
-    const s = toScreen(f, v);
-    return { x: s.x + dx, y: s.y + dy };
-  };
-  const main = E.kind === 'C' ? E.C : E.J;
-  dot(f.ctx, toScreen(f, main), 6, pal.blue);
-  text(f.ctx, label, at(main, 9, E.kind === 'C' ? -9 : 17), { color: pal['red-ink'], size: 14 });
-  if (E.kind === 'C') return;
-  if (E.k1) {
-    dot(f.ctx, toScreen(f, E.k1), 6, pal.teal);
-    text(f.ctx, `${label}-s1`, at(E.k1, 9, 17), { color: pal['red-ink'] });
-  }
-  if (E.k2) {
-    dot(f.ctx, toScreen(f, E.k2), 6, pal.teal);
-    text(f.ctx, `${label}-s2`, at(E.k2, 9, -9), { color: pal['red-ink'] });
-  }
+  if (E.kind === 'C') return void dot(f.ctx, toScreen(f, E.C), 6, pal.blue);
+  if (!guides) return;
+  dot(f.ctx, toScreen(f, E.J), 6, pal.blue);
+  for (const k of [E.k1, E.k2]) if (k) dot(f.ctx, toScreen(f, k), 6, pal.teal);
 }
 
 /** Radius labels at the middle of each arc. */

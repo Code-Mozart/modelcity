@@ -17,6 +17,8 @@ import {
 } from './curves/roads';
 import { dist, type Vec } from './curves/vec';
 import { contentAnchors } from './contentAnchors';
+import type { Focus } from './focus';
+import type { HintTarget } from './hints';
 import { KEYMAP, type Action } from './keymap';
 
 /** What the pointer is doing, as seen by the editor. Positions are world meters. */
@@ -28,7 +30,10 @@ export interface PointerInfo {
   shift: boolean;
 }
 
-/** What is under the pointer: a handle to edit, a curve to insert into, or empty space. */
+/**
+ * What is under the pointer: a handle to edit, and in draw mode also a curve to insert into or
+ * the preview of the node a click would add (^48).
+ */
 export type Hover =
   | { kind: 'handle'; handle: RoadHandle }
   | { kind: 'candidate'; hit: RoadHit }
@@ -55,34 +60,64 @@ type Press =
       moved: boolean;
       finishes: boolean;
       undo: Snapshot;
+      target: HintTarget;
     }
-  | { kind: 'place'; ref: NodeRef; undo: Snapshot };
+  | { kind: 'place'; ref: NodeRef; undo: Snapshot; target: HintTarget };
 
 /**
  * The road editor: roads, the road being drawn, selection and pointer interaction (^40, ^42). No
  * drawing and no view (zoom/pan) logic: the canvas component feeds it pointer events in world
- * coordinates (^12). The left button always creates: a node at the end of the road being drawn
- * (or a new road), an inserted node on a curve, or an edit when pressed on a handle.
+ * coordinates (^12).
+ *
+ * Two modes (^48): in select mode (no road being drawn) the left button edits handles, and a
+ * press on empty canvas starts a road and enters draw mode. In draw mode it adds nodes to the
+ * road, inserts nodes on curves, and still edits handles.
  */
 export class Editor {
   roads = $state.raw<Roads>([]);
-  /** Index of the road being drawn, null if none. */
+  /** Index of the road being drawn, null in select mode. */
   active = $state<number | null>(null);
   sel = $state.raw<NodeRef | null>(null);
   hover = $state.raw<Hover | null>(null);
+  private press = $state.raw<Press | null>(null);
 
+  drawing = $derived(this.active !== null);
   edges = $derived(edgesOfRoads(this.roads));
   /** Everything the user can grab, for the camera bounds (^37). */
   anchors = $derived(contentAnchors(this.roads, this.edges));
-  cursor = $derived(
-    this.hover?.kind === 'handle'
-      ? 'grab'
-      : this.hover?.kind === 'candidate'
-        ? 'copy'
-        : 'crosshair',
-  );
+  cursor = $derived(this.pointerCursor());
+  /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
+  focus = $derived(this.currentFocus());
+  /** What the control hints are about (^49). */
+  hintTarget = $derived(this.press?.target ?? this.targetOf(this.hover));
 
-  private press: Press | null = null;
+  private pointerCursor(): string {
+    if (this.hover?.kind === 'handle') return 'grab';
+    if (this.hover?.kind === 'candidate') return 'copy';
+    return this.drawing ? 'crosshair' : 'default';
+  }
+
+  private currentFocus(): Focus | null {
+    const press = this.press;
+    if (press?.kind === 'drag') {
+      return { road: press.road, type: press.drag.handle.type, i: press.drag.handle.i };
+    }
+    if (press?.kind === 'place') return { road: press.ref.road, type: 'node', i: press.ref.node };
+    const h = this.hover?.kind === 'handle' ? this.hover.handle : null;
+    return h ? { road: h.road, type: h.type, i: h.i } : null;
+  }
+
+  private isLastNode(handle: RoadHandle): boolean {
+    const nodes = this.roads[handle.road]?.nodes ?? [];
+    return handle.type === 'node' && handle.road === this.active && handle.i === nodes.length - 1;
+  }
+
+  private targetOf(hover: Hover | null): HintTarget {
+    if (hover?.kind === 'handle') {
+      return { kind: 'handle', type: hover.handle.type, last: this.isLastNode(hover.handle) };
+    }
+    return hover?.kind === 'candidate' ? { kind: 'curve' } : { kind: 'empty' };
+  }
 
   handles(scale: number): RoadHandle[] {
     return roadHandles(this.roads, this.edges, scale);
@@ -119,7 +154,7 @@ export class Editor {
     this.sel = null;
   }
 
-  /** Stop drawing the road; a road with fewer than two nodes is cancelled. */
+  /** Leave draw mode; a road with fewer than two nodes is cancelled. */
   finishRoad() {
     const road = this.active;
     if (road === null) return;
@@ -134,25 +169,25 @@ export class Editor {
     this.hover = null;
     const handle = this.handleAt(info);
     if (handle) return this.grab(handle, info);
-    const hit = this.curveAt(info);
+    const hit = this.drawing ? this.curveAt(info) : null;
     if (hit) this.insert(hit);
     else this.create(info.pt);
   }
 
   private grab(handle: RoadHandle, { pt }: PointerInfo) {
     const path = this.roads[handle.road]!;
-    if (handle.type === 'node' || handle.type === 'head')
+    if (handle.type === 'node' || handle.type === 'head') {
       this.sel = { road: handle.road, node: handle.i };
-    const last =
-      handle.type === 'node' && handle.road === this.active && handle.i === path.nodes.length - 1;
+    }
     this.press = {
       kind: 'drag',
       road: handle.road,
       drag: startDrag(path, handle),
       start: pt,
       moved: false,
-      finishes: last,
+      finishes: this.isLastNode(handle),
       undo: this.snapshot(),
+      target: this.targetOf({ kind: 'handle', handle }),
     };
   }
 
@@ -161,10 +196,10 @@ export class Editor {
     const r = insertNode(this.roads[hit.road]!, hit);
     this.roads = replaceRoad(this.roads, hit.road, r.path);
     this.sel = { road: hit.road, node: r.sel };
-    this.press = { kind: 'place', ref: this.sel, undo };
+    this.press = { kind: 'place', ref: this.sel, undo, target: { kind: 'curve' } };
   }
 
-  /** A node at the end of the road being drawn, or the first node of a new road. */
+  /** A node at the end of the road being drawn, or the first node of a new road (enters draw mode). */
   private create(pt: Vec) {
     const undo = this.snapshot();
     if (this.active === null) {
@@ -177,7 +212,7 @@ export class Editor {
       this.roads = replaceRoad(this.roads, this.active, r.path);
       this.sel = { road: this.active, node: r.sel };
     }
-    this.press = { kind: 'place', ref: this.sel, undo };
+    this.press = { kind: 'place', ref: this.sel, undo, target: { kind: 'empty' } };
   }
 
   pointerMove(info: PointerInfo) {
@@ -207,18 +242,16 @@ export class Editor {
     );
   }
 
-  private hoverAt(info: PointerInfo): Hover {
+  private hoverAt(info: PointerInfo): Hover | null {
     const handle = this.handleAt(info);
     if (handle) return { kind: 'handle', handle };
+    if (!this.drawing) return null;
     const hit = this.curveAt(info);
     if (hit) return { kind: 'candidate', hit };
-    const nodes = this.active === null ? undefined : this.roads[this.active]?.nodes;
+    const nodes = this.roads[this.active!]?.nodes;
     const ref = nodes?.[nodes.length - 1] ?? null;
-    return {
-      kind: 'ghost',
-      ref,
-      node: { x: info.pt.x, y: info.pt.y, th: ref ? autoHeading(ref, info.pt) : 0 },
-    };
+    const th = ref ? autoHeading(ref, info.pt) : 0;
+    return { kind: 'ghost', ref, node: { x: info.pt.x, y: info.pt.y, th } };
   }
 
   /** Left button released; clicking the last node of the road being drawn finishes it. */
@@ -253,10 +286,7 @@ export class Editor {
   resetRadiusAt(info: PointerInfo) {
     const handle = this.handleAt(info);
     if (handle?.type !== 'rad') return;
-    this.roads = replaceRoad(
-      this.roads,
-      handle.road,
-      resetRadius(this.roads[handle.road]!, handle.i),
-    );
+    const path = this.roads[handle.road]!;
+    this.roads = replaceRoad(this.roads, handle.road, resetRadius(path, handle.i));
   }
 }
