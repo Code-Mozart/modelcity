@@ -77,6 +77,13 @@ rendering:
 - the generated geometry should have different colors, sometimes per segment. when previewed for construction it should be lime green. when both its nodes are selected it should be blue. when its arc radius is changed (arc radius control point dragged) it should be yellow.
 - when hovered, nodes should be at 150% size and segments at 150% thickness
 - selected segments (both nodes selected) should be also drawn at 150% thickness
+- two segments A and B are considered parallel if
+  1. there respective start nodes have the same or exactly opposite heading and end nodes have the same pr exactly opposite heading (i.e. dot product of 1 or -1)
+  2. and the distance between their start two nodes AND the distance between their two end nodes is exactlỳ `lanewidth(A)/2 + lanewidth(B)/2`
+  3. and the centers of their arc radius circles are at the same point (thus they have concentric circles)
+- parallel segments share a centerline. it is rendered dashed, or solid if
+  1. the 2 segments head in opposite directions
+  2. and one of the 2 segments is also parralel to a third segment that heads in the same direction as itself OR if the the right segment does head backwards (which indicates lhs traffic, but modelcity assumes rhs traffic for now. this might change later)
 
 snapping:
 - there are snap lines (solid turquoise in dark mode) and snap points (solid turquoise rings in dark mode). snap lines still allow for 1 degree of freedom, while snap points dont.
@@ -103,8 +110,8 @@ project {
 }
 
 edge {
-  from: node
-  to: node
+  start: node
+  end: node
 
   curve_radius: float
 }
