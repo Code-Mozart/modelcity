@@ -64,12 +64,13 @@ Two levels of gizmo:
 - The **skeleton** is always shown: the curves and the dots of the nodes. There are no numbering labels.
 - The **scaffold** of a segment (the curve between two nodes) is everything else: the blue lines, circle, ticks and control points (the bend's point and the heading tips), the heading arrows (blue), the turquoise lines and points, the orange radius point and its label (`116.7m`). It is shown completely or not at all.
 
-A segment shows its scaffold when:
+Only a single segment shows its scaffold at a time (^66), over all roads. Which one:
 
-- the segment's curve or any of its control points is hovered or dragged, or
-- the pointer is within 20 px of its curve, or within 48 px of any of its control points (a node, a heading tip, the blue point, a hook's turquoise points, the orange point).
+1. A hovered or dragged blue, turquoise or orange point keeps its own segment, wherever the pointer is. A hovered or dragged node or heading tip takes the one of its two segments whose curve is closer to the pointer.
+2. Otherwise the segment whose curve the pointer is on (within 20 px of it), the closest curve first.
+3. Otherwise the segment with the control point closest to the pointer (a node, a heading tip, the blue point, a hook's turquoise points, the orange point), within 48 px; nearer curves break ties.
 
-Near a node, both segments at that node show their scaffold. A node of a road that has no segment yet always shows its heading arrow. A node being placed counts as dragged.
+The heading arrows of the two nodes of the shown segment are shown with it, and no other arrows. A node of a road that has no segment yet always shows its heading arrow. A node being placed counts as dragged.
 
 Looks: filled points can be dragged (blue tips and bend points, orange radius points, a hook's turquoise points); hollow ones (an S-curve's turquoise points) only show derived geometry. On touch there is no hover, so scaffolds appear only while something is grabbed.
 

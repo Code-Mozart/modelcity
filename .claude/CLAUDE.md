@@ -36,6 +36,9 @@ The user entrusts the details to Claude. Principles:
 - Build infrastructure, then use and combine it. Think library and client: engine/API-like code (pure, testable, no UI or input, e.g. `src/lib/view.ts`, `render.ts`) versus code that uses it (components, input handling).
 - The linter enforces quality limits (complexity, function length, nesting depth, parameter count, statements, file length: see `eslint.config.js`). Fix violations by refactoring. Never disable a rule or raise a limit just to get green; raise one only deliberately and mention it in the PR.
 
+## Glossary
+- The README has a glossary (^67) with a status per term. Use its words; when a term is new or changes, update it in the same step: `assumed` unless the user defined it.
+
 ## Hidden features
 - No always-hidden features: anything built but switched off must be listed in `src/lib/features.ts` and have a hat that says why and what decides its return.
 

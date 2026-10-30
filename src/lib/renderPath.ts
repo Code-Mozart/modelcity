@@ -17,7 +17,7 @@ import {
   type Palette,
 } from './paint';
 import type { Pointer } from './proximity';
-import { activeSegments, arrowShown } from './scaffold';
+import { activeFlags, arrowShown } from './scaffold';
 
 /** A road and its edges. */
 export interface RoadScene {
@@ -145,9 +145,7 @@ function drawHandles(f: Frame, scene: Scene, active: boolean[][], pal: Palette) 
 /** Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const { handles, focus, pointer } = scene;
-  const active = scene.roads.map((r, road) =>
-    activeSegments({ road, edges: r.edges, handles, focus, pointer }),
-  );
+  const active = activeFlags({ roads: scene.roads, handles, focus, pointer });
   scene.roads.forEach((road, i) => drawRoad(f, road, active[i]!, pal));
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, pal);

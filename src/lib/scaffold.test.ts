@@ -1,53 +1,110 @@
 import { describe, expect, it } from 'vitest';
 import { edgesOf } from './curves/path';
-import { roadHandles } from './curves/roads';
+import { pointOn } from './curves/piece';
+import { edgesOfRoads, roadHandles } from './curves/roads';
 import { fixture } from './curves/testing/paths';
-import { activeSegments, arrowShown } from './scaffold';
+import { activeFlags, activeSegment, arrowShown, type ScaffoldInput } from './scaffold';
 import { CURVE_NEAR_PX, HANDLE_NEAR_PX } from './proximity';
+import type { Focus } from './focus';
 
 const path = fixture('H');
 const edges = edgesOf(path);
-const handles = roadHandles([path], [edges], 4);
-const input = (pointer: { x: number; y: number } | null, focus = null) => ({
-  road: 0,
-  edges,
-  handles,
-  focus,
-  pointer: pointer && { pt: pointer, scale: 4 },
+const scale = 4;
+
+const inputFor = (
+  pointer: { x: number; y: number } | null,
+  focus: Focus | null = null,
+): ScaffoldInput => {
+  const roads = [path];
+  const all = edgesOfRoads(roads);
+  return {
+    roads: all.map((e) => ({ edges: e })),
+    handles: roadHandles(roads, all, scale),
+    focus,
+    pointer: pointer && { pt: pointer, scale },
+  };
+};
+const away = (p: { x: number; y: number }, px: number) => ({ x: p.x, y: p.y + px / scale });
+/** A point on the curve of edge `i`, at fraction `t` of its first arc or line. */
+const onCurve = (i: number, t = 0.5) => {
+  const piece = edges[i]!.E.pieces.find((p) => p.type === 'arc')!;
+  return pointOn(piece, t);
+};
+
+describe('activeSegment (^60, ^66)', () => {
+  it('shows nothing when the pointer is far from everything or absent', () => {
+    expect(activeSegment(inputFor({ x: 0, y: 500 }))).toBeNull();
+    expect(activeSegment(inputFor(null))).toBeNull();
+  });
+
+  it('shows the segment the pointer is on (within 20 px of its curve)', () => {
+    const p = onCurve(1);
+    expect(activeSegment(inputFor(away(p, CURVE_NEAR_PX - 5)))).toEqual({ road: 0, edge: 1 });
+    expect(activeSegment(inputFor(p))).toEqual({ road: 0, edge: 1 });
+  });
+
+  it('near a node, the segment whose curve is closer to the pointer wins', () => {
+    const behind = pointOn(edges[1]!.E.pieces.filter((p) => p.type === 'arc').at(-1)!, 0.98);
+    expect(activeSegment(inputFor(behind))).toEqual({ road: 0, edge: 1 });
+    const ahead = pointOn(edges[2]!.E.pieces.filter((p) => p.type === 'arc')[0]!, 0.02);
+    expect(activeSegment(inputFor(ahead))).toEqual({ road: 0, edge: 2 });
+  });
+
+  it('prefers the curve under the pointer over a segment with a nearer control point', () => {
+    const p = onCurve(0, 0.3);
+    const seg = activeSegment(inputFor(p));
+    expect(seg).toEqual({ road: 0, edge: 0 });
+  });
 });
-/** A point this far (px) from the given world point. */
-const away = (p: { x: number; y: number }, px: number) => ({ x: p.x, y: p.y + px / 4 });
 
-describe('activeSegments (^60)', () => {
-  it('shows nothing when the pointer is far from everything', () => {
-    expect(activeSegments(input({ x: 0, y: 500 }))).toEqual([false, false, false]);
-    expect(activeSegments(input(null))).toEqual([false, false, false]);
+describe('only a single segment at a time (^66)', () => {
+  it('shows only one segment even when the pointer is close to several', () => {
+    const node = path.nodes[1]!;
+    const flags = activeFlags(inputFor(away(node, HANDLE_NEAR_PX - 8))).flat();
+    expect(flags.filter(Boolean)).toHaveLength(1);
   });
 
-  it('shows a segment when the pointer is near its curve', () => {
-    const mid = edges[1]!.E.pieces.find((p) => p.type === 'arc')!;
-    const at = {
-      x: mid.c.x + mid.r * Math.cos(mid.a0 + mid.da / 2),
-      y: mid.c.y + mid.r * Math.sin(mid.a0 + mid.da / 2),
+  it('shows only one segment over several roads', () => {
+    const roads = [path, { ...path, nodes: path.nodes.map((n) => ({ ...n, y: n.y + 3 })) }];
+    const all = edgesOfRoads(roads);
+    const flags = activeFlags({
+      roads: all.map((e) => ({ edges: e })),
+      handles: roadHandles(roads, all, scale),
+      focus: null,
+      pointer: { pt: away(path.nodes[1]!, 4), scale },
+    });
+    expect(flags.flat().filter(Boolean)).toHaveLength(1);
+  });
+});
+
+describe('a hovered or dragged handle decides (^66)', () => {
+  const far = { x: 0, y: 500 };
+
+  it('the blue, turquoise and orange points keep their own segment wherever the pointer is', () => {
+    for (const type of ['ctrl', 'rad'] as const) {
+      expect(activeSegment(inputFor(far, { road: 0, type, i: 2 }))).toEqual({ road: 0, edge: 2 });
+    }
+  });
+
+  it('a node picks the closer of its two segments, else the one that starts at it', () => {
+    const focus: Focus = { road: 0, type: 'node', i: 1 };
+    expect(activeSegment(inputFor(null, focus))).toEqual({ road: 0, edge: 1 });
+    const before = pointOn(edges[0]!.E.pieces.filter((p) => p.type === 'arc').at(-1)!, 0.9);
+    expect(activeSegment(inputFor(before, focus))).toEqual({ road: 0, edge: 0 });
+  });
+
+  it('the last node only has the segment that ends at it, and a lone node has none', () => {
+    expect(activeSegment(inputFor(far, { road: 0, type: 'node', i: 3 }))).toEqual({
+      road: 0,
+      edge: 2,
+    });
+    const lone = {
+      roads: [{ edges: [] }],
+      handles: [],
+      focus: { road: 0, type: 'node' as const, i: 0 },
+      pointer: null,
     };
-    const far = { x: at.x, y: at.y };
-    const active = activeSegments(input(away(far, CURVE_NEAR_PX - 2)));
-    expect(active[1]).toBe(true);
-  });
-
-  it('shows the segments on both sides of a node when the pointer is near the node', () => {
-    const node = path.nodes[2]!;
-    expect(activeSegments(input(away(node, HANDLE_NEAR_PX - 4)))).toEqual([false, true, true]);
-  });
-
-  it('shows a segment when the pointer is near one of its control points only (a blue point)', () => {
-    const ctrl = handles.find((h) => h.type === 'ctrl' && h.i === 0)!;
-    expect(activeSegments(input(away(ctrl, HANDLE_NEAR_PX - 4)))[0]).toBe(true);
-  });
-
-  it('shows the segments touched by the focus, wherever the pointer is', () => {
-    const active = activeSegments(input({ x: 0, y: 500 }, { road: 0, type: 'rad', i: 2 } as never));
-    expect(active).toEqual([false, false, true]);
+    expect(activeSegment(lone)).toBeNull();
   });
 });
 
