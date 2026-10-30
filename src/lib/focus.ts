@@ -10,28 +10,13 @@ export interface Focus {
   i: number;
 }
 
-/** What to show for one edge (^51). */
-export interface Reveal {
-  /** Construction geometry: blue lines, circle, bisector, ticks, turquoise lines and dots. */
-  guides: boolean;
-  /** The radius labels. */
-  labels: boolean;
-}
-
-const NONE: Reveal = { guides: false, labels: false };
-
 /**
- * Edge `edge` of road `road` shows its construction only while it is being worked on: its own
- * blue or turquoise points, its orange ring or one of its two nodes are hovered or dragged
- * (guides, ^55), and its radius labels while its orange ring or one of its two nodes is (labels).
+ * Whether the focus is on edge `edge` of road `road`: on one of its two nodes (or their heading
+ * tips), or on one of its own control points (^60).
  */
-export function revealed(focus: Focus | null, road: number, edge: number): Reveal {
-  if (!focus || focus.road !== road) return NONE;
-  const { type, i } = focus;
-  if (type === 'node' || type === 'head') {
-    const touches = i === edge || i === edge + 1;
-    return touches ? { guides: true, labels: true } : NONE;
-  }
-  if (i !== edge) return NONE;
-  return type === 'rad' ? { guides: true, labels: true } : { guides: true, labels: false };
+export function touchesEdge(focus: Focus | null, road: number, edge: number): boolean {
+  if (!focus || focus.road !== road) return false;
+  if (focus.type === 'node' || focus.type === 'head')
+    return focus.i === edge || focus.i === edge + 1;
+  return focus.i === edge;
 }

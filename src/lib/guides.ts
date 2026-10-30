@@ -100,7 +100,7 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
 }
 
 /**
- * Derived construction points, drawn with the guides (^51, ^55): the inflection point of an S or
+ * Derived construction points, part of the scaffold (^51, ^60): the inflection point of an S or
  * hook (blue) and the turquoise corners of an S, which cannot be dragged and are drawn hollow. The
  * handles (the bend's blue point, a hook's turquoise points, the orange rings) are drawn separately.
  */

@@ -11,7 +11,7 @@
     lmb = false,
     mmb = false,
     rmb = false,
-    stroke = 1.7,
+    stroke = 1.5,
   }: { lmb?: boolean; mmb?: boolean; rmb?: boolean; stroke?: number } = $props();
 
   const W = 22;
@@ -21,7 +21,8 @@
   const CX = W / 2;
   /** Where the buttons end and the palm rest begins: half the height. */
   const SPLIT = H / 2;
-  const WHEEL = { w: 4.4, top: 3.2, bottom: 17.2 };
+  /** The wheel is wide enough to stay readable at the stroke width of the smaller symbols. */
+  const WHEEL = { w: 6.4, top: 3.2, bottom: 17.2 };
 
   const LEFT = `M0 ${SPLIT} V${R} A${R} ${R} 0 0 1 ${R} 0 H${CX} V${SPLIT} Z`;
   const RIGHT = `M${CX} 0 H${W - R} A${R} ${R} 0 0 1 ${W} ${R} V${SPLIT} H${CX} Z`;

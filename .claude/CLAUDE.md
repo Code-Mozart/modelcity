@@ -44,6 +44,7 @@ The user entrusts the details to Claude. Principles:
 
 ## Conventions
 - World coordinates: meters, origin at map center, x right, y down (^4).
+- Two levels of gizmo (^60): the *skeleton* (curves and node dots, always shown) and the *scaffold* (all other gizmos of a segment, shown by need). A *segment* is the curve between two nodes.
 
 ## Context
 

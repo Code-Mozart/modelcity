@@ -27,7 +27,7 @@
     top: 12px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 14px;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -38,9 +38,9 @@
   }
   li {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
-    min-height: 30px;
+    min-height: 34px;
     font:
       500 14px/1.3 system-ui,
       sans-serif;
@@ -50,7 +50,6 @@
     gap: 6px;
     align-items: center;
     justify-content: flex-start;
-    min-width: 66px;
   }
   .or {
     color: var(--muted);

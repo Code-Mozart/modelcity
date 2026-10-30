@@ -56,22 +56,21 @@ The corner shows what the mouse and keys do right now, as rows of `[input]: acti
 
 While a button is held, the rows stay those of where it was pressed.
 
-## What is shown on the canvas (^51, ^55)
+## What is shown on the canvas (^60)
 
-Always: the curves, the nodes, the heading arrows (the line, not its tip) and the scale bar when it applies. No numbering labels.
+Two levels of gizmo:
 
-Shown by need, so the canvas stays calm:
+- The **skeleton** is always shown: the curves and the dots of the nodes. There are no numbering labels.
+- The **scaffold** of a segment (the curve between two nodes) is everything else: the blue lines, circle, ticks and control points (the bend's point and the heading tips), the heading arrows (blue), the turquoise lines and points, the orange radius point and its label (`116.7m`). It is shown completely or not at all.
 
-| What | Shown when |
-|------|------------|
-| Heading tip (blue, filled) | The pointer is within 48 px of it, or its node is hovered or dragged |
-| Blue point of a bend (blue, filled) | The pointer is within 48 px of it, or it is hovered or dragged |
-| Turquoise points of a hook (turquoise, filled, draggable) | The pointer is within 48 px, or the edge's guides are shown, or they are hovered or dragged |
-| Orange radius points (orange, filled, draggable) | The pointer is within 20 px of that edge's curve, or the point is hovered or dragged |
-| Guides of an edge: blue lines, dashed bisector, circle, ticks, turquoise lines, the blue inflection point of an S or hook, and the hollow turquoise points of an S (derived, not draggable) | One of the edge's two nodes (or their heading tips), its blue or turquoise point, or its orange radius point is hovered or dragged. A node being placed counts as dragged |
-| Radius labels (`116.7m`) | One of the edge's two nodes or its orange radius point is hovered or dragged |
+A segment shows its scaffold when:
 
-Filled points can be dragged; hollow ones only show derived geometry. On touch there is no hover, so the shown-by-need handles appear only while grabbed.
+- the segment's curve or any of its control points is hovered or dragged, or
+- the pointer is within 20 px of its curve, or within 48 px of any of its control points (a node, a heading tip, the blue point, a hook's turquoise points, the orange point).
+
+Near a node, both segments at that node show their scaffold. A node of a road that has no segment yet always shows its heading arrow. A node being placed counts as dragged.
+
+Looks: filled points can be dragged (blue tips and bend points, orange radius points, a hook's turquoise points); hollow ones (an S-curve's turquoise points) only show derived geometry. On touch there is no hover, so scaffolds appear only while something is grabbed.
 
 ## Camera (always, in every context)
 

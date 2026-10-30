@@ -1,11 +1,10 @@
-import type { Hover } from './editor.svelte';
-import { revealed, type Focus, type Reveal } from './focus';
-import { nearEdge, nearHandle, type Pointer } from './proximity';
-import { ARROW_PX } from './curves/handles';
 import { buildEdge } from './curves/edge';
+import { ARROW_PX } from './curves/handles';
 import type { EdgeRef, Path } from './curves/path';
 import type { NodeRef, RoadHandle } from './curves/roads';
 import { fromAngle } from './curves/vec';
+import type { Hover } from './editor.svelte';
+import type { Focus } from './focus';
 import { drawCircles, drawCorners, drawGuides, drawRadiusLabels } from './guides';
 import {
   dot,
@@ -17,6 +16,8 @@ import {
   type Frame,
   type Palette,
 } from './paint';
+import type { Pointer } from './proximity';
+import { activeSegments, arrowShown } from './scaffold';
 
 /** A road and its edges. */
 export interface RoadScene {
@@ -36,33 +37,40 @@ export interface Scene {
 
 const CURVE_PX = 4;
 const HEAD_BARB_PX = 11;
+const ARROW_STROKE_PX = 2;
 
-function drawArrow(
-  f: Frame,
-  node: { x: number; y: number; th: number },
-  color: string,
-  width: number,
-) {
+/**
+ * Two levels of gizmo (^60): the skeleton (curves and node dots) is always drawn; the scaffold of
+ * a segment (everything else) only while it is needed, all or nothing, see `scaffold.ts`.
+ */
+function drawArrow(f: Frame, node: { x: number; y: number; th: number }, color: string) {
   const a = toScreen(f, node);
   const t = screenDir(f, fromAngle(node.th));
   const tip = { x: a.x + t.x * ARROW_PX, y: a.y + t.y * ARROW_PX };
-  segment(f.ctx, a, tip, { color, width });
+  segment(f.ctx, a, tip, { color, width: ARROW_STROKE_PX });
   for (const side of [-1, 1]) {
     const ang = node.th + f.view.rot + Math.PI + side * 0.5;
     const barb = {
       x: tip.x + HEAD_BARB_PX * Math.cos(ang),
       y: tip.y + HEAD_BARB_PX * Math.sin(ang),
     };
-    segment(f.ctx, tip, barb, { color, width });
+    segment(f.ctx, tip, barb, { color, width: ARROW_STROKE_PX });
   }
-  return tip;
 }
 
-function drawNodes(f: Frame, { path }: RoadScene, selected: number | null, pal: Palette) {
-  path.nodes.forEach((n, i) => {
-    drawArrow(f, n, pal.ink, 2.2);
+/** Which segments of a road show their scaffold, and which node is selected. */
+interface NodeState {
+  active: boolean[];
+  sel: number | null;
+}
+
+/** The node dots (skeleton) and, with the scaffold, the heading arrows. */
+function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
+  const { active, sel } = state;
+  road.path.nodes.forEach((n, i) => {
+    if (arrowShown(active, i)) drawArrow(f, n, pal.blue);
     const a = toScreen(f, n);
-    if (i === selected) ring(f.ctx, a, 11, { color: pal.blue, width: 2.2 });
+    if (i === sel) ring(f.ctx, a, 11, { color: pal.blue, width: 2.2 });
     dot(f.ctx, a, 5.5, pal.ink);
   });
 }
@@ -75,7 +83,7 @@ function drawGhost(f: Frame, hover: Extract<Hover, { kind: 'ghost' }>, pal: Pale
     }
   }
   f.ctx.globalAlpha = 0.6;
-  drawArrow(f, hover.node, pal.ink, 2);
+  drawArrow(f, hover.node, pal.blue);
   dot(f.ctx, toScreen(f, hover.node), 5, pal.ink);
   f.ctx.globalAlpha = 1;
 }
@@ -97,10 +105,10 @@ function drawHover(f: Frame, hover: Hover | null, pal: Palette) {
     ring(f.ctx, toScreen(f, hover.handle), 10, { color: pal.blue, width: 1.6 });
 }
 
-/** One road; each edge shows its construction only while it is worked on (^51). */
-function drawRoad(f: Frame, road: RoadScene, shown: Reveal[], pal: Palette) {
+/** One road: the curves always, the construction of the segments whose scaffold is shown. */
+function drawRoad(f: Frame, road: RoadScene, active: boolean[], pal: Palette) {
   road.edges.forEach((ref, k) => {
-    if (!shown[k]!.guides) return;
+    if (!active[k]) return;
     drawGuides(f, ref, pal);
     drawCircles(f, ref, pal);
   });
@@ -108,65 +116,46 @@ function drawRoad(f: Frame, road: RoadScene, shown: Reveal[], pal: Palette) {
     for (const piece of E.pieces) strokePiece(f, piece, { color: pal.curve, width: CURVE_PX });
   }
   road.edges.forEach((ref, k) => {
-    if (shown[k]!.guides) drawCorners(f, ref, pal);
-    if (shown[k]!.labels) drawRadiusLabels(f, ref, pal);
+    if (!active[k]) return;
+    drawCorners(f, ref, pal);
+    drawRadiusLabels(f, ref, pal);
   });
 }
 
-/** The heading tip of a node, where its arrow ends. */
-function tipOf(f: Frame, scene: Scene, h: RoadHandle) {
-  const n = scene.roads[h.road]!.path.nodes[h.i]!;
-  const a = toScreen(f, n);
-  const t = screenDir(f, fromAngle(n.th));
-  return { x: a.x + t.x * ARROW_PX, y: a.y + t.y * ARROW_PX };
-}
+const HANDLE_COLOR = (pal: Palette) => ({
+  head: pal.blue,
+  ctrl: pal.blue,
+  s1: pal.teal,
+  s2: pal.teal,
+  rad: pal.orange,
+});
 
-/** Which focus on the same node or edge counts as hovering or dragging this handle. */
-const OWN_FOCUS: Record<RoadHandle['type'], RoadHandle['type'][]> = {
-  node: [],
-  head: ['head', 'node'],
-  ctrl: ['ctrl'],
-  s1: ['s1'],
-  s2: ['s2'],
-  rad: ['rad'],
-};
-
-const isFocused = ({ focus }: Scene, h: RoadHandle) =>
-  focus?.road === h.road && focus.i === h.i && OWN_FOCUS[h.type].includes(focus.type);
-
-/**
- * Handles are shown only when needed (^55): a heading tip (blue), the blue point of a bend and a
- * hook's turquoise points when the pointer is near (a hook's also with the guides of its edge);
- * the orange rings when the pointer is near their curve. Whatever is hovered or dragged is
- * always shown. All are filled, because they can be dragged.
- */
-function handleShown(scene: Scene, h: RoadHandle, guides: boolean): boolean {
-  if (isFocused(scene, h)) return true;
-  if (h.type === 'rad') return nearEdge(scene.roads[h.road]!.edges[h.i]!.E, scene.pointer);
-  const hook = h.type === 's1' || h.type === 's2';
-  return nearHandle(h, scene.pointer) || (hook && guides);
-}
-
-function drawHandles(f: Frame, scene: Scene, pal: Palette) {
-  const colors = { head: pal.blue, ctrl: pal.blue, s1: pal.teal, s2: pal.teal, rad: pal.orange };
+/** The control points of the scaffolds that are shown, all filled because they can be dragged. */
+function drawHandles(f: Frame, scene: Scene, active: boolean[][], pal: Palette) {
+  const colors = HANDLE_COLOR(pal);
   for (const h of scene.handles) {
     if (h.type === 'node') continue;
-    const guides = revealed(scene.focus, h.road, h.type === 'head' ? -1 : h.i).guides;
-    if (!handleShown(scene, h, guides)) continue;
-    const at = h.type === 'head' ? tipOf(f, scene, h) : toScreen(f, h);
-    dot(f.ctx, at, h.type === 'rad' ? 6.5 : 5.5, colors[h.type]);
+    const segs = active[h.road] ?? [];
+    const shown = h.type === 'head' ? arrowShown(segs, h.i) : segs[h.i] === true;
+    if (shown) dot(f.ctx, toScreen(f, h), h.type === 'rad' ? 6.5 : 5.5, colors[h.type]);
   }
 }
 
-/** Draw all roads with construction geometry, handles and the current hover feedback. */
+/** Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
-  scene.roads.forEach((road, i) => {
-    const shown = road.edges.map((ref) => revealed(scene.focus, i, ref.i));
-    drawRoad(f, road, shown, pal);
-  });
-  drawHandles(f, scene, pal);
+  const { handles, focus, pointer } = scene;
+  const active = scene.roads.map((r, road) =>
+    activeSegments({ road, edges: r.edges, handles, focus, pointer }),
+  );
+  scene.roads.forEach((road, i) => drawRoad(f, road, active[i]!, pal));
+  drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, pal);
   scene.roads.forEach((road, i) => {
-    drawNodes(f, road, scene.sel?.road === i ? scene.sel.node : null, pal);
+    drawNodes(
+      f,
+      road,
+      { active: active[i]!, sel: scene.sel?.road === i ? scene.sel.node : null },
+      pal,
+    );
   });
 }
