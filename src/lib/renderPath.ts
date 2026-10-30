@@ -1,4 +1,5 @@
 import { samplesAlong } from './curves/arrows';
+import { LANE_WIDTH_M } from './curves/lane';
 import { buildEdge } from './curves/edge';
 import { ARROW_PX } from './curves/handles';
 import type { EdgeRef, Path } from './curves/path';
@@ -12,6 +13,7 @@ import {
   ring,
   screenDir,
   segment,
+  strokeChain,
   strokePiece,
   toScreen,
   type Frame,
@@ -49,6 +51,8 @@ const ARROW_STROKE_PX = 2;
 /** Distance between the direction arrows along a curve, and their size (^80). */
 const DIRECTION_SPACING_PX = 48;
 const DIRECTION_BARB_PX = 6;
+/** Width of the outline of a road on each side, screen pixels (^90). */
+const ROAD_OUTLINE_PX = 1.5;
 const NODE_DOT_PX = 5.5;
 /** Selected nodes are blue and 150% larger (^70). */
 const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
@@ -202,9 +206,23 @@ function shownFlags(scene: Scene): boolean[][] {
   );
 }
 
+/**
+ * The surface of all roads, 3 m wide with an outline (^90): all outlines first, then all surfaces,
+ * so that roads that cross or touch merge into one shape.
+ */
+function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
+  const width = LANE_WIDTH_M * f.view.scale;
+  const chains = roads.map((r) => r.edges.flatMap((e) => e.E.pieces));
+  for (const pieces of chains) {
+    strokeChain(f, pieces, { color: pal['road-edge'], width: width + 2 * ROAD_OUTLINE_PX });
+  }
+  for (const pieces of chains) strokeChain(f, pieces, { color: pal.road, width });
+}
+
 /** Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const active = shownFlags(scene);
+  drawLanes(f, scene.roads, pal);
   scene.roads.forEach((road, i) => drawRoad(f, road, active[i]!, pal));
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);

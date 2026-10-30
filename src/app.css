@@ -2,6 +2,9 @@
   --bg: #fafafb;
   --panel: #ffffff;
   --ink: #15171c;
+  /* The road surface and its outline, after Google Maps (^90). */
+  --road: #ffffff;
+  --road-edge: #c9cdd3;
   --muted: #5d6472;
   --line: #d8dbe2;
   --grid-minor: #eceef2;
@@ -35,6 +38,8 @@
     --bg: #101216;
     --panel: #171a20;
     --ink: #f1f2f5;
+    --road: #38414e;
+    --road-edge: #212a37;
     --muted: #a3aab7;
     --line: #2b303a;
     --grid-minor: #181b22;

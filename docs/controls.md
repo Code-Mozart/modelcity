@@ -85,6 +85,7 @@ While a button is held, the rows stay those of where it was pressed.
 
 Two levels of gizmo:
 
+- The **road surface** (^90) lies under everything: every segment is 3 m wide with an outline, in the Google Maps colors of the current theme. It is not a gizmo and cannot be edited; crossing roads merge.
 - The **skeleton** is always shown: the curves, the dots of the nodes, and small direction arrows along the curves every 48 px, pointing the way the road runs (^80, ^86). There are no numbering labels.
 - The **scaffold** of a segment (the curve between two nodes) is everything else: the orange lines, circle, ticks and control points (the bend's point and the heading tips), the heading arrows (orange), the yellow lines and points, the orange radius point and its label (`116.7m`). It is shown completely or not at all.
 

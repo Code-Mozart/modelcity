@@ -20,6 +20,8 @@ export const PALETTE_KEYS = [
   'grid-major',
   'ink',
   'muted',
+  'road',
+  'road-edge',
   'blue',
   'yellow',
   'red',
@@ -96,9 +98,9 @@ export function text(ctx: CanvasRenderingContext2D, s: string, p: Point, t: Text
 }
 
 /** Stroke a line or arc piece; pieces that draw nothing are skipped. */
-export function strokePiece(f: Frame, piece: Piece, s: Stroke) {
+/** Add a piece to the current canvas path (screen space); an arc is joined to the point before it. */
+function tracePiece(f: Frame, piece: Piece) {
   const { ctx } = f;
-  ctx.beginPath();
   if (piece.type === 'line') {
     const a = toScreen(f, piece.P);
     const b = toScreen(f, piece.Q);
@@ -109,6 +111,20 @@ export function strokePiece(f: Frame, piece: Piece, s: Stroke) {
     const a0 = piece.a0 + f.view.rot;
     ctx.arc(c.x, c.y, piece.r * f.view.scale, a0, a0 + piece.da, piece.da < 0);
   }
-  ctx.lineCap = 'round';
-  applyStroke(ctx, s);
+}
+
+export function strokePiece(f: Frame, piece: Piece, s: Stroke) {
+  f.ctx.beginPath();
+  tracePiece(f, piece);
+  f.ctx.lineCap = 'round';
+  applyStroke(f.ctx, s);
+}
+
+/** Stroke pieces that follow each other as one path: flat ends, round joins (^21). */
+export function strokeChain(f: Frame, pieces: Piece[], s: Stroke) {
+  f.ctx.beginPath();
+  for (const piece of pieces) tracePiece(f, piece);
+  f.ctx.lineCap = 'butt';
+  f.ctx.lineJoin = 'round';
+  applyStroke(f.ctx, s);
 }
