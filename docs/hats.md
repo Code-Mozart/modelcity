@@ -1,4 +1,4 @@
-next: ^19
+next: ^30
 
 # Hats
 
@@ -18,9 +18,27 @@ Registry of all hats. Never reuse or renumber. Keep this file up to date.
 | ^10 | decision | decided | **Insert a node on a curve:** the new node takes the tangent as its heading and both halves keep the radius and a matching shape tag, so the curve does not change. See ^6, ^7, ^8. |
 | ^11 | decision | decided | **Editing conventions (demo):** tools Move / Append / Insert (keys M, A, I); Append extends at the nearer end of the path, new heading chosen so the new edge is a single bend; right-click or Del removes a node; Esc returns to Move; Shift while dragging a heading snaps to 15 degrees; handles win over empty space, nodes win over other handles when the cursor is right on them. Handover conventions not yet ported: typed length/angle, 0.5 m click filter, guide snapping, one-road-one-undo. |
 | ^12 | decision | decided | **Port architecture:** curve geometry is a pure, tested library in `src/lib/curves/` working in meters (the demo's 6 px = 1 m); the editor interaction engine is separate from the canvas component; the canvas component only dispatches input and draws. The demo stays as a reference. Builds on ^4. |
-| ^13 | milestone | done, awaiting user test | Port the ^5 demo into the app on the pan/zoom canvas (^2): all three tools, handles, presets, readout, legend, dark mode. The ^2 test box is removed. Not ported: touch pinch zoom, undo. Behavior-preserving except: handles keep a constant screen size at any zoom (demo scaled them with the canvas), and hit areas are in screen pixels. |
+| ^13 | milestone | done (merged) | Port the ^5 demo into the app on the pan/zoom canvas (^2): all three tools, handles, presets, readout, legend, dark mode. The ^2 test box is removed. Not ported: touch pinch zoom, undo. Behavior-preserving except: handles keep a constant screen size at any zoom (demo scaled them with the canvas), and hit areas are in screen pixels. |
 | ^14 | decision | decided | **Navigation vs editing input:** wheel/pinch zooms; dragging empty space or middle-button drag pans; dragging a handle edits. In Append/Insert tools a click acts, and panning needs the middle button. Space+drag was removed (did not work). Touch: one-finger on empty space pans. |
 | ^15 | bug | fixed | While dragging a handle, the blue hover ring stayed at the point where the drag started. Fix: clear the hover when a drag starts. Reported by the user while testing ^13. |
 | ^16 | bug | fixed | Nodes 1 (heading up) and 2 (heading east), whose heading lines meet in a proper corner, became an S-curve instead of an L (single bend). Cause: automatic shape choice also required a two-arc approximation not to inflect, which misfires when the nodes are far apart along one heading. Fix: a bend is chosen whenever the heading lines meet properly (refines ^6, ^7); the inflection check now only decides S vs hook. Reported with a screenshot by the user. |
 | ^17 | bug | fixed | Dragging the orange radius ring of an S-curve was inverted (toward the turquoise corner increased the radius). Cause: a linear radius-from-displacement rule with the wrong sign. Fix: for S and hook the radius is now the one whose arc midpoint is nearest the cursor, so the ring follows the cursor (as the bend gesture already did). Refines ^8. |
-| ^18 | question | open | User observed that the turquoise points are draggable on the hook preset but not on Fig G (S-curve). By design (^9): on an exact S the corners lie on fixed lines and do not depend on the radius, so there is nothing to drag; on a hook they move with the radius, so dragging picks it. Proposal: draw display-only points differently (e.g. small hollow rings) so they do not look draggable. Awaiting user decision. |
+| ^18 | question | open (minor) | User observed that the turquoise points are draggable on the hook preset but not on Fig G (S-curve). By design (^9): on an exact S the corners lie on fixed lines and do not depend on the radius, so there is nothing to drag; on a hook they move with the radius, so dragging picks it. Proposal: draw display-only points differently (e.g. small hollow rings) so they do not look draggable. Awaiting user decision. |
+
+## Roadmap
+
+Milestones in the user's order of priority (user's first draft: many need more concrete requirements and design, shared between user and Claude). Status "planned" until the open questions are settled.
+
+| Hat | Type | Status | Summary |
+|-----|------|--------|---------|
+| ^19 | milestone | planned (next) | **Camera rotation:** a third camera operation besides pan and zoom: rotate the world. The grid is pinned to the camera, so it does not rotate with the world. Open: ^28. |
+| ^20 | milestone | planned | **Basic road creation:** a single continuous path as in the demo (^5, ^13), including UI and a visible gizmo. Design the HUD: minimal or non-existent, canvas (almost) full-screen. Follows ^29. |
+| ^21 | milestone | planned | **Road geometry and markings generated** from the path (generate rather than store, see handover). |
+| ^22 | milestone | planned | **Multi-lane roads** (e.g. 1+1, or one-way with more than one lane): how tools work (creation, selection, moving, ...), how geometry and markings are generated. |
+| ^23 | milestone | planned | **Branching, splits, merges** of roads. |
+| ^24 | milestone | planned | **Intersections and junctions.** |
+| ^25 | milestone | planned | **Crossings**, e.g. pedestrian path x road. |
+| ^26 | milestone | planned | **Lane types and lane width.** Expected to unlock pedestrian paths, bike paths, tram and rail. |
+| ^27 | milestone | planned | **Traffic islands.** |
+| ^28 | question | open | **Camera rotation UX (for ^19).** Claude's proposal: (a) two-finger twist on touch; (b) on desktop, right-button drag rotates (a right click without movement still removes a node); Shift+wheel rotates in steps; (c) rotation keeps the point under the cursor/gesture center fixed, like zoom; (d) a small compass appears only while the view is rotated, click it to reset north (progressive disclosure, ^29); (e) the grid stays axis-aligned to the screen but still pans and zooms with the world, and its spacing stays in world meters. Is that what you mean by "pinned to the camera", and does the gesture set suit you? |
+| ^29 | decision | decided (principles) | **UI design principles:** minimal chrome, canvas (almost) full-screen; progressive disclosure (show tools, options and handles only when relevant, e.g. only for the selection or active tool); Fitts's law (frequent targets big and near the pointer, edges and corners are cheap targets); Hick's law (few choices at a time, group and hide the rest; the user wrote "Higgs law", read as Hick's); consistency with the handle vocabulary (^9) and keymap (^11); discoverability through hover hints rather than permanent legends. The current toolbar and legend of ^13 are provisional and will be replaced in ^20. |
