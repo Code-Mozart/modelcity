@@ -35,7 +35,7 @@ function drawScaleBar({ ctx, view, size }: Frame, pal: Palette) {
   const meters = gridStep(view.scale, SCALE_BAR_MIN_PX);
   ctx.fillStyle = pal.ink;
   ctx.fillRect(16, size.height - 24, meters * view.scale, 3);
-  text(ctx, formatLength(meters), { x: 16, y: size.height - 32 }, { color: pal.ink, size: 12 });
+  text(ctx, formatLength(meters), { x: 16, y: size.height - 32 }, { color: pal.ink });
 }
 
 export interface RenderOptions {

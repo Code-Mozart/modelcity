@@ -42,7 +42,7 @@
     align-items: center;
     min-height: 34px;
     font:
-      500 14px/1.3 system-ui,
+      500 var(--font-size) / 1.3 system-ui,
       sans-serif;
   }
   .inputs {
@@ -53,6 +53,6 @@
   }
   .or {
     color: var(--muted);
-    font-size: 12px;
+    font-size: var(--font-size);
   }
 </style>

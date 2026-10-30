@@ -7,6 +7,8 @@
   --grid-minor: #eceef2;
   --grid-major: #dde0e6;
   --curve: #7b2fe0;
+  /* The one font size of all text (^83); keep equal to FONT_PX in paint.ts. */
+  --font-size: 12px;
   --blue: #1c4dff;
   --teal: #0a8f84;
   --red: #d92a3f;
@@ -74,7 +76,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font:
-    14px/1.4 system-ui,
+    var(--font-size) / 1.4 system-ui,
     -apple-system,
     'Segoe UI',
     Roboto,

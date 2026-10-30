@@ -122,7 +122,6 @@ export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette) {
     const at = { x: mid.x + ((mid.x - c.x) / l) * 22, y: mid.y + ((mid.y - c.y) / l) * 22 };
     text(f.ctx, `${piece.r.toFixed(1)}m`, at, {
       color: pal['orange-ink'],
-      size: 12,
       align: 'center',
     });
   }

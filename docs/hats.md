@@ -1,4 +1,4 @@
-next: ^83
+next: ^84
 
 # Hats
 
@@ -95,3 +95,4 @@ Milestones in the user's order of priority (user's first draft: many need more c
 | ^77 | decision | decided; assumed (details) | **Shared radius (user):** dragging the orange radius point of a segment whose two nodes are selected sets the radius of all selected segments (both nodes selected) to the value the dragged one has; their scaffolds are shown during the drag only. |
 | ^78 | decision | decided | **Moving several nodes hides all scaffold gizmos** while the drag lasts (user). |
 | ^79 | decision | decided | **No insert mark in select mode (user):** the white ring and tick on a hovered curve exist only in draw mode, where a click inserts a node. In select mode the curve gets no mark; the cursor becomes a pointer. |
+| ^83 | decision | decided; assumed (size) | **One font size for all text (user):** the hints, the radius labels and the scale bar use the same small size, 12 px (`--font-size` in `app.css`, `FONT_PX` in `paint.ts`, guarded by a test). Texts inside icons (key caps) use it too and scale with it; the icon boxes themselves do not scale yet. |

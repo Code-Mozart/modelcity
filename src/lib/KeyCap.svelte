@@ -25,7 +25,7 @@
     background: var(--key-bg);
     color: var(--key-ink);
     font:
-      600 12px/1 system-ui,
+      600 var(--font-size) / 1 system-ui,
       sans-serif;
     vertical-align: middle;
     user-select: none;
