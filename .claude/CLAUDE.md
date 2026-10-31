@@ -23,7 +23,13 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - Work on topic branches: `feature/`, `bugfix/`, `chore/`, `docs/`, etc. Claude may create, modify, rename and delete any branch except `main`.
 - Open a PR right after creating a branch (it will be merged eventually); the user merges when it is ready to publish as a new version.
 - PR descriptions are the main review surface (the user rarely reads code): always a summary of what and why, what to test, decisions made, open questions. Max half to one page.
-- Small, verifiable steps, steady progress, aware of the roadmap (see `docs/handover.md`). Use hats in commit messages where applicable.
+- Small, verifiable steps, steady progress, aware of the roadmap (`docs/hats.md`, ^146). Use hats in commit messages where applicable.
+
+## Roadmap and scope (^146)
+- Roadmap = the prioritised list of wanted work (types `feature`, `bug`, `chore`). Milestone = one PR tackling one or more roadmap items.
+- At the start of a milestone write its scope (in/out) in the PR description. Revisions inside the scope are all done in the PR.
+- When the user asks for something new or out of scope during a milestone, say so, admonish gently and suggest putting it on the roadmap as a hat instead. Do not build it right away.
+- Only one branch/PR at a time may add hats (numbering stays unique and gapless). Other PRs (e.g. pure refactors) add no hats.
 
 ## Quality
 
