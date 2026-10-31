@@ -51,7 +51,7 @@ const CURVE_PX = 2;
 const HEAD_BARB_PX = 11;
 const ARROW_STROKE_PX = 2;
 /** Distance between the direction arrows along a curve, and their size (^80). */
-const DIRECTION_SPACING_PX = 48;
+const DIRECTION_SPACING_PX = 72;
 const DIRECTION_BARB_PX = 6;
 const NODE_DOT_PX = 5.5;
 /** Selected nodes are blue and 150% larger (^70). */
