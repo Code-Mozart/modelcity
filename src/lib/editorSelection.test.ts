@@ -16,7 +16,7 @@ function roads() {
   return ed;
 }
 
-const nodes = (ed: Editor) => ed.roads.flatMap((p) => p.nodes.map((n) => [n.x, n.y]));
+const nodes = (ed: Editor) => ed.graph.nodes.map((n) => [n.x, n.y]);
 
 function band(ed: Editor, from: [number, number], to: [number, number], shift = false) {
   ed.pointerDown(at(from[0], from[1], { shift }));
@@ -30,7 +30,7 @@ describe('selection box (^70)', () => {
     band(ed, [-5, -5], [25, 45]);
     expect(ed.selection).toHaveLength(4);
     band(ed, [-5, -5], [5, 5]);
-    expect(ed.selection).toEqual([{ road: 0, node: 0 }]);
+    expect(ed.selection).toEqual([ed.chains[0]!.nodeIds[0]]);
     expect(ed.drawing).toBe(false);
     expect(ed.band).toBeNull();
   });
@@ -63,7 +63,7 @@ describe('selection box (^70)', () => {
     const ed = roads();
     band(ed, [-5, -5], [25, 5]);
     ed.key('Delete');
-    expect(ed.roads).toHaveLength(1);
+    expect(ed.chains).toHaveLength(1);
     expect(ed.selection).toEqual([]);
   });
 });
@@ -102,10 +102,10 @@ describe('group move (^71)', () => {
     band(ed, [-5, -5], [25, 5]);
     ed.pointerDown(at(0, 40));
     ed.pointerUp();
-    expect(ed.selection).toEqual([{ road: 1, node: 0 }]);
+    expect(ed.selection).toEqual([ed.chains[1]!.nodeIds[0]]);
     band(ed, [-5, -5], [25, 5]);
     click(ed, 20, 0);
-    expect(ed.selection).toEqual([{ road: 0, node: 1 }]);
+    expect(ed.selection).toEqual([ed.chains[0]!.nodeIds[1]]);
   });
 });
 
@@ -117,7 +117,7 @@ describe('shift selects (^72)', () => {
       ed.pointerUp();
     };
     toggle();
-    expect(ed.selection).toEqual([{ road: 0, node: 0 }]);
+    expect(ed.selection).toEqual([ed.chains[0]!.nodeIds[0]]);
     toggle();
     expect(ed.selection).toEqual([]);
   });
@@ -142,7 +142,7 @@ describe('shift selects (^72)', () => {
 describe('selecting by curve (^74)', () => {
   /** Three quarters along, clear of the heading arrow tip of the first node. */
   const mid = (ed: Editor) => {
-    const [a, b] = ed.roads[0]!.nodes;
+    const [a, b] = ed.chains[0]!.path.nodes;
     return at(a!.x + (b!.x - a!.x) * 0.75, a!.y + (b!.y - a!.y) * 0.75);
   };
   const press = (ed: Editor, shift: boolean) => {
@@ -156,10 +156,7 @@ describe('selecting by curve (^74)', () => {
     ed.pointerMove(mid(ed));
     expect(ed.hintTarget).toEqual({ kind: 'curve', picked: 0, act: null, lane: false });
     press(ed, false);
-    expect(ed.selection).toEqual([
-      { road: 0, node: 0 },
-      { road: 0, node: 1 },
-    ]);
+    expect(ed.selection).toEqual(ed.chains[0]!.nodeIds);
     expect(ed.drawing).toBe(false);
   });
 
@@ -179,10 +176,10 @@ describe('select lane (^76)', () => {
     ed.pointerDown(at(0, 40, { alt: true }));
     ed.pointerUp();
     expect(ed.selection).toHaveLength(2);
-    expect(ed.selection.every((r) => r.road === 1)).toBe(true);
+    expect(ed.selection).toEqual(ed.chains[1]!.nodeIds);
     ed.pointerDown(at(15, 0, { alt: true }));
     ed.pointerUp();
-    expect(ed.selection.every((r) => r.road === 0)).toBe(true);
+    expect(ed.selection).toEqual(ed.chains[0]!.nodeIds);
   });
 });
 
@@ -217,7 +214,7 @@ describe('sharing a radius (^77)', () => {
     expect(ed.selectedSegments).toHaveLength(3);
     ed.pointerMove(at(ring.x + 4, ring.y + 4));
     ed.pointerUp();
-    const radii = ed.roads[0]!.radii;
+    const radii = ed.chains[0]!.path.radii;
     expect(radii[0]).not.toBeNull();
     expect(radii[1]).toBe(radii[0]);
     expect(radii[2]).toBe(radii[0]);

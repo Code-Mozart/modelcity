@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
-import { nearestOnRoads } from '../src/lib/curves/roads';
-import type { Roads } from '../src/lib/curves/roads';
+import { chainsOf, nearestOnChains } from '../src/lib/model/chains';
+import type { Graph } from '../src/lib/model/graph';
 
 export type Pt = { x: number; y: number };
 
@@ -26,6 +26,11 @@ export class App {
     await this.page.mouse.up();
   }
 
+  async hover(pt: Pt) {
+    const p = await this.at(pt);
+    await this.page.mouse.move(p.x, p.y);
+  }
+
   async rightClick(pt: Pt) {
     const p = await this.at(pt);
     await this.page.mouse.click(p.x, p.y, { button: 'right' });
@@ -36,8 +41,17 @@ export class App {
     await this.drag(from, to);
   }
 
-  roads(): Promise<Roads> {
-    return this.page.evaluate(() => JSON.parse(JSON.stringify(window.__modelcity!.editor.roads)));
+  /** The graph of nodes and edges (^106) as plain data. */
+  graph(): Promise<Graph> {
+    return this.page.evaluate(() => JSON.parse(JSON.stringify(window.__modelcity!.editor.graph)));
+  }
+
+  async nodes() {
+    return (await this.graph()).nodes;
+  }
+
+  async edges() {
+    return (await this.graph()).edges;
   }
 
   state() {
@@ -53,28 +67,26 @@ export class App {
 
   /** The point of the curves nearest to a guess, to click exactly on a curve. */
   async curvePoint(guess: Pt): Promise<Pt> {
-    const hit = nearestOnRoads(await this.roads(), guess, 100)!;
+    const hit = nearestOnChains(chainsOf(await this.graph()), guess, 100)!;
     return { x: hit.at.x, y: hit.at.y };
   }
 
-  async radiusHandle(road: number, i: number): Promise<Pt> {
-    return this.page.evaluate(
-      ([r, n]) => {
-        const hook = window.__modelcity!;
-        const hs = hook.editor.handles(hook.scale());
-        const h = hs.find((x) => x.type === 'rad' && x.road === r && x.i === n && x.t === 0.5)!;
-        return { x: h.x, y: h.y };
-      },
-      [road, i],
-    );
+  /** The middle radius point of the edge with this id. */
+  async radiusHandle(edge: number): Promise<Pt> {
+    return this.page.evaluate((id) => {
+      const hook = window.__modelcity!;
+      const hs = hook.editor.handles(hook.scale());
+      const h = hs.find((x) => x.type === 'rad' && x.id === id && x.t === 0.5)!;
+      return { x: h.x, y: h.y };
+    }, edge);
   }
 
   hints() {
     return this.page.getByRole('list', { name: 'Controls' });
   }
 
-  /** Node `i` of road `road`. */
-  async node(road: number, i: number) {
-    return (await this.roads())[road]!.nodes[i]!;
+  /** The node with this id. */
+  async node(id: number) {
+    return (await this.nodes()).find((n) => n.id === id)!;
   }
 }

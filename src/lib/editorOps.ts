@@ -1,88 +1,85 @@
-import { applyDrag, dragHeading } from './curves/drag';
-import { closeOver, syncHeadings } from './curves/junctions';
-import { appendNode, insertNode, prependNode, withNode } from './curves/path';
-import {
-  moveNodes,
-  replaceRoad,
-  startRoad,
-  type NodeRef,
-  type RoadHit,
-  type Roads,
-} from './curves/roads';
+import { dragHeading } from './curves/drag';
+import { autoHeading, autoHeadingBefore } from './curves/path';
 import { dist, type Vec } from './curves/vec';
 import { withSharedRadius } from './editorPress';
 import type { Drawn } from './editorTargets';
 import type { Placement, PointerInfo, Press } from './editorTypes';
+import type { RoadHit } from './model/chains';
+import { dragGraph } from './model/dragGraph';
+import {
+  addEdge,
+  addNode,
+  insertNode,
+  moveNodes,
+  nodeOf,
+  withNode,
+  type Graph,
+} from './model/graph';
 
 /** The node a click at `pt` would place: where the pointer is, with the automatic heading. */
 export const placementAt = (pt: Vec): Placement => ({ pt, th: null });
 
-const withHeading = (roads: Roads, ref: NodeRef, th: number | null): Roads => {
-  if (th === null) return roads;
-  const path = withNode(roads[ref.road]!, ref.node, { th });
-  return replaceRoad(roads, ref.road, path);
-};
-
 /** A node at the end of the road being drawn, or the first node of a new road (^40). */
-export function placeNode(d: Drawn, at: Placement): { drawn: Drawn; ref: NodeRef } {
-  if (d.active === null) {
-    const r = startRoad(d.roads, at.pt);
-    const ref = { road: r.road, node: 0 };
+export function placeNode(d: Drawn, at: Placement): { drawn: Drawn; id: number } {
+  const tip = d.active === null ? undefined : nodeOf(d.graph, d.active);
+  if (!tip) {
+    const r = addNode(d.graph, { x: at.pt.x, y: at.pt.y, th: at.th ?? 0 });
     return {
-      drawn: { ...d, roads: withHeading(r.roads, ref, at.th), active: r.road, selection: [ref] },
-      ref,
+      drawn: { ...d, graph: r.graph, active: r.id, end: 'end', origin: r.id, selection: [r.id] },
+      id: r.id,
     };
   }
-  const add = d.end === 'end' ? appendNode : prependNode;
-  const r = add(d.roads[d.active]!, at.pt);
-  const ref = { road: d.active, node: r.sel };
-  const roads = withHeading(replaceRoad(d.roads, d.active, r.path), ref, at.th);
-  return { drawn: { ...d, roads, selection: [ref] }, ref };
+  const heading = d.end === 'end' ? autoHeading : autoHeadingBefore;
+  const r = addNode(d.graph, { x: at.pt.x, y: at.pt.y, th: at.th ?? heading(tip, at.pt) });
+  const graph = d.end === 'end' ? addEdge(r.graph, tip.id, r.id) : addEdge(r.graph, r.id, tip.id);
+  return { drawn: { ...d, graph, active: r.id, selection: [r.id] }, id: r.id };
 }
 
 /** Insert a node on a curve; the curve does not change (^10). */
-export function insertAt(d: Drawn, hit: RoadHit): { drawn: Drawn; ref: NodeRef } {
-  const r = insertNode(d.roads[hit.road]!, hit);
-  const ref = { road: hit.road, node: r.sel };
-  return { drawn: { ...d, roads: replaceRoad(d.roads, hit.road, r.path), selection: [ref] }, ref };
+export function insertAt(d: Drawn, hit: RoadHit): { drawn: Drawn; id: number } {
+  const { at } = hit;
+  const r = insertNode(d.graph, hit.edge, { x: at.x, y: at.y, th: Math.atan2(at.ty, at.tx) });
+  return { drawn: { ...d, graph: r.graph, selection: [r.id] }, id: r.id };
 }
 
 /** Start a new road at an existing node: a split (^23). The new road shares the node. */
-export function splitAt(d: Drawn, ref: NodeRef): Drawn {
-  const n = d.roads[ref.road]!.nodes[ref.node]!;
-  const r = startRoad(d.roads, n);
-  const roads = withHeading(r.roads, { road: r.road, node: 0 }, n.th);
-  return { roads, active: r.road, end: 'end', selection: closeOver(roads, [ref]) };
-}
+export const splitAt = (d: Drawn, id: number): Drawn => ({
+  ...d,
+  active: id,
+  end: 'end',
+  origin: id,
+  selection: [id],
+});
 
-/** End the road being drawn at an existing node: a merge (^23). The road shares the node. */
-export function mergeInto(d: Drawn, ref: NodeRef): Drawn {
-  const n = d.roads[ref.road]!.nodes[ref.node]!;
-  const r = placeNode(d, { pt: n, th: n.th });
-  return { ...r.drawn, selection: closeOver(r.drawn.roads, [ref]) };
+/** End the road being drawn at an existing node: a merge, or a loop at its first node (^23, ^162). */
+export function mergeInto(d: Drawn, id: number): Drawn {
+  if (d.active === null) return d;
+  const graph = d.end === 'end' ? addEdge(d.graph, d.active, id) : addEdge(d.graph, id, d.active);
+  return { ...d, graph, selection: [id] };
 }
 
 /**
- * The roads after dragging the grabbed handle to the pointer: a group moves along, a radius is
- * shared, shared nodes keep one heading (^23, ^71, ^77).
+ * The graph after dragging the grabbed handle to the pointer: a group moves along and a radius is
+ * shared (^71, ^77).
  */
-export function dragStep(d: Drawn, press: Extract<Press, { kind: 'drag' }>, info: PointerInfo) {
-  const { road } = press;
-  const { handle } = press.drag;
-  const before = d.roads[road]!;
-  const path = applyDrag(before, press.drag, info.pt, { snap: info.shift });
-  const next = withSharedRadius(replaceRoad(d.roads, road, path), d.selection, press);
-  const to = path.nodes[handle.i]!;
-  const delta = { x: to.x - press.origin.x, y: to.y - press.origin.y };
-  const group = handle.type === 'node' ? press.group : [];
-  const moved = group.length ? moveNodes(next, group, delta) : next;
-  return syncHeadings(moved, road, before);
+export function dragStep(
+  d: Drawn,
+  press: Extract<Press, { kind: 'drag' }>,
+  info: PointerInfo,
+): Graph {
+  const handle = { ...press.drag.handle, road: press.road, id: press.id };
+  const dragged = dragGraph(d.graph, handle, info.pt, { snap: info.shift });
+  const next = withSharedRadius(dragged, d.selection, press);
+  const to = nodeOf(next, press.id);
+  const group = handle.type === 'node' && to ? press.group : [];
+  if (!to || !group.length) return next;
+  return moveNodes(next, group, { x: to.x - press.origin.x, y: to.y - press.origin.y });
 }
 
 /** Dragging while a node is placed sets its heading, from where it was placed (^40). */
-export function placeStep(roads: Roads, ref: NodeRef, info: PointerInfo): Roads {
-  const path = roads[ref.road]!;
-  if (dist(info.pt, path.nodes[ref.node]!) < 6 / info.scale) return roads;
-  const next = replaceRoad(roads, ref.road, dragHeading(path, ref.node, info.pt, info.shift));
-  return syncHeadings(next, ref.road, path);
+export function placeStep(g: Graph, id: number, info: PointerInfo): Graph {
+  const n = nodeOf(g, id);
+  if (!n || dist(info.pt, n) < 6 / info.scale) return g;
+  const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, info.shift).nodes[0]!.th;
+  return withNode(g, id, { th });
 }

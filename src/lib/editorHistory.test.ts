@@ -24,15 +24,15 @@ describe('undo and redo in the editor (^81)', () => {
     ]);
     expect(ed.canUndo).toBe(true);
     ed.key('z', undo);
-    expect(ed.roads[0]!.nodes).toHaveLength(2);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(2);
     expect(ed.drawing).toBe(true);
     ed.key('z', undo);
     ed.key('z', undo);
-    expect(ed.roads).toEqual([]);
+    expect(ed.chains).toEqual([]);
     expect(ed.canUndo).toBe(false);
     ed.key('y', undo);
     ed.key('Z', redo);
-    expect(ed.roads[0]!.nodes).toHaveLength(2);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(2);
     expect(ed.canRedo).toBe(true);
   });
 });
@@ -54,7 +54,7 @@ describe('undo steps of dragging (^81)', () => {
     ed.pointerUp();
     expect(ed.history.past).toHaveLength(steps + 1);
     ed.key('z', undo);
-    expect(ed.roads[0]!.nodes[1]).toMatchObject({ x: 20, y: -10 });
+    expect(ed.chains[0]!.path.nodes[1]).toMatchObject({ x: 20, y: -10 });
     expect(ed.canRedo).toBe(true);
     ed.pointerDown(at(20, -10));
     ed.pointerMove(at(25, -10));
@@ -73,22 +73,22 @@ describe('undo of removing and cancelling (^81)', () => {
     ed.key('Escape');
     click(ed, 20, -10);
     ed.key('Delete');
-    expect(ed.roads[0]!.nodes).toHaveLength(2);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(2);
     ed.key('z', undo);
-    expect(ed.roads[0]!.nodes).toHaveLength(3);
-    expect(ed.selection).toEqual([{ road: 0, node: 1 }]);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(3);
+    expect(ed.selection).toEqual([ed.chains[0]!.nodeIds[1]]);
   });
 
   it('cancelling a lone node with Esc can be undone; undo is ignored while a button is down', () => {
     const ed = draw([[0, 0]]);
     ed.key('Escape');
-    expect(ed.roads).toEqual([]);
+    expect(ed.chains).toEqual([]);
     ed.key('z', undo);
-    expect(ed.roads).toHaveLength(1);
+    expect(ed.chains).toHaveLength(1);
     expect(ed.drawing).toBe(true);
     ed.pointerDown(at(30, 0));
     ed.key('z', undo);
-    expect(ed.roads[0]!.nodes).toHaveLength(2);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(2);
   });
 });
 

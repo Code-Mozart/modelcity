@@ -19,7 +19,7 @@ describe('touchesEdge (^60)', () => {
   });
 
   it('the orange and yellow points touch their own edge only', () => {
-    for (const type of ['ctrl', 's1', 's2', 'rad'] as const) {
+    for (const type of ['ctrl', 'mid1', 'mid2', 'rad'] as const) {
       expect(touchesEdge(at(type, 1), 0, 1)).toBe(true);
       expect(touchesEdge(at(type, 1), 0, 0)).toBe(false);
       expect(touchesEdge(at(type, 1), 0, 2)).toBe(false);

@@ -41,7 +41,7 @@ describe('back to auto (^141, ^143)', () => {
     const handle = handlesOf(path, edgesOf(path), 4).find((h) => h.type === 'rad' && h.t === 0.5)!;
     // far towards the corner at (80, 0) is the tightest, away from it the largest radius
     const away = { x: handle.x + (handle.x - 80) * 50, y: handle.y + handle.y * 50 };
-    const next = applyDrag(path, startDrag(path, handle), away, { snap: false });
+    const next = applyDrag(path, startDrag(handle), away, { snap: false });
     expect(next.radii[0]).toBeNull();
   });
 });

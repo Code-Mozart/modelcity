@@ -1,12 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { Editor } from './editor.svelte';
-import { at, bareCurvePoint, click, draw, drawMode, last } from './testing/editorHelpers';
+import {
+  at,
+  bareCurvePoint,
+  click,
+  draw,
+  drawMode,
+  last,
+  roadDrawn,
+  selAt,
+} from './testing/editorHelpers';
 import { toRad } from './curves/vec';
 
 describe('a new editor', () => {
   it('starts with a blank canvas', () => {
     const ed = new Editor();
-    expect(ed.roads).toEqual([]);
+    expect(ed.chains).toEqual([]);
     expect(ed.active).toBeNull();
     expect(ed.anchors).toEqual([]);
   });
@@ -23,10 +32,10 @@ describe('a new editor', () => {
 describe('creating a road with clicks (^40)', () => {
   it('the first click starts a road with one node heading right', () => {
     const ed = draw([[3, 4]]);
-    expect(ed.roads).toHaveLength(1);
-    expect(ed.roads[0]!.nodes).toEqual([{ x: 3, y: 4, th: 0 }]);
-    expect(ed.active).toBe(0);
-    expect(ed.sel).toEqual({ road: 0, node: 0 });
+    expect(ed.chains).toHaveLength(1);
+    expect(ed.chains[0]!.path.nodes).toMatchObject([{ x: 3, y: 4, th: 0 }]);
+    expect(roadDrawn(ed)).toBe(0);
+    expect(ed.sel).toEqual(ed.chains[0]!.nodeIds[0]);
   });
 
   it('further clicks extend the road with a curve from the heading to the cursor', () => {
@@ -35,9 +44,9 @@ describe('creating a road with clicks (^40)', () => {
       [20, -10],
       [40, 0],
     ]);
-    expect(ed.roads[0]!.nodes).toHaveLength(3);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(3);
     expect(ed.edges[0]!.map((e) => e.E.kind)).toEqual(['C', 'C']);
-    expect(ed.sel).toEqual({ road: 0, node: 2 });
+    expect(ed.sel).toEqual(ed.chains[0]!.nodeIds[2]);
   });
 
   it('previews the next node with the curve from the last one', () => {
@@ -108,9 +117,9 @@ describe('starting another road and finishing roads (^40)', () => {
     expect(ed.active).toBeNull();
     click(ed, 100, 100);
     click(ed, 100, 100);
-    expect(ed.roads).toHaveLength(2);
-    expect(ed.roads[1]!.nodes).toEqual([{ x: 100, y: 100, th: 0 }]);
-    expect(ed.active).toBe(1);
+    expect(ed.chains).toHaveLength(2);
+    expect(ed.chains[1]!.path.nodes).toMatchObject([{ x: 100, y: 100, th: 0 }]);
+    expect(roadDrawn(ed)).toBe(1);
   });
 });
 
@@ -118,7 +127,7 @@ describe('finishing roads with other inputs (^40)', () => {
   it('finishing a road with one node cancels it', () => {
     const ed = draw([[0, 0]]);
     ed.key('Escape');
-    expect(ed.roads).toEqual([]);
+    expect(ed.chains).toEqual([]);
   });
 
   it('a right click on empty space finishes the road', () => {
@@ -128,7 +137,7 @@ describe('finishing roads with other inputs (^40)', () => {
     ]);
     ed.rightClick(at(80, 80));
     expect(ed.active).toBeNull();
-    expect(ed.roads).toHaveLength(1);
+    expect(ed.chains).toHaveLength(1);
   });
 
   it('clicking the last node again finishes the road, or cancels it if it is the only node', () => {
@@ -138,10 +147,10 @@ describe('finishing roads with other inputs (^40)', () => {
     ]);
     click(ed, 20, -10);
     expect(ed.active).toBeNull();
-    expect(ed.roads[0]!.nodes).toHaveLength(2);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(2);
     const lone = draw([[0, 0]]);
     click(lone, 0, 0);
-    expect(lone.roads).toEqual([]);
+    expect(lone.chains).toEqual([]);
     expect(lone.active).toBeNull();
   });
 
@@ -154,7 +163,7 @@ describe('finishing roads with other inputs (^40)', () => {
     ed.pointerMove(at(30, -12));
     ed.pointerUp();
     expect(last(ed)).toMatchObject({ x: 30, y: -12 });
-    expect(ed.active).toBe(0);
+    expect(roadDrawn(ed)).toBe(0);
   });
 });
 
@@ -170,9 +179,9 @@ describe('editing while drawing (^40)', () => {
     ed.pointerDown(at(20, -10));
     ed.pointerMove(at(22, -16));
     ed.pointerUp();
-    expect(ed.roads[0]!.nodes).toHaveLength(3);
-    expect(ed.roads[0]!.nodes[1]).toMatchObject({ x: 22, y: -16 });
-    expect(ed.active).toBe(0);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(3);
+    expect(ed.chains[0]!.path.nodes[1]).toMatchObject({ x: 22, y: -16 });
+    expect(roadDrawn(ed)).toBe(0);
   });
 });
 
@@ -198,9 +207,9 @@ describe('hover and inserting while drawing (^40)', () => {
     const ed = draw(road());
     const mid = bareCurvePoint(ed);
     click(ed, mid.x, mid.y);
-    expect(ed.roads[0]!.nodes).toHaveLength(4);
-    expect(ed.sel!.road).toBe(0);
-    expect(ed.active).toBe(0);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(4);
+    expect(selAt(ed).road).toBe(0);
+    expect(roadDrawn(ed)).toBe(0);
   });
 });
 
@@ -215,12 +224,12 @@ describe('inserting nodes (^40)', () => {
     const ed = draw(road());
     const mid = bareCurvePoint(ed);
     ed.pointerDown(at(mid.x, mid.y));
-    const node = ed.sel!.node;
-    const before = ed.roads[0]!.nodes[node]!.th;
+    const node = selAt(ed).node;
+    const before = ed.chains[0]!.path.nodes[node]!.th;
     ed.pointerMove(at(mid.x, mid.y + 20));
     ed.pointerUp();
-    expect(ed.roads[0]!.nodes[node]!.th).toBeCloseTo(toRad(90));
-    expect(ed.roads[0]!.nodes[node]!.th).not.toBeCloseTo(before);
+    expect(ed.chains[0]!.path.nodes[node]!.th).toBeCloseTo(toRad(90));
+    expect(ed.chains[0]!.path.nodes[node]!.th).not.toBeCloseTo(before);
   });
 
   it('in select mode a click on a curve selects its two nodes instead of inserting (^74)', () => {
@@ -228,7 +237,7 @@ describe('inserting nodes (^40)', () => {
     ed.key('Escape');
     const mid = bareCurvePoint(ed);
     click(ed, mid.x, mid.y);
-    expect(ed.roads[0]!.nodes).toHaveLength(3);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(3);
     expect(ed.drawing).toBe(false);
     expect(ed.selection).toHaveLength(2);
     click(ed, 100, 100);
@@ -237,8 +246,8 @@ describe('inserting nodes (^40)', () => {
     click(ed, 100, 100);
     expect(ed.drawing).toBe(true);
     click(ed, 100, 100);
-    expect(ed.roads).toHaveLength(2);
-    expect(ed.active).toBe(1);
+    expect(ed.chains).toHaveLength(2);
+    expect(roadDrawn(ed)).toBe(1);
   });
 });
 
@@ -250,8 +259,8 @@ describe('removing and aborting (^40)', () => {
       [40, 0],
     ]);
     ed.rightClick(at(20, -10));
-    expect(ed.roads[0]!.nodes).toHaveLength(2);
-    expect(ed.active).toBe(0);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(2);
+    expect(roadDrawn(ed)).toBe(0);
   });
 });
 
@@ -264,19 +273,19 @@ describe('removing nodes (^40)', () => {
     ed.key('Escape');
     ed.pointerDown(at(20, -10));
     ed.pointerUp();
-    expect(ed.sel).toEqual({ road: 0, node: 1 });
+    expect(ed.sel).toEqual(ed.chains[0]!.nodeIds[1]);
     expect(ed.key('Delete')).toBe(true);
-    expect(ed.roads).toEqual([]);
+    expect(ed.chains).toEqual([]);
     expect(ed.sel).toBeNull();
   });
 
   it('cancelPress undoes what the left button did (a second finger came down)', () => {
     const ed = draw([[0, 0]]);
     ed.pointerDown(at(20, -10));
-    expect(ed.roads[0]!.nodes).toHaveLength(2);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(2);
     ed.cancelPress();
-    expect(ed.roads[0]!.nodes).toHaveLength(1);
-    expect(ed.active).toBe(0);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(1);
+    expect(roadDrawn(ed)).toBe(0);
   });
 
   it('ignores unbound keys', () => {

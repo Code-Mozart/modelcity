@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Snapshot } from './editorTypes';
+import { emptyGraph } from './model/graph';
 import { MAX_STEPS, NO_HISTORY, record, redoStep, undoStep } from './history';
 
-const snap = (n: number): Snapshot => ({ roads: [], active: n, end: 'end', selection: [] });
+const snap = (n: number): Snapshot => ({
+  graph: emptyGraph(),
+  active: n,
+  end: 'end',
+  origin: null,
+  selection: [],
+});
 
 describe('history (^81)', () => {
   it('undoes and redoes steps in order', () => {

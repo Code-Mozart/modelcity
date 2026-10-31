@@ -16,23 +16,23 @@ async function firstArm(app: App) {
 }
 
 async function changeRadius(app: App) {
-  expect((await app.roads())[0]!.radii[1]).toBeNull();
-  const handle = await app.radiusHandle(0, 1);
+  expect((await app.edges())[1]!.radius).toBeNull();
+  const handle = await app.radiusHandle(1);
   await app.drag(handle, { x: handle.x + 2, y: handle.y - 2 });
-  expect((await app.roads())[0]!.radii[1]).not.toBeNull();
+  expect((await app.edges())[1]!.radius).not.toBeNull();
 }
 
 async function moveUndoRedo(app: App) {
   await app.page.keyboard.press('Escape');
   expect((await app.state()).mode).toBe('select');
   await app.drag(B, { x: 25, y: 10 });
-  expect((await app.node(0, 1)).x).toBeCloseTo(25, 0);
+  expect((await app.node(1)).x).toBeCloseTo(25, 0);
   await expect(app.hints()).toContainText('undo');
   await app.page.keyboard.press('Control+z');
-  expect((await app.node(0, 1)).x).toBeCloseTo(20, 0);
+  expect((await app.node(1)).x).toBeCloseTo(20, 0);
   await expect(app.hints()).toContainText('redo');
   await app.page.keyboard.press('Control+y');
-  expect((await app.node(0, 1)).x).toBeCloseTo(25, 0);
+  expect((await app.node(1)).x).toBeCloseTo(25, 0);
 }
 
 async function secondArm(app: App) {
@@ -49,11 +49,12 @@ async function splitAndMerge(app: App) {
   await app.click({ x: 0, y: -60 }); // draw mode
   await app.click({ x: 30, y: -40 }); // curve of the second arm: split
   await app.click(await app.curvePoint({ x: 33, y: 10 })); // curve of the first arm: merge
-  const roads = await app.roads();
-  expect(roads).toHaveLength(3);
-  expect(roads[0]!.nodes).toHaveLength(4);
-  const end = roads[2]!.nodes.at(-1)!;
-  expect(roads[0]!.nodes.some((n) => Math.hypot(n.x - end.x, n.y - end.y) < 1e-6)).toBe(true);
+  // five nodes of the arms, the node of the split, the node of the merge; the merge edge is the last
+  const { nodes, edges } = await app.graph();
+  expect(nodes).toHaveLength(7);
+  expect(edges).toHaveLength(6);
+  const end = nodes.find((n) => n.id === edges.at(-1)!.end)!;
+  expect(Math.hypot(end.x - 32.4, end.y - 11.2)).toBeLessThan(1);
   expect((await app.state()).mode).toBe('select');
 }
 

@@ -1,9 +1,9 @@
 import { samplesAlong } from './curves/arrows';
-import { LANE_WIDTH_M, outlinePx } from './curves/lane';
+import { outlinePx } from './curves/lane';
 import { buildEdge } from './curves/edge';
 import { ARROW_PX } from './curves/handles';
 import type { EdgeRef, Path } from './curves/path';
-import type { NodeRef, RoadHandle } from './curves/roads';
+import type { RoadHandle } from './model/chains';
 import { fromAngle } from './curves/vec';
 import type { Hover } from './editor.svelte';
 import type { Focus } from './focus';
@@ -23,10 +23,17 @@ import type { Band } from './selection';
 import type { Pointer } from './proximity';
 import { activeFlags, arrowShown, withSelectedTogether } from './scaffold';
 
-/** A road and its edges. */
+/** A node of a chain (the index in the chain), where it is drawn. */
+export interface NodeRef {
+  road: number;
+  node: number;
+}
+
+/** A chain of the graph and its edges, with the lane width in meters. */
 export interface RoadScene {
   path: Path;
   edges: EdgeRef[];
+  width: number;
 }
 
 /** Everything the path renderer needs to know about the editor. */
@@ -176,8 +183,6 @@ function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
 const HANDLE_COLOR = (pal: Palette) => ({
   head: pal.orange,
   ctrl: pal.orange,
-  s1: pal.orange,
-  s2: pal.orange,
   mid1: pal.orange,
   mid2: pal.orange,
   rad: pal.orange,
@@ -224,13 +229,13 @@ function shownFlags(scene: Scene): boolean[][] {
  * so that roads that cross or touch merge into one shape.
  */
 function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
-  const width = LANE_WIDTH_M * f.view.scale;
-  const outline = outlinePx(width);
-  const chains = roads.map((r) => r.edges.flatMap((e) => e.E.pieces));
-  for (const pieces of chains) {
-    strokeChain(f, pieces, { color: pal['road-edge'], width: width + 2 * outline });
+  const px = (r: RoadScene) => r.width * f.view.scale;
+  const pieces = (r: RoadScene) => r.edges.flatMap((e) => e.E.pieces);
+  for (const r of roads) {
+    const edge = { color: pal['road-edge'], width: px(r) + 2 * outlinePx(px(r)) };
+    strokeChain(f, pieces(r), edge);
   }
-  for (const pieces of chains) strokeChain(f, pieces, { color: pal.road, width });
+  for (const r of roads) strokeChain(f, pieces(r), { color: pal.road, width: px(r) });
 }
 
 /** Draw all roads with the scaffolds that are needed and the current hover feedback. */

@@ -1,5 +1,6 @@
 import { Editor, type PointerInfo } from '../editor.svelte';
 import { pointOn } from '../curves/piece';
+import { positionOf } from '../model/chains';
 
 /** Helpers for tests of the editor: pointer positions, clicks, roads drawn by clicking. */
 export const at = (x: number, y: number, extra: Partial<PointerInfo> = {}): PointerInfo => ({
@@ -33,7 +34,8 @@ export const draw = (points: [number, number][]) => {
   return ed;
 };
 
-export const last = (ed: Editor, road = 0) => ed.roads[road]!.nodes.at(-1)!;
+/** The last node of chain `road` (a chain is a run of edges, ^106). */
+export const last = (ed: Editor, road = 0) => ed.chains[road]!.path.nodes.at(-1)!;
 
 /** A point on a curve that is not close to any handle (so pressing there inserts, not edits). */
 export const bareCurvePoint = (ed: Editor) => {
@@ -49,3 +51,12 @@ export const bareCurvePoint = (ed: Editor) => {
   if (!bare) throw new Error('no bare point on the curves');
   return bare;
 };
+
+/** The index of the chain the node being drawn from is on, null when nothing is drawn (the old "road being drawn"). */
+export const roadDrawn = (ed: Editor): number | null => {
+  const i = ed.chains.findIndex((c) => ed.active !== null && c.nodeIds.includes(ed.active));
+  return ed.active === null || i < 0 ? null : i;
+};
+
+/** Where the selected node (last of the selection) is: chain and index. */
+export const selAt = (ed: Editor) => positionOf(ed.chains, ed.sel!)!;
