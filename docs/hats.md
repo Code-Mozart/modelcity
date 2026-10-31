@@ -1,4 +1,4 @@
-next: ^145
+next: ^146
 
 # Hats
 
@@ -157,3 +157,4 @@ Milestones in the user's order of priority (user's first draft: many need more c
 | ^94 | decision | decided (snapping); assumed (details) | **Parallel lanes snap (user; removed again in ^124, code in `f694dcd^`):** for roads to run parallel they snap to each other. Assumed: the node snaps to the line one lane width (3 m, `LANE_WIDTH_M`) beside the nearest road, on the pointer's side along that road's normal (the bisector of the two segments at a node), within 14 px of that line, and takes its heading, in the direction the new lane runs (same way as the other lane or opposite, by the movement); applies to placing nodes (with preview) and dragging a single node (not a group or shared node); never to the road itself; no key to switch it off yet. Parallel lanes of a curved road are only approximately parallel, since each edge is fitted between the snapped headings. In `src/lib/curves/snap.ts`. |
 | ^95 | decision | assumed | **Curve reach (^23, ^94; reverted in ^124, 18 px again):** a pointer counts as on a curve within half a lane width, but between 6 and 18 px (was always 18 px), so that the snapping line of a neighboring lane stays reachable when zoomed out. `curveReach` in `editorOps.ts`. |
 | ^96 | doc | assumed | **Glossary and docs of ^22/^23:** terms *Shared node*, *Split*, *Merge*, *Snap* in the README; `docs/controls.md` section "Lanes side by side, splits and merges". Open (for the user): lane markings (rest of ^21), whether the snapping needs a modifier to switch it off, junction rendering and rules (^24), traffic direction constraints at merges. |
+| ^145 | decision | planned (user: maybe) | **End-to-end smoke test (Claude's suggestion, user: maybe):** a small Playwright script that checks things such as the control hints per editor state, and later the performance tests (^122). The user's concern: test code is a maintenance liability; e2e tests are less coupled to the code than unit tests, hence "maybe". Decide after the consolidation work; keep it small if built. |
