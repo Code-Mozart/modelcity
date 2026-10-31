@@ -20,6 +20,8 @@ export interface DragModifiers {
 const CTRL_MIN_DIST = 0.7;
 const SNAP_STEP = toRad(15);
 const RADIUS_SEARCH_STEPS = 160;
+/** Refinement steps after the coarse search of a radius. */
+const RADIUS_REFINE_STEPS = 40;
 
 const edgeAt = (path: Path, i: number) =>
   buildEdge(path.nodes[i]!, path.nodes[i + 1]!, path.radii[i] ?? null, path.shapes[i] ?? null);
@@ -68,21 +70,40 @@ function hookCorner(path: Path, i: number, R: number, which: 1 | 2): Vec | null 
   return which === 1 ? E.k1 : E.k2;
 }
 
+/**
+ * The radius, between the smallest and `Rmax`, at which the point `pointAt(R)` is nearest to `pt`:
+ * a coarse search over the radii (on a log scale), then a refinement around the best one, so that
+ * the radius follows the pointer smoothly instead of in steps. Null if there is no such point.
+ */
+function nearestRadius(Rmax: number, pointAt: (R: number) => Vec | null, pt: Vec): number | null {
+  const cost = (R: number) => {
+    const m = pointAt(R);
+    return m ? dist(m, pt) : Infinity;
+  };
+  const at = (n: number) => RMIN * Math.pow(Rmax / RMIN, n / RADIUS_SEARCH_STEPS);
+  let best = -1;
+  let bd = Infinity;
+  for (let n = 0; n <= RADIUS_SEARCH_STEPS; n++) {
+    const c = cost(at(n));
+    if (c < bd) [bd, best] = [c, n];
+  }
+  if (best < 0) return null;
+  let [lo, hi] = [at(Math.max(best - 1, 0)), at(Math.min(best + 1, RADIUS_SEARCH_STEPS))];
+  for (let k = 0; k < RADIUS_REFINE_STEPS; k++) {
+    const [a1, a2] = [lo + (hi - lo) / 3, hi - (hi - lo) / 3];
+    if (cost(a1) <= cost(a2)) hi = a2;
+    else lo = a1;
+  }
+  const R = (lo + hi) / 2;
+  return cost(R) <= bd ? R : at(best);
+}
+
 /** Dragging a hook's corner point: pick the radius whose corner is nearest to the pointer. */
 function dragHookCorner(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
   const E0 = edgeAt(path, i);
   if (E0.kind !== 'H') return path;
-  let best: number | null = null;
-  let bd = Infinity;
-  for (let n = 0; n <= RADIUS_SEARCH_STEPS; n++) {
-    const R = RMIN * Math.pow(E0.Rmax / RMIN, n / RADIUS_SEARCH_STEPS);
-    const c = hookCorner(path, i, R, which);
-    if (c && dist(c, pt) < bd) {
-      bd = dist(c, pt);
-      best = R;
-    }
-  }
-  return best == null ? path : withRadius(path, i, toRequested(best, E0.Rmax));
+  const R = nearestRadius(E0.Rmax, (r) => hookCorner(path, i, r, which), pt);
+  return R == null ? path : withRadius(path, i, toRequested(R, E0.Rmax));
 }
 
 /**
@@ -128,17 +149,7 @@ function handlePoint(
 function radiusNearest(path: Path, at: { i: number; k: number; t: number }, pt: Vec) {
   const E0 = edgeAt(path, at.i);
   if (E0.kind === 'line') return null;
-  let best: number | null = null;
-  let bd = Infinity;
-  for (let n = 0; n <= RADIUS_SEARCH_STEPS; n++) {
-    const R = RMIN * Math.pow(E0.Rmax / RMIN, n / RADIUS_SEARCH_STEPS);
-    const m = handlePoint(path, at, R, E0.kind);
-    if (m && dist(m, pt) < bd) {
-      bd = dist(m, pt);
-      best = R;
-    }
-  }
-  return best;
+  return nearestRadius(E0.Rmax, (R) => handlePoint(path, at, R, E0.kind), pt);
 }
 
 function dragRadius(path: Path, drag: DragState, pt: Vec): Path {

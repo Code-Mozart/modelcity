@@ -1,5 +1,5 @@
 import { buildEdge, edgeRadius, tagOf, type Edge, type PathNode, type ShapeTag } from './edge';
-import { distanceToPiece, isDegenerate, pointOn, type Sample } from './piece';
+import { distanceToPiece, isDegenerate, nearestParam, pointOn, type Sample } from './piece';
 import { angleOf, dist, sub, type Vec } from './vec';
 
 /**
@@ -114,20 +114,18 @@ export interface CurveHit {
   d: number;
 }
 
-const SAMPLES = 160;
-
-/** The point of the path nearest to `pt` if it is within `maxDist` meters. */
+/**
+ * The point of the path nearest to `pt` if it is within `maxDist` meters. Exact on every piece,
+ * so a point that follows the pointer along the curve moves continuously.
+ */
 export function nearestOnCurve(path: Path, pt: Vec, maxDist: number): CurveHit | null {
   let best: CurveHit | null = null;
   for (const ref of edgesOf(path)) {
     ref.E.pieces.forEach((piece, k) => {
-      // A piece farther than `maxDist` has no sample that near: skip sampling it.
       if (isDegenerate(piece) || distanceToPiece(piece, pt) > maxDist) return;
-      for (let n = 0; n <= SAMPLES; n++) {
-        const at = pointOn(piece, n / SAMPLES);
-        const d = dist(at, pt);
-        if (!best || d < best.d) best = { ref, k, at, d };
-      }
+      const at = pointOn(piece, nearestParam(piece, pt));
+      const d = dist(at, pt);
+      if (!best || d < best.d) best = { ref, k, at, d };
     });
   }
   const hit = best as CurveHit | null;
