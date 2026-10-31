@@ -12,6 +12,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 ## Hats
 
 - `^1`, `^2`, `^3`, ... are unique identifiers for anything: questions, statements, decisions, bugs, images, mocks, demos.
+- Hats are the only ids. Never invent a second id system (letters, numbers or codes for milestones, sets, groups, steps). Anything that must be referred to gets a hat, even if that means registering it first.
 - Format: `/\^\d+/`. Where only alphanumerics are allowed (file names), use `/hat\d+/`.
 - Hats never collide, only ever increment, and are never reused.
 - Claude tracks them in `docs/hats.md`. That file must ALWAYS be up to date. Its first line states the next hat, e.g. `next: ^123`.
