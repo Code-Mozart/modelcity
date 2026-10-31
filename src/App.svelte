@@ -5,9 +5,11 @@
   import Hints from './lib/Hints.svelte';
   import { hintsFor } from './lib/hints';
   import MapCanvas from './lib/MapCanvas.svelte';
+  import { installTestHook } from './lib/testHook';
 
   const editor = new Editor();
   const camera = new Camera();
+  installTestHook(editor, camera, () => document.querySelector('canvas'));
   const hints = $derived(
     hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
       undo: editor.canUndo,
