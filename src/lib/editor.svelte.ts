@@ -1,9 +1,6 @@
 import { closeOver } from './curves/junctions';
-import { hitHandle, NODE_HIT_PX } from './curves/handles';
 import {
   edgesOfRoads,
-  nearestOnRoads,
-  nearNode,
   removeNodesFrom,
   removeRoad,
   roadHandles,
@@ -24,8 +21,8 @@ import {
   splitAt,
 } from './editorOps';
 import { skeletonAnchors } from './skeletonAnchors';
-import type { Focus } from './focus';
-import { cursorOf, extendTo, mergePreview, previewOf, targetOf, type Drawn } from './editorTargets';
+import { focusOf, handleAt, curveAt, hoverAt } from './editorHits';
+import { cursorOf, extendTo, mergePreview, targetOf, type Drawn } from './editorTargets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { NO_HISTORY, record, redoStep, undoStep } from './history';
 import type { Pointer } from './proximity';
@@ -81,20 +78,9 @@ export class Editor {
   anchors = $derived(skeletonAnchors(this.roads, this.edges));
   cursor = $derived(cursorOf(this.hover, this.drawing));
   /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
-  focus = $derived(this.currentFocus());
+  focus = $derived(focusOf(this.press, this.hover));
   /** What the control hints are about (^49). */
   hintTarget = $derived(this.press?.target ?? targetOf(this.drawn, this.hover, this.drawing));
-
-  private currentFocus(): Focus | null {
-    const press = this.press;
-    if (press?.kind === 'drag') {
-      const { type, i, k, t } = press.drag.handle;
-      return { road: press.road, type, i, k, t };
-    }
-    if (press?.kind === 'place') return { road: press.ref.road, type: 'node', i: press.ref.node };
-    const h = this.hover?.kind === 'handle' ? this.hover.handle : null;
-    return h ? { road: h.road, type: h.type, i: h.i, k: h.k, t: h.t } : null;
-  }
 
   private get drawn(): Drawn {
     return { roads: this.roads, active: this.active, end: this.end, selection: this.selection };
@@ -106,16 +92,6 @@ export class Editor {
 
   private snapshot(): Snapshot {
     return { roads: this.roads, active: this.active, end: this.end, selection: this.selection };
-  }
-
-  private handleAt({ pt, scale, touch }: PointerInfo): RoadHandle | null {
-    return hitHandle(this.handles(scale), pt, scale, touch);
-  }
-
-  /** The curve under the pointer, as near as a node is, but not within a node's gap (^137). */
-  private curveAt({ pt, scale, touch }: PointerInfo): RoadHit | null {
-    const hit = nearestOnRoads(this.roads, pt, NODE_HIT_PX[touch ? 'touch' : 'mouse'] / scale);
-    return hit && !nearNode(hit) ? hit : null;
   }
 
   /** Handle a key; true if it was bound. */
@@ -185,13 +161,13 @@ export class Editor {
   pointerDown(info: PointerInfo) {
     this.hover = null;
     this.pointer = { pt: info.pt, scale: info.scale };
-    const handle = this.handleAt(info);
+    const handle = handleAt(this.roads, this.edges, info);
     if (handle) return this.grab(handle, info);
     if (!this.drawing) {
-      this.press = emptyPress(this.drawn, info, this.curveAt(info));
+      this.press = emptyPress(this.drawn, info, curveAt(this.roads, info));
       return;
     }
-    const hit = this.curveAt(info);
+    const hit = curveAt(this.roads, info);
     if (hit) this.onCurve(hit);
     else this.place(info);
   }
@@ -232,7 +208,7 @@ export class Editor {
   pointerMove(info: PointerInfo) {
     this.pointer = { pt: info.pt, scale: info.scale };
     const press = this.press;
-    if (!press) this.hover = this.hoverAt(info);
+    if (!press) this.hover = hoverAt(this.drawn, this.edges, info, this.drawing);
     else if (press.kind === 'drag') this.moveDrag(press, info);
     else if (press.kind === 'place') this.moveHeading(press, info);
     else this.moveBand(press, info);
@@ -274,14 +250,6 @@ export class Editor {
     this.band = { a: press.screen, b: info.screen };
     const inside = nodesInBand(this.roads, this.band, info.project);
     this.selection = withNodes(press.base, inside);
-  }
-
-  private hoverAt(info: PointerInfo): Hover | null {
-    const handle = this.handleAt(info);
-    if (handle) return { kind: 'handle', handle };
-    const hit = this.curveAt(info);
-    if (hit) return { kind: 'candidate', hit };
-    return this.drawing ? previewOf(this.drawn, placementAt(info.pt)) : null;
   }
 
   private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
@@ -349,7 +317,7 @@ export class Editor {
 
   /** Right click without moving: removes the node under the pointer, else finishes the road. */
   rightClick(info: PointerInfo) {
-    const handle = this.handleAt(info);
+    const handle = handleAt(this.roads, this.edges, info);
     if (handle?.type === 'node') this.removeAll([{ road: handle.road, node: handle.i }]);
     else this.finishRoad();
   }
