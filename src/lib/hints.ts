@@ -52,8 +52,8 @@ const DRAG_TEXT: Record<HandleType, string> = {
   ctrl: 'bend curve',
   s1: 'change radius',
   s2: 'change radius',
-  mid1: 'move middle line',
-  mid2: 'move middle line',
+  mid1: 'turn heading',
+  mid2: 'turn heading',
   rad: 'change radius',
 };
 

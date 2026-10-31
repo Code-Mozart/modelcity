@@ -1,4 +1,4 @@
-import { buildEdge, edgeRadius, tagOf, type Edge, type PathNode, type ShapeTag } from './edge';
+import { buildEdge, edgeRadius, type Edge, type PathNode } from './edge';
 import { distanceToPiece, isDegenerate, nearestParam, pointOn, type Sample } from './piece';
 import { angleOf, dist, sub, type Vec } from './vec';
 
@@ -9,7 +9,6 @@ import { angleOf, dist, sub, type Vec } from './vec';
 export interface Path {
   nodes: PathNode[];
   radii: (number | null)[];
-  shapes: (ShapeTag | null)[];
 }
 
 export interface EdgeRef {
@@ -19,7 +18,7 @@ export interface EdgeRef {
   E: Edge;
 }
 
-export const emptyPath = (): Path => ({ nodes: [], radii: [], shapes: [] });
+export const emptyPath = (): Path => ({ nodes: [], radii: [] });
 
 const edgeCache = new WeakMap<Path, EdgeRef[]>();
 
@@ -40,44 +39,22 @@ function buildEdges(path: Path): EdgeRef[] {
   for (let i = 0; i < path.nodes.length - 1; i++) {
     const p = path.nodes[i]!;
     const q = path.nodes[i + 1]!;
-    out.push({ i, p, q, E: buildEdge(p, q, path.radii[i] ?? null, path.shapes[i] ?? null) });
+    out.push({ i, p, q, E: buildEdge(p, q, path.radii[i] ?? null) });
   }
   return out;
 }
 
-/** Replace `count` entries at `at` in each of the parallel edge arrays. */
-interface EdgeData {
-  radii: (number | null)[];
-  shapes: (ShapeTag | null)[];
-}
-const NONE: EdgeData = { radii: [], shapes: [] };
-const FRESH: EdgeData = { radii: [null], shapes: [null] };
-
-const spliceEdges = (path: Path, at: number, count: number, add: EdgeData): EdgeData => ({
-  radii: path.radii.toSpliced(at, count, ...add.radii),
-  shapes: path.shapes.toSpliced(at, count, ...add.shapes),
+/** Replace `count` radii at `at`. */
+const spliceEdges = (path: Path, at: number, count: number, ...add: (number | null)[]) => ({
+  radii: path.radii.toSpliced(at, count, ...add),
 });
 
 export function withNode(path: Path, i: number, patch: Partial<PathNode>): Path {
   return { ...path, nodes: path.nodes.map((n, j) => (j === i ? { ...n, ...patch } : n)) };
 }
 
-/** Clear stored shape tags of the given edges (a heading changed, ^7). */
-export function clearShapes(path: Path, edges: number[]): Path {
-  const shapes = path.shapes.map((s, i) => (edges.includes(i) ? null : s));
-  return { ...path, shapes };
-}
-
 export function withRadius(path: Path, i: number, R: number | null): Path {
   return { ...path, radii: path.radii.map((r, j) => (j === i ? R : r)) };
-}
-
-/** Drop the fixed middle line of S-curves around a moved node, keeping the S shape (^7). */
-export function releaseMiddles(path: Path, edges: number[]): Path {
-  const shapes = path.shapes.map((s, i) =>
-    s && s.kind === 'S' && s.mid && edges.includes(i) ? { kind: 'S' as const, s: s.s } : s,
-  );
-  return { ...path, shapes };
 }
 
 /* ---------- append ---------- */
@@ -92,7 +69,7 @@ export const autoHeadingBefore = (next: PathNode, pt: Vec) => 2 * angleOf(sub(ne
 export function prependNode(path: Path, pt: Vec): { path: Path; sel: number } {
   const { nodes } = path;
   const th = nodes.length ? autoHeadingBefore(nodes[0]!, pt) : 0;
-  const added = spliceEdges(path, 0, 0, nodes.length ? FRESH : NONE);
+  const added = spliceEdges(path, 0, 0, ...(nodes.length ? [null] : []));
   return { path: { nodes: [{ x: pt.x, y: pt.y, th }, ...nodes], ...added }, sel: 0 };
 }
 
@@ -100,7 +77,7 @@ export function prependNode(path: Path, pt: Vec): { path: Path; sel: number } {
 export function appendNode(path: Path, pt: Vec): { path: Path; sel: number } {
   const { nodes } = path;
   const th = nodes.length ? autoHeading(nodes[nodes.length - 1]!, pt) : 0;
-  const added = spliceEdges(path, path.radii.length, 0, nodes.length ? FRESH : NONE);
+  const added = spliceEdges(path, path.radii.length, 0, ...(nodes.length ? [null] : []));
   return { path: { nodes: [...nodes, { x: pt.x, y: pt.y, th }], ...added }, sel: nodes.length };
 }
 
@@ -132,27 +109,13 @@ export function nearestOnCurve(path: Path, pt: Vec, maxDist: number): CurveHit |
   return hit && hit.d < maxDist ? hit : null;
 }
 
-type Tags = [ShapeTag | null, ShapeTag | null];
-
-/** Shape tags for the two halves of an edge split inside piece k, so the curve stays the same. */
-function halfTags(E: Edge, k: number): Tags {
-  const bend: ShapeTag = { kind: 'C' };
-  const own = tagOf(E);
-  if (E.kind === 'C') return [k === 0 ? null : bend, k === 2 ? null : bend];
-  if (E.kind === 'S') {
-    return [[null, bend, bend, own, own][k] ?? null, [own, own, bend, bend, null][k] ?? null];
-  }
-  if (E.kind === 'H') return [[bend, bend, own][k] ?? null, [own, bend, bend][k] ?? null];
-  return [null, null];
-}
-
-/** Insert a node on the curve; both halves keep radius and shape, so the curve does not change (^10). */
+/** Insert a node on the curve; both halves keep the radius (^10). */
 export function insertNode(path: Path, hit: CurveHit): { path: Path; sel: number } {
-  const { ref, k, at } = hit;
+  const { ref, at } = hit;
   const R = edgeRadius(ref.E);
   const node = { x: at.x, y: at.y, th: Math.atan2(at.ty, at.tx) };
   const nodes = path.nodes.toSpliced(ref.i + 1, 0, node);
-  const e = spliceEdges(path, ref.i, 1, { radii: [R, R], shapes: halfTags(ref.E, k) });
+  const e = spliceEdges(path, ref.i, 1, R, R);
   return { path: { nodes, ...e }, sel: ref.i + 1 };
 }
 
@@ -163,7 +126,7 @@ export function removeNode(path: Path, i: number): Path {
   if (i < 0 || i >= n) return path;
   const nodes = path.nodes.toSpliced(i, 1);
   if (n === 1) return emptyPath();
-  if (i === 0) return { nodes, ...spliceEdges(path, 0, 1, NONE) };
-  if (i === n - 1) return { nodes, ...spliceEdges(path, n - 2, 1, NONE) };
-  return { nodes, ...spliceEdges(path, i - 1, 2, FRESH) };
+  if (i === 0) return { nodes, ...spliceEdges(path, 0, 1) };
+  if (i === n - 1) return { nodes, ...spliceEdges(path, n - 2, 1) };
+  return { nodes, ...spliceEdges(path, i - 1, 2, null) };
 }

@@ -6,7 +6,7 @@ describe('roads (^40)', () => {
   it('starts a road with one node heading east', () => {
     const r = startRoad([fixture('G')], { x: 5, y: 6 });
     expect(r.road).toBe(1);
-    expect(r.roads[1]).toEqual({ nodes: [{ x: 5, y: 6, th: 0 }], radii: [], shapes: [] });
+    expect(r.roads[1]).toEqual({ nodes: [{ x: 5, y: 6, th: 0 }], radii: [] });
   });
 
   it('tags handles with their road', () => {

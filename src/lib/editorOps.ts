@@ -1,6 +1,6 @@
 import { applyDrag, dragHeading } from './curves/drag';
 import { closeOver, syncHeadings } from './curves/junctions';
-import { appendNode, insertNode, prependNode, withNode, clearShapes } from './curves/path';
+import { appendNode, insertNode, prependNode, withNode } from './curves/path';
 import {
   moveNodes,
   replaceRoad,
@@ -19,7 +19,7 @@ export const placementAt = (pt: Vec): Placement => ({ pt, th: null });
 
 const withHeading = (roads: Roads, ref: NodeRef, th: number | null): Roads => {
   if (th === null) return roads;
-  const path = clearShapes(withNode(roads[ref.road]!, ref.node, { th }), [ref.node - 1, ref.node]);
+  const path = withNode(roads[ref.road]!, ref.node, { th });
   return replaceRoad(roads, ref.road, path);
 };
 
