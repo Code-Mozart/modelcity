@@ -1,8 +1,10 @@
 import { autoHeading, autoHeadingBefore } from './curves/path';
-import { removeRoad, type NodeRef, type RoadHandle, type Roads } from './curves/roads';
-import type { Vec } from './curves/vec';
-import { curveNodes, isSelected, pickedCount } from './selection';
-import type { Hover } from './editorTypes';
+import type { NodeRef, RoadHandle, RoadHit, Roads } from './curves/roads';
+import { activeEnd, curveAction, nodeAction } from './curves/junctions';
+import type { PathNode } from './curves/types';
+import { allSelected, curveNodes, isSelected, pickedCount } from './selection';
+import { branchOfEdge, branchOfNode } from './curves/branches';
+import type { Hover, Placement } from './editorTypes';
 import type { HintTarget } from './hints';
 
 /** The road being drawn and the end new nodes attach to (^65). */
@@ -13,52 +15,44 @@ export interface Drawn {
   selection: NodeRef[];
 }
 
-/** The node of the road being drawn that new nodes attach to (clicking it finishes the road). */
-export function isActiveEnd({ roads, active, end }: Drawn, handle: RoadHandle): boolean {
-  const nodes = roads[handle.road]?.nodes ?? [];
-  if (handle.type !== 'node' || handle.road !== active) return false;
-  return nodes.length === 1 || handle.i === (end === 'end' ? nodes.length - 1 : 0);
+function handleTarget(drawn: Drawn, handle: RoadHandle, drawing: boolean): HintTarget {
+  const { selection, roads } = drawn;
+  const ref = { road: handle.road, node: handle.i };
+  const node = handle.type === 'node';
+  return {
+    kind: 'handle',
+    type: handle.type,
+    act: node && drawing ? nodeAction(drawn, ref) : null,
+    selected: isSelected(selection, ref),
+    lane: node && !drawing && allSelected(selection, branchOfNode(roads, ref)),
+  };
 }
 
-/** A node at either end of its road: drawing can extend the road from it (^65). */
-export function isLeaf(roads: Roads, handle: RoadHandle): boolean {
-  const nodes = roads[handle.road]?.nodes ?? [];
-  return handle.type === 'node' && (handle.i === 0 || handle.i === nodes.length - 1);
+function curveTarget(drawn: Drawn, hit: RoadHit, drawing: boolean): HintTarget {
+  const { selection, roads } = drawn;
+  const { road, ref } = hit;
+  return {
+    kind: 'curve',
+    picked: pickedCount(selection, curveNodes(road, ref.i)),
+    act: drawing ? curveAction(drawn, road) : null,
+    lane: !drawing && allSelected(selection, branchOfEdge(roads, { road, i: ref.i })),
+  };
 }
 
 /** What the control hints are about (^49). */
-export function targetOf(drawn: Drawn, hover: Hover | null): HintTarget {
-  const { selection } = drawn;
-  if (hover?.kind === 'handle') {
-    const { handle } = hover;
-    return {
-      kind: 'handle',
-      type: handle.type,
-      last: isActiveEnd(drawn, handle),
-      leaf: isLeaf(drawn.roads, handle),
-      selected: isSelected(selection, { road: handle.road, node: handle.i }),
-    };
-  }
-  if (hover?.kind !== 'candidate') return { kind: 'empty' };
-  const { road, ref } = hover.hit;
-  return { kind: 'curve', picked: pickedCount(selection, curveNodes(road, ref.i)) };
+export function targetOf(drawn: Drawn, hover: Hover | null, drawing: boolean): HintTarget {
+  if (hover?.kind === 'handle') return handleTarget(drawn, hover.handle, drawing);
+  return hover?.kind === 'candidate' ? curveTarget(drawn, hover.hit, drawing) : { kind: 'empty' };
 }
 
 /**
- * Make a leaf node the one the next node attaches to (^65): the road it belongs to becomes the
- * road being drawn, at that end. A road being drawn with one node only is dropped, since a road
- * needs two.
+ * Make an end node of the road being drawn, or of any road when none is, the one the next node
+ * attaches to (^65): the road becomes the road being drawn, at that end.
  */
-const nodeCount = (roads: Roads, road: number) => roads[road]?.nodes.length ?? 0;
-
 export function extendTo(drawn: Drawn, ref: NodeRef): Drawn {
-  const { roads, active } = drawn;
-  const lone = active !== null && active !== ref.road && nodeCount(roads, active) < 2;
-  const kept = lone ? removeRoad(roads, active, active).roads : roads;
-  const road = lone && active < ref.road ? ref.road - 1 : ref.road;
-  const backwards = ref.node === 0 && nodeCount(kept, road) > 1;
-  const end = backwards ? 'start' : 'end';
-  return { roads: kept, active: road, end, selection: [{ road, node: ref.node }] };
+  const nodes = drawn.roads[ref.road]?.nodes.length ?? 0;
+  const end = ref.node === 0 && nodes > 1 ? 'start' : 'end';
+  return { ...drawn, active: ref.road, end, selection: [ref] };
 }
 
 export function cursorOf(hover: Hover | null, drawing: boolean): string {
@@ -67,10 +61,36 @@ export function cursorOf(hover: Hover | null, drawing: boolean): string {
   return drawing ? 'crosshair' : 'default';
 }
 
+/** The node, or point on a curve with its heading, that a click would merge the road into (^123). */
+function mergeTarget(d: Drawn, hover: Hover): PathNode | null {
+  if (hover.kind === 'handle' && hover.handle.type === 'node') {
+    const ref = { road: hover.handle.road, node: hover.handle.i };
+    return nodeAction(d, ref) === 'merge' ? d.roads[ref.road]!.nodes[ref.node]! : null;
+  }
+  if (hover.kind !== 'candidate' || curveAction(d, hover.hit.road) !== 'merge') return null;
+  const { at } = hover.hit;
+  return { x: at.x, y: at.y, th: Math.atan2(at.ty, at.tx) };
+}
+
+/**
+ * The preview of the curve a merge would add: from the node being drawn from to the target under
+ * the pointer (^123, ^125).
+ */
+export function mergePreview(
+  d: Drawn,
+  hover: Hover | null,
+): Extract<Hover, { kind: 'preview' }> | null {
+  const end = activeEnd(d);
+  const from = end && d.roads[end.road]?.nodes[end.node];
+  const node = from && hover ? mergeTarget(d, hover) : null;
+  return from && node ? { kind: 'preview', ref: from, end: d.end, node } : null;
+}
+
 /** The preview of the node a click would add: where, its heading, and the node it attaches to. */
-export function previewOf({ roads, active, end }: Drawn, pt: Vec): Hover {
+export function previewOf({ roads, active, end }: Drawn, at: Placement): Hover {
   const nodes = active === null ? undefined : roads[active]?.nodes;
   const ref = (end === 'end' ? nodes?.[nodes.length - 1] : nodes?.[0]) ?? null;
   const heading = end === 'end' ? autoHeading : autoHeadingBefore;
-  return { kind: 'preview', ref, end, node: { x: pt.x, y: pt.y, th: ref ? heading(ref, pt) : 0 } };
+  const th = at.th ?? (ref ? heading(ref, at.pt) : 0);
+  return { kind: 'preview', ref, end, node: { x: at.pt.x, y: at.pt.y, th } };
 }

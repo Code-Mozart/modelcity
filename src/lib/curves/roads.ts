@@ -9,7 +9,8 @@ import {
   type Path,
 } from './path';
 import { handlesOf, type Handle } from './handles';
-import type { Vec } from './vec';
+import { RMIN } from './radius';
+import { dist, type Vec } from './vec';
 
 /**
  * The document is a list of independent roads, each one a chain of nodes like the demo's path
@@ -58,6 +59,15 @@ export function nearestOnRoads(roads: Roads, pt: Vec, maxDist: number): RoadHit 
   });
   return best;
 }
+
+/**
+ * Closer than this (meters) to a node, a point on a curve is not a place for a new node (^137): the
+ * smallest radius (a shorter edge could not be curved).
+ */
+export const MIN_NODE_GAP_M = RMIN;
+
+export const nearNode = (hit: RoadHit) =>
+  dist(hit.at, hit.ref.p) < MIN_NODE_GAP_M || dist(hit.at, hit.ref.q) < MIN_NODE_GAP_M;
 
 /** Remove a whole road; `active` and indices above it shift down. */
 export function removeRoad(roads: Roads, road: number, active: number | null) {

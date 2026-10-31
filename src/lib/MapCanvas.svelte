@@ -37,9 +37,10 @@
       selection: editor.selection,
       band: editor.band,
       drawing: editor.drawing,
-      extra: editor.extraScaffold,
+      selectedSegments: editor.selectedSegments,
       hideScaffold: editor.movingGroup,
       hover: editor.hover,
+      mergePreview: editor.mergePreview,
       focus: editor.focus,
       pointer: editor.pointer,
     };
@@ -134,7 +135,6 @@
   onpointerleave={() => editor.pointerLeave()}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
   oncontextmenu={(e) => e.preventDefault()}
-  ondblclick={(e) => editor.resetRadiusAt(info(e))}
 ></canvas>
 
 <style>

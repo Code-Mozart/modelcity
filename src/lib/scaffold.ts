@@ -56,7 +56,7 @@ const closest = (list: Scores[], by: (s: Scores) => number): Scores | undefined 
 
 /**
  * The segment of the hovered or dragged handle. An orange or yellow point belongs to one
- * segment; a node or heading tip to two, then the one whose curve is closer to the pointer
+ * segment; a node or heading control point to two, then the one whose curve is closer to the pointer
  * (without a pointer, the one that starts at the node).
  */
 function focusedSegment(input: ScaffoldInput): SegmentRef | null {
@@ -95,6 +95,20 @@ export function activeFlags(input: ScaffoldInput): boolean[][] {
   const active = activeSegment(input);
   return input.roads.map((r, road) =>
     r.edges.map((e) => active?.road === road && active.edge === e.i),
+  );
+}
+
+/**
+ * With several segments selected (both their nodes), they show their scaffold all together or not
+ * at all: all of them when the segment that shows it is one of them (^133).
+ */
+export function withSelectedTogether(
+  flags: boolean[][],
+  selected: { road: number; i: number }[],
+): boolean[][] {
+  if (selected.length < 2 || !selected.some((s) => flags[s.road]?.[s.i])) return flags;
+  return flags.map((row, road) =>
+    row.map((on, i) => on || selected.some((s) => s.road === road && s.i === i)),
   );
 }
 

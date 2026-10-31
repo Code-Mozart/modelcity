@@ -282,16 +282,4 @@ describe('removing nodes (^40)', () => {
   it('ignores unbound keys', () => {
     expect(new Editor().key('q')).toBe(false);
   });
-
-  it('resets an explicit radius to auto on double-click of its ring', () => {
-    const ed = draw([
-      [0, 0],
-      [30, -20],
-    ]);
-    ed.key('Escape');
-    ed.roads = [{ ...ed.roads[0]!, radii: [3] }];
-    const ring = ed.handles(4).find((h) => h.type === 'rad')!;
-    ed.resetRadiusAt(at(ring.x, ring.y));
-    expect(ed.roads[0]!.radii[0]).toBeNull();
-  });
 });

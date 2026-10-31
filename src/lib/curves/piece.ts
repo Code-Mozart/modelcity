@@ -53,6 +53,19 @@ export function pointOn(piece: Piece, t: number): Sample {
 export const pieceLength = (p: Piece) =>
   p.type === 'line' ? dist(p.P, p.Q) : p.r * Math.abs(p.da);
 
+/** The parameter t in [0, 1] of the point of a piece nearest to `p` (exact, not sampled). */
+export function nearestParam(piece: Piece, p: Vec): number {
+  if (piece.type === 'line') {
+    const d = sub(piece.Q, piece.P);
+    const l2 = dot(d, d);
+    return l2 > 0 ? Math.max(0, Math.min(1, dot(sub(p, piece.P), d) / l2)) : 0;
+  }
+  const sweep = Math.abs(piece.da);
+  const along = mod(Math.sign(piece.da) * (angleOf(sub(p, piece.c)) - piece.a0), TAU);
+  if (along <= sweep) return along / sweep;
+  return dist(p, piece.P) <= dist(p, piece.Q) ? 0 : 1;
+}
+
 /** Distance from a point to the nearest point of a piece (exact, not sampled). */
 export function distanceToPiece(piece: Piece, p: Vec): number {
   if (piece.type === 'line') {

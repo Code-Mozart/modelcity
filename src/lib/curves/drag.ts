@@ -3,7 +3,8 @@ import type { Handle } from './handles';
 import { clearShapes, releaseMiddles, withNode, withRadius, type Path } from './path';
 import { pointOn, sweeps } from './piece';
 import { AUTO_SNAP, RMIN } from './radius';
-import { angleOf, dist, dot, len, mul, sub, toRad, type Vec } from './vec';
+import { reverseEdge } from './reverse';
+import { add, angleOf, dist, dot, len, mul, sub, toRad, type Vec } from './vec';
 
 /** Drag state captured when a handle is grabbed. */
 export interface DragState {
@@ -19,6 +20,8 @@ export interface DragModifiers {
 const CTRL_MIN_DIST = 0.7;
 const SNAP_STEP = toRad(15);
 const RADIUS_SEARCH_STEPS = 160;
+/** Refinement steps after the coarse search of a radius. */
+const RADIUS_REFINE_STEPS = 40;
 
 const edgeAt = (path: Path, i: number) =>
   buildEdge(path.nodes[i]!, path.nodes[i + 1]!, path.radii[i] ?? null, path.shapes[i] ?? null);
@@ -60,74 +63,101 @@ function dragCorner(path: Path, i: number, C: Vec): Path {
   return clearShapes(moved, [i - 1, i, i + 1]);
 }
 
-/** The yellow corner (1 or 2) of the hook the nodes form at radius R, if it is still a hook. */
+/** The corner (1 or 2) of the hook the nodes form at radius R, if it is still a hook. */
 function hookCorner(path: Path, i: number, R: number, which: 1 | 2): Vec | null {
   const E = buildEdge(path.nodes[i]!, path.nodes[i + 1]!, R, path.shapes[i] ?? null);
   if (E.kind !== 'H') return null;
   return which === 1 ? E.k1 : E.k2;
 }
 
-/** Dragging a hook's yellow point: pick the radius whose corner is nearest to the pointer. */
+/**
+ * The radius, between the smallest and `Rmax`, at which the point `pointAt(R)` is nearest to `pt`:
+ * a coarse search over the radii (on a log scale), then a refinement around the best one, so that
+ * the radius follows the pointer smoothly instead of in steps. Null if there is no such point.
+ */
+function nearestRadius(Rmax: number, pointAt: (R: number) => Vec | null, pt: Vec): number | null {
+  const cost = (R: number) => {
+    const m = pointAt(R);
+    return m ? dist(m, pt) : Infinity;
+  };
+  const at = (n: number) => RMIN * Math.pow(Rmax / RMIN, n / RADIUS_SEARCH_STEPS);
+  let best = -1;
+  let bd = Infinity;
+  for (let n = 0; n <= RADIUS_SEARCH_STEPS; n++) {
+    const c = cost(at(n));
+    if (c < bd) [bd, best] = [c, n];
+  }
+  if (best < 0) return null;
+  let [lo, hi] = [at(Math.max(best - 1, 0)), at(Math.min(best + 1, RADIUS_SEARCH_STEPS))];
+  for (let k = 0; k < RADIUS_REFINE_STEPS; k++) {
+    const [a1, a2] = [lo + (hi - lo) / 3, hi - (hi - lo) / 3];
+    if (cost(a1) <= cost(a2)) hi = a2;
+    else lo = a1;
+  }
+  const R = (lo + hi) / 2;
+  return cost(R) <= bd ? R : at(best);
+}
+
+/** Dragging a hook's corner point: pick the radius whose corner is nearest to the pointer. */
 function dragHookCorner(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
   const E0 = edgeAt(path, i);
   if (E0.kind !== 'H') return path;
-  let best: number | null = null;
-  let bd = Infinity;
-  for (let n = 0; n <= RADIUS_SEARCH_STEPS; n++) {
-    const R = RMIN * Math.pow(E0.Rmax / RMIN, n / RADIUS_SEARCH_STEPS);
-    const c = hookCorner(path, i, R, which);
-    if (c && dist(c, pt) < bd) {
-      bd = dist(c, pt);
-      best = R;
-    }
-  }
-  return best == null ? path : withRadius(path, i, toRequested(best, E0.Rmax));
+  const R = nearestRadius(E0.Rmax, (r) => hookCorner(path, i, r, which), pt);
+  return R == null ? path : withRadius(path, i, toRequested(R, E0.Rmax));
 }
 
-/** The midpoint of arc k of edge i when the edge has radius R, if it is still an arc of the same kind. */
-function arcMidpoint(
+/**
+ * Dragging a corner of an S-curve, where a heading line meets its middle line (^132): the corner
+ * slides along the middle line, which stays where it is (it is stored in the shape tag from now
+ * on), and the node's heading turns so that its heading line passes through the corner. Ignored if
+ * that would not be an S-curve any more.
+ */
+function dragMiddle(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
+  const E = edgeAt(path, i);
+  if (E.kind !== 'S' || !E.mid) return path;
+  const M = E.mid;
+  const u = { x: M.ux, y: M.uy };
+  const k = add(M, mul(u, dot(sub(pt, M), u)));
+  const at = which === 1 ? i : i + 1;
+  const node = path.nodes[at]!;
+  const th = which === 1 ? angleOf(sub(k, node)) : angleOf(sub(node, k));
+  const turned = clearShapes(withNode(path, at, { th }), [at - 1, at]);
+  const shapes = turned.shapes.map((s, j) =>
+    j === i ? { kind: 'S' as const, s: E.s1, mid: M } : s,
+  );
+  const next = { ...turned, shapes };
+  const [p, q] = [next.nodes[i]!, next.nodes[i + 1]!];
+  return reverseEdge({ p, q, Rs: next.radii[i] ?? null }, E.s1, M) ? next : path;
+}
+
+/** Where the radius handle sits on arc k of edge i when the edge has radius R, if it is still an arc of that kind. */
+function handlePoint(
   path: Path,
-  at: { i: number; k: number },
+  at: { i: number; k: number; t: number },
   R: number,
   kind: Edge['kind'],
 ): Vec | null {
   const E = buildEdge(path.nodes[at.i]!, path.nodes[at.i + 1]!, R, path.shapes[at.i] ?? null);
   const piece = E.kind === kind ? E.pieces[at.k] : undefined;
-  return piece && sweeps(piece) ? pointOn(piece, 0.5) : null;
+  return piece && sweeps(piece) ? pointOn(piece, at.t) : null;
 }
 
 /**
- * The radius at which the arc's midpoint (where the orange ring sits) is nearest to the pointer,
- * so the ring follows the cursor whichever way the geometry moves it (^17).
+ * The radius at which the handle (an end or the middle of an arc, ^128) is nearest to the pointer,
+ * so the handle follows the cursor whichever way the geometry moves it (^17).
  */
-function radiusNearest(path: Path, at: { i: number; k: number }, pt: Vec): number | null {
+function radiusNearest(path: Path, at: { i: number; k: number; t: number }, pt: Vec) {
   const E0 = edgeAt(path, at.i);
   if (E0.kind === 'line') return null;
-  let best: number | null = null;
-  let bd = Infinity;
-  for (let n = 0; n <= RADIUS_SEARCH_STEPS; n++) {
-    const R = RMIN * Math.pow(E0.Rmax / RMIN, n / RADIUS_SEARCH_STEPS);
-    const m = arcMidpoint(path, at, R, E0.kind);
-    if (m && dist(m, pt) < bd) {
-      bd = dist(m, pt);
-      best = R;
-    }
-  }
-  return best;
+  return nearestRadius(E0.Rmax, (R) => handlePoint(path, at, R, E0.kind), pt);
 }
 
 function dragRadius(path: Path, drag: DragState, pt: Vec): Path {
-  const { i, k = -1 } = drag.handle;
+  const { i, k = 0, t = 0.5 } = drag.handle;
   const E = edgeAt(path, i);
-  if (E.kind === 'line') return path;
-  if (k === -1) {
-    if (E.kind !== 'C') return path;
-    const R = radiusFromCursor(E, pt);
-    return withRadius(path, i, R >= AUTO_SNAP * E.Rmax ? null : Math.max(R, RMIN));
-  }
-  const R = radiusNearest(path, { i, k }, pt);
-  if (R == null) return path;
-  return withRadius(path, i, E.kind === 'S' ? toRequested(R, E.Rmax) : R);
+  const R = E.kind === 'line' ? null : radiusNearest(path, { i, k, t }, pt);
+  if (R == null || E.kind === 'line') return path;
+  return withRadius(path, i, toRequested(R, E.Rmax));
 }
 
 /** The path after dragging the grabbed handle to `pt`. Headings never change when radii do (^8). */
@@ -144,10 +174,11 @@ export function applyDrag(path: Path, drag: DragState, pt: Vec, mod: DragModifie
       return dragHookCorner(path, i, 1, pt);
     case 's2':
       return dragHookCorner(path, i, 2, pt);
+    case 'mid1':
+      return dragMiddle(path, i, 1, pt);
+    case 'mid2':
+      return dragMiddle(path, i, 2, pt);
     case 'rad':
       return dragRadius(path, drag, pt);
   }
 }
-
-/** Radius back to auto: the largest that fits (^8). */
-export const resetRadius = (path: Path, i: number): Path => withRadius(path, i, null);

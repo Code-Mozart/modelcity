@@ -1,5 +1,5 @@
 import { buildEdge, edgeRadius, tagOf, type Edge, type PathNode, type ShapeTag } from './edge';
-import { isDegenerate, pointOn, type Sample } from './piece';
+import { distanceToPiece, isDegenerate, nearestParam, pointOn, type Sample } from './piece';
 import { angleOf, dist, sub, type Vec } from './vec';
 
 /**
@@ -21,7 +21,21 @@ export interface EdgeRef {
 
 export const emptyPath = (): Path => ({ nodes: [], radii: [], shapes: [] });
 
+const edgeCache = new WeakMap<Path, EdgeRef[]>();
+
+/**
+ * The edges of a path. Paths are never mutated, so the result is kept per path object: building an
+ * edge is the expensive part, and a pointer move would otherwise rebuild every road several times.
+ */
 export function edgesOf(path: Path): EdgeRef[] {
+  const cached = edgeCache.get(path);
+  if (cached) return cached;
+  const built = buildEdges(path);
+  edgeCache.set(path, built);
+  return built;
+}
+
+function buildEdges(path: Path): EdgeRef[] {
   const out: EdgeRef[] = [];
   for (let i = 0; i < path.nodes.length - 1; i++) {
     const p = path.nodes[i]!;
@@ -100,19 +114,18 @@ export interface CurveHit {
   d: number;
 }
 
-const SAMPLES = 160;
-
-/** The point of the path nearest to `pt` if it is within `maxDist` meters. */
+/**
+ * The point of the path nearest to `pt` if it is within `maxDist` meters. Exact on every piece,
+ * so a point that follows the pointer along the curve moves continuously.
+ */
 export function nearestOnCurve(path: Path, pt: Vec, maxDist: number): CurveHit | null {
   let best: CurveHit | null = null;
   for (const ref of edgesOf(path)) {
     ref.E.pieces.forEach((piece, k) => {
-      if (isDegenerate(piece)) return;
-      for (let n = 0; n <= SAMPLES; n++) {
-        const at = pointOn(piece, n / SAMPLES);
-        const d = dist(at, pt);
-        if (!best || d < best.d) best = { ref, k, at, d };
-      }
+      if (isDegenerate(piece) || distanceToPiece(piece, pt) > maxDist) return;
+      const at = pointOn(piece, nearestParam(piece, pt));
+      const d = dist(at, pt);
+      if (!best || d < best.d) best = { ref, k, at, d };
     });
   }
   const hit = best as CurveHit | null;

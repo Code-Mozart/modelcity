@@ -1,4 +1,5 @@
 import type { HandleType } from './curves/handles';
+import type { CurveAction, NodeAction } from './curves/junctions';
 
 /** One way of operating the mouse or keyboard, shown as a symbol (^49). */
 export type Input =
@@ -18,8 +19,8 @@ export interface Hint {
 export type HintTarget =
   | { kind: 'empty' }
   /** `picked`: how many of the curve's two nodes are selected. */
-  | { kind: 'curve'; picked?: number }
-  | { kind: 'handle'; type: HandleType; last: boolean; leaf: boolean; selected?: boolean };
+  | { kind: 'curve'; picked?: number; act?: CurveAction; lane?: boolean }
+  | { kind: 'handle'; type: HandleType; act: NodeAction; selected?: boolean; lane?: boolean };
 
 const mouse = (button: 'lmb' | 'mmb' | 'rmb', drag = false, mod?: 'shift' | 'alt'): Input => ({
   kind: 'mouse',
@@ -51,59 +52,72 @@ const DRAG_TEXT: Record<HandleType, string> = {
   ctrl: 'bend curve',
   s1: 'change radius',
   s2: 'change radius',
+  mid1: 'move middle line',
+  mid2: 'move middle line',
   rad: 'change radius',
 };
 
 /**
- * What the left button does on a handle. In draw mode, clicking the node being drawn from ends the
- * road, and clicking another leaf node extends the road from it (^65).
+ * What the left button does on a handle. In draw mode a click on a node finishes, extends, splits or
+ * merges the road (^23, ^65); the hint is that verb (^141).
  */
-function handleHints(target: HandleTarget, drawing: boolean): Hint[] {
-  const { type, last, leaf } = target;
+function handleHints(target: HandleTarget): Hint[] {
+  const { type, act } = target;
   const out: Hint[] = [];
-  if (type === 'node' && drawing && last) out.push(hint(mouse('lmb'), 'finish road'));
-  else if (type === 'node' && drawing && leaf) out.push(hint(mouse('lmb'), 'extend road'));
+  if (act) out.push(hint(mouse('lmb'), act));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
   if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
   return out;
 }
 
+/** What a left click on a curve or on empty canvas does in draw mode (^23). */
+function curveText(target: HintTarget): string {
+  if (target.kind !== 'curve') return 'add node';
+  if (target.act === 'split') return 'split';
+  return target.act === 'merge' ? 'merge' : 'insert here';
+}
+
 /** Draw mode: a road is being drawn. */
 function drawModeHints(target: HintTarget): Hint[] {
   if (target.kind === 'handle') {
-    const rows = handleHints(target, true);
+    const rows = handleHints(target);
     // On a node a right click deletes it, so only Esc finishes there.
     const finish =
       target.type === 'node' ? hint(ESC, 'finish') : hint([ESC, mouse('rmb')], 'finish');
     return [...rows, finish];
   }
-  const what = target.kind === 'curve' ? 'insert node' : 'add node';
+  const drag = target.kind === 'curve' ? 'insert and set heading' : 'add node and set heading';
   return [
-    hint(mouse('lmb'), what),
-    hint(mouse('lmb', true), `${what} with heading`),
+    hint(mouse('lmb'), curveText(target)),
+    hint(mouse('lmb', true), drag),
     hint([ESC, mouse('rmb')], 'finish'),
   ];
 }
 
+/** The Alt row: select the branch under the pointer, or deselect it if it is wholly selected (^128). */
+function laneHint(target: HintTarget): Hint {
+  const selected = target.kind !== 'empty' && target.lane;
+  return hint(mouse('lmb', false, 'alt'), selected ? 'deselect lane' : 'select lane');
+}
+
 /**
- * Selecting with the left button, by what is under the pointer (^72, ^74, ^75, ^76). With nothing
+ * Selecting with the left button, by what is under the pointer (^72, ^74, ^75, ^128). With nothing
  * selected, Shift would add nothing to what LMB does, so no Shift row then.
  */
 function pickHints(target: HintTarget, selected: number): Hint[] {
   const shift = (text: string) => hint(mouse('lmb', false, 'shift'), text);
-  const lane = hint(mouse('lmb', false, 'alt'), 'select lane');
   const instead = selected > 0 ? ' instead' : '';
   if (target.kind === 'handle' && target.type === 'node') {
-    if (target.selected) return [shift('deselect'), lane];
+    if (target.selected) return [shift('deselect'), laneHint(target)];
     const add = selected > 0 ? [shift('select')] : [];
-    return [hint(mouse('lmb'), `select${instead}`), ...add, lane];
+    return [hint(mouse('lmb'), `select${instead}`), ...add, laneHint(target)];
   }
   if (target.kind !== 'curve') return [];
   const all = target.picked === 2;
   return [
     ...(all ? [] : [hint(mouse('lmb'), `select both nodes${instead}`)]),
     ...(selected > 0 ? [shift(all ? 'deselect both nodes' : 'add both nodes to selection')] : []),
-    lane,
+    laneHint(target),
   ];
 }
 
@@ -115,7 +129,7 @@ function selectModeHints(target: HintTarget, selected: number): Hint[] {
   if (selected && !handle) box.push(hint(mouse('lmb', true, 'shift'), 'add to selection'));
   const click = empty ? [hint(mouse('lmb'), selected ? 'deselect all' : 'draw mode')] : [];
   return [
-    ...(handle ? handleHints(target, false) : [...click, ...box]),
+    ...(handle ? handleHints(target) : [...click, ...box]),
     ...pickHints(target, selected),
     ...(selected ? [hint(DEL, 'delete selected')] : []),
     ...CAMERA,

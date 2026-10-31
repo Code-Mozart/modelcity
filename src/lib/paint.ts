@@ -23,7 +23,6 @@ export const PALETTE_KEYS = [
   'road',
   'road-edge',
   'blue',
-  'yellow',
   'red',
   'orange',
   'red-ink',
@@ -91,7 +90,7 @@ export interface TextStyle {
 }
 
 export function text(ctx: CanvasRenderingContext2D, s: string, p: Point, t: TextStyle) {
-  ctx.font = `italic ${FONT_PX}px system-ui, sans-serif`;
+  ctx.font = `${FONT_PX}px system-ui, sans-serif`;
   ctx.fillStyle = t.color;
   ctx.textAlign = t.align ?? 'left';
   ctx.fillText(s, p.x, p.y);

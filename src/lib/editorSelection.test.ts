@@ -154,7 +154,7 @@ describe('selecting by curve (^74)', () => {
   it('LMB selects its two nodes; hovering says how many are selected', () => {
     const ed = roads();
     ed.pointerMove(mid(ed));
-    expect(ed.hintTarget).toEqual({ kind: 'curve', picked: 0 });
+    expect(ed.hintTarget).toEqual({ kind: 'curve', picked: 0, act: null, lane: false });
     press(ed, false);
     expect(ed.selection).toEqual([
       { road: 0, node: 0 },
@@ -214,13 +214,44 @@ describe('sharing a radius (^77)', () => {
     band(ed, [-5, -90], [100, 10]);
     const ring = ed.handles(4).find((h) => h.type === 'rad' && h.i === 0)!;
     ed.pointerDown(at(ring.x, ring.y));
-    expect(ed.extraScaffold).toHaveLength(3);
+    expect(ed.selectedSegments).toHaveLength(3);
     ed.pointerMove(at(ring.x + 4, ring.y + 4));
     ed.pointerUp();
     const radii = ed.roads[0]!.radii;
     expect(radii[0]).not.toBeNull();
     expect(radii[1]).toBe(radii[0]);
     expect(radii[2]).toBe(radii[0]);
-    expect(ed.extraScaffold).toEqual([]);
+  });
+});
+
+describe('radius points (^128)', () => {
+  const road = () => {
+    const ed = draw([
+      [0, 0],
+      [30, -20],
+      [60, 0],
+      [90, -20],
+    ]);
+    ed.key('Escape');
+    band(ed, [-5, -90], [100, 10]);
+    return ed;
+  };
+
+  it('every arc has radius points at its ends, not one in the middle, unless both ends are at nodes', () => {
+    const ed = road();
+    const pts = ed.handles(4).filter((h) => h.type === 'rad' && h.i === 0);
+    expect(pts.length).toBeGreaterThanOrEqual(1);
+    expect(pts.every((h) => h.t === 0 || h.t === 1 || h.t === 0.5)).toBe(true);
+    const single = ed.handles(4).filter((h) => h.type === 'rad' && h.t === 0.5);
+    expect(single.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('knows the selected segments, which show their scaffold together (^133)', () => {
+    const ed = road();
+    expect(ed.selectedSegments).toEqual([
+      { road: 0, i: 0 },
+      { road: 0, i: 1 },
+      { road: 0, i: 2 },
+    ]);
   });
 });

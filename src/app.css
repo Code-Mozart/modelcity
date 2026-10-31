@@ -14,7 +14,6 @@
   /* Icons scale with the text: sizes in em, which is the font size here (^83). */
   --symbol-size: 2.8333em;
   --blue: #1c4dff;
-  --yellow: #8a6a00;
   --red: #d92a3f;
   --orange: #c75f00;
   /* Text variants: graphics need 3:1, text needs 4.5:1 against the background. */
@@ -45,7 +44,6 @@
     --grid-minor: #181b22;
     --grid-major: #232832;
     --blue: #7f9cff;
-    --yellow: #ffd43b;
     --red: #ff7a88;
     --orange: #ffa94d;
     --red-ink: #ff7a88;

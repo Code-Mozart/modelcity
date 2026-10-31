@@ -29,7 +29,9 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | Term | Meaning | Status | Hats |
 |------|---------|--------|------|
 | **Hat** | A unique identifier `^N` for anything (question, decision, bug, image, demo, doc); never reused, tracked in `docs/hats.md` | decided | ^1 |
-| **Road** | A chain of nodes with the curves between them; the unit you draw. Roads are independent of each other for now; lanes come later | decided | ^42, ^22 |
+| **Arm** | Any set of connected nodes (with the segments between them). Today this is what the code and older docs call a *road*, since segments cannot run parallel yet | decided | ^130 |
+| **Road** | All arms that are connected by at least one parallel segment, e.g. an "H" whose top and bottom half only touch but share no nodes. (The code still says *road* for a drawn chain of nodes, `Roads`; to be renamed with the data model, ^106) | decided | ^130 |
+| **Branch** | Both the concept of splits and merges and a chain of nodes without any: its first and last node have a number of edges other than two, all nodes between have exactly two. A "T" has three branches, an "L" one (with bends), an "A" four (roof, bar, two legs) | decided | ^130 |
 | **Node** | A point a road passes through, drawn as a dot. It lies on the curve and carries a heading | decided | ^6 |
 | **Heading** | The direction of the road at a node, shown as an arrow | decided | ^6, ^9 |
 | **Segment** | The curve between two nodes (`edge` in the code) | decided | ^60 |
@@ -38,14 +40,23 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **S-curve** | A segment that turns one way, then the other; both arcs share one radius | decided | ^6 |
 | **Hook** | A segment whose two arcs turn the same way, up to about 285 degrees; provisional | decided | ^6 |
 | **Radius** | One per segment: automatic (the largest that fits) or explicit. The general minimum is 0.5 m for now | decided; assumed (0.5 m) | ^8, ^57 |
-| **Control point** | Something you can drag to edit: a node, a heading tip, a bend's orange point, an orange radius point, a hook's yellow points (`handle` in the code) | decided; assumed (the code word) | ^9 |
+| **Control point** | Something you can drag to edit: a node, a heading control point (on the stem of the heading arrow), a bend's orange point, orange radius points (at the ends of an arc), the corner points of a hook or S-curve (`handle` in the code) | decided; assumed (the code word) | ^9 |
 | **Gizmo** | Any drawn aid on the canvas that is not map content: the skeleton and the scaffolds | decided | ^60 |
 | **Skeleton** | The gizmos that are always shown: the curves (with their direction arrows) and the node dots | decided | ^60 |
-| **Scaffold** | All other gizmos of a segment (orange lines, circle, ticks, control points, heading arrows (orange), yellow lines and points, the orange point and its label). Shown all or nothing, for a single segment at a time, and only by need | decided | ^60, ^66 |
+| **Scaffold** | All other gizmos of a segment (orange lines, circle, control points, heading arrows (orange), the axis line and corner points of an S-curve or hook, the radius label). Shown all or nothing, for a single segment at a time (selected segments together), and only by need | decided | ^60, ^66 |
 | **Selection** | 0..n selected nodes, also of different roads. Selected nodes are blue and 150% larger; dragging one moves all by the same translation | decided; assumed (details) | ^70, ^71, ^72, ^73 |
 | **Selection box** | The rectangle spanned by a left drag on empty canvas in select mode, axis-aligned with the viewport (also "rubber band"); selects the nodes inside it | decided | ^69, ^70 |
-| **Lane** | A strip of road traffic runs in, 3 m wide for now (`LANE_WIDTH_M`). For now a road is a single lane, so *select lane* selects the whole road; more lanes come later | decided; assumed (that a road is one lane for now) | ^22, ^76 |
+| **Lane** | A strip of road traffic runs in, 3 m wide for now (`LANE_WIDTH_M`). For now a branch is a single lane, so *select lane* selects a branch (Alt+click); more lanes come later | decided; assumed (that a road is one lane for now) | ^22, ^76 |
 | **Step** | One undoable change of the roads (a placed node, a drag, a removal, ...), see `docs/controls.md` | assumed | ^81, ^88 |
+| **Shared node** | Nodes of different roads at the same position are one node (a junction): selected, moved, deleted and turned together | decided; assumed (that sharing is by position) | ^23, ^92 |
+| **Split** | A road starts at an existing node, so that node has one edge in and two (or more) out. Draw mode: click a node or a curve | decided | ^23, ^93 |
+| **Merge** | A road ends at an existing node, so that node has two (or more) edges in and one out. Draw mode: click a node or a curve while drawing | decided | ^23, ^93 |
+| **Subject to snapping** | A point or handle that is pulled to snap lines and snap points near it; the pivot crosshair, the rotation handle and moved or placed nodes are | decided | ^112 |
+| **Node ring** | The fixed-size blue ring around a selected node (with more than one node selected); only the closest one in proximity is drawn. Planned | decided | ^114 |
+| **Bounding ring** | The blue ring around all selected nodes, centered at the center of their bounding box. Planned | decided | ^114 |
+| **Rotation handle** | The short blue radial line under the cursor on a ring that rotates the selection around the pivot (the user also says "wheel handle"). Planned | decided | ^115 |
+| **Crosshair** | The blue pivot of rotating and scaling a selection, first at the center of its bounding box; its square tips scale. Planned | decided | ^116 |
+| **Extend mode** | The mode while a road is being extended from a node (dashed preview), between draw mode and select mode. Planned | decided | ^120 |
 | **Select mode** | No road is being drawn: you edit control points; a click enters draw mode | decided | ^48, ^54 |
 | **Draw mode** | A road is being drawn: clicks place nodes, insert nodes on curves, or extend a road from a leaf node | decided | ^48, ^65 |
 | **Preview** | The translucent preview of the node a click would place, with the curve to it (not called "ghost") | decided | ^40, ^48, ^68 |
@@ -57,7 +68,9 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Pivot** | The center of an operation: typically of a rotation, but also of a zoom or scaling. For a middle-button drag it is the point where the drag started, which stays fixed | decided | ^30, ^68 |
 | **Dead zone** | The 20 px around where a middle-button drag started in which that axis does nothing yet | decided | ^31 |
 | **Compass** | The cursor while the middle button is held: a needle to north, N/E/S/W key caps, and drag hints | decided | ^33 |
-| **Hints** | The `[input]: action` rows in the top left corner (also "control hints"), which change with mode, context and selection | decided | ^49, ^74 |
+| **Control hints panel** | The HTML div in the top left corner that shows the control hints; it changes with mode, context and selection (formerly "hints") | decided | ^49, ^74, ^111 |
+| **Control hint** | One row of the control hints panel: `[input]: action` | decided | ^49, ^111 |
+| **Recent history panel** | The HTML div in the top right corner that shows the names of the last operations (batches with their steps) and the undo and redo control hints, each item for a few seconds. Planned (^107–^109) | decided | ^107, ^111 |
 | **Key cap** | The raised, key-like symbol for a keyboard key; blue and sunk in while pressed | decided | ^32, ^68 |
 | **Mouse symbols** | The symbols for mouse buttons, drag and the wheel (`MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`) | decided | ^50, ^56 |
 | **Proximity** | The fixed pixel distance within which something counts as "near" the pointer: 20 px to a curve, 48 px to a control point | decided; assumed (the distances) | ^55, ^60 |

@@ -76,12 +76,6 @@ export function reverseEdge({ p, q, Rs }: EdgeInput, s1: Dir, mid0?: MidLine): T
     R,
     Rmax,
     auto: Rs == null,
-    ticks: [
-      { at: A1, dir: T1, role: 'orange' },
-      { at: B1, dir: c.u, role: 'yellow' },
-      { at: A2, dir: c.u, role: 'yellow' },
-      { at: B2, dir: T2, role: 'orange' },
-    ],
     pieces: [line(p, A1), arc1, line(B1, A2), arc2, line(B2, q)],
   };
 }
