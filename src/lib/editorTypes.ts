@@ -67,7 +67,15 @@ export type Press =
       undo: Snapshot;
       target: HintTarget;
     }
-  | { kind: 'place'; ref: NodeRef; undo: Snapshot; finish: boolean; target: HintTarget }
+  | {
+      kind: 'place';
+      ref: NodeRef;
+      undo: Snapshot;
+      /** On a curve: what a click, but not a drag, does after the node was inserted (^133). */
+      then: 'split' | 'merge' | null;
+      moved: boolean;
+      target: HintTarget;
+    }
   | {
       kind: 'empty';
       screen: Vec;

@@ -99,6 +99,20 @@ export function activeFlags(input: ScaffoldInput): boolean[][] {
 }
 
 /**
+ * With several segments selected (both their nodes), they show their scaffold all together or not
+ * at all: all of them when the segment that shows it is one of them (^133).
+ */
+export function withSelectedTogether(
+  flags: boolean[][],
+  selected: { road: number; i: number }[],
+): boolean[][] {
+  if (selected.length < 2 || !selected.some((s) => flags[s.road]?.[s.i])) return flags;
+  return flags.map((row, road) =>
+    row.map((on, i) => on || selected.some((s) => s.road === road && s.i === i)),
+  );
+}
+
+/**
  * A node's heading arrow belongs to the scaffold of the segments on both sides of the node; a node
  * without any segment (a road with its first node only) always shows its arrow.
  */

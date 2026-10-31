@@ -21,7 +21,7 @@ import {
 } from './paint';
 import type { Band } from './selection';
 import type { Pointer } from './proximity';
-import { activeFlags, arrowShown } from './scaffold';
+import { activeFlags, arrowShown, withSelectedTogether } from './scaffold';
 
 /** A road and its edges. */
 export interface RoadScene {
@@ -36,8 +36,8 @@ export interface Scene {
   selection: NodeRef[];
   band: Band | null;
   drawing: boolean;
-  /** Segments (road, index) that show their scaffold too: the selected ones while a radius is shared (^77). */
-  extra: { road: number; i: number }[];
+  /** The segments (road, index) whose two nodes are selected: they show their scaffold together (^133). */
+  selectedSegments: { road: number; i: number }[];
   /** All scaffolds are hidden while several nodes are moved (^78). */
   hideScaffold: boolean;
   hover: Hover | null;
@@ -176,8 +176,10 @@ function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
 const HANDLE_COLOR = (pal: Palette) => ({
   head: pal.orange,
   ctrl: pal.orange,
-  s1: pal.yellow,
-  s2: pal.yellow,
+  s1: pal.orange,
+  s2: pal.orange,
+  mid1: pal.orange,
+  mid2: pal.orange,
   rad: pal.orange,
 });
 
@@ -207,17 +209,14 @@ function drawBand(f: Frame, { a, b }: Band, pal: Palette) {
   ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
 }
 
-/** Which segments show their scaffold: the focused one, the shared-radius ones, or none while moving a group. */
+/** Which segments show their scaffold: the one by proximity, with the selected ones together, or none while moving a group. */
 function shownFlags(scene: Scene): boolean[][] {
-  const { roads, handles, focus, pointer, extra } = scene;
-  const flags = activeFlags({ roads, handles, focus, pointer });
-  return roads.map((r, road) =>
-    r.edges.map(
-      (e, k) =>
-        !scene.hideScaffold &&
-        (flags[road]![k]! || extra.some((x) => x.road === road && x.i === e.i)),
-    ),
+  const { roads, handles, focus, pointer } = scene;
+  const flags = withSelectedTogether(
+    activeFlags({ roads, handles, focus, pointer }),
+    scene.selectedSegments,
   );
+  return flags.map((row) => row.map((on) => on && !scene.hideScaffold));
 }
 
 /**

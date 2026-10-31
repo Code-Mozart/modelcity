@@ -1,13 +1,13 @@
 import { sweeps, pointOn } from './piece';
-import type { Piece } from './types';
+import type { Edge, Piece } from './types';
 import type { EdgeRef, Path } from './path';
 import { dist, fromAngle, mul, add, type Vec } from './vec';
 
 /**
- * Draggable handles (^9). `k` is the piece index for radius handles, -1 for the bend gesture.
+ * Draggable handles (^9). `k` is the piece index for radius handles.
  * Sizes are in screen pixels so handles keep their look at any zoom.
  */
-export type HandleType = 'node' | 'head' | 'ctrl' | 's1' | 's2' | 'rad';
+export type HandleType = 'node' | 'head' | 'ctrl' | 's1' | 's2' | 'mid1' | 'mid2' | 'rad';
 
 export interface Handle extends Vec {
   type: HandleType;
@@ -21,14 +21,17 @@ export const ARROW_PX = 40;
 const HIT_PX = { mouse: 11, touch: 20 };
 const NODE_HIT_PX = { mouse: 9, touch: 16 };
 
+/** The corner points of a hook (they set the radius) or of an S with a stored middle line (they move it). */
+function cornerHandles(i: number, E: Exclude<Edge, { kind: 'line' | 'C' }>): Handle[] {
+  const [t1, t2] = (E.kind === 'H' ? ['s1', 's2'] : ['mid1', 'mid2']) as [HandleType, HandleType];
+  if (E.kind === 'S' && !E.mid) return [];
+  return [...(E.k1 ? [{ type: t1, i, ...E.k1 }] : []), ...(E.k2 ? [{ type: t2, i, ...E.k2 }] : [])];
+}
+
 function edgeHandles({ i, p, q, E }: EdgeRef): Handle[] {
-  const nodes = [p, q];
   if (E.kind === 'line') return [];
-  const out: Handle[] = [];
-  if (E.kind === 'C') out.push({ type: 'ctrl', i, ...E.C });
-  if (E.kind === 'H' && E.k1) out.push({ type: 's1', i, ...E.k1 });
-  if (E.kind === 'H' && E.k2) out.push({ type: 's2', i, ...E.k2 });
-  E.pieces.forEach((piece, k) => out.push(...radiusHandles(i, k, piece, nodes)));
+  const out: Handle[] = E.kind === 'C' ? [{ type: 'ctrl', i, ...E.C }] : cornerHandles(i, E);
+  E.pieces.forEach((piece, k) => out.push(...radiusHandles(i, k, piece, [p, q])));
   return out;
 }
 
@@ -60,7 +63,7 @@ export function handlesOf(path: Path, edges: EdgeRef[], scale: number): Handle[]
 }
 
 /** Non-node handles in tie-break order: the earlier type wins when equally near. */
-const PRIORITY: HandleType[] = ['head', 'ctrl', 's1', 's2', 'rad'];
+const PRIORITY: HandleType[] = ['head', 'ctrl', 's1', 's2', 'mid1', 'mid2', 'rad'];
 
 function nearest<H extends Handle>(list: H[], pt: Vec, within: number): H | null {
   let best: H | null = null;

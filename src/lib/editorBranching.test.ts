@@ -160,3 +160,24 @@ describe('preview of a merge (^123, ^125)', () => {
     expect(ed.mergePreview).toBeNull();
   });
 });
+
+describe('a drag on a curve only inserts a node (^133)', () => {
+  it('a drag with a heading neither splits nor merges, a click does', () => {
+    const ed = base();
+    const on = bareCurvePoint(ed);
+    ed.pointerDown(at(on.x, on.y));
+    ed.pointerMove(at(on.x + 5, on.y + 20));
+    ed.pointerUp();
+    expect(ed.roads).toHaveLength(1);
+    expect(ed.roads[0]!.nodes).toHaveLength(4);
+    expect(ed.active).toBeNull();
+    click(ed, 20, 80);
+    click(ed, 40, 40);
+    const p = bareCurvePoint(ed);
+    ed.pointerDown(at(p.x, p.y));
+    ed.pointerMove(at(p.x + 5, p.y + 20));
+    ed.pointerUp();
+    expect(ed.roads[1]!.nodes).toHaveLength(2);
+    expect(ed.drawing).toBe(true);
+  });
+});

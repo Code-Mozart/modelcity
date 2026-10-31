@@ -40,10 +40,10 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **S-curve** | A segment that turns one way, then the other; both arcs share one radius | decided | ^6 |
 | **Hook** | A segment whose two arcs turn the same way, up to about 285 degrees; provisional | decided | ^6 |
 | **Radius** | One per segment: automatic (the largest that fits) or explicit. The general minimum is 0.5 m for now | decided; assumed (0.5 m) | ^8, ^57 |
-| **Control point** | Something you can drag to edit: a node, a heading control point (on the stem of the heading arrow), a bend's orange point, orange radius points (at the ends of an arc), a hook's yellow points (`handle` in the code) | decided; assumed (the code word) | ^9 |
+| **Control point** | Something you can drag to edit: a node, a heading control point (on the stem of the heading arrow), a bend's orange point, orange radius points (at the ends of an arc), the corner points of a hook or S-curve (`handle` in the code) | decided; assumed (the code word) | ^9 |
 | **Gizmo** | Any drawn aid on the canvas that is not map content: the skeleton and the scaffolds | decided | ^60 |
 | **Skeleton** | The gizmos that are always shown: the curves (with their direction arrows) and the node dots | decided | ^60 |
-| **Scaffold** | All other gizmos of a segment (orange lines, circle, control points, heading arrows (orange), yellow lines and points, the radius label). Shown all or nothing, for a single segment at a time, and only by need | decided | ^60, ^66 |
+| **Scaffold** | All other gizmos of a segment (orange lines, circle, control points, heading arrows (orange), the axis line and corner points of an S-curve or hook, the radius label). Shown all or nothing, for a single segment at a time (selected segments together), and only by need | decided | ^60, ^66 |
 | **Selection** | 0..n selected nodes, also of different roads. Selected nodes are blue and 150% larger; dragging one moves all by the same translation | decided; assumed (details) | ^70, ^71, ^72, ^73 |
 | **Selection box** | The rectangle spanned by a left drag on empty canvas in select mode, axis-aligned with the viewport (also "rubber band"); selects the nodes inside it | decided | ^69, ^70 |
 | **Lane** | A strip of road traffic runs in, 3 m wide for now (`LANE_WIDTH_M`). For now a branch is a single lane, so *select lane* selects a branch (Alt+click); more lanes come later | decided; assumed (that a road is one lane for now) | ^22, ^76 |

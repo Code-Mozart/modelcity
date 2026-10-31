@@ -14,7 +14,7 @@ import {
   type Roads,
 } from './curves/roads';
 import { dist } from './curves/vec';
-import { dragPress, emptyPress, sharing } from './editorPress';
+import { dragPress, emptyPress } from './editorPress';
 import {
   dragStep,
   insertAt,
@@ -42,6 +42,7 @@ import {
   afterBranchClick,
   afterCurveClick,
   nodesInBand,
+  selectedSegments,
   sameSelection,
   withNodes,
   withoutNode,
@@ -213,14 +214,16 @@ export class Editor {
     const act = targetOf(this.drawn, { kind: 'candidate', hit }, true);
     const r = insertAt(this.drawn, hit);
     const kind = act.kind === 'curve' ? act.act : null;
-    const next =
-      kind === 'split'
-        ? splitAt(r.drawn, r.ref)
-        : kind === 'merge'
-          ? mergeInto(r.drawn, r.ref)
-          : r.drawn;
-    this.restore(next);
-    this.press = { kind: 'place', ref: r.ref, undo, finish: kind === 'merge', target: act };
+    const then = kind === 'split' || kind === 'merge' ? kind : null;
+    this.restore(r.drawn);
+    this.press = { kind: 'place', ref: r.ref, undo, then, moved: false, target: act };
+  }
+
+  /** A click on a curve ends in a split or merge at the inserted node; a drag only inserts it (^133). */
+  private clickedCurve(press: Extract<Press, { kind: 'place' }>) {
+    if (press.moved || !press.then) return;
+    if (press.then === 'split') this.restore(splitAt(this.drawn, press.ref));
+    else this.merge(press.ref);
   }
 
   /** A node at the end of the road being drawn, or the first node of a new road (^40). */
@@ -228,7 +231,8 @@ export class Editor {
     const undo = this.snapshot();
     const r = placeNode(this.drawn, placementAt(info.pt));
     this.restore(r.drawn);
-    this.press = { kind: 'place', ref: r.ref, undo, finish: false, target: { kind: 'empty' } };
+    const target = { kind: 'empty' } as const;
+    this.press = { kind: 'place', ref: r.ref, undo, then: null, moved: false, target };
   }
 
   pointerMove(info: PointerInfo) {
@@ -236,7 +240,7 @@ export class Editor {
     const press = this.press;
     if (!press) this.hover = this.hoverAt(info);
     else if (press.kind === 'drag') this.moveDrag(press, info);
-    else if (press.kind === 'place') this.roads = placeStep(this.roads, press.ref, info);
+    else if (press.kind === 'place') this.moveHeading(press, info);
     else this.moveBand(press, info);
   }
 
@@ -246,9 +250,9 @@ export class Editor {
     this.roads = dragStep(this.drawn, press, info);
   }
 
-  /** Segments whose scaffold shows besides the focused one: the selected ones while a radius point of one of them is dragged or hovered (^77, ^128). */
-  get extraScaffold() {
-    return sharing(this.roads, this.selection, this.press, this.hover)?.all ?? [];
+  /** The segments whose two nodes are selected (^133). */
+  get selectedSegments() {
+    return selectedSegments(this.roads, this.selection);
   }
 
   /** The curve a merge into the node or curve under the pointer would add (^123, ^125). */
@@ -260,6 +264,13 @@ export class Editor {
   get movingGroup() {
     const press = this.press;
     return press?.kind === 'drag' && press.moved && press.group.length > 0;
+  }
+
+  private moveHeading(press: Extract<Press, { kind: 'place' }>, info: PointerInfo) {
+    const next = placeStep(this.roads, press.ref, info);
+    if (next === this.roads) return;
+    this.roads = next;
+    press.moved = true;
   }
 
   /** Dragging on empty canvas spans the selection box; shift keeps the selection and adds to it (^70, ^72). */
@@ -322,7 +333,7 @@ export class Editor {
     this.batching = true;
     if (press.kind === 'drag' && !press.moved) this.clickedHandle(press);
     if (press.kind === 'empty' && !press.moved) this.clickedEmpty(press);
-    if (press.kind === 'place' && press.finish) this.finishRoad();
+    if (press.kind === 'place') this.clickedCurve(press);
     this.batching = false;
     this.commit(press.undo);
   }

@@ -214,14 +214,13 @@ describe('sharing a radius (^77)', () => {
     band(ed, [-5, -90], [100, 10]);
     const ring = ed.handles(4).find((h) => h.type === 'rad' && h.i === 0)!;
     ed.pointerDown(at(ring.x, ring.y));
-    expect(ed.extraScaffold).toHaveLength(3);
+    expect(ed.selectedSegments).toHaveLength(3);
     ed.pointerMove(at(ring.x + 4, ring.y + 4));
     ed.pointerUp();
     const radii = ed.roads[0]!.radii;
     expect(radii[0]).not.toBeNull();
     expect(radii[1]).toBe(radii[0]);
     expect(radii[2]).toBe(radii[0]);
-    expect(ed.extraScaffold).toEqual([]);
   });
 });
 
@@ -247,12 +246,12 @@ describe('radius points (^128)', () => {
     expect(single.length).toBeGreaterThanOrEqual(0);
   });
 
-  it('hovering a radius point of a selected segment shows the scaffolds of all selected ones', () => {
+  it('knows the selected segments, which show their scaffold together (^133)', () => {
     const ed = road();
-    const p = ed.handles(4).find((h) => h.type === 'rad' && h.i === 0)!;
-    ed.pointerMove(at(p.x, p.y));
-    expect(ed.extraScaffold).toHaveLength(3);
-    ed.pointerMove(at(500, 500));
-    expect(ed.extraScaffold).toEqual([]);
+    expect(ed.selectedSegments).toEqual([
+      { road: 0, i: 0 },
+      { road: 0, i: 1 },
+      { road: 0, i: 2 },
+    ]);
   });
 });

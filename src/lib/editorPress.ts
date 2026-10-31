@@ -11,7 +11,7 @@ import { branchOfEdge, branchOfNode } from './curves/branches';
 import { closeOver } from './curves/junctions';
 import { nodeAction } from './curves/junctions';
 import { targetOf, type Drawn } from './editorTargets';
-import type { Hover, PointerInfo, Press } from './editorTypes';
+import type { PointerInfo, Press } from './editorTypes';
 import { curveNodes, isSelected, pressNode, selectedSegments } from './selection';
 
 const edgeOf = (hit: RoadHit) => ({ road: hit.road, i: hit.ref.i });
@@ -80,33 +80,19 @@ export function emptyPress(drawn: Drawn, info: PointerInfo, hit: RoadHit | null)
   };
 }
 
-/** The segment whose radius is being dragged, or whose radius point is hovered (^77, ^128). */
-function radiusOwner(press: Press | null, hover: Hover | null) {
-  if (press) {
-    const rad = press.kind === 'drag' && press.drag.handle.type === 'rad';
-    return rad ? { road: press.road, i: press.drag.handle.i } : null;
-  }
-  const h = hover?.kind === 'handle' ? hover.handle : null;
-  return h?.type === 'rad' ? { road: h.road, i: h.i } : null;
-}
-
 /**
- * The segment of a radius point that is dragged or hovered and all selected segments (both nodes
- * selected), if it is one of them: they all get its radius, and all show their scaffold (^77, ^128).
+ * The segment of the radius point that is dragged and all selected segments (both nodes selected),
+ * if it is one of them: they all get its radius (^77).
  */
-export function sharing(
-  roads: Roads,
-  selection: NodeRef[],
-  press: Press | null,
-  hover: Hover | null,
-) {
-  const own = radiusOwner(press, hover);
+export function sharing(roads: Roads, selection: NodeRef[], press: Press) {
+  if (press.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
+  const own = { road: press.road, i: press.drag.handle.i };
   const all = selectedSegments(roads, selection);
-  return own && all.some((s) => s.road === own.road && s.i === own.i) ? { own, all } : null;
+  return all.some((s) => s.road === own.road && s.i === own.i) ? { own, all } : null;
 }
 
 /** The radius of the dragged segment is given to all selected segments. */
 export function withSharedRadius(roads: Roads, selection: NodeRef[], press: Press): Roads {
-  const s = sharing(roads, selection, press, null);
+  const s = sharing(roads, selection, press);
   return s ? shareRadius(roads, s.own, s.all) : roads;
 }

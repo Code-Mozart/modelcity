@@ -3,7 +3,13 @@ import { edgesOf } from './curves/path';
 import { pointOn } from './curves/piece';
 import { edgesOfRoads, roadHandles } from './curves/roads';
 import { fixture } from './curves/testing/paths';
-import { activeFlags, activeSegment, arrowShown, type ScaffoldInput } from './scaffold';
+import {
+  activeFlags,
+  activeSegment,
+  arrowShown,
+  withSelectedTogether,
+  type ScaffoldInput,
+} from './scaffold';
 import { CURVE_NEAR_PX, HANDLE_NEAR_PX } from './proximity';
 import type { Focus } from './focus';
 
@@ -116,5 +122,31 @@ describe('arrowShown (^60)', () => {
 
   it('a node without any segment always shows its arrow', () => {
     expect(arrowShown([], 0)).toBe(true);
+  });
+});
+
+describe('selected segments show their scaffold together (^133)', () => {
+  const grid = (on: [number, number][]) => {
+    const rows = [0, 1].map(() => [false, false, false]);
+    for (const [road, i] of on) rows[road]![i] = true;
+    return rows;
+  };
+  const selected = [
+    { road: 0, i: 0 },
+    { road: 0, i: 2 },
+  ];
+
+  it('all of them when the shown segment is one of them', () => {
+    expect(withSelectedTogether(grid([[0, 2]]), selected)).toEqual(
+      grid([
+        [0, 0],
+        [0, 2],
+      ]),
+    );
+  });
+
+  it('none of them when another segment is shown, and nothing changes for a single selected segment', () => {
+    expect(withSelectedTogether(grid([[1, 1]]), selected)).toEqual(grid([[1, 1]]));
+    expect(withSelectedTogether(grid([[0, 0]]), [selected[0]!])).toEqual(grid([[0, 0]]));
   });
 });

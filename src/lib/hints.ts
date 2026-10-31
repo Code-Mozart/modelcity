@@ -52,6 +52,8 @@ const DRAG_TEXT: Record<HandleType, string> = {
   ctrl: 'bend curve',
   s1: 'change radius',
   s2: 'change radius',
+  mid1: 'move middle line',
+  mid2: 'move middle line',
   rad: 'change radius',
 };
 
@@ -62,7 +64,7 @@ const DRAG_TEXT: Record<HandleType, string> = {
 function handleHints(target: HandleTarget): Hint[] {
   const { type, act } = target;
   const out: Hint[] = [];
-  if (act) out.push(hint(mouse('lmb'), `${act} road`));
+  if (act) out.push(hint(mouse('lmb'), act === 'extend' ? 'extend' : `${act} road`));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
   if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
   return out;
@@ -72,7 +74,7 @@ function handleHints(target: HandleTarget): Hint[] {
 function curveText(target: HintTarget): string {
   if (target.kind !== 'curve') return 'add node';
   if (target.act === 'split') return 'split here';
-  return target.act === 'merge' ? 'merge here' : 'insert node';
+  return target.act === 'merge' ? 'merge here' : 'insert here';
 }
 
 /** Draw mode: a road is being drawn. */
@@ -84,10 +86,10 @@ function drawModeHints(target: HintTarget): Hint[] {
       target.type === 'node' ? hint(ESC, 'finish') : hint([ESC, mouse('rmb')], 'finish');
     return [...rows, finish];
   }
-  const what = curveText(target);
+  const drag = target.kind === 'curve' ? 'insert here with heading' : 'add node with heading';
   return [
-    hint(mouse('lmb'), what),
-    hint(mouse('lmb', true), `${what} with heading`),
+    hint(mouse('lmb'), curveText(target)),
+    hint(mouse('lmb', true), drag),
     hint([ESC, mouse('rmb')], 'finish'),
   ];
 }

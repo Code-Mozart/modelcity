@@ -23,7 +23,6 @@ export const PALETTE_KEYS = [
   'road',
   'road-edge',
   'blue',
-  'yellow',
   'red',
   'orange',
   'red-ink',

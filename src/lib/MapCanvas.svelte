@@ -37,7 +37,7 @@
       selection: editor.selection,
       band: editor.band,
       drawing: editor.drawing,
-      extra: editor.extraScaffold,
+      selectedSegments: editor.selectedSegments,
       hideScaffold: editor.movingGroup,
       hover: editor.hover,
       mergePreview: editor.mergePreview,
