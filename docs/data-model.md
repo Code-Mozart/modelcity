@@ -62,6 +62,7 @@ A named set of lane properties that edges refer to. Today only `name` and `width
 
 - **Export** (^163) and **import** (^164) a project as a file (`Ctrl+S`, `Ctrl+O`, ^168). **Save to the browser** (^165) in IndexedDB, one record per project; **autosave** (^166) after a change to nodes, edges or lane configurations. Moving the camera alone neither autosaves nor changes `lastUpdatedAt`, and the camera is not part of undo. The camera is saved with the next save.
 - **Several projects** (^167): the list of stored projects.
+- **New project** (^171): a blank project with a new empty record.
 
 ## 5. Migrations
 
