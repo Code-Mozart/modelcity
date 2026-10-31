@@ -1,13 +1,13 @@
 # The stored data model (draft, ^161)
 
-Status: **draft**. Once the user has approved it, the stored model is fixed: **every change to it needs both of us to agree** (user and Claude), and comes with a version bump and a migration (see the end). Hats: ^106 (normalized model), ^92 (replaced by the graph, see below), ^26 (lane configuration), ^82 and ^148 (persistence).
+Status: **ready for the user's final review**. Once the user has approved it, the stored model is fixed: **every change to it needs both of us to agree** (user and Claude), and comes with a version bump and a migration (see the end). Hats: ^106 (normalized model), ^92 (replaced by the graph, see below), ^26 (lane configuration), ^82 and ^148 (persistence).
 
 ## 1. What is stored and what is derived
 
 The stored model is a **directed graph with radii and headings**. Nothing else is stored.
 
 - **Stored:** the project (title, dates, version), the camera, the nodes, the edges, the lane configurations.
-- **Derived at runtime, never stored:** curve pieces and geometry (`EdgeRef`), caches, the road surface, junction kinds, branches, roads and arms (^130), parallel segments (^100), the road being drawn, the selection, the undo history, hover and pointer state.
+- **Derived at runtime, never stored:** the shape of an edge (bend, S-curve, hook), curve pieces and geometry (`EdgeRef`), caches, the road surface, junction kinds, branches, roads and arms (^130), parallel segments (^100), the road being drawn, the selection, the undo history, hover and pointer state.
 
 ## 2. One project (JSON)
 
@@ -22,7 +22,7 @@ The stored model is a **directed graph with radii and headings**. Nothing else i
     [0, 100000, 0, 0.0],
     [1, 300000, 50000, 2.3]
   ],
-  "edges": [[0, 0, 1, null, 1, null]],
+  "edges": [[0, 0, 1, null, 1]],
   "laneConfigurations": { "1": { "name": "default", "width": 3000 } }
 }
 ```
@@ -42,11 +42,11 @@ An **export file** is exactly one such project object. The browser keeps one sto
 
 One heading per node. A node is shared by all edges that meet there; sharing is the graph itself (no more coincidence by position, ^92).
 
-### Edges: `[id, startNodeId, endNodeId, radius, laneConfigurationId, shape]` (densely packed)
+### Edges: `[id, startNodeId, endNodeId, radius, laneConfigurationId]` (densely packed)
 
 - The edge runs from start to end; that is its direction of travel (the direction arrows).
-- `radius`: integer millimeters, or `null` for automatic (the largest that fits, ^8). The minimum is 0.5 m (^57).
-- `shape` is `null` (the automatic choice between bend and S-curve, ^7) or the stored tag: `{"kind":"C"}`, `{"kind":"S","s":1|-1,"mid":{"x":mm,"y":mm,"ux":float,"uy":float}}` (`mid` only once the middle line was dragged, ^132) or `{"kind":"H","s":1|-1}`. It is needed because positions, headings and radius alone can be a bend or an S-curve, and a hook has a direction.
+- `radius`: integer millimeters, or `null` for automatic (the largest that fits, ^8). It is the only nullable element. The minimum is 0.5 m (^57).
+- There is no shape tag (^172): whether the edge is a bend, an S-curve or a hook, and where the middle line of an S runs, are derived from the two positions, the two headings and the radius.
 
 ### Lane configurations: `{ "<id>": { "name": string, "width": mm } }` (not densely packed)
 
@@ -72,4 +72,4 @@ A named set of lane properties that edges refer to. Today only `name` and `width
 
 ## 6. Decided
 
-All decisions of this document are recorded in ^170 (decided: the graph, the tuples, the millimeters, no counters, the conventions, `scale` in pixels per meter, no check in the model).
+All decisions of this document are recorded in ^170 (the graph, the tuples, the millimeters, no counters, the conventions, `scale` in pixels per meter, no check in the model) and ^172 (no shape tag).
