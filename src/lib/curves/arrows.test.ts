@@ -25,7 +25,7 @@ describe('samplesAlong (^80)', () => {
   });
 
   it('follows arcs, with the tangent turning along', () => {
-    const edge = buildEdge({ x: 0, y: 0, th: 0 }, { x: 20, y: 20, th: Math.PI / 2 }, null, null);
+    const edge = buildEdge({ x: 0, y: 0, th: 0 }, { x: 20, y: 20, th: Math.PI / 2 }, null);
     const s = samplesAlong(edge.pieces, 3);
     expect(s.length).toBeGreaterThan(5);
     expect(s[0]!.tx).toBeGreaterThan(0.9);

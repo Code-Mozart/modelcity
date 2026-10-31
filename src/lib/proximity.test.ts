@@ -15,7 +15,7 @@ describe('proximity (^55)', () => {
   });
 
   it('an edge is near when the pointer is close to its curve, not to its handles', () => {
-    const edge = buildEdge({ x: 0, y: 0, th: 0 }, { x: 40, y: 0, th: 0 }, null, null);
+    const edge = buildEdge({ x: 0, y: 0, th: 0 }, { x: 40, y: 0, th: 0 }, null);
     expect(nearEdge(edge, at(20, CURVE_NEAR_PX / 4 - 0.2))).toBe(true);
     expect(nearEdge(edge, at(20, CURVE_NEAR_PX / 4 + 0.5))).toBe(false);
     expect(nearEdge(edge, null)).toBe(false);

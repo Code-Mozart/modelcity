@@ -1,10 +1,9 @@
 import { buildEdge, type Edge } from './edge';
 import type { Handle } from './handles';
-import { clearShapes, releaseMiddles, withNode, withRadius, type Path } from './path';
+import { withNode, withRadius, type Path } from './path';
 import { pointOn, sweeps } from './piece';
 import { AUTO_SNAP, RMIN } from './radius';
-import { reverseEdge } from './reverse';
-import { add, angleOf, dist, dot, len, mul, sub, toRad, type Vec } from './vec';
+import { angleOf, dist, dot, len, mul, sub, toRad, type Vec } from './vec';
 
 /** Drag state captured when a handle is grabbed. */
 export interface DragState {
@@ -24,7 +23,7 @@ const RADIUS_SEARCH_STEPS = 160;
 const RADIUS_REFINE_STEPS = 40;
 
 const edgeAt = (path: Path, i: number) =>
-  buildEdge(path.nodes[i]!, path.nodes[i + 1]!, path.radii[i] ?? null, path.shapes[i] ?? null);
+  buildEdge(path.nodes[i]!, path.nodes[i + 1]!, path.radii[i] ?? null);
 
 export const startDrag = (_path: Path, handle: Handle): DragState => ({ handle });
 
@@ -43,13 +42,13 @@ export function radiusFromCursor(E: Edge & { kind: 'C' }, pt: Vec): number {
 const toRequested = (R: number, Rmax: number) => (R >= AUTO_SNAP * Rmax ? null : R);
 
 function dragNode(path: Path, i: number, pt: Vec): Path {
-  return releaseMiddles(withNode(path, i, { x: pt.x, y: pt.y }), [i - 1, i]);
+  return withNode(path, i, { x: pt.x, y: pt.y });
 }
 
 export function dragHeading(path: Path, i: number, pt: Vec, snap: boolean): Path {
   let th = angleOf(sub(pt, path.nodes[i]!));
   if (snap) th = Math.round(th / SNAP_STEP) * SNAP_STEP;
-  return clearShapes(withNode(path, i, { th }), [i - 1, i]);
+  return withNode(path, i, { th });
 }
 
 /** Dragging the blue point sets both headings so their lines meet at the pointer (^9). */
@@ -57,15 +56,14 @@ function dragCorner(path: Path, i: number, C: Vec): Path {
   const p = path.nodes[i]!;
   const q = path.nodes[i + 1]!;
   if (dist(C, p) <= CTRL_MIN_DIST || dist(C, q) <= CTRL_MIN_DIST) return path;
-  const moved = withNode(withNode(path, i, { th: angleOf(sub(C, p)) }), i + 1, {
+  return withNode(withNode(path, i, { th: angleOf(sub(C, p)) }), i + 1, {
     th: angleOf(sub(q, C)),
   });
-  return clearShapes(moved, [i - 1, i, i + 1]);
 }
 
 /** The corner (1 or 2) of the hook the nodes form at radius R, if it is still a hook. */
 function hookCorner(path: Path, i: number, R: number, which: 1 | 2): Vec | null {
-  const E = buildEdge(path.nodes[i]!, path.nodes[i + 1]!, R, path.shapes[i] ?? null);
+  const E = buildEdge(path.nodes[i]!, path.nodes[i + 1]!, R);
   if (E.kind !== 'H') return null;
   return which === 1 ? E.k1 : E.k2;
 }
@@ -107,27 +105,15 @@ function dragHookCorner(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
 }
 
 /**
- * Dragging a corner of an S-curve, where a heading line meets its middle line (^132): the corner
- * slides along the middle line, which stays where it is (it is stored in the shape tag from now
- * on), and the node's heading turns so that its heading line passes through the corner. Ignored if
- * that would not be an S-curve any more.
+ * Dragging a corner of an S-curve, where a heading line meets the middle line (^132, experiment):
+ * the heading of the corner's node turns so that its heading line passes through the pointer.
  */
 function dragMiddle(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
-  const E = edgeAt(path, i);
-  if (E.kind !== 'S' || !E.mid) return path;
-  const M = E.mid;
-  const u = { x: M.ux, y: M.uy };
-  const k = add(M, mul(u, dot(sub(pt, M), u)));
+  if (edgeAt(path, i).kind !== 'S') return path;
   const at = which === 1 ? i : i + 1;
   const node = path.nodes[at]!;
-  const th = which === 1 ? angleOf(sub(k, node)) : angleOf(sub(node, k));
-  const turned = clearShapes(withNode(path, at, { th }), [at - 1, at]);
-  const shapes = turned.shapes.map((s, j) =>
-    j === i ? { kind: 'S' as const, s: E.s1, mid: M } : s,
-  );
-  const next = { ...turned, shapes };
-  const [p, q] = [next.nodes[i]!, next.nodes[i + 1]!];
-  return reverseEdge({ p, q, Rs: next.radii[i] ?? null }, E.s1, M) ? next : path;
+  const th = which === 1 ? angleOf(sub(pt, node)) : angleOf(sub(node, pt));
+  return withNode(path, at, { th });
 }
 
 /** Where the radius handle sits on arc k of edge i when the edge has radius R, if it is still an arc of that kind. */
@@ -137,7 +123,7 @@ function handlePoint(
   R: number,
   kind: Edge['kind'],
 ): Vec | null {
-  const E = buildEdge(path.nodes[at.i]!, path.nodes[at.i + 1]!, R, path.shapes[at.i] ?? null);
+  const E = buildEdge(path.nodes[at.i]!, path.nodes[at.i + 1]!, R);
   const piece = E.kind === kind ? E.pieces[at.k] : undefined;
   return piece && sweeps(piece) ? pointOn(piece, at.t) : null;
 }

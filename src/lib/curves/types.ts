@@ -8,14 +8,11 @@ export interface PathNode extends Vec {
   th: number;
 }
 
-/** The fixed middle line of an S-curve (point on it and direction). */
+/** The middle line of an S-curve (point on it and direction), derived from the nodes. */
 export interface MidLine extends Vec {
   ux: number;
   uy: number;
 }
-
-/** Stored shape tag of an edge (^7). */
-export type ShapeTag = { kind: 'C' } | { kind: 'S'; s: Dir; mid?: MidLine } | { kind: 'H'; s: Dir };
 
 export interface Line {
   type: 'line';

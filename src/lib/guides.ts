@@ -88,17 +88,12 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
 
 /**
  * Derived construction points, part of the scaffold (^51, ^60): the inflection point of an S or
- * hook, and the corners of an S whose middle line is not stored (it is derived and cannot be
- * dragged, so they are hollow). The handles (the bend's point, the corners of a hook or of an S with
- * a middle line, the radius points) are drawn separately.
+ * hook. The handles (the bend's point, the corners of a hook or of an S, the radius points) are
+ * drawn separately.
  */
 export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   if (E.kind === 'line' || E.kind === 'C') return;
   dot(f.ctx, toScreen(f, E.J), 6, pal.orange);
-  if (E.kind !== 'S' || E.mid) return;
-  for (const k of [E.k1, E.k2]) {
-    if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.orange, width: 2 });
-  }
 }
 
 /** The place on an arc where its radius label hangs: just outside the circle, at parameter t. */

@@ -1,5 +1,5 @@
 import type { Path } from './path';
-import { withNode, releaseMiddles } from './path';
+import { withNode } from './path';
 import type { NodeRef, Roads } from './roads';
 
 /**
@@ -34,11 +34,9 @@ export function closeOver(roads: Roads, refs: NodeRef[]): NodeRef[] {
 }
 
 /** Edges of a road next to the node: the one before and the one after. */
-const around = (node: number) => [node - 1, node];
-
 /**
  * After a drag changed headings in `road`, the shared nodes in other roads take the new heading
- * (a shared node has one heading), and their S-curve middles are released.
+ * (a shared node has one heading).
  */
 export function syncHeadings(roads: Roads, road: number, before: Path): Roads {
   const now = roads[road];
@@ -48,8 +46,7 @@ export function syncHeadings(roads: Roads, road: number, before: Path): Roads {
     if (before.nodes[i] && before.nodes[i]!.th === n.th) return;
     for (const c of coincident(out, { road, node: i }).slice(1)) {
       const path = withNode(out[c.road]!, c.node, { th: n.th });
-      const shapes = releaseMiddles(path, around(c.node));
-      out = out.map((p, r) => (r === c.road ? shapes : p));
+      out = out.map((p, r) => (r === c.road ? path : p));
     }
   });
   return out;
