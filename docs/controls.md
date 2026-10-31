@@ -28,7 +28,7 @@ Details:
 
 - Shift while dragging a heading (editing a handle, or placing a node) snaps it to 15° steps (^11).
 - Dragging a radius point to within 0.5% of the largest radius that fits makes the radius auto again: a deliberate snap, on any kind of segment, and the only way back to auto (the double-click was removed, ^143); with the snapping system it is to become a snap to the limiting node (^141).
-- Moving a node releases the fixed middle line of the S-curves next to it (they get the derived one again), and a heading drag of a shared node turns all its copies (^7, ^92).
+- A heading drag of a shared node turns all its copies (^92). Experiment (no shape tag): every curve is derived from the positions, headings and radii alone; the S-curve's middle line is always the derived one and cannot be moved.
 - The cursor shows what a click would do: a hand over a control point, a crosshair in draw mode, a plus-like copy cursor over a curve in draw mode (click inserts, splits or merges), a pointer over a curve in select mode (click selects), else the default arrow.
 - Dragging less than 6 px while placing a node does not set a heading, so a click keeps the automatic one.
 - Roads are independent of each other (^42).
@@ -107,7 +107,7 @@ Only a single segment shows its scaffold at a time (^66), over all roads, with o
 
 If that segment is one of several selected ones, all selected segments show their scaffold, with their heading arrows (^133); if it is not, the selected ones show nothing. The heading arrows of the two nodes of the shown segment are shown with it, and no other arrows. A node of a road that has no segment yet always shows its heading arrow. A node being placed counts as dragged.
 
-Looks: blue means selected or user action (selected nodes, the hover ring, the selection box), orange is gizmo. Filled points can be dragged (heading, bend, radius and corner points, all orange, ^134); hollow ones (the corners of an S-curve whose middle line is derived) only show derived geometry. On touch there is no hover, so scaffolds appear only while something is grabbed.
+Looks: blue means selected or user action (selected nodes, the hover ring, the selection box), orange is gizmo. Filled points can be dragged (heading, bend, radius and corner points, all orange, ^134); the corners of an S-curve turn the heading of their node when dragged (the pointer is on the heading line). Nothing is hollow any more. On touch there is no hover, so scaffolds appear only while something is grabbed.
 
 ## Undo and redo (^81, ^88)
 

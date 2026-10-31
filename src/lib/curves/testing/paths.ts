@@ -11,7 +11,6 @@ function twoNodes(a: [number, number, number], b: [number, number, number]): Pat
       { x: b[0], y: b[1], th: toRad(b[2]) },
     ],
     radii: [null],
-    shapes: [null],
   };
 }
 
@@ -26,7 +25,7 @@ function figH(): Path {
     at = add(at, mul(fromAngle(g), lens[i]!));
     nodes.push({ ...at, th: th[i + 1]! });
   }
-  return { nodes, radii: [null, null, null], shapes: [null, null, null] };
+  return { nodes, radii: [null, null, null] };
 }
 
 const builders: Record<FixtureName, () => Path> = {

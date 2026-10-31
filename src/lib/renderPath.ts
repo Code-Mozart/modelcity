@@ -102,7 +102,7 @@ function drawPreview(
 ) {
   if (hover.ref) {
     const [from, to] = hover.end === 'end' ? [hover.ref, hover.node] : [hover.node, hover.ref];
-    for (const piece of buildEdge(from, to, null, null).pieces) {
+    for (const piece of buildEdge(from, to, null).pieces) {
       strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
     }
   }

@@ -1,7 +1,6 @@
 import {
   edgesOf,
   nearestOnCurve,
-  releaseMiddles,
   removeNode,
   withNode,
   type CurveHit,
@@ -42,7 +41,7 @@ export const replaceRoad = (roads: Roads, road: number, path: Path): Roads =>
 
 /** A new road consisting of one node at `pt`, heading east (to the right). */
 export function startRoad(roads: Roads, pt: Vec): { roads: Roads; road: number } {
-  const road: Path = { nodes: [{ x: pt.x, y: pt.y, th: 0 }], radii: [], shapes: [] };
+  const road: Path = { nodes: [{ x: pt.x, y: pt.y, th: 0 }], radii: [] };
   return { roads: [...roads, road], road: roads.length };
 }
 
@@ -140,19 +139,12 @@ export function placed(roads: Roads, refs: NodeRef[]): Placed[] {
 
 /**
  * Move nodes (possibly of several roads) by the same translation from where they were (^71).
- * Headings stay; the fixed middle line of an S-curve next to a moved node is released.
+ * Headings stay.
  */
 export function moveNodes(roads: Roads, group: Placed[], delta: Vec): Roads {
   return roads.map((path, road) => {
     const mine = group.filter((g) => g.road === road);
     if (!mine.length) return path;
-    const moved = mine.reduce(
-      (p, g) => withNode(p, g.node, { x: g.x + delta.x, y: g.y + delta.y }),
-      path,
-    );
-    return releaseMiddles(
-      moved,
-      mine.flatMap((g) => [g.node - 1, g.node]),
-    );
+    return mine.reduce((p, g) => withNode(p, g.node, { x: g.x + delta.x, y: g.y + delta.y }), path);
   });
 }

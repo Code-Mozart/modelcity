@@ -22,10 +22,9 @@ const HIT_PX = { mouse: 11, touch: 20 };
 /** How near (screen pixels) the pointer must be to a node, and to a curve (^137). */
 export const NODE_HIT_PX = { mouse: 9, touch: 16 };
 
-/** The corner points of a hook (they set the radius) or of an S with a stored middle line (they move it). */
+/** The corner points of a hook (they set the radius) or of an S (they turn the heading of their node). */
 function cornerHandles(i: number, E: Exclude<Edge, { kind: 'line' | 'C' }>): Handle[] {
   const [t1, t2] = (E.kind === 'H' ? ['s1', 's2'] : ['mid1', 'mid2']) as [HandleType, HandleType];
-  if (E.kind === 'S' && !E.mid) return [];
   return [...(E.k1 ? [{ type: t1, i, ...E.k1 }] : []), ...(E.k2 ? [{ type: t2, i, ...E.k2 }] : [])];
 }
 
