@@ -26,6 +26,16 @@ export class App {
     await this.page.mouse.up();
   }
 
+  async rightClick(pt: Pt) {
+    const p = await this.at(pt);
+    await this.page.mouse.click(p.x, p.y, { button: 'right' });
+  }
+
+  /** The box of a drag on empty canvas, from corner to corner. */
+  async box(from: Pt, to: Pt) {
+    await this.drag(from, to);
+  }
+
   roads(): Promise<Roads> {
     return this.page.evaluate(() => JSON.parse(JSON.stringify(window.__modelcity!.editor.roads)));
   }
