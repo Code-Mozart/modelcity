@@ -1,4 +1,4 @@
-next: ^149
+next: ^160
 
 # Hats
 
@@ -29,23 +29,23 @@ Registry of all hats. Never reuse or renumber. Keep this file up to date.
 
 The roadmap (^146): items of type `feature`, `bug` or `chore` in the user's order of priority (user's first draft: many need more concrete requirements and design, shared between user and Claude). Status "planned" until the open questions are settled.
 
-### Milestone sets (^147)
+### Milestones (^147)
 
-Every open feature is in exactly one set. Decisions, questions and bugs in brackets belong to the same set. The suggested order is Claude's; the user decides the priority.
+Every open feature is in exactly one planned milestone, and each milestone is a hat. Decisions, questions and bugs in brackets belong to the same set. The suggested order is Claude's; the user decides the priority.
 
-| Set | Name | Features | Also belongs to it | Depends on |
+| Name | Milestone | Features | Also belongs to it | Depends on |
 |---|---|---|---|---|
-| A | Data model and persistence | ^106 normalized model, ^82 persistence, ^148 project management | ^105 (hook points derived), ^92 (shared nodes by position, still `assumed`), ^118 (clipboard question), the stored lane width (^26) | none; unblocks C, D, F |
-| B1 | History | ^103 batch undo, ^107 recent history panel | ^108, ^109 | none |
-| B2 | Controls and UI | ^110 learned controls hidden, ^97 operations search, ^104 view mode | ^111 (names, decided) | B1 for the search list |
-| B3 | Modes | ^119 mode outline and label | ^120 extend mode | none |
-| C | Snapping engine | ^101 snap lines and points | ^100, ^102, ^112, ^113 | A (parallel segments need the lane width) |
-| D | Selection transforms and clipboard | ^114 rings, ^115 rotate, ^116 crosshair and scale, ^117 clipboard | ^118 | C (^112), A (clipboard format) |
-| E | Situational rendering | ^98 segment colors, ^99 hover and selection emphasis | none | none |
-| F1 | Lanes and markings | ^21 markings, ^22 multi-lane roads, ^26 lane types and width | ^100 | A, C |
-| F2 | Junctions and islands | ^24 junctions, ^27 traffic islands | none | F1 |
-| F3 | Crossings | ^25 crossings | none | F1 |
-| G | Quality | ^122 performance tests | ^145 (done) | none |
+| Data model and persistence | ^149 | ^106 normalized model, ^82 persistence, ^148 project management | ^105 (hook points derived), ^92 (shared nodes by position, still `assumed`), ^118 (clipboard question), the stored lane width (^26) | none; unblocks ^153, ^154, F |
+| History | ^150 | ^103 batch undo, ^107 recent history panel | ^108, ^109 | none |
+| Controls and UI | ^151 | ^110 learned controls hidden, ^97 operations search, ^104 view mode | ^111 (names, decided) | ^150 for the search list |
+| Modes | ^152 | ^119 mode outline and label | ^120 extend mode | none |
+| Snapping engine | ^153 | ^101 snap lines and points | ^100, ^102, ^112, ^113 | ^149 (parallel segments need the lane width) |
+| Selection transforms and clipboard | ^154 | ^114 rings, ^115 rotate, ^116 crosshair and scale, ^117 clipboard | ^118 | ^153 (^112), ^149 (clipboard format) |
+| Situational rendering | ^155 | ^98 segment colors, ^99 hover and selection emphasis | none | none |
+| Lanes and markings | ^156 | ^21 markings, ^22 multi-lane roads, ^26 lane types and width | ^100 | ^149, ^153 |
+| Junctions and islands | ^157 | ^24 junctions, ^27 traffic islands | none | ^156 |
+| Crossings | ^158 | ^25 crossings | none | ^156 |
+| Quality | ^159 | ^122 performance tests | ^145 (done) | none |
 
 Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^145, ^146, ^147.
 
@@ -53,7 +53,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 |-----|------|--------|---------|
 | ^19 | feature | done (merged) | **Camera rotation:** a third camera operation besides pan and zoom: rotate the world. The grid is pinned to the camera, so it does not rotate with the world. Open: ^28. |
 | ^20 | feature | done | **Basic road creation:** a single continuous path as in the demo (^5, ^13), including UI and a visible gizmo. Design the HUD: minimal or non-existent, canvas (almost) full-screen. Follows ^29. |
-| ^21 | feature | in part: road surface done (^90, ^91); markings open (milestone F1) | **Road geometry and markings generated** from the path (generate rather than store, see handover). |
+| ^21 | feature | in part: road surface done (^90, ^91); markings open (milestone ^156) | **Road geometry and markings generated** from the path (generate rather than store, see handover). |
 | ^22 | feature | in part: lanes are roads drawn side by side by hand; the parallel snapping was removed again (^124) and returns with ^101; markings: see ^21 | **Multi-lane roads** (e.g. 1+1, or one-way with more than one lane): how tools work (creation, selection, moving, ...), how geometry and markings are generated. |
 | ^23 | feature | done (merged) | **Branching, splits, merges** of roads. |
 | ^24 | feature | planned | **Intersections and junctions.** |
@@ -179,5 +179,16 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^96 | doc | assumed (the term Snap was removed with ^124) | **Glossary and docs of ^22/^23:** terms *Shared node*, *Split*, *Merge*, *Snap* in the README; `docs/controls.md` section "Lanes side by side, splits and merges". Open (for the user): lane markings (rest of ^21), whether the snapping needs a modifier to switch it off, junction rendering and rules (^24), traffic direction constraints at merges. |
 | ^145 | decision | done (user: maybe, then asked for it) | **End-to-end smoke test (Claude's suggestion, user: maybe):** a small Playwright script that checks things such as the control hints per editor state, and later the performance tests (^122). The user's concern: test code is a maintenance liability; e2e tests are less coupled to the code than unit tests, hence "maybe". Built as one scenario test in `e2e/smoke.spec.ts` (first arm with S and L, radius, move/undo/redo, second arm, split, merge, Alt branch select); `bun run e2e`, own CI job; the test reads the app through the dev-only `window.__modelcity` hook (assumed). Keep it small. |
 | ^146 | decision | decided (user) | **Roadmap, milestone, scope (user):** the *roadmap* is the one fuzzy, prioritised list of wanted work (it replaces "todo-list" and "backlog"; no sprints). Its items are `feature`, `bug` or `chore` (refactor, docs, tooling); hat type `milestone` is renamed `feature`. A *milestone* is one PR that tackles one or more roadmap items; at its start Claude writes what is in and out of scope. In-scope revisions are all done in the PR; new ideas during a milestone go onto the roadmap as hats, and Claude reminds the user of that. Only the one hats branch/PR may add hats; a pure refactor PR adds none. |
-| ^147 | decision | decided (user: the groups A to E; the rest of the grouping: assumed) | **Milestone sets (^146):** the open features are grouped into the sets A, B1, B2, B3, C, D, E, F1, F2, F3 and G (table in the Roadmap section), each feature in exactly one set. Stale statuses were corrected in the same step: ^2, ^19, ^23, ^40, ^47, ^53, ^58, ^64, ^70, ^80, ^81 are done; ^18 is closed; ^94 is removed and ^95 superseded (both by ^124). |
-| ^148 | feature | planned | **Project management (user, part of set A):** exporting and backing up the data, several projects, and a strategy for migrating saved data when the data model changes. Together with ^82 (persistence) and ^106 (the normalized data model). Needs a design discussion first. |
+| ^147 | decision | decided (user: the groups; the rest of the grouping: assumed; ids as hats: decided) | **Milestones (^146):** the open features are grouped into the planned milestones ^149 to ^159 (table in the Roadmap section), each feature in exactly one. The milestones have hats, not letters (user: no competing ids). Stale statuses were corrected in the same step: ^2, ^19, ^23, ^40, ^47, ^53, ^58, ^64, ^70, ^80, ^81 are done; ^18 is closed; ^94 is removed and ^95 superseded (both by ^124). |
+| ^148 | feature | planned | **Project management (user, part of milestone ^149):** exporting and backing up the data, several projects, and a strategy for migrating saved data when the data model changes. Together with ^82 (persistence) and ^106 (the normalized data model). Needs a design discussion first. |
+| ^149 | milestone | planned | **Data model and persistence:** ^106 normalized model, ^82 persistence, ^148 project management. Also belongs to it: ^105 (hook points derived), ^92 (shared nodes by position, still `assumed`), ^118 (clipboard question), the stored lane width (^26). Depends on: none; unblocks ^153, ^154, F. Scope (in/out) is written when the milestone starts. |
+| ^150 | milestone | planned | **History:** ^103 batch undo, ^107 recent history panel. Also belongs to it: ^108, ^109. Depends on: none. Scope (in/out) is written when the milestone starts. |
+| ^151 | milestone | planned | **Controls and UI:** ^110 learned controls hidden, ^97 operations search, ^104 view mode. Also belongs to it: ^111 (names, decided). Depends on: ^150 for the search list. Scope (in/out) is written when the milestone starts. |
+| ^152 | milestone | planned | **Modes:** ^119 mode outline and label. Also belongs to it: ^120 extend mode. Depends on: none. Scope (in/out) is written when the milestone starts. |
+| ^153 | milestone | planned | **Snapping engine:** ^101 snap lines and points. Also belongs to it: ^100, ^102, ^112, ^113. Depends on: ^149 (parallel segments need the lane width). Scope (in/out) is written when the milestone starts. |
+| ^154 | milestone | planned | **Selection transforms and clipboard:** ^114 rings, ^115 rotate, ^116 crosshair and scale, ^117 clipboard. Also belongs to it: ^118. Depends on: ^153 (^112), ^149 (clipboard format). Scope (in/out) is written when the milestone starts. |
+| ^155 | milestone | planned | **Situational rendering:** ^98 segment colors, ^99 hover and selection emphasis. Also belongs to it: none. Depends on: none. Scope (in/out) is written when the milestone starts. |
+| ^156 | milestone | planned | **Lanes and markings:** ^21 markings, ^22 multi-lane roads, ^26 lane types and width. Also belongs to it: ^100. Depends on: ^149, ^153. Scope (in/out) is written when the milestone starts. |
+| ^157 | milestone | planned | **Junctions and islands:** ^24 junctions, ^27 traffic islands. Also belongs to it: none. Depends on: ^156. Scope (in/out) is written when the milestone starts. |
+| ^158 | milestone | planned | **Crossings:** ^25 crossings. Also belongs to it: none. Depends on: ^156. Scope (in/out) is written when the milestone starts. |
+| ^159 | milestone | planned | **Quality:** ^122 performance tests. Also belongs to it: ^145 (done). Depends on: none. Scope (in/out) is written when the milestone starts. |
