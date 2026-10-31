@@ -4,7 +4,7 @@ import { clearShapes, releaseMiddles, withNode, withRadius, type Path } from './
 import { pointOn, sweeps } from './piece';
 import { AUTO_SNAP, RMIN } from './radius';
 import { reverseEdge } from './reverse';
-import { add, angleOf, dist, dot, fromAngle, len, mul, sub, toRad, type Vec } from './vec';
+import { add, angleOf, dist, dot, len, mul, sub, toRad, type Vec } from './vec';
 
 /** Drag state captured when a handle is grabbed. */
 export interface DragState {
@@ -86,24 +86,27 @@ function dragHookCorner(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
 }
 
 /**
- * Dragging a corner of an S-curve's middle line, where a heading line meets it (^132): the corner
- * slides along its heading line and the middle line turns about the other corner. Ignored if
+ * Dragging a corner of an S-curve, where a heading line meets its middle line (^132): the corner
+ * slides along the middle line, which stays where it is (it is stored in the shape tag from now
+ * on), and the node's heading turns so that its heading line passes through the corner. Ignored if
  * that would not be an S-curve any more.
  */
 function dragMiddle(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
   const E = edgeAt(path, i);
-  if (E.kind !== 'S' || !E.mid || !E.k1 || !E.k2) return path;
-  const [p, q] = [path.nodes[i]!, path.nodes[i + 1]!];
-  const [node, other] = which === 1 ? [p, E.k2] : [q, E.k1];
-  const heading = fromAngle(node.th);
-  const moved = add(node, mul(heading, dot(sub(pt, node), heading)));
-  const [k1, k2] = which === 1 ? [moved, other] : [other, moved];
-  const d = sub(k2, k1);
-  if (len(d) < 1e-3) return path;
-  const mid = { x: (k1.x + k2.x) / 2, y: (k1.y + k2.y) / 2, ux: d.x / len(d), uy: d.y / len(d) };
-  if (!reverseEdge({ p, q, Rs: path.radii[i] ?? null }, E.s1, mid)) return path;
-  const shapes = path.shapes.map((s, j) => (j === i ? { kind: 'S' as const, s: E.s1, mid } : s));
-  return { ...path, shapes };
+  if (E.kind !== 'S' || !E.mid) return path;
+  const M = E.mid;
+  const u = { x: M.ux, y: M.uy };
+  const k = add(M, mul(u, dot(sub(pt, M), u)));
+  const at = which === 1 ? i : i + 1;
+  const node = path.nodes[at]!;
+  const th = which === 1 ? angleOf(sub(k, node)) : angleOf(sub(node, k));
+  const turned = clearShapes(withNode(path, at, { th }), [at - 1, at]);
+  const shapes = turned.shapes.map((s, j) =>
+    j === i ? { kind: 'S' as const, s: E.s1, mid: M } : s,
+  );
+  const next = { ...turned, shapes };
+  const [p, q] = [next.nodes[i]!, next.nodes[i + 1]!];
+  return reverseEdge({ p, q, Rs: next.radii[i] ?? null }, E.s1, M) ? next : path;
 }
 
 /** Where the radius handle sits on arc k of edge i when the edge has radius R, if it is still an arc of that kind. */

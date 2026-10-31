@@ -1,9 +1,10 @@
 import { resetRadius } from './curves/drag';
 import { closeOver } from './curves/junctions';
-import { hitHandle } from './curves/handles';
+import { hitHandle, NODE_HIT_PX } from './curves/handles';
 import {
   edgesOfRoads,
   nearestOnRoads,
+  nearNode,
   removeNodesFrom,
   removeRoad,
   replaceRoad,
@@ -30,14 +31,7 @@ import { cursorOf, extendTo, mergePreview, previewOf, targetOf, type Drawn } fro
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { NO_HISTORY, record, redoStep, undoStep } from './history';
 import type { Pointer } from './proximity';
-import {
-  DRAG_PX,
-  INSERT_REACH_PX,
-  type Hover,
-  type PointerInfo,
-  type Press,
-  type Snapshot,
-} from './editorTypes';
+import { DRAG_PX, type Hover, type PointerInfo, type Press, type Snapshot } from './editorTypes';
 import {
   afterBranchClick,
   afterCurveClick,
@@ -120,8 +114,10 @@ export class Editor {
     return hitHandle(this.handles(scale), pt, scale, touch);
   }
 
-  private curveAt({ pt, scale }: PointerInfo): RoadHit | null {
-    return nearestOnRoads(this.roads, pt, INSERT_REACH_PX / scale);
+  /** The curve under the pointer, as near as a node is, but not within a node's gap (^137). */
+  private curveAt({ pt, scale, touch }: PointerInfo): RoadHit | null {
+    const hit = nearestOnRoads(this.roads, pt, NODE_HIT_PX[touch ? 'touch' : 'mouse'] / scale);
+    return hit && !nearNode(hit) ? hit : null;
   }
 
   /** Handle a key; true if it was bound. */

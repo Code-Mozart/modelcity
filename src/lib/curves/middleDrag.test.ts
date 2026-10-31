@@ -20,29 +20,29 @@ describe('dragging the corners of an S-curve (^132)', () => {
     expect(handles.filter((h) => h.type === 'mid1' || h.type === 'mid2')).toHaveLength(2);
   });
 
-  it('turns the middle line about the other corner, along the heading line, and stays an S', () => {
+  it('slides along the middle line, which stays, and turns the heading of the node', () => {
     const { path, E, handles } = setup();
     const h = handles.find((x) => x.type === 'mid1')!;
-    const to = {
-      x: h.x + 0.6 * Math.cos(path.nodes[0]!.th),
-      y: h.y + 0.6 * Math.sin(path.nodes[0]!.th),
-    };
+    const M = E.mid!;
+    const to = { x: h.x + 0.8 * M.ux, y: h.y + 0.8 * M.uy };
     const next = applyDrag(path, startDrag(path, h), to, noMods);
+    expect(next.nodes[0]!.th).not.toBeCloseTo(path.nodes[0]!.th, 6);
+    expect(next.nodes[1]).toEqual(path.nodes[1]);
     const tag = next.shapes[0];
-    expect(tag).toMatchObject({ kind: 'S' });
-    const mid = tag && tag.kind === 'S' ? tag.mid : undefined;
-    expect(mid).toBeDefined();
-    expect(mid!.ux).not.toBeCloseTo(E.mid!.ux, 6);
+    expect(tag).toMatchObject({ kind: 'S', mid: M });
     const E2 = edgesOf(next)[0]!.E;
     expect(E2.kind).toBe('S');
-    // the other corner stays where it was
-    if (E2.kind === 'S') expect(E2.k2!.x).toBeCloseTo(E.k2!.x, 6);
+    if (E2.kind === 'S') {
+      expect(E2.k2!.x).toBeCloseTo(E.k2!.x, 6);
+      expect(E2.k1!.x).toBeCloseTo(h.x + 0.8 * M.ux, 3);
+    }
   });
 
   it('ignores a drag that would not be an S-curve any more', () => {
-    const { path, handles } = setup();
+    const { path, E, handles } = setup();
     const h = handles.find((x) => x.type === 'mid2')!;
-    const next = applyDrag(path, startDrag(path, h), { x: -1e6, y: 1e6 }, noMods);
+    const far = { x: E.mid!.x - 1e6 * E.mid!.ux, y: E.mid!.y - 1e6 * E.mid!.uy };
+    const next = applyDrag(path, startDrag(path, h), far, noMods);
     expect(edgesOf(next)[0]!.E.kind).toBe('S');
   });
 });
