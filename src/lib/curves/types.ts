@@ -37,13 +37,6 @@ export interface Arc {
 
 export type Piece = Line | Arc;
 
-/** Short perpendicular marker where a construction line touches the curve. */
-export interface Tick {
-  at: Vec;
-  dir: Vec;
-  role: 'orange' | 'yellow';
-}
-
 /** Input shared by all edge builders: both end nodes and the requested radius (null = auto). */
 export interface EdgeInput {
   p: PathNode;
@@ -72,7 +65,6 @@ export interface BendEdge extends RadiusInfo {
   turn: number;
   T1: Vec;
   T2: Vec;
-  ticks: Tick[];
 }
 
 /** S-curve or hook: two arcs of one radius (^6). */
@@ -88,7 +80,6 @@ export interface TwoArcEdge extends RadiusInfo {
   J: Vec;
   axis: { a: Vec; b: Vec };
   straight: number;
-  ticks: Tick[];
 }
 
 export type Edge = LineEdge | BendEdge | TwoArcEdge;

@@ -1,4 +1,5 @@
 import { sweeps, pointOn } from './piece';
+import type { Piece } from './types';
 import type { EdgeRef, Path } from './path';
 import { dist, fromAngle, mul, add, type Vec } from './vec';
 
@@ -12,23 +13,39 @@ export interface Handle extends Vec {
   type: HandleType;
   i: number;
   k?: number;
+  /** Where on arc k a radius handle sits: 0 start, 1 end, 0.5 middle (^128). */
+  t?: number;
 }
 
 export const ARROW_PX = 40;
 const HIT_PX = { mouse: 11, touch: 20 };
 const NODE_HIT_PX = { mouse: 9, touch: 16 };
 
-function edgeHandles({ i, E }: EdgeRef): Handle[] {
+function edgeHandles({ i, p, q, E }: EdgeRef): Handle[] {
+  const nodes = [p, q];
   if (E.kind === 'line') return [];
   const out: Handle[] = [];
   if (E.kind === 'C') out.push({ type: 'ctrl', i, ...E.C });
   if (E.kind === 'H' && E.k1) out.push({ type: 's1', i, ...E.k1 });
   if (E.kind === 'H' && E.k2) out.push({ type: 's2', i, ...E.k2 });
-  E.pieces.forEach((piece, k) => {
-    if (sweeps(piece))
-      out.push({ type: 'rad', i, k: E.kind === 'C' ? -1 : k, ...pointOn(piece, 0.5) });
-  });
+  E.pieces.forEach((piece, k) => out.push(...radiusHandles(i, k, piece, nodes)));
   return out;
+}
+
+/** Closer than this (meters) to a node, a point on a curve counts as at the node. */
+const AT_NODE = 1e-3;
+
+/**
+ * The radius control points of an arc: both of its ends, where the straight pieces touch it
+ * (^128), so dragging them along the heading lines changes the radius. An end at a node is not
+ * offered (the node is there); an arc with both ends at nodes, a single arc between two nodes, is
+ * grabbed at its middle instead, so that its radius can always be reached.
+ */
+function radiusHandles(i: number, k: number, piece: Piece, nodes: Vec[]): Handle[] {
+  if (!sweeps(piece)) return [];
+  const at = (t: number): Handle => ({ type: 'rad', i, k, t, ...pointOn(piece, t) });
+  const free = [0, 1].map(at).filter((h) => nodes.every((n) => dist(n, h) > AT_NODE));
+  return free.length ? free : [at(0.5)];
 }
 
 export function handlesOf(path: Path, edges: EdgeRef[], scale: number): Handle[] {

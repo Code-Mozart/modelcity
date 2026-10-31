@@ -39,9 +39,12 @@ export function afterCurveClick(sel: NodeRef[], nodes: NodeRef[], shift: boolean
   return nodes.reduce(withoutNode, sel);
 }
 
-/** All nodes of a road: what Alt+LMB selects, the lane being the road for now (^76). */
-export const roadNodes = (roads: Roads, road: number): NodeRef[] =>
-  (roads[road]?.nodes ?? []).map((_, node) => ({ road, node }));
+export const allSelected = (sel: NodeRef[], refs: NodeRef[]) =>
+  refs.length > 0 && refs.every((r) => isSelected(sel, r));
+
+/** Alt+click on a branch (^128): selects its nodes, or deselects them if they are all selected. */
+export const afterBranchClick = (sel: NodeRef[], nodes: NodeRef[]): NodeRef[] =>
+  allSelected(sel, nodes) ? nodes.reduce(withoutNode, sel) : nodes;
 
 /** The segments (road, index) whose two nodes are both selected. */
 export function selectedSegments(roads: Roads, sel: NodeRef[]): { road: number; i: number }[] {
@@ -53,7 +56,7 @@ export function selectedSegments(roads: Roads, sel: NodeRef[]): { road: number; 
   );
 }
 
-/** What pressing a node does to the selection, and what a release without moving does (^71, ^72, ^76). */
+/** What pressing a node does to the selection, and what a release without moving does (^71, ^72, ^128). */
 export interface NodePress {
   selection: NodeRef[];
   click: 'toggle' | 'collapse' | 'keep';
@@ -70,7 +73,7 @@ export function pressNode(
   lane: NodeRef[],
   { shift, alt }: Modifiers,
 ): NodePress {
-  if (alt) return { selection: lane, click: 'keep' };
+  if (alt) return { selection: afterBranchClick(sel, lane), click: 'keep' };
   if (shift) {
     const was = isSelected(sel, ref);
     return { selection: withNodes(sel, [ref]), click: was ? 'toggle' : 'keep' };

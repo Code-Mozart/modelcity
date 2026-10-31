@@ -19,8 +19,8 @@ export interface Hint {
 export type HintTarget =
   | { kind: 'empty' }
   /** `picked`: how many of the curve's two nodes are selected. */
-  | { kind: 'curve'; picked?: number; act?: CurveAction }
-  | { kind: 'handle'; type: HandleType; act: NodeAction; selected?: boolean };
+  | { kind: 'curve'; picked?: number; act?: CurveAction; lane?: boolean }
+  | { kind: 'handle'; type: HandleType; act: NodeAction; selected?: boolean; lane?: boolean };
 
 const mouse = (button: 'lmb' | 'mmb' | 'rmb', drag = false, mod?: 'shift' | 'alt'): Input => ({
   kind: 'mouse',
@@ -92,25 +92,30 @@ function drawModeHints(target: HintTarget): Hint[] {
   ];
 }
 
+/** The Alt row: select the branch under the pointer, or deselect it if it is wholly selected (^128). */
+function laneHint(target: HintTarget): Hint {
+  const selected = target.kind !== 'empty' && target.lane;
+  return hint(mouse('lmb', false, 'alt'), selected ? 'deselect lane' : 'select lane');
+}
+
 /**
- * Selecting with the left button, by what is under the pointer (^72, ^74, ^75, ^76). With nothing
+ * Selecting with the left button, by what is under the pointer (^72, ^74, ^75, ^128). With nothing
  * selected, Shift would add nothing to what LMB does, so no Shift row then.
  */
 function pickHints(target: HintTarget, selected: number): Hint[] {
   const shift = (text: string) => hint(mouse('lmb', false, 'shift'), text);
-  const lane = hint(mouse('lmb', false, 'alt'), 'select lane');
   const instead = selected > 0 ? ' instead' : '';
   if (target.kind === 'handle' && target.type === 'node') {
-    if (target.selected) return [shift('deselect'), lane];
+    if (target.selected) return [shift('deselect'), laneHint(target)];
     const add = selected > 0 ? [shift('select')] : [];
-    return [hint(mouse('lmb'), `select${instead}`), ...add, lane];
+    return [hint(mouse('lmb'), `select${instead}`), ...add, laneHint(target)];
   }
   if (target.kind !== 'curve') return [];
   const all = target.picked === 2;
   return [
     ...(all ? [] : [hint(mouse('lmb'), `select both nodes${instead}`)]),
     ...(selected > 0 ? [shift(all ? 'deselect both nodes' : 'add both nodes to selection')] : []),
-    lane,
+    laneHint(target),
   ];
 }
 

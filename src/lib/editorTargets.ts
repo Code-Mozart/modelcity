@@ -1,8 +1,9 @@
 import { autoHeading, autoHeadingBefore } from './curves/path';
-import type { NodeRef, Roads } from './curves/roads';
+import type { NodeRef, RoadHandle, RoadHit, Roads } from './curves/roads';
 import { activeEnd, curveAction, nodeAction } from './curves/junctions';
 import type { PathNode } from './curves/types';
-import { curveNodes, isSelected, pickedCount } from './selection';
+import { allSelected, curveNodes, isSelected, pickedCount } from './selection';
+import { branchOfEdge, branchOfNode } from './curves/branches';
 import type { Hover, Placement } from './editorTypes';
 import type { HintTarget } from './hints';
 
@@ -14,27 +15,34 @@ export interface Drawn {
   selection: NodeRef[];
 }
 
-/** What the control hints are about (^49). */
-export function targetOf(drawn: Drawn, hover: Hover | null, drawing: boolean): HintTarget {
-  const { selection } = drawn;
-  if (hover?.kind === 'handle') {
-    const { handle } = hover;
-    const ref = { road: handle.road, node: handle.i };
-    const node = handle.type === 'node';
-    return {
-      kind: 'handle',
-      type: handle.type,
-      act: node && drawing ? nodeAction(drawn, ref) : null,
-      selected: isSelected(selection, ref),
-    };
-  }
-  if (hover?.kind !== 'candidate') return { kind: 'empty' };
-  const { road, ref } = hover.hit;
+function handleTarget(drawn: Drawn, handle: RoadHandle, drawing: boolean): HintTarget {
+  const { selection, roads } = drawn;
+  const ref = { road: handle.road, node: handle.i };
+  const node = handle.type === 'node';
+  return {
+    kind: 'handle',
+    type: handle.type,
+    act: node && drawing ? nodeAction(drawn, ref) : null,
+    selected: isSelected(selection, ref),
+    lane: node && !drawing && allSelected(selection, branchOfNode(roads, ref)),
+  };
+}
+
+function curveTarget(drawn: Drawn, hit: RoadHit, drawing: boolean): HintTarget {
+  const { selection, roads } = drawn;
+  const { road, ref } = hit;
   return {
     kind: 'curve',
     picked: pickedCount(selection, curveNodes(road, ref.i)),
     act: drawing ? curveAction(drawn, road) : null,
+    lane: !drawing && allSelected(selection, branchOfEdge(roads, { road, i: ref.i })),
   };
+}
+
+/** What the control hints are about (^49). */
+export function targetOf(drawn: Drawn, hover: Hover | null, drawing: boolean): HintTarget {
+  if (hover?.kind === 'handle') return handleTarget(drawn, hover.handle, drawing);
+  return hover?.kind === 'candidate' ? curveTarget(drawn, hover.hit, drawing) : { kind: 'empty' };
 }
 
 /**

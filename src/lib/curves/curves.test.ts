@@ -180,7 +180,7 @@ describe('dragging radii', () => {
 
   it('setting a radius leaves headings alone and dragging far snaps back to auto', () => {
     const path = fixture('H');
-    const handle = { type: 'rad' as const, i: 0, k: -1, x: 0, y: 0 };
+    const handle = { type: 'rad' as const, i: 0, k: 1, t: 0.5, x: 0, y: 0 };
     const E = edgesOf(path)[0]!.E;
     if (E.kind !== 'C') throw new Error('expected a bend');
     const small = applyDrag(path, startDrag(path, handle), pointOn(E.pieces[1]!, 0.5), noMods);

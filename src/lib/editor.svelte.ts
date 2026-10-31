@@ -39,6 +39,7 @@ import {
   type Snapshot,
 } from './editorTypes';
 import {
+  afterBranchClick,
   afterCurveClick,
   nodesInBand,
   sameSelection,
@@ -94,11 +95,12 @@ export class Editor {
   private currentFocus(): Focus | null {
     const press = this.press;
     if (press?.kind === 'drag') {
-      return { road: press.road, type: press.drag.handle.type, i: press.drag.handle.i };
+      const { type, i, k, t } = press.drag.handle;
+      return { road: press.road, type, i, k, t };
     }
     if (press?.kind === 'place') return { road: press.ref.road, type: 'node', i: press.ref.node };
     const h = this.hover?.kind === 'handle' ? this.hover.handle : null;
-    return h ? { road: h.road, type: h.type, i: h.i } : null;
+    return h ? { road: h.road, type: h.type, i: h.i, k: h.k, t: h.t } : null;
   }
 
   private get drawn(): Drawn {
@@ -244,9 +246,9 @@ export class Editor {
     this.roads = dragStep(this.drawn, press, info);
   }
 
-  /** Segments whose scaffold shows besides the focused one: the selected ones while sharing a radius (^77). */
+  /** Segments whose scaffold shows besides the focused one: the selected ones while a radius point of one of them is dragged or hovered (^77, ^128). */
   get extraScaffold() {
-    return sharing(this.roads, this.selection, this.press)?.all ?? [];
+    return sharing(this.roads, this.selection, this.press, this.hover)?.all ?? [];
   }
 
   /** The curve a merge into the node or curve under the pointer would add (^123, ^125). */
@@ -279,8 +281,10 @@ export class Editor {
 
   private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
     const { curve, shift } = press;
-    if (curve.length)
-      this.selection = closeOver(this.roads, afterCurveClick(this.selection, curve, shift));
+    const next = press.alt
+      ? afterBranchClick(this.selection, curve)
+      : afterCurveClick(this.selection, curve, shift);
+    if (curve.length) this.selection = closeOver(this.roads, next);
     else if (shift) return;
     else if (this.selection.length) this.selection = [];
     else this.enterDrawMode();

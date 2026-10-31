@@ -1,4 +1,4 @@
-import type { Edge, Tick } from './curves/types';
+import type { Arc, Edge } from './curves/types';
 import type { EdgeRef } from './curves/path';
 import { sweeps } from './curves/piece';
 import { fromAngle, type Vec } from './curves/vec';
@@ -14,29 +14,21 @@ import {
   type Palette,
 } from './paint';
 
-/** Construction geometry drawn behind the curve (^9): heading lines, circles, ticks, corner points. */
+/** Construction geometry drawn behind the curve (^9): heading lines, circles, corner points. */
 const HEAD_REACH_PX = 28;
 const STUB_PX = 60;
 const AXIS_REACH_PX = 50;
-const TICK_PX = 9;
+
+/** The radius handle that is hovered or dragged on an edge: its arc and the place on it. */
+export interface RadFocus {
+  k: number;
+  t: number;
+}
 
 /** Where a heading line leads: to a corner point, or as a short stub pointing forward (+1) or back (-1). */
 interface HeadEnd {
   corner: Vec | null;
   sign: 1 | -1;
-}
-
-function drawTick(f: Frame, t: Tick, pal: Palette) {
-  const at = toScreen(f, t.at);
-  const d = screenDir(f, t.dir);
-  const nx = -d.y * TICK_PX;
-  const ny = d.x * TICK_PX;
-  segment(
-    f.ctx,
-    { x: at.x - nx, y: at.y - ny },
-    { x: at.x + nx, y: at.y + ny },
-    { color: pal[t.role], width: 2 },
-  );
 }
 
 /** Heading line of one node: through its corner point if there is one, else a short stub. */
@@ -83,7 +75,6 @@ export function drawGuides(f: Frame, ref: EdgeRef, pal: Palette) {
   if (E.kind === 'line') return;
   if (E.kind === 'C') drawBendGuides(f, { ...ref, E }, pal);
   else drawTwoArcGuides(f, { ...ref, E }, pal);
-  E.ticks.forEach((t) => drawTick(f, t, pal));
 }
 
 export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
@@ -109,20 +100,28 @@ export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   }
 }
 
-/** Radius labels at the middle of each arc. */
-export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette) {
-  for (const piece of E.pieces) {
-    if (!sweeps(piece)) continue;
-    const mid = toScreen(f, {
-      x: piece.c.x + piece.r * Math.cos(piece.a0 + piece.da / 2),
-      y: piece.c.y + piece.r * Math.sin(piece.a0 + piece.da / 2),
-    });
-    const c = toScreen(f, piece.c);
-    const l = Math.hypot(mid.x - c.x, mid.y - c.y) || 1;
-    const at = { x: mid.x + ((mid.x - c.x) / l) * 22, y: mid.y + ((mid.y - c.y) / l) * 22 };
-    text(f.ctx, `${piece.r.toFixed(1)}m`, at, {
-      color: pal['orange-ink'],
-      align: 'center',
-    });
-  }
+/** The place on an arc where its radius label hangs: just outside the circle, at parameter t. */
+function labelAt(f: Frame, piece: Arc, t: number): Vec {
+  // next to a radius point the label keeps clear of it, in the middle of the arc it hangs closer
+  const gap = t === 0.5 ? 22 : 34;
+  const a = piece.a0 + piece.da * t;
+  const at = toScreen(f, {
+    x: piece.c.x + piece.r * Math.cos(a),
+    y: piece.c.y + piece.r * Math.sin(a),
+  });
+  const c = toScreen(f, piece.c);
+  const l = Math.hypot(at.x - c.x, at.y - c.y) || 1;
+  return { x: at.x + ((at.x - c.x) / l) * gap, y: at.y + ((at.y - c.y) / l) * gap };
+}
+
+/**
+ * Radius labels at the middle of each arc; while a radius handle is hovered or dragged (`rad`)
+ * only the label of its arc is shown, next to that handle (^128).
+ */
+export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette, rad: RadFocus | null) {
+  E.pieces.forEach((piece, k) => {
+    if (!sweeps(piece) || (rad && rad.k !== k)) return;
+    const at = labelAt(f, piece, rad?.t ?? 0.5);
+    text(f.ctx, `${piece.r.toFixed(1)}m`, at, { color: pal['orange-ink'], align: 'center' });
+  });
 }

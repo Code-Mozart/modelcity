@@ -73,6 +73,8 @@ export type Press =
       screen: Vec;
       base: NodeRef[];
       shift: boolean;
+      /** Alt on a curve: the click selects or deselects its branch (^128). */
+      alt: boolean;
       /** The two nodes of the curve that was pressed (select mode), else none (^74). */
       curve: NodeRef[];
       moved: boolean;

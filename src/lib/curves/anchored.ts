@@ -48,10 +48,6 @@ export function anchoredEdge(inp: EdgeInput, kind: 'S' | 'H', s1: Dir): TwoArcEd
     J: mid(e.Ta, e.Tb),
     axis: { a: e.Ta, b: e.Tb },
     straight: e.straight,
-    ticks: [
-      { at: e.Ta, dir: e.u, role: 'yellow' },
-      { at: e.Tb, dir: e.u, role: 'yellow' },
-    ],
     pieces: e.pieces,
   };
 }

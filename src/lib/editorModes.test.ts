@@ -146,8 +146,9 @@ describe('hint target for the control hints (^49)', () => {
       type: 'node',
       act: 'finish',
       selected: true,
+      lane: false,
     });
-    const middle = { kind: 'handle', type: 'node', act: null, selected: false };
+    const middle = { kind: 'handle', type: 'node', act: null, selected: false, lane: false };
     ed.pointerMove(at(20, -10));
     expect(ed.hintTarget).toEqual(middle);
     ed.pointerDown(at(20, -10));
@@ -164,6 +165,7 @@ describe('hint target for the control hints (^49)', () => {
       type: 'node',
       act: null,
       selected: false,
+      lane: false,
     });
   });
 });

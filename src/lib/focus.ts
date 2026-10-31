@@ -8,6 +8,9 @@ export interface Focus {
   road: number;
   type: HandleType;
   i: number;
+  /** For a radius handle: the arc and the place on it (^128). */
+  k?: number;
+  t?: number;
 }
 
 /**

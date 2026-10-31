@@ -148,8 +148,15 @@ function drawDirection(f: Frame, road: RoadScene, pal: Palette) {
   }
 }
 
+/** What is shown of a road: which segments show their scaffold, and the radius handle in focus. */
+interface RoadShown {
+  active: boolean[];
+  rad: Focus | null;
+}
+
 /** One road: the curves always, the construction of the segments whose scaffold is shown. */
-function drawRoad(f: Frame, road: RoadScene, active: boolean[], pal: Palette) {
+function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
+  const { active, rad } = shown;
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawGuides(f, ref, pal);
@@ -162,7 +169,7 @@ function drawRoad(f: Frame, road: RoadScene, active: boolean[], pal: Palette) {
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawCorners(f, ref, pal);
-    drawRadiusLabels(f, ref, pal);
+    drawRadiusLabels(f, ref, pal, rad?.i === ref.i ? { k: rad.k ?? 0, t: rad.t ?? 0.5 } : null);
   });
 }
 
@@ -231,7 +238,10 @@ function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const active = shownFlags(scene);
   drawLanes(f, scene.roads, pal);
-  scene.roads.forEach((road, i) => drawRoad(f, road, active[i]!, pal));
+  scene.roads.forEach((road, i) => {
+    const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;
+    drawRoad(f, road, { active: active[i]!, rad }, pal);
+  });
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
   if (scene.mergePreview) drawPreview(f, scene.mergePreview, pal, true);

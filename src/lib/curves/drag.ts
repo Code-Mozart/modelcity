@@ -84,30 +84,30 @@ function dragHookCorner(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
   return best == null ? path : withRadius(path, i, toRequested(best, E0.Rmax));
 }
 
-/** The midpoint of arc k of edge i when the edge has radius R, if it is still an arc of the same kind. */
-function arcMidpoint(
+/** Where the radius handle sits on arc k of edge i when the edge has radius R, if it is still an arc of that kind. */
+function handlePoint(
   path: Path,
-  at: { i: number; k: number },
+  at: { i: number; k: number; t: number },
   R: number,
   kind: Edge['kind'],
 ): Vec | null {
   const E = buildEdge(path.nodes[at.i]!, path.nodes[at.i + 1]!, R, path.shapes[at.i] ?? null);
   const piece = E.kind === kind ? E.pieces[at.k] : undefined;
-  return piece && sweeps(piece) ? pointOn(piece, 0.5) : null;
+  return piece && sweeps(piece) ? pointOn(piece, at.t) : null;
 }
 
 /**
- * The radius at which the arc's midpoint (where the orange ring sits) is nearest to the pointer,
- * so the ring follows the cursor whichever way the geometry moves it (^17).
+ * The radius at which the handle (an end or the middle of an arc, ^128) is nearest to the pointer,
+ * so the handle follows the cursor whichever way the geometry moves it (^17).
  */
-function radiusNearest(path: Path, at: { i: number; k: number }, pt: Vec): number | null {
+function radiusNearest(path: Path, at: { i: number; k: number; t: number }, pt: Vec) {
   const E0 = edgeAt(path, at.i);
   if (E0.kind === 'line') return null;
   let best: number | null = null;
   let bd = Infinity;
   for (let n = 0; n <= RADIUS_SEARCH_STEPS; n++) {
     const R = RMIN * Math.pow(E0.Rmax / RMIN, n / RADIUS_SEARCH_STEPS);
-    const m = arcMidpoint(path, at, R, E0.kind);
+    const m = handlePoint(path, at, R, E0.kind);
     if (m && dist(m, pt) < bd) {
       bd = dist(m, pt);
       best = R;
@@ -117,17 +117,11 @@ function radiusNearest(path: Path, at: { i: number; k: number }, pt: Vec): numbe
 }
 
 function dragRadius(path: Path, drag: DragState, pt: Vec): Path {
-  const { i, k = -1 } = drag.handle;
+  const { i, k = 0, t = 0.5 } = drag.handle;
   const E = edgeAt(path, i);
-  if (E.kind === 'line') return path;
-  if (k === -1) {
-    if (E.kind !== 'C') return path;
-    const R = radiusFromCursor(E, pt);
-    return withRadius(path, i, R >= AUTO_SNAP * E.Rmax ? null : Math.max(R, RMIN));
-  }
-  const R = radiusNearest(path, { i, k }, pt);
-  if (R == null) return path;
-  return withRadius(path, i, E.kind === 'S' ? toRequested(R, E.Rmax) : R);
+  const R = E.kind === 'line' ? null : radiusNearest(path, { i, k, t }, pt);
+  if (R == null || E.kind === 'line') return path;
+  return withRadius(path, i, E.kind === 'H' ? R : toRequested(R, E.Rmax));
 }
 
 /** The path after dragging the grabbed handle to `pt`. Headings never change when radii do (^8). */

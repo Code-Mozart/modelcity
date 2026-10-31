@@ -25,10 +25,6 @@ export function bendEdge({ p, q, Rs }: EdgeInput, cls: Classification): BendEdge
     R,
     Rmax,
     auto: Rs == null,
-    ticks: [
-      { at: A1, dir: T1, role: 'orange' },
-      { at: A2, dir: T2, role: 'orange' },
-    ],
     pieces: [line(p, A1), cornerArc(A1, T1, T2, t), line(A2, q)],
   };
 }

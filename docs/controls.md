@@ -19,15 +19,15 @@ The left button always creates or edits; there are no tools (^44). What happens 
 
 | Under the pointer | Select mode | Draw mode | Hats |
 |-------------------|-------------|-----------|------|
-| A handle: node, heading control point (on the arrow's stem), bend point (orange), orange ring, yellow point | The handle is highlighted (blue ring). Click selects a node or heading. Drag edits it: moves the node (all selected nodes move with it, see Selection), turns the heading, drags the bend point or the radius ring | The same, with no node preview | ^9, ^44, ^48 |
+| A handle: node, heading control point (on the arrow's stem), bend point (orange), radius point (orange), yellow point | The handle is highlighted (blue ring). Click selects a node or heading. Drag edits it: moves the node (all selected nodes move with it, see Selection), turns the heading, drags the bend point or the radius ring | The same, with no node preview | ^9, ^44, ^48 |
 | A node of a road (draw mode, ^23) | Same as any handle (above) | **Nothing being drawn:** a click on a node that is the only end node of its road extends that road from it (^65): the road becomes the road being drawn, at that end (at the first node backwards, the new node is added before it). A click on any other node, or on a node that roads share, **splits**: a new road starts at that node, sharing it (see below). **A road is being drawn:** a click on a node of another road **merges**: the road ends at that node, sharing it, and drawing stops; a click on the other end of the road being drawn extends from there; a click on the node being drawn from finishes the road. A drag moves the node (and all roads' copies of it) as usual | ^23, ^65 |
-| A road's curve (within 18 px) | No mark (the insert mark only exists in draw mode, ^79). Click selects its two nodes, Shift+click adds them (or deselects both if both are selected, ^74), Alt+click selects the whole road (^76). A drag spans the selection box | The curve gets a ring and a small tick (the white mark). A click inserts a node there (the curve does not change) and then, with nothing being drawn, **splits** a new road off that node, or, while a road is being drawn, **merges** that road into it (a click on the road's own curve only inserts). A drag does the same and sets the heading of the node while dragging, which can turn the curve into an S-curve or hook. Esc after a split leaves just the inserted node | ^10, ^23, ^44, ^48 |
+| A road's curve (within 18 px) | No mark (the insert mark only exists in draw mode, ^79). Click selects its two nodes, Shift+click adds them (or deselects both if both are selected, ^74), Alt+click selects the branch (^131), or deselects it if all of it is selected. A drag spans the selection box | The curve gets a ring and a small tick (the white mark). A click inserts a node there (the curve does not change) and then, with nothing being drawn, **splits** a new road off that node, or, while a road is being drawn, **merges** that road into it (a click on the road's own curve only inserts). A drag does the same and sets the heading of the node while dragging, which can turn the curve into an S-curve or hook. Esc after a split leaves just the inserted node | ^10, ^23, ^44, ^48 |
 | Empty canvas | With nothing selected, click enters draw mode (no node yet); with a selection, click deselects all instead (^75); a Shift click does nothing. Drag spans the selection box (see Selection) | A preview of the node (and, once the road has nodes, the curve to it from the last one). The first click places node 1 of a new road, heading right (a drag sets its heading). Later clicks add a node at the end of the road, its heading chosen so that the new edge is a single circular arc (a hook beyond 180°, also when the cursor is behind the arrow). Drag adds the node at the press point with the heading pointing to the cursor, previewed live | ^40, ^44, ^46, ^48 |
 
 Details:
 
 - Shift while dragging a heading (editing a handle, or placing a node) snaps it to 15° steps (^11).
-- Double-click on an orange ring resets that radius to auto (^8).
+- Double-click on a radius point resets that radius to auto (^8).
 - Dragging less than 6 px while placing a node does not set a heading, so a click keeps the automatic one.
 - Roads are independent of each other (^42).
 - Entering draw mode and placing the first node are two clicks (^54).
@@ -49,10 +49,10 @@ A selection is 0..n nodes, also of different roads. Selected nodes are drawn blu
 | LMB drag on empty canvas (select mode) | Spans the selection box, axis-aligned with the viewport. The nodes inside are the new selection, live while dragging |
 | Shift + LMB drag on empty canvas | Same, but the nodes inside are added to the current selection |
 | LMB on an unselected node | It becomes the whole selection (select mode only: in draw mode a click on a node does not select, ^75) |
-| Alt + LMB click on a node or curve | Select the whole road, the lane being the road for now (^76); Alt + drag on a node moves the whole road |
+| Alt + LMB click on a node or curve | Select the **branch** (a chain of nodes between two nodes where branches split, merge or end, both of them included, ^130, ^131); if the whole branch is selected already, deselect it instead. Alt + drag on a node moves the branch. On a node where branches meet or end, the branch that goes on from it in drawing direction (else the one before it) is meant (assumed) |
 | LMB click on empty canvas (something selected) | Deselect all; with nothing selected it enters draw mode instead (^75) |
 | LMB drag a selected node | All selected nodes move by the same translation; all scaffold gizmos are hidden meanwhile (^78). A click without moving reduces the selection to that node |
-| LMB drag the orange radius point of a segment whose two nodes are selected | The radius of all selected segments (both nodes selected) is set to the dragged value; their scaffolds are shown during the drag only (^77) |
+| LMB drag a radius point of a segment whose two nodes are selected | The radius of all selected segments (both nodes selected) is set to the dragged value; their scaffolds are shown while the radius point is hovered or dragged (^77, ^129) |
 | Shift + LMB click on a node | Toggle whether the node is selected |
 | LMB click on a curve (select mode) | Select its two nodes (^74) |
 | Shift + LMB click on a curve | Add both nodes to the selection; only if both are selected already, deselect them (^74) |
@@ -80,8 +80,8 @@ The corner shows what the mouse and keys do right now, as rows of `[input]: acti
 | Mode and context | Rows |
 |------------------|------|
 | Select mode, empty canvas | `[LMB]: draw mode` (with a selection: `[LMB]: deselect all`), `[LMB drag]: select`, `[Shift]+[LMB drag]: add to selection` (only while something is selected), `[Del]: delete selected` (same), `[RMB drag]: pan`, `[Wheel]: zoom`, `[MMB drag]: rotate` |
-| Select mode, over a curve | `[LMB]: select both nodes` (not if both are selected; `… instead` when something else is selected), `[LMB drag]: select`, `[Shift]+[LMB]: add both nodes to selection` or `deselect both nodes` (only with a selection), `[Alt]+[LMB]: select lane`, `[Del]`, then the camera rows |
-| Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), on a node `[RMB]: delete node`, `[LMB]: select` (`select instead` if something else is selected; not if it is selected), `[Shift]+[LMB]: select` (only with a selection) or `deselect`, `[Alt]+[LMB]: select lane`, then `[Del]` and the camera rows |
+| Select mode, over a curve | `[LMB]: select both nodes` (not if both are selected; `… instead` when something else is selected), `[LMB drag]: select`, `[Shift]+[LMB]: add both nodes to selection` or `deselect both nodes` (only with a selection), `[Alt]+[LMB]: select lane` (`deselect lane` if the whole branch is selected), `[Del]`, then the camera rows |
+| Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), on a node `[RMB]: delete node`, `[LMB]: select` (`select instead` if something else is selected; not if it is selected), `[Shift]+[LMB]: select` (only with a selection) or `deselect`, `[Alt]+[LMB]: select lane` (`deselect lane` if the whole branch is selected), then `[Del]` and the camera rows |
 | Draw mode, empty canvas | `[LMB]: add node`, `[LMB drag]: add node with heading`, `[Esc] or [RMB]: finish` |
 | Draw mode, over a curve | `[LMB]: split here` (nothing being drawn), `merge here` (another road's curve while drawing) or `insert node` (the road's own curve), `[LMB drag]: … with heading`, `[Esc] or [RMB]: finish` |
 | Draw mode, over a node | `[LMB]: split road` or `extend road` (nothing being drawn), `merge road` (another road's node while drawing), `[LMB drag]: move node`, `[RMB]: delete node`, `[Esc]: finish`. The node being drawn from also has `[LMB]: finish road`; another leaf node has `[LMB]: extend road` |
@@ -95,13 +95,13 @@ Two levels of gizmo:
 
 - The **road surface** (^90) lies under everything: every segment is 3 m wide with an outline, in the Google Maps colors of the current theme. It is not a gizmo and cannot be edited; crossing roads merge.
 - The **skeleton** is always shown: the curves, the dots of the nodes, and small direction arrows along the curves every 48 px, pointing the way the road runs (^80, ^86). There are no numbering labels.
-- The **scaffold** of a segment (the curve between two nodes) is everything else: the orange lines, circle, ticks and control points (the bend's point and the heading control points), the heading arrows (orange), the yellow lines and points, the orange radius point and its label (`116.7m`). It is shown completely or not at all.
+- The **scaffold** of a segment (the curve between two nodes) is everything else: the orange lines, circle and control points (the bend's point and the heading control points), the heading arrows (orange), the yellow lines and points, the orange radius points, two at the ends of each arc where the straight lines touch it (an arc whose ends are both at nodes has one in the middle; a point at a node is not shown, ^128), and the radius label (`116.7m`), which hangs at the radius point that is hovered or dragged, else in the middle of the arc. It is shown completely or not at all.
 
 Only a single segment shows its scaffold at a time (^66), over all roads. Which one:
 
 1. A hovered or dragged orange or yellow point keeps its own segment, wherever the pointer is. A hovered or dragged node or heading control point takes the one of its two segments whose curve is closer to the pointer.
 2. Otherwise the segment whose curve the pointer is on (within 20 px of it), the closest curve first.
-3. Otherwise the segment with the control point closest to the pointer (a node, a heading control point, the bend point, a hook's yellow points, the orange point), within 48 px; nearer curves break ties.
+3. Otherwise the segment with the control point closest to the pointer (a node, a heading control point, the bend point, a hook's yellow points, a radius point), within 48 px; nearer curves break ties.
 
 The heading arrows of the two nodes of the shown segment are shown with it, and no other arrows. A node of a road that has no segment yet always shows its heading arrow. A node being placed counts as dragged.
 
