@@ -32,6 +32,9 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - When the user asks for something new or out of scope during a milestone, say so, admonish gently and suggest putting it on the roadmap as a hat instead. Do not build it right away.
 - Only one branch/PR at a time may add hats (numbering stays unique and gapless). Other PRs (e.g. pure refactors) add no hats.
 
+## Stored data model (^170)
+- The stored model is specified in `docs/data-model.md`. It is fixed: any change to it needs the user's agreement, a version bump and a migration.
+
 ## Quality
 
 - Verify with tests (unit, integration, e2e). CI builds, lints, type-checks and tests. Keep it green at all times.

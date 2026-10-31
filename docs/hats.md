@@ -1,4 +1,4 @@
-next: ^169
+next: ^171
 
 # Hats
 
@@ -201,3 +201,5 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^166 | feature | planned (milestone ^149) | **Autosave (user, part of ^148):** the open project is saved to the browser by itself after a change (not after camera moves alone). |
 | ^167 | feature | planned (milestone ^149) | **Several projects (user, part of ^148):** a list of projects in the browser and switching between them. The UI for it depends on the operations search (^97), so the first version has only the hotkeys and the operations (^168), always shown in the control hints panel. |
 | ^168 | feature | planned (milestone ^149) | **Project hotkeys (user, part of ^148):** `Ctrl+O` opens a modal to load another project from the browser or to import one from a file; `Ctrl+S` exports (backs up). Both override the browser defaults (open and save page). |
+| ^169 | feature | planned (milestone ^159) | **Validator (user):** checks a project for things the model allows but the map should not have, for example a node with conflicting directions (two roads arriving head-on with different headings), and reports them. The model itself stays a plain directed graph (^170). Milestone ^159 is assumed. |
+| ^170 | decision | decided (user); conventions: assumed | **Stored data model (user, ^161), written in `docs/data-model.md`:** a directed graph with radii and headings (replaces the chains and the shared nodes by position of ^92); nodes `[id, x, y, heading]`, edges `[id, start, end, radius or null, laneConfigurationId, shape or null]` as arrays of tuples; lane configurations with a name and a width (^26); the camera is saved (`x`, `y`, `scale` in pixels per meter, `rot`); all lengths are integer millimeters; headings in radians with 0 = east, clockwise on screen, as in the code; no id counters (new id = largest + 1); `version` is an integer; conflicts in the graph are reported by the validator (^169), not prevented; a change to the stored model needs both of us to agree, plus a migration. The shape tag stays because positions, headings and radius do not fix an edge (^7). |
