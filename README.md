@@ -59,7 +59,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Parallel segments** | Two segments are parallel if their start nodes, and their end nodes, have the same or exactly opposite heading, the distance between the start nodes and between the end nodes is half the sum of their lane widths, and their arc circles have the same center (concentric); they share a centerline. A *road* is made of arms connected by at least one parallel segment | decided (user's definition, not built yet) | ^100, ^130 |
 | **Roadmap** | The one prioritised list of wanted work, fuzzy beyond the next items; the "Roadmap" section of `docs/hats.md`. Replaces "todo-list" and "backlog" | decided | ^146 |
 | **Roadmap item** | A `feature`, `bug` or `chore` (refactor, docs, tooling) on the roadmap | decided | ^146 |
-| **Milestone** | One PR that tackles one or more roadmap items, with a written scope (in/out) | decided | ^146 |
+| **Milestone** | One PR that tackles one or more roadmap items, with a written scope (in/out); a roadmap item can be unassigned until it is planned | decided | ^146 |
 | **Extend mode** | The mode while a road is being extended from a node (dashed preview), between draw mode and select mode. Planned | decided | ^120 |
 | **Select mode** | No road is being drawn: you edit control points; a click enters draw mode | decided | ^48, ^54 |
 | **Draw mode** | A road is being drawn: clicks place nodes, insert nodes on curves, or extend a road from a leaf node | decided | ^48, ^65 |
