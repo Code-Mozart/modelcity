@@ -29,27 +29,32 @@ function cornerHandles(i: number, E: Exclude<Edge, { kind: 'line' | 'C' }>): Han
   return [...(E.k1 ? [{ type: t1, i, ...E.k1 }] : []), ...(E.k2 ? [{ type: t2, i, ...E.k2 }] : [])];
 }
 
-function edgeHandles({ i, p, q, E }: EdgeRef): Handle[] {
+function edgeHandles({ i, p, q, E }: EdgeRef, scale: number): Handle[] {
   if (E.kind === 'line') return [];
   const out: Handle[] = E.kind === 'C' ? [{ type: 'ctrl', i, ...E.C }] : cornerHandles(i, E);
-  E.pieces.forEach((piece, k) => out.push(...radiusHandles(i, k, piece, [p, q])));
+  E.pieces.forEach((piece, k) => out.push(...radiusHandles(i, k, piece, { nodes: [p, q], scale })));
   return out;
 }
 
-/** Closer than this (meters) to a node, a point on a curve counts as at the node. */
-const AT_NODE = 1e-3;
+/** Closer than this (screen pixels) to a node, the radius point at the end of an arc is hidden (^139). */
+const AT_NODE_PX = 14;
 
 /**
- * The radius control points of an arc: both of its ends, where the straight pieces touch it
- * (^128), so dragging them along the heading lines changes the radius. An end at a node is not
- * offered (the node is there); an arc with both ends at nodes, a single arc between two nodes, is
- * grabbed at its middle instead, so that its radius can always be reached.
+ * The radius control points of an arc (^128, ^139): one in the middle, on the bisector of the
+ * corner, and one at each end, where the straight pieces touch the arc, so that dragging them
+ * along the heading lines changes the radius. An end that is at a node, or within a few pixels
+ * of it, is not offered, since the node dot would cover it.
  */
-function radiusHandles(i: number, k: number, piece: Piece, nodes: Vec[]): Handle[] {
+function radiusHandles(
+  i: number,
+  k: number,
+  piece: Piece,
+  { nodes, scale }: { nodes: Vec[]; scale: number },
+): Handle[] {
   if (!sweeps(piece)) return [];
   const at = (t: number): Handle => ({ type: 'rad', i, k, t, ...pointOn(piece, t) });
-  const free = [0, 1].map(at).filter((h) => nodes.every((n) => dist(n, h) > AT_NODE));
-  return free.length ? free : [at(0.5)];
+  const ends = [0, 1].map(at).filter((h) => nodes.every((n) => dist(n, h) * scale > AT_NODE_PX));
+  return [...ends, at(0.5)];
 }
 
 export function handlesOf(path: Path, edges: EdgeRef[], scale: number): Handle[] {
@@ -60,7 +65,7 @@ export function handlesOf(path: Path, edges: EdgeRef[], scale: number): Handle[]
     i,
     ...add(n, mul(fromAngle(n.th), arrow)),
   }));
-  return [...nodes, ...heads, ...edges.flatMap(edgeHandles)];
+  return [...nodes, ...heads, ...edges.flatMap((e) => edgeHandles(e, scale))];
 }
 
 /** Non-node handles in tie-break order: the earlier type wins when equally near. */
