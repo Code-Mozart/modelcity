@@ -1,0 +1,49 @@
+# The stored data model (^161)
+
+Status: **approved by the user.** This file is the single source for the stored format; the reasons are in the hats ^170 (the graph, the conventions) and ^172 (no shape tag). **Every change to the stored model needs both of us to agree**, a version bump and a migration (^173).
+
+## Stored and derived
+
+The stored model is a **directed graph with radii and headings**. What is stored: the project (title, dates, version), the camera, the nodes, the edges and the lane configurations. Everything else is derived at runtime and never stored: the shape of an edge (bend, S-curve, hook), curve pieces, caches, the road surface, junction kinds, branches, roads and arms, parallel segments, the road being drawn, the selection, the undo history, hover and pointer state.
+
+## One project (JSON)
+
+```json
+{
+  "version": 1,
+  "title": "modelcity demo map",
+  "createdAt": "2026-10-31T06:00:00Z",
+  "lastUpdatedAt": "2026-10-31T06:01:00Z",
+  "camera": { "x": 0, "y": 0, "scale": 4.0, "rotation": 0.0 },
+  "nodes": [
+    [0, 100000, 0, 0.0],
+    [1, 300000, 50000, 2.3]
+  ],
+  "edges": [[0, 0, 1, null, 1]],
+  "laneConfigurations": { "1": { "name": "default", "width": 3000 } }
+}
+```
+
+An export file is exactly one such project object; the browser stores one record per project in the same format (^163 to ^168).
+
+## Conventions
+
+- **Lengths are integer millimeters**: node positions, radius, lane width and the camera position. The editor works in float meters (^4) and rounds to the millimeter when it commits a change, so a saved and loaded project is identical.
+- **Angles are radians.** A heading of 0 points east (+x); positive turns clockwise on the screen (y is down), so 1.5708 points south. A heading is the direction of travel.
+- **Camera:** `x`, `y` is the world point at the center of the viewport; `scale` is pixels per meter (float); `rotation` is the rotation of the world about that center, positive clockwise on the screen, and 0 has north (-y) at the top (as `View` in `src/lib/view.ts`, whose field is called `rot`).
+- **Dates** are ISO 8601 UTC strings; `version` is an integer.
+- **Ids** are integers. A new id is the largest id of its kind in the project plus 1 (no counters are stored).
+
+## Nodes: `[id, x, y, heading]` (densely packed)
+
+One heading per node. A node is shared by all edges that meet there.
+
+## Edges: `[id, startNodeId, endNodeId, radius, laneConfigurationId]` (densely packed)
+
+- The edge runs from the start to the end node; that is its direction of travel.
+- `radius` is an integer in millimeters, or `null` for automatic (the largest that fits, ^8). It is the only nullable element. The minimum is 0.5 m (^57).
+- There is no shape tag: the shape is derived from the two positions, the two headings and the radius (^172).
+
+## Lane configurations: `{ "<id>": { "name": string, "width": mm } }` (not densely packed)
+
+A named set of lane properties that edges refer to. Today only `name` and `width` (the default is 3000, ^90).
