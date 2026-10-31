@@ -135,7 +135,6 @@
   onpointerleave={() => editor.pointerLeave()}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
   oncontextmenu={(e) => e.preventDefault()}
-  ondblclick={(e) => editor.resetRadiusAt(info(e))}
 ></canvas>
 
 <style>

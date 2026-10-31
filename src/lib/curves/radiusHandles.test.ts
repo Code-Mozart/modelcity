@@ -26,3 +26,22 @@ describe('radius points of an arc (^128, ^139)', () => {
     expect(far.map((h) => h.t)).toEqual([0.5]);
   });
 });
+
+describe('back to auto (^141, ^143)', () => {
+  it('dragging a radius point to the largest radius makes the radius auto, the only way back', async () => {
+    const { applyDrag, startDrag } = await import('./drag');
+    const path = {
+      nodes: [
+        { x: 0, y: 0, th: 0 },
+        { x: 80, y: -60, th: -Math.PI / 2 },
+      ],
+      radii: [20 as number | null],
+      shapes: [null],
+    };
+    const handle = handlesOf(path, edgesOf(path), 4).find((h) => h.type === 'rad' && h.t === 0.5)!;
+    // far towards the corner at (80, 0) is the tightest, away from it the largest radius
+    const away = { x: handle.x + (handle.x - 80) * 50, y: handle.y + handle.y * 50 };
+    const next = applyDrag(path, startDrag(path, handle), away, { snap: false });
+    expect(next.radii[0]).toBeNull();
+  });
+});

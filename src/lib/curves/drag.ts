@@ -157,7 +157,7 @@ function dragRadius(path: Path, drag: DragState, pt: Vec): Path {
   const E = edgeAt(path, i);
   const R = E.kind === 'line' ? null : radiusNearest(path, { i, k, t }, pt);
   if (R == null || E.kind === 'line') return path;
-  return withRadius(path, i, E.kind === 'H' ? R : toRequested(R, E.Rmax));
+  return withRadius(path, i, toRequested(R, E.Rmax));
 }
 
 /** The path after dragging the grabbed handle to `pt`. Headings never change when radii do (^8). */
@@ -182,6 +182,3 @@ export function applyDrag(path: Path, drag: DragState, pt: Vec, mod: DragModifie
       return dragRadius(path, drag, pt);
   }
 }
-
-/** Radius back to auto: the largest that fits (^8). */
-export const resetRadius = (path: Path, i: number): Path => withRadius(path, i, null);

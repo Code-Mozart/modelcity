@@ -1,4 +1,3 @@
-import { resetRadius } from './curves/drag';
 import { closeOver } from './curves/junctions';
 import { hitHandle, NODE_HIT_PX } from './curves/handles';
 import {
@@ -7,7 +6,6 @@ import {
   nearNode,
   removeNodesFrom,
   removeRoad,
-  replaceRoad,
   roadHandles,
   type NodeRef,
   type RoadHandle,
@@ -354,15 +352,5 @@ export class Editor {
     const handle = this.handleAt(info);
     if (handle?.type === 'node') this.removeAll([{ road: handle.road, node: handle.i }]);
     else this.finishRoad();
-  }
-
-  /** Double-click on a radius ring resets the radius to auto (^8). */
-  resetRadiusAt(info: PointerInfo) {
-    const handle = this.handleAt(info);
-    if (handle?.type !== 'rad') return;
-    const before = this.snapshot();
-    const path = this.roads[handle.road]!;
-    this.roads = replaceRoad(this.roads, handle.road, resetRadius(path, handle.i));
-    this.commit(before);
   }
 }

@@ -27,8 +27,9 @@ The left button always creates or edits; there are no tools (^44). What happens 
 Details:
 
 - Shift while dragging a heading (editing a handle, or placing a node) snaps it to 15° steps (^11).
-- Double-click on a radius point resets that radius to auto (^8).
-- Dragging a radius point to within 0.5% of the largest radius that fits makes the radius auto again: a deliberate snap (^141); with the snapping system it is to become a snap to the limiting node.
+- Dragging a radius point to within 0.5% of the largest radius that fits makes the radius auto again: a deliberate snap, on any kind of segment, and the only way back to auto (the double-click was removed, ^143); with the snapping system it is to become a snap to the limiting node (^141).
+- Moving a node releases the fixed middle line of the S-curves next to it (they get the derived one again), and a heading drag of a shared node turns all its copies (^7, ^92).
+- The cursor shows what a click would do: a hand over a control point, a crosshair in draw mode, a plus-like copy cursor over a curve in draw mode (click inserts, splits or merges), a pointer over a curve in select mode (click selects), else the default arrow.
 - Dragging less than 6 px while placing a node does not set a heading, so a click keeps the automatic one.
 - Roads are independent of each other (^42).
 - Entering draw mode and placing the first node are two clicks (^54).
