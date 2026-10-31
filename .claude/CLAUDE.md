@@ -33,7 +33,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - Only one branch/PR at a time may add hats (numbering stays unique and gapless). Other PRs (e.g. pure refactors) add no hats.
 
 ## Stored data model (^170)
-- The stored model is specified in `docs/data-model.md`. It is fixed: any change to it needs the user's agreement, a version bump and a migration.
+- The stored model is specified in `docs/data-model.md`. It is fixed: any change to it needs the user's agreement, a version bump and a migration (^173).
 
 ## Quality
 

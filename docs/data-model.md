@@ -1,15 +1,12 @@
-# The stored data model (draft, ^161)
+# The stored data model (^161)
 
-Status: **ready for the user's final review**. Once the user has approved it, the stored model is fixed: **every change to it needs both of us to agree** (user and Claude), and comes with a version bump and a migration (see the end). Hats: ^106 (normalized model), ^92 (replaced by the graph, see below), ^26 (lane configuration), ^82 and ^148 (persistence).
+Status: **approved by the user.** This file is the single source for the stored format; the reasons are in the hats ^170 (the graph, the conventions) and ^172 (no shape tag). **Every change to the stored model needs both of us to agree**, a version bump and a migration (^173).
 
-## 1. What is stored and what is derived
+## Stored and derived
 
-The stored model is a **directed graph with radii and headings**. Nothing else is stored.
+The stored model is a **directed graph with radii and headings**. What is stored: the project (title, dates, version), the camera, the nodes, the edges and the lane configurations. Everything else is derived at runtime and never stored: the shape of an edge (bend, S-curve, hook), curve pieces, caches, the road surface, junction kinds, branches, roads and arms, parallel segments, the road being drawn, the selection, the undo history, hover and pointer state.
 
-- **Stored:** the project (title, dates, version), the camera, the nodes, the edges, the lane configurations.
-- **Derived at runtime, never stored:** the shape of an edge (bend, S-curve, hook), curve pieces and geometry (`EdgeRef`), caches, the road surface, junction kinds, branches, roads and arms (^130), parallel segments (^100), the road being drawn, the selection, the undo history, hover and pointer state.
-
-## 2. One project (JSON)
+## One project (JSON)
 
 ```json
 {
@@ -17,7 +14,7 @@ The stored model is a **directed graph with radii and headings**. Nothing else i
   "title": "modelcity demo map",
   "createdAt": "2026-10-31T06:00:00Z",
   "lastUpdatedAt": "2026-10-31T06:01:00Z",
-  "camera": { "x": 0, "y": 0, "scale": 4.0, "rot": 0.0 },
+  "camera": { "x": 0, "y": 0, "scale": 4.0, "rotation": 0.0 },
   "nodes": [
     [0, 100000, 0, 0.0],
     [1, 300000, 50000, 2.3]
@@ -27,49 +24,26 @@ The stored model is a **directed graph with radii and headings**. Nothing else i
 }
 ```
 
-An **export file** is exactly one such project object. The browser keeps one stored record per project in the same format (see section 5).
+An export file is exactly one such project object; the browser stores one record per project in the same format (^163 to ^168).
 
-### Conventions (one place, no conversions)
+## Conventions
 
-- **Lengths are integer millimeters**: node positions, radius, lane width, camera position, and the position of a frozen S-curve middle line. The editor works in float meters (^4) and rounds to the millimeter when it commits a change, so a saved and loaded project is identical.
-- **World:** meters in the editor, origin at the map center, x right, y down (^4).
-- **Headings and angles:** radians. A heading of 0 points east (+x); positive turns clockwise on the screen (y is down), so 1.5708 points south. Headings are the direction of travel.
-- **Camera:** `x`, `y` is the world point at the center of the viewport (mm), `scale` is **pixels per meter** (float, as `View.scale`), `rot` is the rotation of the world about that center in radians, positive clockwise on the screen; `rot` 0 has north (-y) at the top (`src/lib/view.ts`).
-- **Dates:** ISO 8601 UTC strings. `version`: an integer.
-- **Ids:** integers. A new id is the largest id of its kind in the project plus 1 (no counters are stored).
+- **Lengths are integer millimeters**: node positions, radius, lane width and the camera position. The editor works in float meters (^4) and rounds to the millimeter when it commits a change, so a saved and loaded project is identical.
+- **Angles are radians.** A heading of 0 points east (+x); positive turns clockwise on the screen (y is down), so 1.5708 points south. A heading is the direction of travel.
+- **Camera:** `x`, `y` is the world point at the center of the viewport; `scale` is pixels per meter (float); `rotation` is the rotation of the world about that center, positive clockwise on the screen, and 0 has north (-y) at the top (as `View` in `src/lib/view.ts`, whose field is called `rot`).
+- **Dates** are ISO 8601 UTC strings; `version` is an integer.
+- **Ids** are integers. A new id is the largest id of its kind in the project plus 1 (no counters are stored).
 
-### Nodes: `[id, x, y, heading]` (densely packed)
+## Nodes: `[id, x, y, heading]` (densely packed)
 
-One heading per node. A node is shared by all edges that meet there; sharing is the graph itself (no more coincidence by position, ^92).
+One heading per node. A node is shared by all edges that meet there.
 
-### Edges: `[id, startNodeId, endNodeId, radius, laneConfigurationId]` (densely packed)
+## Edges: `[id, startNodeId, endNodeId, radius, laneConfigurationId]` (densely packed)
 
-- The edge runs from start to end; that is its direction of travel (the direction arrows).
-- `radius`: integer millimeters, or `null` for automatic (the largest that fits, ^8). It is the only nullable element. The minimum is 0.5 m (^57).
-- There is no shape tag (^172): whether the edge is a bend, an S-curve or a hook, and where the middle line of an S runs, are derived from the two positions, the two headings and the radius.
+- The edge runs from the start to the end node; that is its direction of travel.
+- `radius` is an integer in millimeters, or `null` for automatic (the largest that fits, ^8). It is the only nullable element. The minimum is 0.5 m (^57).
+- There is no shape tag: the shape is derived from the two positions, the two headings and the radius (^172).
 
-### Lane configurations: `{ "<id>": { "name": string, "width": mm } }` (not densely packed)
+## Lane configurations: `{ "<id>": { "name": string, "width": mm } }` (not densely packed)
 
-A named set of lane properties that edges refer to. Today only `name` and `width`; more properties (car lane, bike path, ...) are added later with a migration. The default is 3000 mm (`LANE_WIDTH_M`, ^90).
-
-## 3. Rules of the graph
-
-- It is a plain directed graph. Two edges may arrive at a node from opposite sides, or leave it in different directions; the model does not forbid it. Such conflicts (a node with conflicting directions, ...) are reported by the **validator** (^169), not prevented by the model.
-- Loops are normal (an edge back to an earlier node, ^162). A road, an arm and a branch (^130) are computed from the graph.
-- A later height of a node is a new element at the end of the node tuple, added with a migration.
-
-## 4. Persistence (^82, ^148)
-
-- **Export** (^163) and **import** (^164) a project as a file (`Ctrl+S`, `Ctrl+O`, ^168). **Save to the browser** (^165) in IndexedDB, one record per project; **autosave** (^166) after a change to nodes, edges or lane configurations. Moving the camera alone neither autosaves nor changes `lastUpdatedAt`, and the camera is not part of undo. The camera is saved with the next save.
-- **Several projects** (^167): the list of stored projects.
-- **New project** (^171): a blank project with a new empty record.
-
-## 5. Migrations
-
-- `version` is an integer. Loading a project with an older version runs the migrations in order (`1 → 2`, `2 → 3`, ...); each is a pure function on the parsed JSON, and old migrations are never edited.
-- Each version keeps a sample project file in the tests. A test migrates every sample to the current version and checks the result.
-- A project with a newer version than the app knows is refused with a clear message, never opened half.
-
-## 6. Decided
-
-All decisions of this document are recorded in ^170 (the graph, the tuples, the millimeters, no counters, the conventions, `scale` in pixels per meter, no check in the model) and ^172 (no shape tag).
+A named set of lane properties that edges refer to. Today only `name` and `width` (the default is 3000, ^90).
