@@ -28,7 +28,7 @@ describe('control hints (^49)', () => {
   it('draw mode on empty canvas: add a node, with a heading, or finish', () => {
     expect(rows(true, empty)).toEqual([
       'LMB: add node',
-      'LMB drag: add node with heading',
+      'LMB drag: add node and set heading',
       'Esc or RMB: finish',
     ]);
   });
@@ -36,7 +36,7 @@ describe('control hints (^49)', () => {
   it('draw mode over a curve: insert a node', () => {
     expect(rows(true, { kind: 'curve' })).toEqual([
       'LMB: insert here',
-      'LMB drag: insert here with heading',
+      'LMB drag: insert and set heading',
       'Esc or RMB: finish',
     ]);
   });
@@ -53,7 +53,7 @@ describe('control hints (^49)', () => {
 describe('control hints over nodes and handles (^49)', () => {
   it('over the last node a click finishes the road', () => {
     expect(rows(true, node(true))).toEqual([
-      'LMB: finish road',
+      'LMB: finish',
       'LMB drag: move node',
       'RMB: delete node',
       'Esc: finish',
@@ -176,14 +176,14 @@ describe('split and merge hints (^23)', () => {
   const act = (a: 'split' | 'merge'): HintTarget => ({ kind: 'handle', type: 'node', act: a });
 
   it('over a node: split a road off it, or merge the road being drawn into it', () => {
-    expect(rows(true, act('split'))[0]).toBe('LMB: split road');
-    expect(rows(true, act('merge'))[0]).toBe('LMB: merge road');
+    expect(rows(true, act('split'))[0]).toBe('LMB: split');
+    expect(rows(true, act('merge'))[0]).toBe('LMB: merge');
   });
 
   it('over a curve: split here, merge here, or insert a node', () => {
     const curve = (a: 'split' | 'merge' | 'insert'): HintTarget => ({ kind: 'curve', act: a });
-    expect(rows(true, curve('split'))[0]).toBe('LMB: split here');
-    expect(rows(true, curve('merge'))[1]).toBe('LMB drag: insert here with heading');
+    expect(rows(true, curve('split'))[0]).toBe('LMB: split');
+    expect(rows(true, curve('merge'))[1]).toBe('LMB drag: insert and set heading');
     expect(rows(true, curve('insert'))[0]).toBe('LMB: insert here');
   });
 });

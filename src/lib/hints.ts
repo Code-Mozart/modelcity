@@ -59,12 +59,12 @@ const DRAG_TEXT: Record<HandleType, string> = {
 
 /**
  * What the left button does on a handle. In draw mode a click on a node finishes, extends, splits or
- * merges the road (^23, ^65).
+ * merges the road (^23, ^65); the hint is that verb (^141).
  */
 function handleHints(target: HandleTarget): Hint[] {
   const { type, act } = target;
   const out: Hint[] = [];
-  if (act) out.push(hint(mouse('lmb'), act === 'extend' ? 'extend' : `${act} road`));
+  if (act) out.push(hint(mouse('lmb'), act));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
   if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
   return out;
@@ -73,8 +73,8 @@ function handleHints(target: HandleTarget): Hint[] {
 /** What a left click on a curve or on empty canvas does in draw mode (^23). */
 function curveText(target: HintTarget): string {
   if (target.kind !== 'curve') return 'add node';
-  if (target.act === 'split') return 'split here';
-  return target.act === 'merge' ? 'merge here' : 'insert here';
+  if (target.act === 'split') return 'split';
+  return target.act === 'merge' ? 'merge' : 'insert here';
 }
 
 /** Draw mode: a road is being drawn. */
@@ -86,7 +86,7 @@ function drawModeHints(target: HintTarget): Hint[] {
       target.type === 'node' ? hint(ESC, 'finish') : hint([ESC, mouse('rmb')], 'finish');
     return [...rows, finish];
   }
-  const drag = target.kind === 'curve' ? 'insert here with heading' : 'add node with heading';
+  const drag = target.kind === 'curve' ? 'insert and set heading' : 'add node and set heading';
   return [
     hint(mouse('lmb'), curveText(target)),
     hint(mouse('lmb', true), drag),

@@ -28,6 +28,7 @@ Details:
 
 - Shift while dragging a heading (editing a handle, or placing a node) snaps it to 15° steps (^11).
 - Double-click on a radius point resets that radius to auto (^8).
+- Dragging a radius point to within 0.5% of the largest radius that fits makes the radius auto again: a deliberate snap (^141); with the snapping system it is to become a snap to the limiting node.
 - Dragging less than 6 px while placing a node does not set a heading, so a click keeps the automatic one.
 - Roads are independent of each other (^42).
 - Entering draw mode and placing the first node are two clicks (^54).
@@ -82,9 +83,9 @@ The corner shows what the mouse and keys do right now, as rows of `[input]: acti
 | Select mode, empty canvas | `[LMB]: draw mode` (with a selection: `[LMB]: deselect all`), `[LMB drag]: select`, `[Shift]+[LMB drag]: add to selection` (only while something is selected), `[Del]: delete selected` (same), `[RMB drag]: pan`, `[Wheel]: zoom`, `[MMB drag]: rotate` |
 | Select mode, over a curve | `[LMB]: select both nodes` (not if both are selected; `… instead` when something else is selected), `[LMB drag]: select`, `[Shift]+[LMB]: add both nodes to selection` or `deselect both nodes` (only with a selection), `[Alt]+[LMB]: select lane` (`deselect lane` if the whole branch is selected), `[Del]`, then the camera rows |
 | Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), on a node `[RMB]: delete node`, `[LMB]: select` (`select instead` if something else is selected; not if it is selected), `[Shift]+[LMB]: select` (only with a selection) or `deselect`, `[Alt]+[LMB]: select lane` (`deselect lane` if the whole branch is selected), then `[Del]` and the camera rows |
-| Draw mode, empty canvas | `[LMB]: add node`, `[LMB drag]: add node with heading`, `[Esc] or [RMB]: finish` |
-| Draw mode, over a curve | `[LMB]: split here` (nothing being drawn), `merge here` (another road's curve while drawing) or `insert here` (the road's own curve), `[LMB drag]: insert here with heading`, `[Esc] or [RMB]: finish` |
-| Draw mode, over a node | `[LMB]: split road` or `extend` (nothing being drawn), `merge road` (another road's node while drawing), `[LMB drag]: move node`, `[RMB]: delete node`, `[Esc]: finish`. The node being drawn from also has `[LMB]: finish road`; another leaf node has `[LMB]: extend road` |
+| Draw mode, empty canvas | `[LMB]: add node`, `[LMB drag]: add node and set heading`, `[Esc] or [RMB]: finish` |
+| Draw mode, over a curve | `[LMB]: split` (nothing being drawn), `merge` (another road's curve while drawing) or `insert here` (the road's own curve), `[LMB drag]: insert and set heading`, `[Esc] or [RMB]: finish` |
+| Draw mode, over a node | `[LMB]: split` or `extend` (nothing being drawn), `merge` (another road's node while drawing), `[LMB drag]: move node`, `[RMB]: delete node`, `[Esc]: finish`. The node being drawn from also has `[LMB]: finish`; another leaf node has `[LMB]: extend road` |
 | Draw mode, over another handle | what dragging it does, `[Esc] or [RMB]: finish` |
 
 While a button is held, the rows stay those of where it was pressed.
