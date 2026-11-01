@@ -139,23 +139,32 @@ function selectModeHints(target: HintTarget, selected: number): Hint[] {
   ];
 }
 
-/** What can be undone or redone right now (^81). */
+/** What can be undone or redone right now, and whether that is a batch of several steps (^81, ^103). */
 export interface HistoryState {
   undo: boolean;
   redo: boolean;
+  undoBatch: boolean;
+  redoBatch: boolean;
 }
 
-/** Undo and redo come first, and only while there is something to undo or redo (^81). */
-function historyHints({ undo, redo }: HistoryState): Hint[] {
+/**
+ * Undo and redo, only while there is something to undo or redo (^81); the rows for a batch only
+ * while the next step belongs to one (^103). They are shown in the recent history panel (^109).
+ */
+export function historyHints({ undo, redo, undoBatch, redoBatch }: HistoryState): Hint[] {
   return [
     ...(undo ? [hint(keys('Ctrl', 'Z'), 'undo')] : []),
+    ...(undo && undoBatch ? [hint(keys('Alt', 'Ctrl', 'Z'), 'undo batch')] : []),
     ...(redo ? [hint([keys('Ctrl', 'Y'), keys('Ctrl', 'Shift', 'Z')], 'redo')] : []),
+    ...(redo && redoBatch
+      ? [hint([keys('Alt', 'Ctrl', 'Y'), keys('Alt', 'Ctrl', 'Shift', 'Z')], 'redo batch')]
+      : []),
   ];
 }
 
 /**
- * The hints for the top left corner, for the current mode, what is under the pointer, how many
- * nodes are selected and what can be undone (^49).
+ * The hints for the top left corner, for the current mode, what is under the pointer and how many
+ * nodes are selected (^49).
  */
 /** The project controls are always shown for now (^168). */
 const PROJECT_HINTS: Hint[] = [
@@ -163,12 +172,7 @@ const PROJECT_HINTS: Hint[] = [
   hint({ kind: 'keys', labels: ['Ctrl', 'O'] }, 'projects'),
 ];
 
-export function hintsFor(
-  drawing: boolean,
-  target: HintTarget,
-  selected = 0,
-  history: HistoryState = { undo: false, redo: false },
-): Hint[] {
+export function hintsFor(drawing: boolean, target: HintTarget, selected = 0): Hint[] {
   const rows = drawing ? drawModeHints(target) : selectModeHints(target, selected);
-  return [...historyHints(history), ...rows, ...PROJECT_HINTS];
+  return [...rows, ...PROJECT_HINTS];
 }

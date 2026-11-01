@@ -76,8 +76,6 @@ Entering draw mode, finishing a road and removing nodes clear the selection.
 
 ## The hints (top left)
 
-At the very top, in every mode and context: `[Ctrl]+[Z]: undo` only while there is something to undo, and `[Ctrl]+[Y] or [Ctrl]+[Shift]+[Z]: redo` only while there is something to redo (^81).
-
 The corner shows what the mouse and keys do right now, as rows of `[input]: action`, with symbols for the inputs (^49, ^50; `MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`, `KeyCap`). The rows change with the mode and with what is under the pointer:
 
 | Mode and context | Rows |
@@ -131,6 +129,16 @@ Not decided yet: the UI to switch projects without the modal (it waits for the o
 |-------|--------|
 | Ctrl+Z (Cmd+Z) | Undo the last step |
 | Ctrl+Y or Ctrl+Shift+Z | Redo |
+| Alt+Ctrl+Z | Undo the whole batch the last step belongs to (^103) |
+| Alt+Ctrl+Y or Alt+Ctrl+Shift+Z | Redo a whole batch (^103) |
+
+The hints for these keys are at the bottom of the recent history panel (top right, ^109), not in the control hints panel: `Ctrl+Z: undo` while an item of the panel is shown and there is something to undo; `Ctrl+Y or Ctrl+Shift+Z: redo` after an undo or redo while there is something to redo; the rows `Alt+Ctrl+Z: undo batch` and `Alt+Ctrl+Y or Alt+Ctrl+Shift+Z: redo batch` only while the next step belongs to a batch of several steps.
+
+**Batches (^103, ^216):** a batch is a run of consecutive steps of one kind: selection changes, or the steps of one drawing session (the first node until finishing the road). A selection batch ends when the user does something other than selecting (camera moves do not end it). After an undo or redo the next step starts a batch of its own.
+
+## The recent history panel (top right; ^107, ^108, ^109)
+
+Every step shows its name there for 3 seconds, each item on its own clock: `place node`, `move node`, `turn heading`, `bend curve`, `change radius`, `insert node`, `split road`, `merge road`, `close road`, `extend road`, `finish road`, `delete node`, `delete 3 nodes`, `select 2 nodes`, `deselect node`, `deselect all`. An undo shows as `undo: <name>`, a redo as `redo: <name>`. A batch of several steps is one item with a bold title (`draw road`, `select 3 nodes`) and its steps below, sharing one line on the right; it stays while it can go on and goes 3 seconds after it was finished. With more than 5 steps only the last 4 are shown, under an italic `(N more steps)`.
 
 A step is one finished action that changed the roads or the selection (^88): a node placed (with its heading drag), a drag of a handle or of several nodes, an inserted node, removing nodes, cancelling a road with one node, extending from a leaf node when it drops a one-node road, resetting a radius. Changing the selection is a step too (a click on a node, the selection box, deselecting, Shift clicks), also finishing a road (it clears the selection). Camera moves and entering draw mode are not steps. Undo and redo restore the roads, the road being drawn and the selection (so undoing a removal selects the nodes again); undoing while drawing stays in draw mode. They are ignored while the left button is down. A new step clears what could be redone. The last 200 steps are kept.
 

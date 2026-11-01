@@ -3,10 +3,14 @@
   import InputIcon from './InputIcon.svelte';
 
   /** Control hints in the top left corner over the map, without a background (^41, ^49). */
-  let { hints }: { hints: Hint[] } = $props();
+  let {
+    hints,
+    inline = false,
+    label = 'Controls',
+  }: { hints: Hint[]; inline?: boolean; label?: string } = $props();
 </script>
 
-<ul class="hints" aria-label="Controls">
+<ul class="hints" class:inline aria-label={label}>
   {#each hints as h (h.text + h.inputs.map((i) => JSON.stringify(i)).join())}
     <li>
       <span class="inputs">
@@ -37,6 +41,14 @@
     z-index: 2;
     /* No background; a halo keeps the text readable over the map. */
     filter: drop-shadow(0 0 2px var(--bg)) drop-shadow(0 0 2px var(--bg));
+  }
+  /* In the recent history panel (^109): in the flow, right-aligned. */
+  .hints.inline {
+    position: static;
+    gap: 0.5em;
+    margin-top: 0.8em;
+    filter: none;
+    align-items: flex-end;
   }
   li {
     display: flex;

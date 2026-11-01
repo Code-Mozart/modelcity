@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { Camera } from './lib/camera/camera.svelte';
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
   import Hints from './lib/hints/Hints.svelte';
-  import { hintsFor } from './lib/hints/hints';
+  import HistoryPanel from './lib/hud/HistoryPanel.svelte';
+  import { Recent } from './lib/hud/recent.svelte';
+  import { hintsFor, historyHints } from './lib/hints/hints';
+  import { keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
@@ -20,10 +23,21 @@
   const hints = $derived(
     session.modalOpen
       ? modalHints(session.row?.mode ?? 'list', session.over)
-      : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
-          undo: editor.canUndo,
-          redo: editor.canRedo,
-        }),
+      : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length),
+  );
+  // What the history just did, for a few seconds, with the undo and redo hints at its bottom (^107, ^109).
+  const recent = new Recent();
+  $effect(() => {
+    const event = editor.event;
+    untrack(() => recent.consume(event));
+  });
+  const historyRows = $derived(
+    historyHints({
+      undo: recent.items.length > 0 && editor.canUndo,
+      redo: editor.canRedo && recent.items.some((i) => i.prefix !== ''),
+      undoBatch: editor.canUndoBatch,
+      redoBatch: editor.canRedoBatch,
+    }),
   );
 
   onMount(() => void session.start());
@@ -53,7 +67,7 @@
     if (projectKey(e)) e.preventDefault();
     else if (
       camera.key(e.key) ||
-      editor.key(e.key, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey })
+      editor.key(keyOf(e), { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey, alt: e.altKey })
     )
       e.preventDefault();
   }
@@ -68,6 +82,7 @@
 <main>
   <MapCanvas {editor} {camera} />
   <Hints {hints} />
+  <HistoryPanel {recent} hints={historyRows} />
   <Compass {camera} />
   <ProjectsModal {session} />
 </main>

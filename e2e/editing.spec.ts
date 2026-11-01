@@ -80,3 +80,24 @@ test('close a loop', async ({ page }) => {
   expect(edges.at(-1)).toMatchObject({ start: 2, end: 0 });
   expect((await app.nodes()).length).toBe(3);
 });
+
+test('the recent history panel names steps, batches selecting, Alt+Ctrl+Z undoes a batch (^107)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  await drawRoad(app);
+  await expect(app.history()).toContainText('finish road');
+  for (const x of [0, 30, 60]) await app.click({ x, y: 0 });
+  // Three selection steps are one batch with a title; it stays until something else is done.
+  await page.waitForTimeout(3500);
+  await expect(app.history()).toContainText('select node');
+  await expect(app.history()).toContainText('undo batch');
+  await page.keyboard.press('Control+Alt+z');
+  expect((await app.state()).selected).toBe(0);
+  await expect(app.history()).toContainText('undo: ');
+  await expect(app.history()).toContainText('redo batch');
+  await page.keyboard.press('Control+Alt+Shift+z');
+  expect((await app.state()).selected).toBe(1);
+});
