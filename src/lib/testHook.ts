@@ -1,7 +1,7 @@
-import type { Camera } from './camera.svelte';
-import type { Editor } from './editor.svelte';
+import type { Camera } from './camera/camera.svelte';
+import type { Editor } from './editor/editor.svelte';
 import type { ProjectSession } from './project/session.svelte';
-import { worldToScreen, type Point } from './view';
+import { worldToScreen, type Point } from './camera/view';
 
 /** What the end-to-end tests (`e2e/`) can see of the app (^145). Only installed in dev builds. */
 export interface TestHook {

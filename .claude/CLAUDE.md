@@ -44,7 +44,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 ## Code
 The user entrusts the details to Claude. Principles:
 - SRP, KISS and DRY at all times.
-- Build infrastructure, then use and combine it. Think library and client: engine/API-like code (pure, testable, no UI or input, e.g. `src/lib/view.ts`, `render.ts`) versus code that uses it (components, input handling).
+- Build infrastructure, then use and combine it. Think library and client: engine/API-like code (pure, testable, no UI or input, e.g. `src/lib/camera/view.ts`, `src/lib/render/paint.ts`) versus code that uses it (components, input handling).
 - The linter enforces quality limits (complexity, function length, nesting depth, parameter count, statements, file length: see `eslint.config.js`). Fix violations by refactoring. Never disable a rule or raise a limit just to get green; raise one only deliberately and mention it in the PR.
 
 ## Glossary
@@ -58,7 +58,7 @@ The user entrusts the details to Claude. Principles:
 
 ## Conventions
 - World coordinates: meters, origin at map center, x right, y down (^4).
-- Design principle (^178): every list the user sees is searchable, and the search is fuzzy (`src/lib/fuzzy.ts`).
+- Design principle (^178): every list the user sees is searchable, and the search is fuzzy (`src/lib/ui/fuzzy.ts`).
 - Design principle (^181): a control hint says what an input does right now, with what is under the pointer and the state of the app; never "when you click X, Y happens".
 - Design principle (^210): a message to the user has the icon of its kind in front (error: exclamation mark in a red circle; information: i in a blue circle; warning: exclamation mark in an orange triangle; success: check mark in a green circle), never color alone (`Notice.svelte`).
 - Design principle (^211): use the available screen space; UI is not small without a reason.
@@ -69,7 +69,7 @@ The user entrusts the details to Claude. Principles:
 
 - Controls: `docs/controls.md` is the current reference; update it together with the hat when a control changes.
 - Product background and design decisions: `docs/handover.md` (its mention of single-page HTML demos is outdated; we build a real app now).
-- Stack: bun + TypeScript + Svelte 5 + Vite + vitest (^1). Code map: `src/lib/curves/` is the pure curve geometry library (^12), `editor.svelte.ts` the interaction engine, `MapCanvas.svelte` view and input dispatch, `render*.ts` drawing.
+- Stack: bun + TypeScript + Svelte 5 + Vite + vitest (^1). Code map of `src/lib/` (^12): `curves/` the pure curve geometry library; `model/` the graph, chains and junctions; `editor/` the interaction engine (`editor.svelte.ts`) with its pure helpers, selection and undo; `camera/` view, pan, zoom, rotate and bounds; `render/` canvas drawing; `hints/` the control hints and the input symbols; `ui/` generic components (list, icons, notices); `project/` projects, storage, files and the projects modal; `MapCanvas.svelte` input dispatch and view.
 
 ## Commands
 - `bun install` (also enables the git hooks in `.githooks/`), `bun run dev` (app), `bun run ci` (lint + check + test + build, same as GitHub Actions).

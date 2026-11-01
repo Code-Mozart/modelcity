@@ -1,7 +1,7 @@
 import { SvelteDate } from 'svelte/reactivity';
-import type { ModalTarget } from '../hints';
-import type { Camera } from '../camera.svelte';
-import type { Editor } from '../editor.svelte';
+import type { ModalTarget } from './modalHints';
+import type { Camera } from '../camera/camera.svelte';
+import type { Editor } from '../editor/editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
 import { fromFile, ProjectFileError, toFile, type CameraState, type Project } from './file';
 import { parseProject } from './migrate';

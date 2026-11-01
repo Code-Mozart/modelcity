@@ -1,4 +1,4 @@
-import { Editor, type PointerInfo } from '../editor.svelte';
+import { Editor, type PointerInfo } from '../editor/editor.svelte';
 import { pointOn } from '../curves/piece';
 import { positionOf } from '../model/chains';
 

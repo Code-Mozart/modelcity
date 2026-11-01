@@ -58,7 +58,7 @@ describe.each(Object.entries(themes))('%s theme contrast', (_name, t) => {
 
 describe('one font size for all text (^83)', () => {
   it('app.css and the canvas text use the same size', async () => {
-    const { FONT_PX } = await import('./paint');
+    const { FONT_PX } = await import('./render/paint');
     expect(css).toContain(`--font-size: ${FONT_PX}px;`);
   });
 });

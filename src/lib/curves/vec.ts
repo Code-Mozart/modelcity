@@ -1,4 +1,4 @@
-import type { Point } from '../view';
+import type { Point } from '../camera/view';
 
 /** Small 2D vector helpers. World units are meters, y points down (^4). */
 export type Vec = Point;

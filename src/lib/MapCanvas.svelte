@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import type { Camera } from './camera.svelte';
-  import type { Editor, PointerInfo } from './editor.svelte';
+  import type { Camera } from './camera/camera.svelte';
+  import type { Editor, PointerInfo } from './editor/editor.svelte';
   import { FEATURES } from './features';
   import { chainSelection } from './model/chains';
-  import { render } from './render';
-  import { screenToWorld, worldToScreen, type Point } from './view';
+  import { render } from './render/render';
+  import { screenToWorld, worldToScreen, type Point } from './camera/view';
 
   let { editor, camera }: { editor: Editor; camera: Camera } = $props();
 
