@@ -49,6 +49,11 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Lane** | A strip of road traffic runs in, 3 m wide for now (`LANE_WIDTH_M`). For now a branch is a single lane, so *select lane* selects a branch (Alt+click); more lanes come later | decided; assumed (that a road is one lane for now) | ^22, ^76 |
 | **Step** | One undoable change of the roads (a placed node, a drag, a removal, ...), see `docs/controls.md` | assumed | ^81, ^88 |
 | **Junction node** | A node where more than one edge meets, a single node of the graph with one heading (formerly the *shared node* by position, ^92, replaced by the graph, ^106) | decided; assumed (the name) | ^23, ^106, ^170 |
+| **Operation** | Something the user can do and that has a name: undo, split, export, change the radius. Listed in the control hints, the recent history panel and the operations search. We say *operation*, not *action* (`action` is also what code calls many other things) | decided | ^180 |
+| **Fuzzy search** | A search that finds a title if the characters of the search appear in it in the same order, case ignored, and puts the better matches (characters next to each other, at word starts) first; rules in `docs/controls.md` | decided (the principle, ^178); assumed (the scoring) | ^178 |
+| **No project** | The state with a blank map that is not a project yet; it becomes one as soon as it has something in it | decided | ^189 |
+| **Modal** | A window over the map that blocks the rest until it is closed, for example the *projects modal* (`Ctrl+O`); not "dialog" | decided | ^212 |
+| **Project** | The map with its title, dates and camera, kept in the browser, saved by itself and exported or imported as a file (`docs/data-model.md`) | assumed | ^82, ^148, ^170 |
 | **Chain** | A run of edges that follow each other through nodes with exactly one edge in and one out; derived from the graph for drawing and hit testing, never stored | assumed | ^106 |
 | **Split** | A road starts at an existing node, so that node has one edge in and two (or more) out. Draw mode: click a node or a curve | decided | ^23, ^93 |
 | **Merge** | A road ends at an existing node, so that node has two (or more) edges in and one out. Draw mode: click a node or a curve while drawing | decided | ^23, ^93 |

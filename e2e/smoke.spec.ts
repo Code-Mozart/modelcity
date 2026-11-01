@@ -71,6 +71,7 @@ async function selectBranch(app: App) {
 test('draw, edit, undo, split, merge and select a branch', async ({ page }) => {
   await page.goto('/');
   const app = new App(page);
+  await app.ready();
   await test.step('first arm A, B, C', () => firstArm(app));
   await test.step('radius of B-C', () => changeRadius(app));
   await test.step('move, undo, redo', () => moveUndoRedo(app));

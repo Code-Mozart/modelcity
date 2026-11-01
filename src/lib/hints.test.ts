@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hintsFor, type Hint, type HintTarget } from './hints';
+import { modalHints, hintsFor, type Hint, type HintTarget } from './hints';
 
 /** A readable form of a hint: "LMB drag: pan". */
 const show = (h: Hint) =>
@@ -14,8 +14,12 @@ const show = (h: Hint) =>
             : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}`;
+const PROJECT_ROWS = ['Ctrl+S: export', 'Ctrl+O: projects'];
+/** The hints of the mode and target, without the project controls that are always shown (^168). */
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
-  hintsFor(drawing, target, selected).map(show);
+  hintsFor(drawing, target, selected)
+    .map(show)
+    .filter((r) => !PROJECT_ROWS.includes(r));
 
 const empty: HintTarget = { kind: 'empty' };
 const node = (last: boolean, leaf = last): HintTarget => ({
@@ -33,9 +37,9 @@ describe('control hints (^49)', () => {
     ]);
   });
 
-  it('draw mode over a curve: insert a node', () => {
-    expect(rows(true, { kind: 'curve' })).toEqual([
-      'LMB: insert here',
+  it('draw mode over a curve: merge into it, or insert a node with a drag', () => {
+    expect(rows(true, { kind: 'curve', act: 'merge' })).toEqual([
+      'LMB: merge',
       'LMB drag: insert and set heading',
       'Esc or RMB: finish',
     ]);
@@ -180,10 +184,45 @@ describe('split and merge hints (^23)', () => {
     expect(rows(true, act('merge'))[0]).toBe('LMB: merge');
   });
 
-  it('over a curve: split here, merge here, or insert a node', () => {
-    const curve = (a: 'split' | 'merge' | 'insert'): HintTarget => ({ kind: 'curve', act: a });
+  it('over a curve: split or merge, also into the road being drawn (^191)', () => {
+    const curve = (a: 'split' | 'merge'): HintTarget => ({ kind: 'curve', act: a });
     expect(rows(true, curve('split'))[0]).toBe('LMB: split');
     expect(rows(true, curve('merge'))[1]).toBe('LMB drag: insert and set heading');
-    expect(rows(true, curve('insert'))[0]).toBe('LMB: insert here');
+    expect(rows(true, curve('merge'))[0]).toBe('LMB: merge');
+  });
+});
+
+describe('project controls (^168)', () => {
+  it('are always the last hints, in every mode', () => {
+    for (const drawing of [false, true]) {
+      expect(hintsFor(drawing, empty).map(show).slice(-2)).toEqual(PROJECT_ROWS);
+    }
+  });
+});
+
+describe('the projects modal hints say what an input does right now (^181)', () => {
+  const rows = (...args: Parameters<typeof modalHints>) => modalHints(...args).map(show);
+
+  it('only Esc over nothing, and the click only over something that can be clicked', () => {
+    expect(rows('list')).toEqual(['Esc: close']);
+    expect(rows('list', 'card')).toEqual(['LMB: open', 'Esc: close']);
+    expect(rows('list', 'rename')).toEqual(['LMB: rename', 'Esc: close']);
+    expect(rows('list', 'delete')).toEqual(['LMB: delete', 'Esc: close']);
+    expect(rows('list', 'save')).toEqual(['LMB: save to disc', 'Esc: close']);
+  });
+
+  it('inputs that do the same are one row: Esc or LMB closes over the cross', () => {
+    expect(rows('list', 'close')).toEqual(['Esc or LMB: close']);
+  });
+
+  it('while renaming: the check mark and Enter rename, the cross and Esc cancel', () => {
+    expect(rows('rename')).toEqual(['Enter: rename', 'Esc: cancel']);
+    expect(rows('rename', 'confirm')).toEqual(['Enter or LMB: rename', 'Esc: cancel']);
+    expect(rows('rename', 'cancel')).toEqual(['Esc or LMB: cancel', 'Enter: rename']);
+  });
+
+  it('while asked about a delete: the check mark deletes, the cross and Esc cancel', () => {
+    expect(rows('delete', 'confirm')).toEqual(['LMB: delete', 'Esc: cancel']);
+    expect(rows('delete', 'cancel')).toEqual(['Esc or LMB: cancel']);
   });
 });

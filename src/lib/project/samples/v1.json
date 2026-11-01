@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "title": "Sample of version 1",
+  "createdAt": "2026-10-31T06:00:00Z",
+  "lastUpdatedAt": "2026-10-31T06:01:00Z",
+  "camera": { "x": 0, "y": 0, "scale": 4, "rotation": 0 },
+  "nodes": [
+    [0, 100000, 0, 0],
+    [1, 300000, 50000, 2.3],
+    [2, 300000, 150000, 1.5708]
+  ],
+  "edges": [
+    [0, 0, 1, null, 1],
+    [1, 1, 2, 12500, 1]
+  ],
+  "laneConfigurations": { "1": { "name": "default", "width": 3000 } }
+}

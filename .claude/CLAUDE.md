@@ -34,6 +34,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 
 ## Stored data model (^170)
 - The stored model is specified in `docs/data-model.md`. It is fixed: any change to it needs the user's agreement, a version bump and a migration (^173).
+- Every way a project file is refused on import has a hat (^192 to ^208, rule ^209). When the import interface changes (data model extended or changed, a migration or a check added), make or update these hats in the same step.
 
 ## Quality
 
@@ -57,6 +58,11 @@ The user entrusts the details to Claude. Principles:
 
 ## Conventions
 - World coordinates: meters, origin at map center, x right, y down (^4).
+- Design principle (^178): every list the user sees is searchable, and the search is fuzzy (`src/lib/fuzzy.ts`).
+- Design principle (^181): a control hint says what an input does right now, with what is under the pointer and the state of the app; never "when you click X, Y happens".
+- Design principle (^210): a message to the user has the icon of its kind in front (error: exclamation mark in a red circle; information: i in a blue circle; warning: exclamation mark in an orange triangle; success: check mark in a green circle), never color alone (`Notice.svelte`).
+- Design principle (^211): use the available screen space; UI is not small without a reason.
+- Say *operation* for something the user can do, not *action* (^180).
 - Two levels of gizmo (^60): the *skeleton* (curves and node dots, always shown) and the *scaffold* (all other gizmos of a segment, shown by need). A *segment* is the curve between two nodes.
 
 ## Context

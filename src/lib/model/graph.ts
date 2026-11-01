@@ -140,3 +140,30 @@ export function removeNodes(g: Graph, ids: number[], keep: number | null): Graph
   const used = new Set(removed.edges.flatMap((e) => [e.start, e.end]));
   return { ...removed, nodes: removed.nodes.filter((n) => used.has(n.id) || n.id === keep) };
 }
+
+const mm = (m: number) => Math.round(m * 1000) / 1000;
+
+/**
+ * The graph with every length rounded to the millimeter, the resolution of the stored model
+ * (`docs/data-model.md`): the editor rounds when it commits a change, so what is saved and loaded
+ * again is what was on the screen. The same graph object if nothing changes.
+ */
+export function roundToMm(g: Graph): Graph {
+  const nodes = g.nodes.map((n) =>
+    mm(n.x) === n.x && mm(n.y) === n.y ? n : { ...n, x: mm(n.x), y: mm(n.y) },
+  );
+  const edges = g.edges.map((e) =>
+    e.radius === null || mm(e.radius) === e.radius ? e : { ...e, radius: mm(e.radius) },
+  );
+  const lanes = Object.fromEntries(
+    Object.entries(g.lanes).map(([id, l]) => [
+      id,
+      mm(l.width) === l.width ? l : { ...l, width: mm(l.width) },
+    ]),
+  );
+  const same =
+    nodes.every((n, i) => n === g.nodes[i]) &&
+    edges.every((e, i) => e === g.edges[i]) &&
+    Object.entries(lanes).every(([id, l]) => l === g.lanes[Number(id)]);
+  return same ? g : { nodes, edges, lanes };
+}
