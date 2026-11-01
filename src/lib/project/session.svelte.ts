@@ -51,7 +51,8 @@ export class ProjectSession {
   row = $state<{ id: string; mode: 'rename' | 'delete' } | null>(null);
   /** What the pointer is over in the dialog, for the hints (^181). */
   over = $state<DialogTarget | null>(null);
-  private dirty = false;
+  /** True while a rename is written: the dialog does not react meanwhile. */
+  busy = $state(false);
   private createdAt = '';
   private lastUpdatedAt = '';
   private saved: Graph | null = null;
@@ -93,19 +94,18 @@ export class ProjectSession {
     return { title, createdAt, lastUpdatedAt, camera: this.camera.state, graph: this.editor.graph };
   }
 
-  /** Write the project to the browser now. */
-  async save() {
+  /** Write the project to the browser now. Only a change of the map counts as an update, not a rename. */
+  async save(touch = true) {
     clearTimeout(this.timer);
     if (!this.id) return;
-    this.lastUpdatedAt = this.now();
+    if (touch) this.lastUpdatedAt = this.now();
     this.saved = this.editor.graph;
-    this.dirty = false;
     await this.storage.put({ id: this.id, file: toFile(this.project()) });
   }
 
-  /** The graph or the title may have changed (called whenever the graph does): save it after a short while, debounced (^166). Moving the camera alone does not. */
+  /** The graph may have changed (called whenever it does): save it after a short while, debounced (^166). Moving the camera alone does not. */
   changed() {
-    if (!this.id || (this.editor.graph === this.saved && !this.dirty)) return;
+    if (!this.id || this.editor.graph === this.saved) return;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.save(), AUTOSAVE_MS);
   }
@@ -177,7 +177,7 @@ export class ProjectSession {
     this.row = null;
   }
 
-  /** Give a project a new name (an empty one is refused); the open one is saved by autosave, the others at once. */
+  /** Give a project a new name (an empty one is refused) and save it at once. The date of the last change stays (^177). */
   async rename(id: string, title: string) {
     const name = title.trim().slice(0, MAX_TITLE);
     this.row = null;
@@ -186,13 +186,16 @@ export class ProjectSession {
     this.projects = this.projects.map((p) =>
       p.id === id ? { id, file: { ...p.file, title: name } } : p,
     );
-    if (id === this.id) {
-      this.title = name;
-      this.dirty = true;
-      this.changed();
-    } else {
-      const file = { ...target.file, title: name, lastUpdatedAt: this.now() };
-      await this.storage.put({ id, file });
+    this.busy = true;
+    try {
+      if (id === this.id) {
+        this.title = name;
+        await this.save(false);
+      } else {
+        await this.storage.put({ id, file: { ...target.file, title: name } });
+      }
+    } finally {
+      this.busy = false;
     }
   }
 

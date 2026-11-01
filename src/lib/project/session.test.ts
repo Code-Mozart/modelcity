@@ -139,21 +139,28 @@ describe('the editor and the project', () => {
 });
 
 describe('the projects dialog (^168, ^178)', () => {
-  it('renames the open project through autosave and another one at once', async () => {
+  it('renames at once, for the open project too, and the date of the last change stays', async () => {
     const { session, storage } = setup();
     await session.start();
     const first = session.id;
     await session.create();
+    const dates = Object.fromEntries(
+      (await storage.list()).map((p) => [p.id, p.file.lastUpdatedAt]),
+    );
     await session.openDialog();
     await session.rename(first, '  Harbour  ');
-    expect((await storage.list()).find((p) => p.id === first)!.file.title).toBe('Harbour');
     await session.rename(session.id, 'Old town');
+    const stored = await storage.list();
+    expect(stored.find((p) => p.id === first)!.file).toMatchObject({
+      title: 'Harbour',
+      lastUpdatedAt: dates[first],
+    });
+    expect(stored.find((p) => p.id === session.id)!.file).toMatchObject({
+      title: 'Old town',
+      lastUpdatedAt: dates[session.id],
+    });
     expect(session.title).toBe('Old town');
-    expect((await storage.list()).find((p) => p.id === session.id)!.file.title).toBe(
-      'Untitled project',
-    );
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + 1);
-    expect((await storage.list()).find((p) => p.id === session.id)!.file.title).toBe('Old town');
+    expect(session.busy).toBe(false);
     expect(session.shown.map((p) => p.file.title).sort()).toEqual(['Harbour', 'Old town']);
   });
 

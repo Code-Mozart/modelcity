@@ -56,6 +56,8 @@
       role="dialog"
       aria-modal="true"
       aria-label="Projects"
+      aria-busy={session.busy}
+      inert={session.busy}
       tabindex="-1"
       onpointerdown={(e) => e.stopPropagation()}
     >
