@@ -8,9 +8,9 @@ export type Pt = { x: number; y: number };
 export class App {
   constructor(readonly page: Page) {}
 
-  /** Wait until the app has opened its project (it loads from the browser first). */
+  /** Wait until the app has opened its project (it looks at the projects of the browser first). */
   async ready() {
-    await this.page.waitForFunction(() => window.__modelcity?.session.id);
+    await this.page.waitForFunction(() => window.__modelcity?.session.ready);
   }
 
   private async at(pt: Pt): Promise<Pt> {
@@ -87,17 +87,21 @@ export class App {
   }
 
   /** The projects stored in the browser (IndexedDB), as export files. */
-  stored(): Promise<{ title: string; nodes: unknown[]; edges: unknown[] }[]> {
+  stored(): Promise<
+    { title: string; lastUpdatedAt: string; nodes: unknown[]; edges: unknown[] }[]
+  > {
     return this.page.evaluate(
       () =>
-        new Promise<{ title: string; nodes: unknown[]; edges: unknown[] }[]>((resolve, reject) => {
-          const open = indexedDB.open('modelcity', 1);
-          open.onerror = () => reject(open.error);
-          open.onsuccess = () => {
-            const all = open.result.transaction('projects').objectStore('projects').getAll();
-            all.onsuccess = () => resolve(all.result.map((r: { file: never }) => r.file));
-          };
-        }),
+        new Promise<{ title: string; lastUpdatedAt: string; nodes: unknown[]; edges: unknown[] }[]>(
+          (resolve, reject) => {
+            const open = indexedDB.open('modelcity', 1);
+            open.onerror = () => reject(open.error);
+            open.onsuccess = () => {
+              const all = open.result.transaction('projects').objectStore('projects').getAll();
+              all.onsuccess = () => resolve(all.result.map((r: { file: never }) => r.file));
+            };
+          },
+        ),
     );
   }
 

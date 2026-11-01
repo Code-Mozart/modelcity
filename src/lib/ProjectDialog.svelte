@@ -2,13 +2,16 @@
   import { tick } from 'svelte';
   import type { DialogTarget } from './hints';
   import Icon from './Icon.svelte';
+  import ProjectCard from './ProjectCard.svelte';
   import type { ProjectSession } from './project/session.svelte';
 
-  /** The projects of the browser, opened with Ctrl+O (^168, ^171): search, open, rename, delete, new, import a file. */
+  /**
+   * The projects of the browser, opened with Ctrl+O (^168, ^171): search, open, rename, delete,
+   * import a file, save to disc, new project. Everything is a card of the full width.
+   */
   let { session }: { session: ProjectSession } = $props();
   let file = $state<HTMLInputElement>();
   let search = $state<HTMLInputElement>();
-  let draft = $state('');
 
   // Typing right after Ctrl+O searches (^178).
   $effect(() => {
@@ -21,32 +24,11 @@
     if (file) file.value = '';
   }
 
-  function rename(id: string, title: string) {
-    draft = title;
-    session.startRename(id);
-  }
-
-  function renameKey(e: KeyboardEvent, id: string) {
-    if (e.key === 'Enter') void session.rename(id, draft);
-    else if (e.key === 'Escape') session.cancelRow();
-    else return;
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  /** Select the whole name when the text field appears. */
-  function focusAll(input: HTMLInputElement) {
-    input.focus();
-    input.select();
-  }
-
   /** What the pointer is over, for the control hints (^181). */
   const over = (target: DialogTarget) => ({
     onpointerenter: () => (session.over = target),
     onpointerleave: () => (session.over = null),
   });
-
-  const when = (iso: string) => new Date(iso).toLocaleString();
 </script>
 
 {#if session.dialogOpen}
@@ -82,92 +64,29 @@
       />
       <ul>
         {#each session.shown as p (p.id)}
-          {@const mode = session.row?.id === p.id ? session.row.mode : null}
-          <li class:current={p.id === session.id} class:asking={mode === 'delete'}>
-            {#if mode === 'rename'}
-              <input
-                class="name"
-                aria-label="Project name"
-                maxlength="100"
-                bind:value={draft}
-                use:focusAll
-                onkeydown={(e) => renameKey(e, p.id)}
-              />
-            {:else}
-              <button
-                class="open"
-                title={p.file.title}
-                onclick={() => session.open(p.id)}
-                {...over('card')}
-              >
-                <span class="title">{p.file.title}</span>
-                <span class="date">{when(p.file.lastUpdatedAt)}</span>
-              </button>
-            {/if}
-            {#if mode === 'rename'}
-              <button
-                class="icon"
-                aria-label="Confirm rename"
-                onclick={() => session.rename(p.id, draft)}
-                {...over('confirm')}
-              >
-                <Icon name="check" />
-              </button>
-              <button
-                class="icon"
-                aria-label="Cancel"
-                onclick={() => session.cancelRow()}
-                {...over('cancel')}
-              >
-                <Icon name="x" />
-              </button>
-            {:else if mode === 'delete'}
-              <button
-                class="icon danger"
-                aria-label="Confirm delete {p.file.title}"
-                onclick={() => session.confirmDelete()}
-                {...over('confirm')}
-              >
-                <Icon name="check" />
-              </button>
-              <button
-                class="icon"
-                aria-label="Cancel"
-                onclick={() => session.cancelRow()}
-                {...over('cancel')}
-              >
-                <Icon name="x" />
-              </button>
-            {:else}
-              <button
-                class="icon"
-                aria-label="Rename {p.file.title}"
-                onclick={() => rename(p.id, p.file.title)}
-                {...over('rename')}
-              >
-                <Icon name="pen" />
-              </button>
-              <button
-                class="icon"
-                aria-label="Delete {p.file.title}"
-                onclick={() => session.startDelete(p.id)}
-                {...over('delete')}
-              >
-                <Icon name="trash" />
-              </button>
-            {/if}
-          </li>
+          <ProjectCard {session} project={p} {over} />
         {:else}
           <li class="none">No project matches.</li>
         {/each}
       </ul>
       {#if session.error}<p class="error" role="alert">{session.error}</p>{/if}
-      <div class="actions">
-        <button onclick={() => session.create().then(() => session.closeDialog())} {...over('new')}>
-          New project
-        </button>
-        <button onclick={() => file?.click()} {...over('import')}>Import file…</button>
-      </div>
+      <ul class="actions">
+        <li class="card">
+          <button class="open" onclick={() => file?.click()} {...over('import')}>
+            Import file…
+          </button>
+        </li>
+        <li class="card">
+          <button class="open" onclick={() => session.download()} {...over('save')}>
+            Save to disc…
+          </button>
+        </li>
+        <li class="card" class:current={session.noProject}>
+          <button class="open" onclick={() => session.newProject()} {...over('new')}>
+            New project
+          </button>
+        </li>
+      </ul>
       <input
         bind:this={file}
         type="file"
@@ -190,7 +109,7 @@
     background: color-mix(in srgb, var(--bg) 60%, transparent);
   }
   .dialog {
-    width: min(32em, calc(100% - 2em));
+    width: min(34em, calc(100% - 2em));
     max-height: calc(100% - 2em);
     overflow: auto;
     padding: 1.2em;
@@ -214,8 +133,7 @@
     font-size: 1.3em;
   }
   .search,
-  .name {
-    width: 100%;
+  .dialog :global(.name) {
     box-sizing: border-box;
     padding: 0.5em 0.7em;
     color: var(--ink);
@@ -225,87 +143,96 @@
     font: inherit;
   }
   .search {
+    width: 100%;
     margin-bottom: 0.8em;
   }
-  .name {
+  .dialog :global(.name) {
     flex: 1;
-    width: auto;
+    min-width: 0;
+    margin: 0.3em 0 0.3em 0.3em;
     border-color: var(--blue);
   }
   ul {
     display: flex;
     flex-direction: column;
-    gap: 0.3em;
-    margin: 0 0 1em;
+    gap: 0.4em;
+    margin: 0 0 0.8em;
     padding: 0;
     list-style: none;
   }
-  li {
-    display: flex;
-    align-items: stretch;
-    gap: 0.4em;
+  ul.actions {
+    margin: 0;
   }
   li.none {
     color: var(--muted);
   }
-  li.current .open {
-    outline: 2px solid var(--blue);
-  }
-  /* The card that is asked about deletion. */
-  li.asking .open {
-    outline: 2px solid var(--red);
-  }
-  button {
-    padding: 0.5em 0.9em;
-    color: var(--ink);
+  /* A card spans the whole width; what it has to the right (the icons) is inside it. */
+  .dialog :global(li.card) {
+    display: flex;
+    align-items: center;
+    gap: 0.2em;
+    padding-right: 0.3em;
     background: var(--btn);
     border: 1px solid var(--line);
     border-radius: 0.4em;
+  }
+  .dialog :global(li.card:hover) {
+    border-color: var(--muted);
+  }
+  .dialog :global(li.current) {
+    outline: 2px solid var(--blue);
+  }
+  /* The card that is asked about deletion. */
+  .dialog :global(li.asking) {
+    outline: 2px solid var(--red);
+  }
+  .dialog :global(button) {
+    color: var(--ink);
     font: inherit;
     cursor: pointer;
   }
   /* The icon buttons keep their place and size in every state, and have no background. */
-  button.icon {
+  .dialog :global(button.icon) {
     flex: none;
     display: grid;
     place-items: center;
     width: 2.4em;
+    height: 2.4em;
     padding: 0;
     background: transparent;
-    border-color: transparent;
+    border: 0;
+    border-radius: 0.4em;
   }
-  button.icon:hover {
+  .dialog :global(button.icon:hover) {
     color: var(--blue);
   }
-  button.danger,
-  button.danger:hover {
+  .dialog :global(button.danger),
+  .dialog :global(button.danger:hover) {
     color: var(--red-ink);
   }
-  .open {
+  .dialog :global(.open) {
     flex: 1;
     min-width: 0;
     display: flex;
     justify-content: space-between;
     gap: 1em;
+    padding: 0.7em 0.9em;
     text-align: left;
+    background: transparent;
+    border: 0;
   }
-  .title {
+  .dialog :global(.title) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .date {
+  .dialog :global(.date) {
     flex: none;
     white-space: nowrap;
     color: var(--muted);
   }
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5em;
-  }
   .error {
-    margin: 0 0 1em;
+    margin: 0 0 0.8em;
     color: var(--red-ink);
   }
 </style>

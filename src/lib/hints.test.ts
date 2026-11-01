@@ -205,23 +205,24 @@ describe('the projects dialog hints say what an input does right now (^181)', ()
 
   it('only Esc over nothing, and the click only over something that can be clicked', () => {
     expect(rows('list')).toEqual(['Esc: close']);
-    expect(rows('list', 'card')).toEqual(['LMB: open project', 'Esc: close']);
+    expect(rows('list', 'card')).toEqual(['LMB: open', 'Esc: close']);
     expect(rows('list', 'rename')).toEqual(['LMB: rename', 'Esc: close']);
     expect(rows('list', 'delete')).toEqual(['LMB: delete', 'Esc: close']);
+    expect(rows('list', 'save')).toEqual(['LMB: save to disc', 'Esc: close']);
   });
 
-  it('while renaming: Enter renames, Esc cancels, the check mark renames, the cross cancels', () => {
-    expect(rows('rename')).toEqual(['Enter: rename', 'Esc: cancel renaming']);
-    expect(rows('rename', 'confirm')).toEqual([
-      'LMB: rename',
-      'Enter: rename',
-      'Esc: cancel renaming',
-    ]);
-    expect(rows('rename', 'cancel')[0]).toBe('LMB: cancel');
+  it('inputs that do the same are one row: Esc or LMB closes over the cross', () => {
+    expect(rows('list', 'close')).toEqual(['Esc or LMB: close']);
+  });
+
+  it('while renaming: the check mark and Enter rename, the cross and Esc cancel', () => {
+    expect(rows('rename')).toEqual(['Enter: rename', 'Esc: cancel']);
+    expect(rows('rename', 'confirm')).toEqual(['Enter or LMB: rename', 'Esc: cancel']);
+    expect(rows('rename', 'cancel')).toEqual(['Esc or LMB: cancel', 'Enter: rename']);
   });
 
   it('while asked about a delete: the check mark deletes, the cross and Esc cancel', () => {
-    expect(rows('delete', 'confirm')).toEqual(['LMB: delete for good', 'Esc: cancel deleting']);
-    expect(rows('delete', 'cancel')).toEqual(['LMB: cancel', 'Esc: cancel deleting']);
+    expect(rows('delete', 'confirm')).toEqual(['LMB: delete', 'Esc: cancel']);
+    expect(rows('delete', 'cancel')).toEqual(['Esc or LMB: cancel']);
   });
 });

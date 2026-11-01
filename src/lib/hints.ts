@@ -164,35 +164,46 @@ export type DialogMode = 'list' | 'rename' | 'delete';
 
 /** What the pointer is over in the projects dialog (nothing: null). */
 export type DialogTarget =
-  'card' | 'rename' | 'delete' | 'confirm' | 'cancel' | 'close' | 'new' | 'import';
+  'card' | 'rename' | 'delete' | 'confirm' | 'cancel' | 'close' | 'new' | 'import' | 'save';
 
 const CLICK: Record<DialogTarget, (mode: DialogMode) => string> = {
-  card: () => 'open project',
+  card: () => 'open',
   rename: () => 'rename',
   delete: () => 'delete',
-  confirm: (mode) => (mode === 'rename' ? 'rename' : 'delete for good'),
+  confirm: (mode) => (mode === 'rename' ? 'rename' : 'delete'),
   cancel: () => 'cancel',
   close: () => 'close',
   new: () => 'new project',
-  import: () => 'import a file',
+  import: () => 'import',
+  save: () => 'save to disc',
 };
 
-const ESC_TEXT: Record<DialogMode, string> = {
-  list: 'close',
-  rename: 'cancel renaming',
-  delete: 'cancel deleting',
-};
+const ESC_TEXT: Record<DialogMode, string> = { list: 'close', rename: 'cancel', delete: 'cancel' };
+
+/** Rows with the same text become one row with all their inputs, keys before the mouse (`Esc or LMB: cancel`). */
+function merged(rows: Hint[]): Hint[] {
+  const out: Hint[] = [];
+  for (const row of rows) {
+    const same = out.find((r) => r.text === row.text);
+    if (same) same.inputs.push(...row.inputs);
+    else out.push({ ...row, inputs: [...row.inputs] });
+  }
+  for (const r of out)
+    r.inputs.sort((a, b) => Number(a.kind === 'mouse') - Number(b.kind === 'mouse'));
+  return out;
+}
 
 /**
  * The controls while the projects dialog is up (^168): they replace all others, which do not work
- * meanwhile. Like all hints they say what an input does right now (^181): the click is only there
- * over something that can be clicked.
+ * meanwhile. Like all hints they say what an input does right now, as briefly as is clear (^181):
+ * the click is only there over something that can be clicked, and what two inputs do alike is one row.
  */
 export function dialogHints(mode: DialogMode, over: DialogTarget | null = null): Hint[] {
-  const rows = [hint(ESC, ESC_TEXT[mode])];
-  if (mode === 'rename') rows.unshift(hint(ENTER, 'rename'));
-  if (over) rows.unshift(hint(mouse('lmb'), CLICK[over](mode)));
-  return rows;
+  const rows: Hint[] = [];
+  if (over) rows.push(hint(mouse('lmb'), CLICK[over](mode)));
+  if (mode === 'rename') rows.push(hint(ENTER, 'rename'));
+  rows.push(hint(ESC, ESC_TEXT[mode]));
+  return merged(rows);
 }
 
 export function hintsFor(

@@ -61,7 +61,7 @@
 <svelte:window
   onkeydown={onKeyDown}
   onkeyup={(e) => camera.keyUp(e.key)}
-  onpagehide={() => void session.save()}
+  onpagehide={() => void session.flush()}
 />
 
 <main>
