@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { addEdge, addNode, emptyGraph, shareRadius } from '../model/graph';
-import { fromFile, toFile, FILE_VERSION, ProjectFileError, type Project } from './file';
+import {
+  fromFile,
+  toFile,
+  FILE_VERSION,
+  ProjectFileError,
+  type Project,
+  type RefusalKind,
+} from './file';
 import { migrate, parseProject, validate } from './migrate';
 
 const project = (): Project => {
@@ -55,31 +62,62 @@ const text = (change: (f: Draft) => void = () => {}) => {
   return JSON.stringify(f);
 };
 
+/** Every way a file is refused (^192 to ^207): the hat, what the user is told, how to break a file so. */
+const REFUSALS: [string, RefusalKind, RegExp, (f: Draft) => void][] = [
+  ['^194', 'not-project', /not a modelcity project file/, (f) => delete f.version],
+  ['^194', 'not-project', /not a modelcity project file/, (f) => (f.version = 1.5)],
+  ['^195', 'newer', /newer version.*version 99.*up to 1/, (f) => (f.version = 99)],
+  ['^197', 'damaged', /damaged.*console/, (f) => delete f.title],
+  ['^198', 'damaged', /damaged.*console/, (f) => (f.camera = { x: 'a' })],
+  ['^199', 'damaged', /damaged.*console/, (f) => (f.nodes = {} as never)],
+  ['^200', 'damaged', /damaged.*console/, (f) => delete f.laneConfigurations],
+  ['^201', 'damaged', /damaged.*console/, (f) => (f.nodes[0] = [1, 2])],
+  ['^202', 'damaged', /damaged.*console/, (f) => (f.edges[0] = [0, 0, 1])],
+  ['^203', 'damaged', /damaged.*console/, (f) => (f.laneConfigurations = { '1': { name: 5 } })],
+  ['^204', 'damaged', /damaged.*console/, (f) => (f.nodes[1]![0] = 0)],
+  ['^205', 'damaged', /damaged.*console/, (f) => f.edges.push([...(f.edges[0] as number[])])],
+  ['^206', 'damaged', /damaged.*console/, (f) => (f.edges[0] = [0, 0, 7, null, 1])],
+  ['^207', 'damaged', /damaged.*console/, (f) => (f.edges[0] = [0, 0, 1, null, 4])],
+];
+
+const refusal = (open: () => unknown): ProjectFileError => {
+  try {
+    open();
+  } catch (e) {
+    return e as ProjectFileError;
+  }
+  throw new Error('the file was not refused');
+};
+
 describe('opening a file (^164)', () => {
   it('accepts what was exported', () => {
     expect(parseProject(text()).title).toBe('Test');
   });
 
   it.each([
-    ['{', /not valid JSON/],
-    ['[1]', /not a project/],
-  ])('refuses the text %s', (raw, message) => {
-    expect(() => parseProject(raw)).toThrow(message);
+    ['^192', '{', /not a modelcity project file/],
+    ['^193', '[1]', /not a modelcity project file/],
+  ])('refuses the text with %s: %s', (hat, raw, message) => {
+    const e = refusal(() => parseProject(raw));
+    expect(e.hat).toBe(hat);
+    expect(e.kind).toBe('not-project');
+    expect(e.message).toMatch(message);
   });
 
-  it.each<[string, (f: Draft) => void, RegExp]>([
-    ['no version', (f) => delete f.version, /no valid version/],
-    ['a fractional version', (f) => (f.version = 1.5), /no valid version/],
-    ['a newer version', (f) => (f.version = 99), /newer version/],
-    ['a broken node', (f) => (f.nodes[0] = [1, 2]), /node is not/],
-    ['a broken edge', (f) => (f.edges[0] = [0, 0, 1]), /edge is not/],
-    ['a missing node', (f) => (f.edges[0] = [0, 0, 7, null, 1]), /does not exist/],
-    ['a missing lane', (f) => (f.edges[0] = [0, 0, 1, null, 4]), /lane configuration/],
-    ['a double id', (f) => (f.nodes[1]![0] = 0), /same id/],
-    ['a broken camera', (f) => (f.camera = { x: 'a' }), /camera/],
-  ])('refuses %s with a clear message', (_, change, message) => {
-    expect(() => parseProject(text(change))).toThrow(ProjectFileError);
-    expect(() => parseProject(text(change))).toThrow(message);
+  it.each(REFUSALS)(
+    'refuses with %s as %s, tells the user in a word and the console where',
+    (hat, kind, message, change) => {
+      const e = refusal(() => parseProject(text(change)));
+      expect([e.hat, e.kind]).toEqual([hat, kind]);
+      expect(e.message).toMatch(message);
+      expect(e.detail.length).toBeGreaterThan(10);
+    },
+  );
+
+  it('says where in the file it went wrong', () => {
+    const broken = text((f) => (f.nodes[1] = [1, 2]));
+    const e = refusal(() => parseProject(broken));
+    expect(e.detail).toContain('nodes[1]');
   });
 });
 
@@ -91,9 +129,9 @@ describe('migrations (^173)', () => {
     };
     expect(migrate({ version: 1 }, 3, migrations)).toEqual({ version: 3, a: 1, b: 2 });
     expect(migrate({ version: 2 }, 3, migrations)).toEqual({ version: 3, b: NaN });
-    expect(() => migrate({ version: 1 }, 3, { 1: migrations[1] })).toThrow(
-      /no migration from project version 2/,
-    );
+    const gap = refusal(() => migrate({ version: 1 }, 3, { 1: migrations[1] }));
+    expect([gap.hat, gap.kind]).toEqual(['^196', 'old']);
+    expect(gap.message).toMatch(/old version of modelcity \(version 2\)/);
   });
 
   it('brings every sample file of every version to the current version', () => {

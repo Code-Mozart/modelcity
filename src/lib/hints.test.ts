@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dialogHints, hintsFor, type Hint, type HintTarget } from './hints';
+import { modalHints, hintsFor, type Hint, type HintTarget } from './hints';
 
 /** A readable form of a hint: "LMB drag: pan". */
 const show = (h: Hint) =>
@@ -200,8 +200,8 @@ describe('project controls (^168)', () => {
   });
 });
 
-describe('the projects dialog hints say what an input does right now (^181)', () => {
-  const rows = (...args: Parameters<typeof dialogHints>) => dialogHints(...args).map(show);
+describe('the projects modal hints say what an input does right now (^181)', () => {
+  const rows = (...args: Parameters<typeof modalHints>) => modalHints(...args).map(show);
 
   it('only Esc over nothing, and the click only over something that can be clicked', () => {
     expect(rows('list')).toEqual(['Esc: close']);

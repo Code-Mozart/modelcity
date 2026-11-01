@@ -52,6 +52,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Operation** | Something the user can do and that has a name: undo, split, export, change the radius. Listed in the control hints, the recent history panel and the operations search. We say *operation*, not *action* (`action` is also what code calls many other things) | decided | ^180 |
 | **Fuzzy search** | A search that finds a title if the characters of the search appear in it in the same order, case ignored, and puts the better matches (characters next to each other, at word starts) first; rules in `docs/controls.md` | decided (the principle, ^178); assumed (the scoring) | ^178 |
 | **No project** | The state with a blank map that is not a project yet; it becomes one as soon as it has something in it | decided | ^189 |
+| **Modal** | A window over the map that blocks the rest until it is closed, for example the *projects modal* (`Ctrl+O`); not "dialog" | decided | ^212 |
 | **Project** | The map with its title, dates and camera, kept in the browser, saved by itself and exported or imported as a file (`docs/data-model.md`) | assumed | ^82, ^148, ^170 |
 | **Chain** | A run of edges that follow each other through nodes with exactly one edge in and one out; derived from the graph for drawing and hit testing, never stored | assumed | ^106 |
 | **Split** | A road starts at an existing node, so that node has one edge in and two (or more) out. Draw mode: click a node or a curve | decided | ^23, ^93 |

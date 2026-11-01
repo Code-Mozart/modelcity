@@ -1,10 +1,9 @@
 import { SvelteDate } from 'svelte/reactivity';
-import { fuzzyFilter } from '../fuzzy';
-import type { DialogTarget } from '../hints';
+import type { ModalTarget } from '../hints';
 import type { Camera } from '../camera.svelte';
 import type { Editor } from '../editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
-import { fromFile, toFile, type CameraState, type Project } from './file';
+import { fromFile, ProjectFileError, toFile, type CameraState, type Project } from './file';
 import { parseProject } from './migrate';
 import type { ProjectStorage, StoredProject } from './storage';
 
@@ -46,17 +45,15 @@ export class ProjectSession {
   /** True when the projects of the browser were looked at and one was opened, if there is any. */
   ready = $state(false);
   title = $state('Untitled project');
-  dialogOpen = $state(false);
-  /** The projects kept in the browser, newest first (shown by the dialog). */
+  modalOpen = $state(false);
+  /** The projects kept in the browser, newest first (shown by the modal). */
   projects = $state.raw<StoredProject[]>([]);
   error = $state<string | null>(null);
-  /** What the projects dialog searches for (^178). */
-  query = $state('');
   /** The card being renamed or asked to be deleted (a second click confirms), if any. */
   row = $state<{ id: string; mode: 'rename' | 'delete' } | null>(null);
-  /** What the pointer is over in the dialog, for the hints (^181). */
-  over = $state<DialogTarget | null>(null);
-  /** True while a rename is written: the dialog does not react meanwhile. */
+  /** What the pointer is over in the modal, for the hints (^181). */
+  over = $state<ModalTarget | null>(null);
+  /** True while a rename is written: the modal does not react meanwhile. */
   busy = $state(false);
   private createdAt = '';
   private lastUpdatedAt = '';
@@ -129,7 +126,7 @@ export class ProjectSession {
     await this.storage.put({ id: this.id, file: toFile(this.project()) });
   }
 
-  /** Save what is not saved yet (before another project opens, a dialog lists them, the page closes). The date only changes if the map did. */
+  /** Save what is not saved yet (before another project opens, a modal lists them, the page closes). The date only changes if the map did. */
   async flush() {
     if (this.id || this.hasData()) await this.save(this.editor.graph !== this.saved);
   }
@@ -162,7 +159,7 @@ export class ProjectSession {
       this.showBlank();
       await this.refresh();
     }
-    this.closeDialog();
+    this.closeModal();
   }
 
   /** A project made of a file (^164). */
@@ -177,14 +174,14 @@ export class ProjectSession {
 
   async open(id: string) {
     if (id === this.id) {
-      this.closeDialog();
+      this.closeModal();
       return;
     }
     const target = (await this.refresh()).find((p) => p.id === id);
     if (!target) return;
     await this.flush();
     this.show(target);
-    this.closeDialog();
+    this.closeModal();
   }
 
   async remove(id: string) {
@@ -198,21 +195,36 @@ export class ProjectSession {
     else this.showBlank();
   }
 
-  /** Open a project from the text of a file as a new project of the browser (^164). */
+  /** Open a project from a file the user picked; one that cannot be read is refused like one that is no project (^208). */
+  async importFile(file: { text(): Promise<string> }) {
+    let text: string;
+    try {
+      text = await file.text();
+    } catch (e) {
+      this.refuse(new ProjectFileError('unreadable', '^208', String(e)));
+      return;
+    }
+    await this.importText(text);
+  }
+
+  /** The user is told in a word, the console gets the details (^209). */
+  private refuse(e: ProjectFileError) {
+    console.error(`[modelcity] import refused (${e.hat}): ${e.detail}`);
+    this.error = e.message;
+  }
+
+  /** Open a project from the text of a file as a new project of the browser (^164). A refusal tells the user in a word, the console the details (^209). */
   async importText(text: string) {
     try {
       const p = fromFile(parseProject(text));
       await this.adopt(p.title, p.graph, p.camera);
       this.error = null;
-      this.closeDialog();
+      this.closeModal();
     } catch (e) {
-      this.error = e instanceof Error ? e.message : String(e);
+      this.refuse(
+        e instanceof ProjectFileError ? e : new ProjectFileError('unreadable', '^208', String(e)),
+      );
     }
-  }
-
-  /** The projects the dialog shows: all, or those that fuzzily match the search (^178). */
-  get shown(): StoredProject[] {
-    return fuzzyFilter(this.projects, this.query, (p) => p.file.title);
   }
 
   startRename(id: string) {
@@ -283,17 +295,16 @@ export class ProjectSession {
     URL.revokeObjectURL(url);
   }
 
-  async openDialog() {
+  async openModal() {
     this.error = null;
-    this.query = '';
     this.row = null;
     await this.flush();
     await this.refresh();
-    this.dialogOpen = true;
+    this.modalOpen = true;
   }
 
-  closeDialog() {
-    this.dialogOpen = false;
+  closeModal() {
+    this.modalOpen = false;
     this.row = null;
     this.over = null;
   }

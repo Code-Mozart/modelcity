@@ -24,3 +24,26 @@ export function formatLocalIso(iso: string): string {
   const offset = localOffset(iso);
   return `${formatAt(iso, offset).replace(' ', 'T')}${offsetText(offset)}`;
 }
+
+const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['second', 1],
+  ['minute', 60],
+  ['hour', 3600],
+  ['day', 86400],
+  ['week', 604800],
+];
+const relative = new Intl.RelativeTimeFormat('en', { numeric: 'always' });
+
+/** After this many weeks a time is shown as a date again (^214). */
+export const AGO_WEEKS = 8;
+
+/**
+ * How long ago an instant was, `1 second ago`, `17 minutes ago`, `2 weeks ago` (^214), up to
+ * `AGO_WEEKS` weeks; after that, or for a time in the future, the date as in `formatLocal`.
+ */
+export function formatAgo(iso: string, nowMs: number): string {
+  const seconds = Math.floor((nowMs - Date.parse(iso)) / 1000);
+  if (seconds < 0 || seconds >= AGO_WEEKS * 604800) return formatLocal(iso);
+  const [unit, size] = [...UNITS].reverse().find(([, s]) => seconds >= s) ?? UNITS[0]!;
+  return relative.format(-Math.floor(seconds / size), unit);
+}

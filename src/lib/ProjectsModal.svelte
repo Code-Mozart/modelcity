@@ -1,38 +1,56 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import type { DialogTarget } from './hints';
+  import FilterList from './FilterList.svelte';
+  import type { ModalTarget } from './hints';
   import Icon from './Icon.svelte';
+  import Notice from './Notice.svelte';
   import ProjectCard from './ProjectCard.svelte';
   import type { ProjectSession } from './project/session.svelte';
 
   /**
    * The projects of the browser, opened with Ctrl+O (^168, ^171): search, open, rename, delete,
-   * import a file, save to disc, new project. Everything is a card of the full width.
+   * import a file, save to disc, new project. Everything is a card of the full width; only the list
+   * of projects scrolls (^211).
    */
   let { session }: { session: ProjectSession } = $props();
   let file = $state<HTMLInputElement>();
-  let search = $state<HTMLInputElement>();
+  let list = $state<ReturnType<typeof FilterList<(typeof session.projects)[number]>>>();
+  let query = $state('');
+  let searching = $state(false);
 
   // Typing right after Ctrl+O searches (^178).
   $effect(() => {
-    if (session.dialogOpen) void tick().then(() => search?.focus());
+    if (!session.modalOpen) return;
+    query = '';
+    void tick().then(() => list?.focus());
   });
 
   async function pick() {
     const f = file?.files?.[0];
-    if (f) await session.importText(await f.text());
+    if (f) await session.importFile(f);
     if (file) file.value = '';
   }
 
   /** What the pointer is over, for the control hints (^181). */
-  const over = (target: DialogTarget) => ({
+  const over = (target: ModalTarget) => ({
     onpointerenter: () => (session.over = target),
     onpointerleave: () => (session.over = null),
   });
+
+  /** The search field says "search" while the pointer is over it and it is not the one that is typed in. */
+  const searchAttrs = {
+    onpointerenter: () => !searching && (session.over = 'search'),
+    onpointerleave: () => (session.over = null),
+    onfocus: () => {
+      searching = true;
+      session.over = null;
+    },
+    onblur: () => (searching = false),
+  };
 </script>
 
-{#if session.dialogOpen}
-  <div class="backdrop" role="presentation" onpointerdown={() => session.closeDialog()}>
+{#if session.modalOpen}
+  <div class="backdrop" role="presentation" onpointerdown={() => session.closeModal()}>
     <div
       class="dialog"
       role="dialog"
@@ -48,28 +66,27 @@
         <button
           class="icon"
           aria-label="Close"
-          onclick={() => session.closeDialog()}
+          onclick={() => session.closeModal()}
           {...over('close')}
         >
           <Icon name="x" />
         </button>
       </header>
-      <input
-        class="search"
-        type="search"
-        placeholder="Search…"
-        aria-label="Search projects"
-        bind:this={search}
-        bind:value={session.query}
-      />
-      <ul>
-        {#each session.shown as p (p.id)}
-          <ProjectCard {session} project={p} {over} />
-        {:else}
-          <li class="none">No project matches.</li>
-        {/each}
-      </ul>
-      {#if session.error}<p class="error" role="alert">{session.error}</p>{/if}
+      <FilterList
+        bind:this={list}
+        bind:query
+        items={session.projects}
+        key={(p) => p.id}
+        textOf={(p) => p.file.title}
+        label="Search projects"
+        none="No project matches."
+        {searchAttrs}
+      >
+        {#snippet item(project)}
+          <ProjectCard {session} {project} {over} />
+        {/snippet}
+      </FilterList>
+      {#if session.error}<div class="gap"><Notice kind="error">{session.error}</Notice></div>{/if}
       <ul class="actions">
         <li class="card">
           <button class="open" onclick={() => file?.click()} {...over('import')}>
@@ -108,10 +125,13 @@
     place-items: center;
     background: color-mix(in srgb, var(--bg) 60%, transparent);
   }
+  /* Wide, and as tall as the content up to three quarters of the screen (^211); only the list scrolls. */
   .dialog {
-    width: min(34em, calc(100% - 2em));
-    max-height: calc(100% - 2em);
-    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: min(60em, calc(100% - 2em));
+    max-height: 75%;
     padding: 1.2em;
     color: var(--ink);
     background: var(--panel);
@@ -132,7 +152,6 @@
     margin: 0;
     font-size: 1.3em;
   }
-  .search,
   .dialog :global(.name) {
     box-sizing: border-box;
     padding: 0.5em 0.7em;
@@ -141,30 +160,23 @@
     border: 1px solid var(--line);
     border-radius: 0.4em;
     font: inherit;
-  }
-  .search {
-    width: 100%;
-    margin-bottom: 0.8em;
-  }
-  .dialog :global(.name) {
     flex: 1;
     min-width: 0;
     margin: 0.3em 0 0.3em 0.3em;
     border-color: var(--blue);
   }
-  ul {
+  ul.actions {
     display: flex;
+    flex: none;
     flex-direction: column;
     gap: 0.4em;
-    margin: 0 0 0.8em;
-    padding: 0;
+    margin: 1.6em 0 0;
+    padding: 0.2em;
     list-style: none;
   }
-  ul.actions {
-    margin: 0;
-  }
-  li.none {
-    color: var(--muted);
+  .gap {
+    flex: none;
+    margin-top: 0.8em;
   }
   /* A card spans the whole width; what it has to the right (the icons) is inside it. */
   .dialog :global(li.card) {
@@ -214,12 +226,23 @@
     flex: 1;
     min-width: 0;
     display: flex;
-    justify-content: space-between;
-    gap: 1em;
+    flex-direction: column;
+    gap: 0.1em;
     padding: 0.7em 0.9em;
     text-align: left;
     background: transparent;
     border: 0;
+  }
+  .dialog :global(.line) {
+    display: flex;
+    justify-content: space-between;
+    gap: 1em;
+  }
+  /* The mark of the open project: a word, not only a color (^177). */
+  .dialog :global(.label) {
+    color: var(--muted);
+    font-size: 0.85em;
+    font-style: italic;
   }
   .dialog :global(.title) {
     overflow: hidden;
@@ -230,9 +253,5 @@
     flex: none;
     white-space: nowrap;
     color: var(--muted);
-  }
-  .error {
-    margin: 0 0 0.8em;
-    color: var(--red-ink);
   }
 </style>

@@ -1,14 +1,14 @@
 <script lang="ts">
-  import type { DialogTarget } from './hints';
+  import type { ModalTarget } from './hints';
   import Icon from './Icon.svelte';
   import type { ProjectSession } from './project/session.svelte';
   import type { StoredProject } from './project/storage';
-  import { formatLocal, formatLocalIso } from './time';
+  import { formatAgo, formatLocalIso } from './time';
 
   /**
-   * One project in the projects dialog (^168): title and date, the pen and the bin inside the card.
+   * One project in the projects modal (^168): title and how long ago it was changed (the exact time is the tooltip), the pen and the bin inside the card.
    * Renaming and asking about a delete change the card in place, with the same two icon places.
-   * Styles: `ProjectDialog.svelte` (all cards look alike).
+   * Styles: `ProjectsModal.svelte` (all cards look alike).
    */
   let {
     session,
@@ -17,7 +17,7 @@
   }: {
     session: ProjectSession;
     project: StoredProject;
-    over: (target: DialogTarget) => Record<string, () => void>;
+    over: (target: ModalTarget) => Record<string, () => void>;
   } = $props();
 
   let draft = $state('');
@@ -55,9 +55,12 @@
     />
   {:else}
     <button class="open" title={p.file.title} onclick={() => session.open(p.id)} {...over('card')}>
-      <span class="title">{p.file.title}</span>
-      <span class="date" title={formatLocalIso(p.file.lastUpdatedAt)}>
-        {formatLocal(p.file.lastUpdatedAt)}
+      {#if p.id === session.id}<span class="label">current project</span>{/if}
+      <span class="line">
+        <span class="title">{p.file.title}</span>
+        <span class="date" title={formatLocalIso(p.file.lastUpdatedAt)}>
+          {formatAgo(p.file.lastUpdatedAt, Date.now())}
+        </span>
       </span>
     </button>
   {/if}

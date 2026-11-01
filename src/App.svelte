@@ -4,9 +4,9 @@
   import Compass from './lib/Compass.svelte';
   import { Editor } from './lib/editor.svelte';
   import Hints from './lib/Hints.svelte';
-  import { dialogHints, hintsFor } from './lib/hints';
+  import { modalHints, hintsFor } from './lib/hints';
   import MapCanvas from './lib/MapCanvas.svelte';
-  import ProjectDialog from './lib/ProjectDialog.svelte';
+  import ProjectsModal from './lib/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
   import { IndexedDbStorage } from './lib/project/storage';
   import { installTestHook } from './lib/testHook';
@@ -15,10 +15,10 @@
   const camera = new Camera();
   const session = new ProjectSession(editor, camera, new IndexedDbStorage());
   installTestHook(editor, camera, session, () => document.querySelector('canvas'));
-  // While the projects dialog is up its controls replace all others (^168).
+  // While the projects modal is up its controls replace all others (^168).
   const hints = $derived(
-    session.dialogOpen
-      ? dialogHints(session.row?.mode ?? 'list', session.over)
+    session.modalOpen
+      ? modalHints(session.row?.mode ?? 'list', session.over)
       : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
           undo: editor.canUndo,
           redo: editor.canRedo,
@@ -37,15 +37,15 @@
   function projectKey(e: KeyboardEvent): boolean {
     if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return false;
     if (e.key === 's') session.download();
-    else if (e.key === 'o') void session.openDialog();
+    else if (e.key === 'o') void session.openModal();
     else return false;
     return true;
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    if (session.dialogOpen) {
+    if (session.modalOpen) {
       if (e.key === 'Escape' && session.row) session.cancelRow();
-      else if (e.key === 'Escape') session.closeDialog();
+      else if (e.key === 'Escape') session.closeModal();
       return;
     }
     if (e.target instanceof HTMLInputElement) return;
@@ -68,7 +68,7 @@
   <MapCanvas {editor} {camera} />
   <Hints {hints} />
   <Compass {camera} />
-  <ProjectDialog {session} />
+  <ProjectsModal {session} />
 </main>
 
 <style>

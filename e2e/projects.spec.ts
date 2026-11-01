@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
   await new App(page).ready();
 });
 
-const dialogOf = (page: Page) => page.getByRole('dialog', { name: 'Projects' });
+const modalOf = (page: Page) => page.getByRole('dialog', { name: 'Projects' });
 
 /** Draw a road and wait until it is saved as the n-th project of the browser. */
 async function projectWithRoad(app: App, count: number) {
@@ -23,10 +23,10 @@ test('there is no project at first, and the first road makes one that is there a
   const app = new App(page);
   expect(await app.stored()).toHaveLength(0);
   await page.keyboard.press('Control+o');
-  const card = dialogOf(page).locator('li.current');
+  const card = modalOf(page).locator('li.current');
   await expect(card).toContainText('New project');
-  await card.getByRole('button').click(); // the outlined card only closes the dialog
-  await expect(dialogOf(page)).toBeHidden();
+  await card.getByRole('button').click(); // the outlined card only closes the modal
+  await expect(modalOf(page)).toBeHidden();
   expect(await app.stored()).toHaveLength(0);
   await projectWithRoad(app, 1);
   await page.reload();
@@ -52,7 +52,7 @@ test('Ctrl+S saves a file that Ctrl+O imports as a project', async ({ page }) =>
   expect(JSON.parse(readFileSync(path, 'utf8'))).toMatchObject({ version: 1 });
 
   await page.keyboard.press('Control+o');
-  const dialog = dialogOf(page);
+  const dialog = modalOf(page);
   await dialog.getByRole('button', { name: 'New project' }).click();
   await expect(dialog).toBeHidden();
   expect(await app.nodes()).toHaveLength(0);
@@ -64,12 +64,19 @@ test('Ctrl+S saves a file that Ctrl+O imports as a project', async ({ page }) =>
   await expect.poll(async () => (await app.stored()).length).toBe(2);
 });
 
-test('the dialog has a Save to disc card, and dates like 2026-11-01 17:18:09', async ({ page }) => {
+test('the modal has a Save to disc card, the time since the change and a label for the open project', async ({
+  page,
+}) => {
   const app = new App(page);
   await projectWithRoad(app, 1);
   await page.keyboard.press('Control+o');
-  const dialog = dialogOf(page);
-  await expect(dialog.locator('.date')).toHaveText(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/);
+  const dialog = modalOf(page);
+  await expect(dialog.locator('.date')).toHaveText(/^\d+ (second|minute)s? ago$/);
+  await expect(dialog.locator('.date')).toHaveAttribute(
+    'title',
+    /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$/,
+  );
+  await expect(dialog.locator('.label')).toHaveText('current project');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     dialog.getByRole('button', { name: 'Save to disc…' }).click(),
@@ -84,7 +91,7 @@ test('Ctrl+O lists the projects, opens one and closes with Esc; opening does not
   await projectWithRoad(app, 1);
   const date = (await app.stored())[0]!.lastUpdatedAt;
   await page.keyboard.press('Control+o');
-  const dialog = dialogOf(page);
+  const dialog = modalOf(page);
   await dialog.getByRole('button', { name: 'New project' }).click();
   await expect(dialog).toBeHidden();
   expect(await app.nodes()).toHaveLength(0);
@@ -123,7 +130,7 @@ test('rename: the pen opens a text field, Enter renames, Esc cancels without clo
   const app = new App(page);
   await projectWithRoad(app, 1);
   await page.keyboard.press('Control+o');
-  const dialog = dialogOf(page);
+  const dialog = modalOf(page);
   await dialog.getByRole('button', { name: /^Rename/ }).click();
   const name = dialog.getByLabel('Project name');
   await name.fill('Harbour');
@@ -144,7 +151,7 @@ test('delete asks first: the bin turns into a cross, the pen into a check mark',
   const app = new App(page);
   await projectWithRoad(app, 1);
   await page.keyboard.press('Control+o');
-  const dialog = dialogOf(page);
+  const dialog = modalOf(page);
   await dialog.getByRole('button', { name: 'New project' }).click();
   await expect(dialog).toBeHidden();
   await projectWithRoad(app, 2);
@@ -163,13 +170,13 @@ test('delete asks first: the bin turns into a cross, the pen into a check mark',
   await expect.poll(async () => (await app.stored()).length).toBe(1);
 });
 
-test('the dialog shows its own controls only, one row for inputs that do the same, and searches', async ({
+test('the modal shows its own controls only, one row for inputs that do the same, and searches', async ({
   page,
 }) => {
   const app = new App(page);
   await projectWithRoad(app, 1);
   await page.keyboard.press('Control+o');
-  const dialog = dialogOf(page);
+  const dialog = modalOf(page);
   const hints = app.hints();
   await expect(hints).toContainText('close');
   await expect(hints).not.toContainText('open');
@@ -185,4 +192,41 @@ test('the dialog shows its own controls only, one row for inputs that do the sam
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).toBeHidden();
   await expect(hints).toContainText('draw mode');
+});
+
+test('the modal is wide, at most three quarters of the screen tall, and the file error has an icon', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await projectWithRoad(app, 1);
+  await page.keyboard.press('Control+o');
+  const box = (await modalOf(page).boundingBox())!;
+  expect(box.width).toBeGreaterThan(600);
+  expect(box.height).toBeLessThanOrEqual(0.75 * page.viewportSize()!.height);
+  await page.getByLabel('Project file').setInputFiles({
+    name: 'bad.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('hello'),
+  });
+  const alert = page.getByRole('alert');
+  await expect(alert).toContainText('This is not a modelcity project file.');
+  await expect(alert.locator('svg')).toBeVisible();
+});
+
+test('the search finds fuzzily and says what a click does only while it is not the one typed in', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await projectWithRoad(app, 1);
+  await page.keyboard.press('Control+o');
+  const modal = modalOf(page);
+  const search = modal.getByLabel('Search projects');
+  await expect(search).toBeFocused();
+  await search.hover();
+  await expect(app.hints()).not.toContainText('search');
+  await page.keyboard.type('utp'); // Untitled project
+  await expect(modal.locator('.open').first()).toBeVisible();
+  await modal.getByRole('heading', { name: 'Projects' }).click(); // leaves the field
+  await search.hover();
+  await expect(app.hints()).toContainText('search');
 });

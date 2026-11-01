@@ -97,9 +97,9 @@ describe('the date and the camera of a project (^189)', () => {
     const first = await datesOf(s.storage);
     const id = s.session.id;
     await s.session.newProject();
-    await s.session.openDialog();
+    await s.session.openModal();
     await s.session.open(id);
-    await s.session.openDialog();
+    await s.session.openModal();
     await s.session.newProject();
     expect(await datesOf(s.storage)).toEqual(first);
   });
@@ -127,12 +127,12 @@ describe('several projects (^167, ^171, ^189)', () => {
     expect(await s.storage.list()).toHaveLength(2);
   });
 
-  it('with no project, new project only closes the dialog', async () => {
+  it('with no project, new project only closes the modal', async () => {
     const { session, storage } = setup();
     await session.start();
-    await session.openDialog();
+    await session.openModal();
     await session.newProject();
-    expect(session.dialogOpen).toBe(false);
+    expect(session.modalOpen).toBe(false);
     expect(await storage.list()).toHaveLength(0);
   });
 });
@@ -208,14 +208,14 @@ describe('the editor and the project', () => {
   });
 });
 
-describe('the projects dialog (^168, ^178)', () => {
+describe('the projects modal (^168, ^178)', () => {
   it('renames at once, for the open project too, and the date of the last change stays', async () => {
     const s = setup();
     const first = await two(s);
     const dates = Object.fromEntries(
       (await s.storage.list()).map((p) => [p.id, p.file.lastUpdatedAt]),
     );
-    await s.session.openDialog();
+    await s.session.openModal();
     await s.session.rename(first, '  Harbour  ');
     await s.session.rename(s.session.id, 'Old town');
     const stored = await s.storage.list();
@@ -228,15 +228,15 @@ describe('the projects dialog (^168, ^178)', () => {
       lastUpdatedAt: dates[s.session.id],
     });
     expect(s.session.busy).toBe(false);
-    expect(s.session.shown.map((p) => p.file.title).sort()).toEqual(['Harbour', 'Old town']);
+    expect(s.session.projects.map((p) => p.file.title).sort()).toEqual(['Harbour', 'Old town']);
   });
 });
 
-describe('renaming, deleting and searching in the dialog (^168, ^178)', () => {
+describe('renaming, deleting and importing in the modal (^168)', () => {
   it('refuses an empty name and cancels the row', async () => {
     const s = setup();
     await withRoad(s);
-    await s.session.openDialog();
+    await s.session.openModal();
     s.session.startRename(s.session.id);
     await s.session.rename(s.session.id, '   ');
     expect(s.session.title).toBe('Untitled project');
@@ -246,7 +246,7 @@ describe('renaming, deleting and searching in the dialog (^168, ^178)', () => {
   it('asks before it deletes, and cancel leaves the project', async () => {
     const s = setup();
     const first = await two(s);
-    await s.session.openDialog();
+    await s.session.openModal();
     s.session.startDelete(first);
     expect(s.session.row).toEqual({ id: first, mode: 'delete' });
     s.session.cancelRow();
@@ -257,19 +257,27 @@ describe('renaming, deleting and searching in the dialog (^168, ^178)', () => {
     expect(s.session.row).toBeNull();
   });
 
-  it('searches the projects fuzzily, and a click on the open project closes the dialog', async () => {
+  it('a click on the open project closes the modal', async () => {
     const s = setup();
-    const first = await two(s);
-    await s.session.openDialog();
-    await s.session.rename(first, 'Harbour district');
-    await s.session.rename(s.session.id, 'Old town');
-    s.session.query = 'hbr';
-    expect(s.session.shown.map((p) => p.file.title)).toEqual(['Harbour district']);
-    s.session.query = 'zzz';
-    expect(s.session.shown).toEqual([]);
-    s.session.query = '';
+    await two(s);
+    await s.session.openModal();
     await s.session.open(s.session.id);
-    expect(s.session.dialogOpen).toBe(false);
+    expect(s.session.modalOpen).toBe(false);
+  });
+});
+
+describe('refusing a file (^208, ^209)', () => {
+  it('refuses a file that cannot be read, like one that is no project (^208)', async () => {
+    const s = setup();
+    await s.session.start();
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await s.session.importFile({ text: () => Promise.reject(new Error('gone')) });
+    expect(s.session.error).toMatch(/could not be read/);
+    expect(log.mock.calls[0]![0]).toContain('^208');
+    await s.session.importText('{"version": 7}');
+    expect(s.session.error).toMatch(/newer version/);
+    expect(log.mock.calls[1]![0]).toContain('^195');
+    log.mockRestore();
   });
 });
 

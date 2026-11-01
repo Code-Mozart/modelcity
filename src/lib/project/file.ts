@@ -91,5 +91,36 @@ export function fromFile(f: ProjectFile): Project {
   };
 }
 
-/** A project that cannot be opened: not valid, or made by a newer version of the app. */
-export class ProjectFileError extends Error {}
+/**
+ * Why a file is refused (^209): what the user is told depends on the kind, the console gets the
+ * hat of the refusal and where in the file it went wrong.
+ */
+export type RefusalKind = 'not-project' | 'newer' | 'old' | 'damaged' | 'unreadable';
+
+const CONSOLE = 'Details are in the browser console (F12).';
+
+/** What the user reads for each kind (^192 to ^208 say which refusal is which kind). */
+export const REFUSAL_TEXT: Record<
+  RefusalKind,
+  (v: { version?: number; current?: number }) => string
+> = {
+  'not-project': () => 'This is not a modelcity project file.',
+  newer: ({ version, current }) =>
+    `This project was made with a newer version of modelcity (it is version ${version}, this version reads up to ${current}), so it cannot be opened here. Open it with the newest version of modelcity.`,
+  old: ({ version }) =>
+    `This project is from an old version of modelcity (version ${version}) that this version can no longer convert, so it cannot be opened.`,
+  damaged: () => `This project file is damaged, so it cannot be opened. ${CONSOLE}`,
+  unreadable: () => `The file could not be read. ${CONSOLE}`,
+};
+
+/** A project that cannot be opened: the message is for the user, `hat` and `detail` for the console. */
+export class ProjectFileError extends Error {
+  constructor(
+    readonly kind: RefusalKind,
+    readonly hat: string,
+    readonly detail: string,
+    versions: { version?: number; current?: number } = {},
+  ) {
+    super(REFUSAL_TEXT[kind](versions));
+  }
+}
