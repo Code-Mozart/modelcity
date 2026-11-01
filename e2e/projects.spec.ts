@@ -71,12 +71,14 @@ test('the modal has a Save to disc card, the time since the change and a label f
   await projectWithRoad(app, 1);
   await page.keyboard.press('Control+o');
   const dialog = modalOf(page);
-  await expect(dialog.locator('.date')).toHaveText(/^\d+ (second|minute)s? ago$/);
+  await expect(dialog.locator('.date')).toHaveText(
+    /^(just now|\d+ seconds? ago|\d+ minutes? ago)$/,
+  );
   await expect(dialog.locator('.date')).toHaveAttribute(
     'title',
     /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$/,
   );
-  await expect(dialog.locator('.label')).toHaveText('current project');
+  await expect(dialog.locator('.label')).toHaveText('open');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     dialog.getByRole('button', { name: 'Save to disc…' }).click(),
@@ -229,4 +231,41 @@ test('the search finds fuzzily and says what a click does only while it is not t
   await modal.getByRole('heading', { name: 'Projects' }).click(); // leaves the field
   await search.hover();
   await expect(app.hints()).toContainText('search');
+});
+
+test('an error message takes its room from the list, the modal stays within three quarters of the screen', async ({
+  page,
+}) => {
+  const app = new App(page);
+  const file = JSON.stringify({
+    version: 1,
+    title: 'ATest',
+    createdAt: '2026-10-01T19:02:41.454Z',
+    lastUpdatedAt: '2026-10-12T19:06:18.603Z',
+    camera: { x: 0, y: 0, scale: 1, rotation: 0 },
+    nodes: [],
+    edges: [],
+    laneConfigurations: { '1': { name: 'default', width: 3000 } },
+  });
+  for (let i = 0; i < 14; i++) {
+    await page.evaluate((text) => window.__modelcity!.session.importText(text), file);
+  }
+  await page.keyboard.press('Control+o');
+  const modal = modalOf(page);
+  // an imported project keeps the dates of its file (^214)
+  await expect(modal.locator('.date').first()).toHaveAttribute('title', /^2026-10-1[23]T/);
+  const before = (await modal.boundingBox())!;
+  await page.getByLabel('Project file').setInputFiles({
+    name: 'bad.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{"version": 99}'),
+  });
+  await expect(page.getByRole('alert')).toBeVisible();
+  const after = (await modal.boundingBox())!;
+  const screen = page.viewportSize()!.height;
+  expect(after.height).toBeLessThanOrEqual(0.75 * screen + 1);
+  expect(after.y + after.height).toBeLessThan(screen);
+  expect(before.height).toBeLessThanOrEqual(0.75 * screen + 1);
+  await expect(modal.getByRole('button', { name: 'New project' })).toBeInViewport();
+  void app;
 });

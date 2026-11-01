@@ -38,12 +38,12 @@ const relative = new Intl.RelativeTimeFormat('en', { numeric: 'always' });
 export const AGO_WEEKS = 8;
 
 /**
- * How long ago an instant was, `1 second ago`, `17 minutes ago`, `2 weeks ago` (^214), up to
+ * How long ago an instant was, `just now`, `1 second ago`, `17 minutes ago`, `2 weeks ago` (^214), up to
  * `AGO_WEEKS` weeks; after that, or for a time in the future, the date as in `formatLocal`.
  */
 export function formatAgo(iso: string, nowMs: number): string {
   const seconds = Math.floor((nowMs - Date.parse(iso)) / 1000);
   if (seconds < 0 || seconds >= AGO_WEEKS * 604800) return formatLocal(iso);
   const [unit, size] = [...UNITS].reverse().find(([, s]) => seconds >= s) ?? UNITS[0]!;
-  return relative.format(-Math.floor(seconds / size), unit);
+  return seconds < 1 ? 'just now' : relative.format(-Math.floor(seconds / size), unit);
 }

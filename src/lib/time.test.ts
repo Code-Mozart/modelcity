@@ -21,7 +21,7 @@ describe('time ago (^214)', () => {
   const ago = (seconds: number) => formatAgo(new Date(now - seconds * 1000).toISOString(), now);
 
   it('counts seconds, minutes, hours, days and weeks, rounding down', () => {
-    expect(ago(0)).toBe('0 seconds ago');
+    expect(ago(0)).toBe('just now');
     expect(ago(1)).toBe('1 second ago');
     expect(ago(59)).toBe('59 seconds ago');
     expect(ago(60)).toBe('1 minute ago');

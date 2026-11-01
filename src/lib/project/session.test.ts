@@ -188,6 +188,21 @@ describe('import and export (^163, ^164)', () => {
     expect(JSON.parse(session.exportText())).toMatchObject({ version: 1, nodes: [], edges: [] });
   });
 
+  it('keeps the dates of the file: opening a file is not a change of the map (^214)', async () => {
+    const { session, storage } = setup();
+    await session.start();
+    const file = JSON.parse(session.exportText());
+    file.createdAt = '2026-10-01T19:02:41.454Z';
+    file.lastUpdatedAt = '2026-10-12T19:06:18.603Z';
+    await session.importText(JSON.stringify(file));
+    const [stored] = await storage.list();
+    expect(stored!.file).toMatchObject({
+      createdAt: file.createdAt,
+      lastUpdatedAt: file.lastUpdatedAt,
+    });
+    expect(session.exportText()).toContain(file.lastUpdatedAt);
+  });
+
   it('keeps the open project and says what is wrong with a file that is no project', async () => {
     const s = setup();
     await withRoad(s);

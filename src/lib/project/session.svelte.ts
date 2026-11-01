@@ -163,9 +163,11 @@ export class ProjectSession {
   }
 
   /** A project made of a file (^164). */
-  private async adopt(title: string, graph: Graph, camera: CameraState) {
+  private async adopt({ title, graph, camera, createdAt, lastUpdatedAt }: Project) {
     await this.flush();
     this.begin(title);
+    // Opening a file is not a change of the map: the project keeps the dates of the file (^214).
+    [this.createdAt, this.lastUpdatedAt] = [createdAt, lastUpdatedAt];
     this.editor.load(graph);
     this.camera.restore(camera);
     await this.save(false);
@@ -217,7 +219,7 @@ export class ProjectSession {
   async importText(text: string) {
     try {
       const p = fromFile(parseProject(text));
-      await this.adopt(p.title, p.graph, p.camera);
+      await this.adopt(p);
       this.error = null;
       this.closeModal();
     } catch (e) {

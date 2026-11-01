@@ -121,8 +121,9 @@
     position: absolute;
     inset: 0;
     z-index: 1;
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: color-mix(in srgb, var(--bg) 60%, transparent);
   }
   /* Wide, and as tall as the content up to three quarters of the screen (^211); only the list scrolls. */

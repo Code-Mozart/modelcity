@@ -55,7 +55,7 @@
     />
   {:else}
     <button class="open" title={p.file.title} onclick={() => session.open(p.id)} {...over('card')}>
-      {#if p.id === session.id}<span class="label">current project</span>{/if}
+      {#if p.id === session.id}<span class="label">open</span>{/if}
       <span class="line">
         <span class="title">{p.file.title}</span>
         <span class="date" title={formatLocalIso(p.file.lastUpdatedAt)}>
