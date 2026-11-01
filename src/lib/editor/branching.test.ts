@@ -1,18 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { edgesIn, edgesOut } from '../model/graph';
-import { at, bareCurvePoint, click, draw } from '../testing/editorHelpers';
+import { at, bareCurvePoint, click, draw, roadThenDrawMode } from '../testing/editorHelpers';
 
 /** Road A (0,0) - B (40,-20) - C (80,0), finished; draw mode, nothing being drawn. */
-const base = () => {
-  const ed = draw([
-    [0, 0],
-    [40, -20],
-    [80, 0],
-  ]);
-  ed.key('Escape');
-  click(ed, 500, 500);
-  return ed;
-};
+const base = () => roadThenDrawMode();
 
 const middle = (ed: ReturnType<typeof base>) => ed.graph.nodes[1]!.id;
 

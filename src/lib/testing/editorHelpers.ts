@@ -34,6 +34,20 @@ export const draw = (points: [number, number][]) => {
   return ed;
 };
 
+/** A finished road, then draw mode again: the start of most tests of splitting, merging and extending. */
+export const roadThenDrawMode = (
+  points: [number, number][] = [
+    [0, 0],
+    [40, -20],
+    [80, 0],
+  ],
+) => {
+  const ed = draw(points);
+  ed.key('Escape');
+  click(ed, 500, 500);
+  return ed;
+};
+
 /** The last node of chain `road` (a chain is a run of edges, ^106). */
 export const last = (ed: Editor, road = 0) => ed.chains[road]!.path.nodes.at(-1)!;
 

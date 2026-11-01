@@ -1,16 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { at, bareCurvePoint, click, draw } from '../testing/editorHelpers';
+import { at, bareCurvePoint, roadThenDrawMode } from '../testing/editorHelpers';
 
-const road = () => {
-  const ed = draw([
-    [0, 0],
-    [40, -20],
-    [80, 0],
-  ]);
-  ed.key('Escape');
-  click(ed, 500, 500);
-  return ed;
-};
+const road = () => roadThenDrawMode();
 
 describe('how near a curve is (^137)', () => {
   it('is as near as a node is: 9 px, so 2.25 m at 4 px per meter', () => {
