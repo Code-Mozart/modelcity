@@ -37,6 +37,18 @@
     onpointerleave: () => (session.over = null),
   });
 
+  /** The cards below the list. */
+  const actions = $derived([
+    { target: 'import', label: 'Import file…', run: () => file?.click(), current: false },
+    { target: 'save', label: 'Save to disc…', run: () => session.download(), current: false },
+    {
+      target: 'new',
+      label: 'New project',
+      run: () => session.newProject(),
+      current: session.noProject,
+    },
+  ] as const);
+
   /** The search field says "search" while the pointer is over it and it is not the one that is typed in. */
   const searchAttrs = {
     onpointerenter: () => !searching && (session.over = 'search'),
@@ -88,21 +100,11 @@
       </FilterList>
       {#if session.error}<div class="gap"><Notice kind="error">{session.error}</Notice></div>{/if}
       <ul class="actions">
-        <li class="card">
-          <button class="open" onclick={() => file?.click()} {...over('import')}>
-            Import file…
-          </button>
-        </li>
-        <li class="card">
-          <button class="open" onclick={() => session.download()} {...over('save')}>
-            Save to disc…
-          </button>
-        </li>
-        <li class="card" class:current={session.noProject}>
-          <button class="open" onclick={() => session.newProject()} {...over('new')}>
-            New project
-          </button>
-        </li>
+        {#each actions as a (a.target)}
+          <li class="card" class:current={a.current}>
+            <button class="open" onclick={a.run} {...over(a.target)}>{a.label}</button>
+          </li>
+        {/each}
       </ul>
       <input
         bind:this={file}
