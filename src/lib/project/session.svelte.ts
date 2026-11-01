@@ -1,4 +1,5 @@
 import { SvelteDate } from 'svelte/reactivity';
+import { fuzzyFilter } from '../fuzzy';
 import type { Camera } from '../camera.svelte';
 import type { Editor } from '../editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
@@ -8,6 +9,7 @@ import type { ProjectStorage, StoredProject } from './storage';
 
 /** How long after a change the project is saved to the browser (^166). */
 export const AUTOSAVE_MS = 400;
+const MAX_TITLE = 100;
 const LAST_KEY = 'modelcity.project';
 const NEW_CAMERA: CameraState = { x: 0, y: 0, scale: 4, rotation: 0 };
 
@@ -42,6 +44,11 @@ export class ProjectSession {
   /** The projects kept in the browser, newest first (shown by the dialog). */
   projects = $state.raw<StoredProject[]>([]);
   error = $state<string | null>(null);
+  /** What the projects dialog searches for (^178). */
+  query = $state('');
+  /** The card being renamed or asked to be deleted (a second click confirms), if any. */
+  row = $state<{ id: string; mode: 'rename' | 'delete' } | null>(null);
+  private dirty = false;
   private createdAt = '';
   private lastUpdatedAt = '';
   private saved: Graph | null = null;
@@ -89,12 +96,13 @@ export class ProjectSession {
     if (!this.id) return;
     this.lastUpdatedAt = this.now();
     this.saved = this.editor.graph;
+    this.dirty = false;
     await this.storage.put({ id: this.id, file: toFile(this.project()) });
   }
 
-  /** The graph may have changed (called whenever it does): save it after a short while (^166). Moving the camera alone does not. */
+  /** The graph or the title may have changed (called whenever the graph does): save it after a short while, debounced (^166). Moving the camera alone does not. */
   changed() {
-    if (!this.id || this.editor.graph === this.saved) return;
+    if (!this.id || (this.editor.graph === this.saved && !this.dirty)) return;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.save(), AUTOSAVE_MS);
   }
@@ -113,8 +121,12 @@ export class ProjectSession {
   }
 
   async open(id: string) {
+    if (id === this.id) {
+      this.dialogOpen = false;
+      return;
+    }
     const target = (await this.refresh()).find((p) => p.id === id);
-    if (!target || id === this.id) return;
+    if (!target) return;
     await this.save();
     this.show(target);
     this.dialogOpen = false;
@@ -145,6 +157,49 @@ export class ProjectSession {
     }
   }
 
+  /** The projects the dialog shows: all, or those that fuzzily match the search (^178). */
+  get shown(): StoredProject[] {
+    return fuzzyFilter(this.projects, this.query, (p) => p.file.title);
+  }
+
+  startRename(id: string) {
+    this.row = { id, mode: 'rename' };
+  }
+
+  startDelete(id: string) {
+    this.row = { id, mode: 'delete' };
+  }
+
+  cancelRow() {
+    this.row = null;
+  }
+
+  /** Give a project a new name (an empty one is refused); the open one is saved by autosave, the others at once. */
+  async rename(id: string, title: string) {
+    const name = title.trim().slice(0, MAX_TITLE);
+    this.row = null;
+    const target = this.projects.find((p) => p.id === id);
+    if (!name || !target || name === target.file.title) return;
+    this.projects = this.projects.map((p) =>
+      p.id === id ? { id, file: { ...p.file, title: name } } : p,
+    );
+    if (id === this.id) {
+      this.title = name;
+      this.dirty = true;
+      this.changed();
+    } else {
+      const file = { ...target.file, title: name, lastUpdatedAt: this.now() };
+      await this.storage.put({ id, file });
+    }
+  }
+
+  /** Delete the project of the card asked about; it is gone for good (^177). */
+  async confirmDelete() {
+    const id = this.row?.id;
+    this.row = null;
+    if (id) await this.remove(id);
+  }
+
   /** The project as the text of an export file (^163). */
   exportText() {
     this.lastUpdatedAt = this.lastUpdatedAt || this.now();
@@ -169,11 +224,14 @@ export class ProjectSession {
 
   async openDialog() {
     this.error = null;
+    this.query = '';
+    this.row = null;
     await this.refresh();
     this.dialogOpen = true;
   }
 
   closeDialog() {
     this.dialogOpen = false;
+    this.row = null;
   }
 }

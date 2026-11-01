@@ -57,6 +57,8 @@ The user entrusts the details to Claude. Principles:
 
 ## Conventions
 - World coordinates: meters, origin at map center, x right, y down (^4).
+- Design principle (^178): every list the user sees is searchable, and the search is fuzzy (`src/lib/fuzzy.ts`).
+- Say *operation* for something the user can do, not *action* (^180).
 - Two levels of gizmo (^60): the *skeleton* (curves and node dots, always shown) and the *scaffold* (all other gizmos of a segment, shown by need). A *segment* is the curve between two nodes.
 
 ## Context

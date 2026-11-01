@@ -4,7 +4,7 @@
   import Compass from './lib/Compass.svelte';
   import { Editor } from './lib/editor.svelte';
   import Hints from './lib/Hints.svelte';
-  import { hintsFor } from './lib/hints';
+  import { dialogHints, hintsFor } from './lib/hints';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectDialog from './lib/ProjectDialog.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
@@ -15,11 +15,14 @@
   const camera = new Camera();
   const session = new ProjectSession(editor, camera, new IndexedDbStorage());
   installTestHook(editor, camera, session, () => document.querySelector('canvas'));
+  // While the projects dialog is up its controls replace all others (^168).
   const hints = $derived(
-    hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
-      undo: editor.canUndo,
-      redo: editor.canRedo,
-    }),
+    session.dialogOpen
+      ? dialogHints(session.row?.mode ?? 'list')
+      : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
+          undo: editor.canUndo,
+          redo: editor.canRedo,
+        }),
   );
 
   onMount(() => void session.start());
@@ -40,11 +43,12 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    if (e.target instanceof HTMLInputElement) return;
     if (session.dialogOpen) {
-      if (e.key === 'Escape') session.closeDialog();
+      if (e.key === 'Escape' && session.row) session.cancelRow();
+      else if (e.key === 'Escape') session.closeDialog();
       return;
     }
+    if (e.target instanceof HTMLInputElement) return;
     if (projectKey(e)) e.preventDefault();
     else if (
       camera.key(e.key) ||

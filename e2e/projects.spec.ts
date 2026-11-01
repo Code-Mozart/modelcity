@@ -84,3 +84,65 @@ test('a file that is no project is refused with a message, the open project stay
   await expect(page.getByRole('alert')).toContainText('newer version');
   expect(await app.nodes()).toHaveLength(2);
 });
+
+test('rename: the pen opens a text field, Enter renames, Esc cancels without closing', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.keyboard.press('Control+o');
+  const dialog = page.getByRole('dialog', { name: 'Projects' });
+  await dialog.getByRole('button', { name: /^Rename/ }).click();
+  const name = dialog.getByLabel('Project name');
+  await name.fill('Harbour');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  await expect(name).toBeHidden();
+  await expect(dialog.getByText('Untitled project')).toBeVisible();
+  await dialog.getByRole('button', { name: /^Rename/ }).click();
+  await name.fill('Harbour');
+  await page.keyboard.press('Enter');
+  await expect(dialog.getByText('Harbour')).toBeVisible();
+  await expect.poll(async () => (await app.stored())[0]!.title).toBe('Harbour');
+});
+
+test('delete asks first: the bin turns into a cross, the pen into a check mark', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.keyboard.press('Control+o');
+  const dialog = page.getByRole('dialog', { name: 'Projects' });
+  await dialog.getByRole('button', { name: 'New project' }).click();
+  await expect(dialog).toBeHidden();
+  await page.keyboard.press('Control+o');
+  await dialog
+    .getByRole('button', { name: /^Delete/ })
+    .first()
+    .click();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  expect(await app.stored()).toHaveLength(2);
+  await dialog
+    .getByRole('button', { name: /^Delete/ })
+    .first()
+    .click();
+  await dialog.getByRole('button', { name: /^Confirm delete/ }).click();
+  await expect.poll(async () => (await app.stored()).length).toBe(1);
+});
+
+test('the dialog shows its own controls only, searches, and closes with the cross', async ({
+  page,
+}) => {
+  await page.keyboard.press('Control+o');
+  const dialog = page.getByRole('dialog', { name: 'Projects' });
+  const hints = new App(page).hints();
+  await expect(hints).toContainText('open the project');
+  await expect(hints).not.toContainText('pan');
+  await expect(hints).not.toContainText('select');
+  await dialog.getByRole('button', { name: 'New project' }).click();
+  await expect(dialog).toBeHidden();
+  await page.keyboard.press('Control+o');
+  await page.keyboard.type('zzz');
+  await expect(dialog.getByText('No project matches.')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(hints).toContainText('draw mode');
+});

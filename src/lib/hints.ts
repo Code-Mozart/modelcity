@@ -35,6 +35,7 @@ const hint = (input: Input | Input[], text: string): Hint => ({
 });
 
 const ESC: Input = { kind: 'key', label: 'Esc' };
+const ENTER: Input = { kind: 'key', label: 'Enter' };
 const DEL: Input = { kind: 'key', label: 'Del' };
 const keys = (...labels: string[]): Input => ({ kind: 'keys', labels });
 
@@ -157,6 +158,35 @@ const PROJECT_HINTS: Hint[] = [
   hint({ kind: 'keys', labels: ['Ctrl', 'S'] }, 'export'),
   hint({ kind: 'keys', labels: ['Ctrl', 'O'] }, 'projects'),
 ];
+
+/** What the projects dialog is doing, for its hints. */
+export type DialogMode = 'list' | 'rename' | 'delete';
+
+/**
+ * The controls while the projects dialog is up (^168): they replace all others, which do not work
+ * meanwhile.
+ */
+export function dialogHints(mode: DialogMode): Hint[] {
+  if (mode === 'rename') {
+    return [
+      hint(ENTER, 'rename'),
+      hint(mouse('lmb'), 'rename (on the check mark)'),
+      hint([ESC, mouse('lmb')], 'cancel (on the cross)'),
+    ];
+  }
+  if (mode === 'delete') {
+    return [
+      hint(mouse('lmb'), 'delete for good (on the check mark)'),
+      hint([ESC, mouse('lmb')], 'cancel (on the cross)'),
+    ];
+  }
+  return [
+    hint(mouse('lmb'), 'open the project'),
+    hint(mouse('lmb'), 'rename (on the pen)'),
+    hint(mouse('lmb'), 'delete (on the bin)'),
+    hint(ESC, 'close'),
+  ];
+}
 
 export function hintsFor(
   drawing: boolean,

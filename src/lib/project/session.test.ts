@@ -137,3 +137,68 @@ describe('the editor and the project', () => {
     expect(ed.graph.nodes[0]).toMatchObject({ x: 10, y: 20.001 });
   });
 });
+
+describe('the projects dialog (^168, ^178)', () => {
+  it('renames the open project through autosave and another one at once', async () => {
+    const { session, storage } = setup();
+    await session.start();
+    const first = session.id;
+    await session.create();
+    await session.openDialog();
+    await session.rename(first, '  Harbour  ');
+    expect((await storage.list()).find((p) => p.id === first)!.file.title).toBe('Harbour');
+    await session.rename(session.id, 'Old town');
+    expect(session.title).toBe('Old town');
+    expect((await storage.list()).find((p) => p.id === session.id)!.file.title).toBe(
+      'Untitled project',
+    );
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + 1);
+    expect((await storage.list()).find((p) => p.id === session.id)!.file.title).toBe('Old town');
+    expect(session.shown.map((p) => p.file.title).sort()).toEqual(['Harbour', 'Old town']);
+  });
+
+  it('refuses an empty name and cancels the row', async () => {
+    const { session } = setup();
+    await session.start();
+    await session.openDialog();
+    session.startRename(session.id);
+    await session.rename(session.id, '   ');
+    expect(session.title).toBe('Untitled project');
+    expect(session.row).toBeNull();
+  });
+});
+
+describe('deleting and searching projects (^168, ^178)', () => {
+  it('asks before it deletes: a delete is a start and a confirmation, cancel leaves the project', async () => {
+    const { session, storage } = setup();
+    await session.start();
+    const first = session.id;
+    await session.create();
+    await session.openDialog();
+    session.startDelete(first);
+    expect(session.row).toEqual({ id: first, mode: 'delete' });
+    session.cancelRow();
+    expect(await storage.list()).toHaveLength(2);
+    session.startDelete(first);
+    await session.confirmDelete();
+    expect(await storage.list()).toHaveLength(1);
+    expect(session.row).toBeNull();
+  });
+
+  it('searches the projects fuzzily, and a click on the open project closes the dialog', async () => {
+    const { session } = setup();
+    await session.start();
+    const first = session.id;
+    await session.rename(first, 'Harbour district');
+    await session.create();
+    await session.rename(session.id, 'Old town');
+    await session.openDialog();
+    session.query = 'hbr';
+    expect(session.shown.map((p) => p.file.title)).toEqual(['Harbour district']);
+    session.query = 'zzz';
+    expect(session.shown).toEqual([]);
+    session.query = '';
+    await session.open(session.id);
+    expect(session.dialogOpen).toBe(false);
+  });
+});

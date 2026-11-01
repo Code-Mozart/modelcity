@@ -33,6 +33,8 @@
     list-style: none;
     color: var(--ink);
     pointer-events: none;
+    /* Above the backdrop of the projects dialog, whose controls it shows (^168). */
+    z-index: 2;
     /* No background; a halo keeps the text readable over the map. */
     filter: drop-shadow(0 0 2px var(--bg)) drop-shadow(0 0 2px var(--bg));
   }
