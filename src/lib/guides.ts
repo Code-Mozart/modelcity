@@ -94,6 +94,10 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
 export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   if (E.kind === 'line' || E.kind === 'C') return;
   dot(f.ctx, toScreen(f, E.J), 6, pal.orange);
+  if (E.kind !== 'H') return;
+  for (const k of [E.k1, E.k2]) {
+    if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.orange, width: 2 });
+  }
 }
 
 /** The place on an arc where its radius label hangs: just outside the circle, at parameter t. */

@@ -1,5 +1,5 @@
 import type { HandleType } from './curves/handles';
-import type { CurveAction, NodeAction } from './curves/junctions';
+import type { CurveAction, NodeAction } from './model/junction';
 
 /** One way of operating the mouse or keyboard, shown as a symbol (^49). */
 export type Input =
@@ -50,8 +50,6 @@ const DRAG_TEXT: Record<HandleType, string> = {
   node: 'move node',
   head: 'turn heading',
   ctrl: 'bend curve',
-  s1: 'change radius',
-  s2: 'change radius',
   mid1: 'turn heading',
   mid2: 'turn heading',
   rad: 'change radius',

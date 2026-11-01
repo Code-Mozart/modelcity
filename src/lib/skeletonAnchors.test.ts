@@ -1,19 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { skeletonAnchors } from './skeletonAnchors';
 import { isDegenerate } from './curves/piece';
-import { edgesOfRoads } from './curves/roads';
+import { chainsOf } from './model/chains';
+import { graphOfPaths } from './testing/graphs';
 import { fixture } from './curves/testing/paths';
 
 const anchorsOf = (roads: ReturnType<typeof fixture>[]) =>
-  skeletonAnchors(roads, edgesOfRoads(roads));
+  skeletonAnchors(chainsOf(graphOfPaths(roads)));
 
 describe('skeletonAnchors (^62)', () => {
   it('covers the node dots and the pieces of the curves, and nothing else', () => {
     const path = fixture('H');
     const anchors = anchorsOf([path]);
     expect(anchors.filter((a) => a.kind === 'point')).toHaveLength(path.nodes.length);
-    const pieces = edgesOfRoads([path])[0]!
-      .flatMap((e) => e.E.pieces)
+    const pieces = chainsOf(graphOfPaths([path]))[0]!
+      .edges.flatMap((e) => e.E.pieces)
       .filter((p) => !isDegenerate(p));
     expect(anchors.filter((a) => a.kind === 'piece')).toHaveLength(pieces.length);
     expect(anchors).toHaveLength(path.nodes.length + pieces.length);

@@ -22,7 +22,7 @@ describe('dragging the corners of an S-curve (^132, no shape tag)', () => {
     const { path, handles } = setup();
     const h = handles.find((x) => x.type === 'mid1')!;
     const to = { x: h.x, y: h.y + 4 };
-    const next = applyDrag(path, startDrag(path, h), to, noMods);
+    const next = applyDrag(path, startDrag(h), to, noMods);
     const n = path.nodes[0]!;
     expect(next.nodes[0]!.th).toBeCloseTo(Math.atan2(to.y - n.y, to.x - n.x), 9);
     expect(next.nodes[1]).toEqual(path.nodes[1]);
@@ -32,7 +32,7 @@ describe('dragging the corners of an S-curve (^132, no shape tag)', () => {
     const { path, handles } = setup();
     const h = handles.find((x) => x.type === 'mid2')!;
     const to = { x: h.x, y: h.y - 4 };
-    const next = applyDrag(path, startDrag(path, h), to, noMods);
+    const next = applyDrag(path, startDrag(h), to, noMods);
     const n = path.nodes[1]!;
     expect(next.nodes[1]!.th).toBeCloseTo(Math.atan2(n.y - to.y, n.x - to.x), 9);
     expect(next.nodes[0]).toEqual(path.nodes[0]);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Editor } from './editor.svelte';
-import { at, click, draw } from './testing/editorHelpers';
+import { at, click, draw, roadDrawn } from './testing/editorHelpers';
 
 const road = (): [number, number][] => [
   [0, 0],
@@ -13,13 +13,13 @@ describe('entering draw mode (^48, ^54)', () => {
     const ed = new Editor();
     click(ed, 10, 10);
     expect(ed.drawing).toBe(true);
-    expect(ed.roads).toEqual([]);
+    expect(ed.chains).toEqual([]);
     expect(ed.cursor).toBe('crosshair');
     ed.pointerMove(at(30, 5));
     expect(ed.hover).toMatchObject({ kind: 'preview', ref: null, node: { x: 30, y: 5, th: 0 } });
     click(ed, 30, 5);
-    expect(ed.roads[0]!.nodes).toEqual([{ x: 30, y: 5, th: 0 }]);
-    expect(ed.active).toBe(0);
+    expect(ed.chains[0]!.path.nodes).toMatchObject([{ x: 30, y: 5, th: 0 }]);
+    expect(roadDrawn(ed)).toBe(0);
   });
 
   it('a drag in select mode does not enter draw mode, it is reserved for a rubber band', () => {
@@ -28,7 +28,7 @@ describe('entering draw mode (^48, ^54)', () => {
     ed.pointerMove(at(40, 30));
     ed.pointerUp();
     expect(ed.drawing).toBe(false);
-    expect(ed.roads).toEqual([]);
+    expect(ed.chains).toEqual([]);
   });
 });
 
@@ -41,7 +41,7 @@ describe('leaving draw mode early (^54)', () => {
     click(ed, 10, 10);
     ed.rightClick(at(50, 50));
     expect(ed.drawing).toBe(false);
-    expect(ed.roads).toEqual([]);
+    expect(ed.chains).toEqual([]);
   });
 
   it('a second finger after the first click changes nothing', () => {
@@ -91,7 +91,7 @@ describe('select mode and draw mode (^48)', () => {
     ed.pointerDown(at(20, -10));
     ed.pointerMove(at(24, -14));
     ed.pointerUp();
-    expect(ed.roads[0]!.nodes[1]).toMatchObject({ x: 24, y: -14 });
+    expect(ed.chains[0]!.path.nodes[1]).toMatchObject({ x: 24, y: -14 });
     expect(ed.drawing).toBe(false);
   });
 });
@@ -148,7 +148,7 @@ describe('hint target for the control hints (^49)', () => {
       selected: true,
       lane: false,
     });
-    const middle = { kind: 'handle', type: 'node', act: null, selected: false, lane: false };
+    const middle = { kind: 'handle', type: 'node', act: 'merge', selected: false, lane: false };
     ed.pointerMove(at(20, -10));
     expect(ed.hintTarget).toEqual(middle);
     ed.pointerDown(at(20, -10));

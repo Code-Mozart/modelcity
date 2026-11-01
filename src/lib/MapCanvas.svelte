@@ -3,6 +3,7 @@
   import type { Camera } from './camera.svelte';
   import type { Editor, PointerInfo } from './editor.svelte';
   import { FEATURES } from './features';
+  import { chainSelection } from './model/chains';
   import { render } from './render';
   import { screenToWorld, worldToScreen, type Point } from './view';
 
@@ -32,9 +33,9 @@
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
     const scene = {
-      roads: editor.roads.map((path, i) => ({ path, edges: editor.edges[i] ?? [] })),
+      roads: editor.chains.map((c) => ({ path: c.path, edges: c.edges, width: c.width })),
       handles: editor.handles(camera.view.scale),
-      selection: editor.selection,
+      selection: chainSelection(editor.chains, editor.selection),
       band: editor.band,
       drawing: editor.drawing,
       selectedSegments: editor.selectedSegments,

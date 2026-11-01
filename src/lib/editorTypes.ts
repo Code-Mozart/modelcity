@@ -1,8 +1,9 @@
 import type { DragState } from './curves/drag';
-import type { RoadHandle, RoadHit, NodeRef, Placed, Roads } from './curves/roads';
 import type { PathNode } from './curves/types';
 import type { Vec } from './curves/vec';
-import type { NodeAction } from './curves/junctions';
+import type { RoadHandle, RoadHit } from './model/chains';
+import type { Graph, Placed } from './model/graph';
+import type { NodeAction } from './model/junction';
 import type { HintTarget } from './hints';
 
 /** What the pointer is doing, as seen by the editor. `pt` is in world meters. */
@@ -36,11 +37,16 @@ export interface Placement {
 /** Pointer travel (screen pixels) that turns a press into a drag. */
 export const DRAG_PX = 6;
 
+/**
+ * What is edited and can be undone: the graph, the node being drawn from (`active`) with the way
+ * the next edge runs (`end`) and the node the road being drawn started at (`origin`), and the selection.
+ */
 export interface Snapshot {
-  roads: Roads;
+  graph: Graph;
   active: number | null;
   end: 'start' | 'end';
-  selection: NodeRef[];
+  origin: number | null;
+  selection: number[];
 }
 
 /**
@@ -51,7 +57,9 @@ export interface Snapshot {
 export type Press =
   | {
       kind: 'drag';
+      /** The chain the handle is drawn on (for the focus) and the id of its node or edge. */
       road: number;
+      id: number;
       drag: DragState;
       start: Vec;
       moved: boolean;
@@ -67,7 +75,7 @@ export type Press =
     }
   | {
       kind: 'place';
-      ref: NodeRef;
+      id: number;
       undo: Snapshot;
       /** On a curve: what a click, but not a drag, does after the node was inserted (^133). */
       then: 'split' | 'merge' | null;
@@ -77,12 +85,12 @@ export type Press =
   | {
       kind: 'empty';
       screen: Vec;
-      base: NodeRef[];
+      base: number[];
       shift: boolean;
       /** Alt on a curve: the click selects or deselects its branch (^128). */
       alt: boolean;
       /** The two nodes of the curve that was pressed (select mode), else none (^74). */
-      curve: NodeRef[];
+      curve: number[];
       moved: boolean;
       undo: Snapshot;
       target: HintTarget;

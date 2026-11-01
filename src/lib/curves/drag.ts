@@ -25,7 +25,7 @@ const RADIUS_REFINE_STEPS = 40;
 const edgeAt = (path: Path, i: number) =>
   buildEdge(path.nodes[i]!, path.nodes[i + 1]!, path.radii[i] ?? null);
 
-export const startDrag = (_path: Path, handle: Handle): DragState => ({ handle });
+export const startDrag = (handle: Handle): DragState => ({ handle });
 
 /** Radius of the bend whose circle is tangent to both heading lines and passes through `pt`. */
 export function radiusFromCursor(E: Edge & { kind: 'C' }, pt: Vec): number {
@@ -61,13 +61,6 @@ function dragCorner(path: Path, i: number, C: Vec): Path {
   });
 }
 
-/** The corner (1 or 2) of the hook the nodes form at radius R, if it is still a hook. */
-function hookCorner(path: Path, i: number, R: number, which: 1 | 2): Vec | null {
-  const E = buildEdge(path.nodes[i]!, path.nodes[i + 1]!, R);
-  if (E.kind !== 'H') return null;
-  return which === 1 ? E.k1 : E.k2;
-}
-
 /**
  * The radius, between the smallest and `Rmax`, at which the point `pointAt(R)` is nearest to `pt`:
  * a coarse search over the radii (on a log scale), then a refinement around the best one, so that
@@ -94,14 +87,6 @@ function nearestRadius(Rmax: number, pointAt: (R: number) => Vec | null, pt: Vec
   }
   const R = (lo + hi) / 2;
   return cost(R) <= bd ? R : at(best);
-}
-
-/** Dragging a hook's corner point: pick the radius whose corner is nearest to the pointer. */
-function dragHookCorner(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
-  const E0 = edgeAt(path, i);
-  if (E0.kind !== 'H') return path;
-  const R = nearestRadius(E0.Rmax, (r) => hookCorner(path, i, r, which), pt);
-  return R == null ? path : withRadius(path, i, toRequested(R, E0.Rmax));
 }
 
 /**
@@ -156,10 +141,6 @@ export function applyDrag(path: Path, drag: DragState, pt: Vec, mod: DragModifie
       return dragHeading(path, i, pt, mod.snap);
     case 'ctrl':
       return dragCorner(path, i, pt);
-    case 's1':
-      return dragHookCorner(path, i, 1, pt);
-    case 's2':
-      return dragHookCorner(path, i, 2, pt);
     case 'mid1':
       return dragMiddle(path, i, 1, pt);
     case 'mid2':

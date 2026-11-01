@@ -7,7 +7,7 @@ import { dist, fromAngle, mul, add, type Vec } from './vec';
  * Draggable handles (^9). `k` is the piece index for radius handles.
  * Sizes are in screen pixels so handles keep their look at any zoom.
  */
-export type HandleType = 'node' | 'head' | 'ctrl' | 's1' | 's2' | 'mid1' | 'mid2' | 'rad';
+export type HandleType = 'node' | 'head' | 'ctrl' | 'mid1' | 'mid2' | 'rad';
 
 export interface Handle extends Vec {
   type: HandleType;
@@ -22,10 +22,13 @@ const HIT_PX = { mouse: 11, touch: 20 };
 /** How near (screen pixels) the pointer must be to a node, and to a curve (^137). */
 export const NODE_HIT_PX = { mouse: 9, touch: 16 };
 
-/** The corner points of a hook (they set the radius) or of an S (they turn the heading of their node). */
+/** The corner points of an S-curve: they turn the heading of their node. A hook's are derived (^105). */
 function cornerHandles(i: number, E: Exclude<Edge, { kind: 'line' | 'C' }>): Handle[] {
-  const [t1, t2] = (E.kind === 'H' ? ['s1', 's2'] : ['mid1', 'mid2']) as [HandleType, HandleType];
-  return [...(E.k1 ? [{ type: t1, i, ...E.k1 }] : []), ...(E.k2 ? [{ type: t2, i, ...E.k2 }] : [])];
+  if (E.kind !== 'S') return [];
+  return [
+    ...(E.k1 ? [{ type: 'mid1' as const, i, ...E.k1 }] : []),
+    ...(E.k2 ? [{ type: 'mid2' as const, i, ...E.k2 }] : []),
+  ];
 }
 
 function edgeHandles({ i, p, q, E }: EdgeRef, scale: number): Handle[] {
@@ -68,7 +71,7 @@ export function handlesOf(path: Path, edges: EdgeRef[], scale: number): Handle[]
 }
 
 /** Non-node handles in tie-break order: the earlier type wins when equally near. */
-const PRIORITY: HandleType[] = ['head', 'ctrl', 's1', 's2', 'mid1', 'mid2', 'rad'];
+const PRIORITY: HandleType[] = ['head', 'ctrl', 'mid1', 'mid2', 'rad'];
 
 function nearest<H extends Handle>(list: H[], pt: Vec, within: number): H | null {
   let best: H | null = null;

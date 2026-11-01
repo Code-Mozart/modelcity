@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { edgesOf } from './curves/path';
 import { pointOn } from './curves/piece';
-import { edgesOfRoads, roadHandles } from './curves/roads';
+import { chainHandles, chainsOf } from './model/chains';
+import { graphOfPaths } from './testing/graphs';
 import { fixture } from './curves/testing/paths';
 import {
   activeFlags,
@@ -21,11 +22,10 @@ const inputFor = (
   pointer: { x: number; y: number } | null,
   focus: Focus | null = null,
 ): ScaffoldInput => {
-  const roads = [path];
-  const all = edgesOfRoads(roads);
+  const chains = chainsOf(graphOfPaths([path]));
   return {
-    roads: all.map((e) => ({ edges: e })),
-    handles: roadHandles(roads, all, scale),
+    roads: chains.map((c) => ({ edges: c.edges })),
+    handles: chainHandles(chains, scale),
     focus,
     pointer: pointer && { pt: pointer, scale },
   };
@@ -72,10 +72,10 @@ describe('only a single segment at a time (^66)', () => {
 
   it('shows only one segment over several roads', () => {
     const roads = [path, { ...path, nodes: path.nodes.map((n) => ({ ...n, y: n.y + 3 })) }];
-    const all = edgesOfRoads(roads);
+    const chains = chainsOf(graphOfPaths(roads));
     const flags = activeFlags({
-      roads: all.map((e) => ({ edges: e })),
-      handles: roadHandles(roads, all, scale),
+      roads: chains.map((c) => ({ edges: c.edges })),
+      handles: chainHandles(chains, scale),
       focus: null,
       pointer: { pt: away(path.nodes[1]!, 4), scale },
     });

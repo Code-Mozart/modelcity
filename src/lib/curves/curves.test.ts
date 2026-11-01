@@ -1,25 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { applyDrag, radiusFromCursor, startDrag } from './drag';
 import { buildEdge, type Edge } from './edge';
-import {
-  appendNode,
-  autoHeading,
-  edgesOf,
-  insertNode,
-  nearestOnCurve,
-  prependNode,
-  removeNode,
-  type Path,
-} from './path';
-import { distanceToPiece, isDegenerate, pieceLength, pointOn } from './piece';
+import { autoHeading, edgesOf, type Path } from './path';
+import { distanceToPiece, isDegenerate, pointOn } from './piece';
 import { fixture, type FixtureName } from './testing/paths';
 import { dist, fromAngle, toRad } from './vec';
 
 const NAMES: FixtureName[] = ['H', 'G', 'hook'];
 const noMods = { snap: false };
-
-const totalLength = (path: Path) =>
-  edgesOf(path).reduce((sum, { E }) => sum + E.pieces.reduce((s, p) => s + pieceLength(p), 0), 0);
 
 /** Pieces form one connected chain whose arcs end where they say they do. */
 function expectConnected(E: Edge, p: Path['nodes'][number], q: Path['nodes'][number]) {
@@ -90,57 +78,12 @@ describe('radius', () => {
   });
 });
 
-describe('path edits', () => {
-  it('appends at the nearer end with a heading that makes a single bend', () => {
-    const { path, sel } = appendNode(fixture('H'), { x: 120, y: 30 });
-    expect(sel).toBe(path.nodes.length - 1);
-    expect(path.radii).toHaveLength(path.nodes.length - 1);
-    expect(edgesOf(path).at(-1)!.E.kind).toBe('C');
-  });
-
-  it('starts a path with a single node', () => {
-    const { path } = appendNode({ nodes: [], radii: [] }, { x: 1, y: 2 });
-    expect(path.nodes).toHaveLength(1);
-    expect(path.radii).toHaveLength(0);
-  });
-
-  // Without a stored shape tag (experiment) an inserted node can change a hook, and an S-curve at some
-  // points; only the pieces' midpoints are checked here, and the hook is left out.
-  it.each(NAMES.filter((n) => n !== 'hook'))(
-    'inserting a node on %s does not change the curve (^10)',
-    (name) => {
-      const path = fixture(name);
-      const before = totalLength(path);
-      for (const { E } of edgesOf(path)) {
-        E.pieces.forEach((piece, k) => {
-          const at = pointOn(piece, 0.5);
-          const hit = nearestOnCurve(path, at, 0.5);
-          if (!hit || hit.ref.E !== E) return;
-          const { path: next } = insertNode(path, { ...hit, k });
-          expect(next.nodes).toHaveLength(path.nodes.length + 1);
-          expect(totalLength(next)).toBeCloseTo(before, 3);
-        });
-      }
-    },
-  );
-
-  it('removes nodes at the ends and in the middle', () => {
-    const path = fixture('H');
-    for (const i of [0, 1, 3]) {
-      const next = removeNode(path, i);
-      expect(next.nodes).toHaveLength(3);
-      expect(next.radii).toHaveLength(2);
-    }
-    expect(removeNode(removeNode(fixture('G'), 0), 0).nodes).toHaveLength(0);
-  });
-});
-
 describe('dragging handles', () => {
   it('moves a node', () => {
     const path = fixture('H');
     const next = applyDrag(
       path,
-      startDrag(path, { type: 'node', i: 1, x: 0, y: 0 }),
+      startDrag({ type: 'node', i: 1, x: 0, y: 0 }),
       { x: 5, y: 6 },
       noMods,
     );
@@ -152,7 +95,7 @@ describe('dragging handles', () => {
     const path = fixture('H');
     const n = path.nodes[0]!;
     const pt = { x: n.x + 10 * Math.cos(toRad(33)), y: n.y + 10 * Math.sin(toRad(33)) };
-    const next = applyDrag(path, startDrag(path, { type: 'head', i: 0, x: 0, y: 0 }), pt, {
+    const next = applyDrag(path, startDrag({ type: 'head', i: 0, x: 0, y: 0 }), pt, {
       ...noMods,
       snap: true,
     });
@@ -173,9 +116,9 @@ describe('dragging radii', () => {
     const handle = { type: 'rad' as const, i: 0, k: 1, t: 0.5, x: 0, y: 0 };
     const E = edgesOf(path)[0]!.E;
     if (E.kind !== 'C') throw new Error('expected a bend');
-    const small = applyDrag(path, startDrag(path, handle), pointOn(E.pieces[1]!, 0.5), noMods);
+    const small = applyDrag(path, startDrag(handle), pointOn(E.pieces[1]!, 0.5), noMods);
     expect(small.radii[0]).toBeNull();
-    const tight = applyDrag(path, startDrag(path, handle), { x: E.C.x + 1, y: E.C.y }, noMods);
+    const tight = applyDrag(path, startDrag(handle), { x: E.C.x + 1, y: E.C.y }, noMods);
     expect(tight.radii[0]).toBeGreaterThan(0);
     expect(tight.nodes).toEqual(path.nodes);
   });
@@ -198,7 +141,7 @@ describe('^17 S-curve radius drag follows the cursor', () => {
     return { ring: pointOn(E.pieces[1]!, 0.5), corner: E.k1, R: E.R };
   };
   const dragTo = (pt: { x: number; y: number }) =>
-    applyDrag(path, startDrag(path, { type: 'rad', i: 0, k: 1, x: 0, y: 0 }), pt, noMods);
+    applyDrag(path, startDrag({ type: 'rad', i: 0, k: 1, x: 0, y: 0 }), pt, noMods);
 
   it('moving the ring toward the corner decreases the radius, away increases it', () => {
     const { ring, corner } = ringAndCorner(path);
@@ -283,33 +226,5 @@ describe('distanceToPiece (^55)', () => {
     const ccw = { ...arc, P: { x: 0, y: 5 }, Q: { x: 5, y: 0 }, a0: Math.PI / 2, da: -Math.PI / 2 };
     expect(distanceToPiece(ccw, { x: 6 * Math.cos(0.7), y: 6 * Math.sin(0.7) })).toBeCloseTo(1);
     expect(distanceToPiece(ccw, { x: -3, y: 0 })).toBeCloseTo(Math.hypot(3, 5));
-  });
-});
-
-describe('prependNode (^65)', () => {
-  it('adds a node before the first one whose curve arrives along the first node heading', () => {
-    const path = fixture('H');
-    const { path: next, sel } = prependNode(path, { x: -150, y: 40 });
-    expect(sel).toBe(0);
-    expect(next.nodes).toHaveLength(path.nodes.length + 1);
-    expect(next.radii).toHaveLength(next.nodes.length - 1);
-    expect(next.nodes[1]).toEqual(path.nodes[0]);
-    const E = edgesOf(next)[0]!.E;
-    expect(E.kind).not.toBe('line');
-    expectConnected(E, next.nodes[0]!, next.nodes[1]!);
-    const end = pointOn(
-      E.pieces.findLast((x) => !isDegenerate(x))!,
-      1,
-    );
-    expect(
-      end.tx * Math.cos(path.nodes[0]!.th) + end.ty * Math.sin(path.nodes[0]!.th),
-    ).toBeGreaterThan(1 - 1e-6);
-  });
-
-  it('works on a road with a single node', () => {
-    const one = { nodes: [{ x: 0, y: 0, th: 0 }], radii: [], shapes: [] };
-    const { path } = prependNode(one, { x: -20, y: 5 });
-    expect(path.nodes).toHaveLength(2);
-    expect(path.radii).toHaveLength(1);
   });
 });

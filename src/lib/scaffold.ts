@@ -1,6 +1,6 @@
 import type { EdgeRef } from './curves/path';
 import { distanceToPiece, isDegenerate } from './curves/piece';
-import type { RoadHandle } from './curves/roads';
+import type { RoadHandle } from './model/chains';
 import { touchesEdge, type Focus } from './focus';
 import { CURVE_NEAR_PX, HANDLE_NEAR_PX, type Pointer } from './proximity';
 

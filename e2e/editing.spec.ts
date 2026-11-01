@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { App } from './app';
 
-const nodes = async (app: App, road = 0) => (await app.roads())[road]!.nodes;
+const nodes = (app: App) => app.nodes();
 
 /** A straight road of three nodes along the x axis, finished with Escape. */
 async function drawRoad(app: App) {
@@ -38,10 +38,11 @@ async function moveGroup(app: App) {
   expect((await app.state()).selected).toBe(3);
   await app.drag({ x: 40, y: 40 }, { x: 50, y: 50 });
   const after = await nodes(app);
-  after.forEach((n, i) => {
-    expect(n.x - before[i]!.x).toBeCloseTo(10, 0);
-    expect(n.y - before[i]!.y).toBeCloseTo(10, 0);
-  });
+  for (const n of after) {
+    const was = before.find((b) => b.id === n.id)!;
+    expect(n.x - was.x).toBeCloseTo(10, 0);
+    expect(n.y - was.y).toBeCloseTo(10, 0);
+  }
 }
 
 test('delete, extend and move a group', async ({ page }) => {
@@ -53,4 +54,27 @@ test('delete, extend and move a group', async ({ page }) => {
   await test.step('remove a node with RMB', () => rightClickNode(app));
   await test.step('extend it again', () => extendTo(app, { x: 40, y: 40 }));
   await test.step('move a selected group', () => moveGroup(app));
+});
+
+/** Branches can form loops (^162): a click on the first node of the road being drawn closes it. */
+test('close a loop', async ({ page }) => {
+  await page.goto('/');
+  const app = new App(page);
+  await app.click({ x: 0, y: 30 }); // empty canvas: enters draw mode
+  for (const [x, y] of [
+    [0, 0],
+    [40, 0],
+    [40, 40],
+  ] as const)
+    await app.click({ x, y });
+  const first = await app.node(0);
+  expect(first).toMatchObject({ x: 0, y: 0 });
+  await app.hover(first);
+  await expect(app.hints()).toContainText('close');
+  await app.click(first);
+  expect((await app.state()).mode).toBe('select');
+  const edges = await app.edges();
+  expect(edges).toHaveLength(3);
+  expect(edges.at(-1)).toMatchObject({ start: 2, end: 0 });
+  expect((await app.nodes()).length).toBe(3);
 });

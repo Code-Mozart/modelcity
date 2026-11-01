@@ -28,9 +28,8 @@ describe('Alt+click selects a branch (^128)', () => {
     const wing = ed.edges[1]![0]!.E.pieces.at(-1)!;
     const on = wing.type === 'arc' ? { x: wing.Q.x - 4, y: wing.Q.y } : wing.P;
     alt(ed, on.x, on.y);
-    // two nodes, one of them shared with the other road (so three entries)
-    expect(ed.selection).toHaveLength(3);
-    expect(ed.selection.every((r) => r.road === 1 || (r.road === 0 && r.node === 1))).toBe(true);
+    // the two nodes of the branch, one of them where the other road meets it
+    expect(ed.selection).toHaveLength(2);
   });
 
   it('a second Alt+click on the same branch deselects it, and the hint says so', () => {
