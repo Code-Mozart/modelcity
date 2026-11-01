@@ -28,7 +28,7 @@ function curveTarget(drawn: Drawn, hit: RoadHit, drawing: boolean): HintTarget {
   return {
     kind: 'curve',
     picked: e ? pickedCount(selection, [e.start, e.end]) : 0,
-    act: drawing ? curveAction(drawn, hit.edge) : null,
+    act: drawing ? curveAction(drawn) : null,
     lane: !drawing && allSelected(selection, branchOfEdge(graph, hit.edge)),
   };
 }
@@ -64,7 +64,7 @@ function mergeTarget(d: Drawn, hover: Hover): PathNode | null {
       ? (nodeOf(d.graph, hover.handle.id) ?? null)
       : null;
   }
-  if (hover.kind !== 'candidate' || curveAction(d, hover.hit.edge) !== 'merge') return null;
+  if (hover.kind !== 'candidate' || curveAction(d) !== 'merge') return null;
   const { at } = hover.hit;
   return { x: at.x, y: at.y, th: Math.atan2(at.ty, at.tx) };
 }

@@ -8,8 +8,8 @@ import { edgesAt, edgesIn, edgesOut, type Graph } from './graph';
  */
 export type NodeAction = 'finish' | 'close' | 'extend' | 'split' | 'merge' | null;
 
-/** What a click on a curve does in draw mode: split a new road off, merge into it, or only insert a node. */
-export type CurveAction = 'split' | 'merge' | 'insert' | null;
+/** What a click on a curve does in draw mode: split a new road off, or merge into it, also into the road being drawn (^191). */
+export type CurveAction = 'split' | 'merge' | null;
 
 /**
  * The state of drawing that decides the actions: the node being drawn from, which way the next
@@ -24,29 +24,15 @@ export interface DrawState {
 
 const degree = (g: Graph, id: number) => edgesAt(g, id).length;
 
-/** The edges of the road being drawn: from the node it started at to the node being drawn from. */
-export function drawnEdges({ graph, active, end, origin }: DrawState): Set<number> {
-  const seen = new Set<number>();
-  let cur = active;
-  while (cur !== null && cur !== origin) {
-    const back = end === 'end' ? edgesIn(graph, cur) : edgesOut(graph, cur);
-    const e = back.find((b) => !seen.has(b.id));
-    if (!e) break;
-    seen.add(e.id);
-    cur = end === 'end' ? e.start : e.end;
-  }
-  return seen;
-}
-
 export function nodeAction(d: DrawState, id: number): NodeAction {
   if (id === d.active) return 'finish';
   if (d.active === null) return degree(d.graph, id) === 1 ? 'extend' : 'split';
   return id === d.origin ? 'close' : 'merge';
 }
 
-export function curveAction(d: DrawState, edge: number): CurveAction {
+export function curveAction(d: DrawState): CurveAction {
   if (d.active === null) return 'split';
-  return drawnEdges(d).has(edge) ? 'insert' : 'merge';
+  return 'merge';
 }
 
 /** The node at the other end of the road that ends at the leaf `id`, going through nodes with two edges. */

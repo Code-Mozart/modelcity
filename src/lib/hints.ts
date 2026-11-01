@@ -73,7 +73,7 @@ function handleHints(target: HandleTarget): Hint[] {
 function curveText(target: HintTarget): string {
   if (target.kind !== 'curve') return 'add node';
   if (target.act === 'split') return 'split';
-  return target.act === 'merge' ? 'merge' : 'insert here';
+  return 'merge';
 }
 
 /** Draw mode: a road is being drawn. */

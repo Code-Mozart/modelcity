@@ -97,7 +97,7 @@ describe('actions and branches (^23, ^128, ^162)', () => {
     const { graph, ids } = chain(3);
     expect(nodeAction(state(graph, null, null), ids[0]!)).toBe('extend');
     expect(nodeAction(state(graph, null, null), ids[1]!)).toBe('split');
-    expect(curveAction(state(graph, null, null), 0)).toBe('split');
+    expect(curveAction(state(graph, null, null))).toBe('split');
   });
 
   it('while drawing: the node drawn from finishes, where it started closes, others merge', () => {
@@ -106,9 +106,9 @@ describe('actions and branches (^23, ^128, ^162)', () => {
     expect(nodeAction(d, ids[2]!)).toBe('finish');
     expect(nodeAction(d, ids[0]!)).toBe('close');
     expect(nodeAction(d, ids[1]!)).toBe('merge');
-    expect(curveAction(d, 0)).toBe('insert');
+    expect(curveAction(d)).toBe('merge');
     const other = chain(2, graph);
-    expect(curveAction(state(other.graph, ids[2]!, ids[0]!), 2)).toBe('merge');
+    expect(curveAction(state(other.graph, ids[2]!, ids[0]!))).toBe('merge');
   });
 
   it('knows the far end of a road and the branch an edge or node belongs to', () => {

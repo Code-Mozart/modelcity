@@ -203,10 +203,12 @@ describe('hover and inserting while drawing (^40)', () => {
     expect(ed.hover?.kind).toBe('preview');
   });
 
-  it('pressing on a curve inserts a node there and keeps drawing', () => {
+  it('dragging on a curve inserts a node there and keeps drawing; a click merges (^191)', () => {
     const ed = draw(road());
     const mid = bareCurvePoint(ed);
-    click(ed, mid.x, mid.y);
+    ed.pointerDown(at(mid.x, mid.y));
+    ed.pointerMove(at(mid.x + 4, mid.y + 12));
+    ed.pointerUp();
     expect(ed.chains[0]!.path.nodes).toHaveLength(4);
     expect(selAt(ed).road).toBe(0);
     expect(roadDrawn(ed)).toBe(0);

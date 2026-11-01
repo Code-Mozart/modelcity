@@ -186,3 +186,38 @@ describe('a drag on a curve only inserts a node (^133)', () => {
     expect(ed.drawing).toBe(true);
   });
 });
+
+describe('merging into the road being drawn (^191)', () => {
+  it('a click on a curve of the road itself says merge and merges, like on any other road', () => {
+    const ed = draw([
+      [0, 0],
+      [40, -20],
+      [80, 0],
+    ]);
+    const on = bareCurvePoint(ed);
+    ed.pointerMove(at(on.x, on.y));
+    expect(ed.hintTarget).toMatchObject({ kind: 'curve', act: 'merge' });
+    expect(ed.mergePreview).not.toBeNull();
+    click(ed, on.x, on.y);
+    expect(ed.drawing).toBe(false);
+    expect(ed.graph.nodes).toHaveLength(4);
+    expect(ed.graph.edges).toHaveLength(4);
+    const inserted = ed.graph.nodes[3]!.id;
+    expect(ed.graph.edges.at(-1)).toMatchObject({ start: 2, end: inserted });
+  });
+
+  it('a drag on the curve of the road itself still only inserts a node', () => {
+    const ed = draw([
+      [0, 0],
+      [40, -20],
+      [80, 0],
+    ]);
+    const on = bareCurvePoint(ed);
+    ed.pointerDown(at(on.x, on.y));
+    ed.pointerMove(at(on.x + 5, on.y + 20));
+    ed.pointerUp();
+    expect(ed.graph.nodes).toHaveLength(4);
+    expect(ed.graph.edges).toHaveLength(3);
+    expect(ed.drawing).toBe(true);
+  });
+});
