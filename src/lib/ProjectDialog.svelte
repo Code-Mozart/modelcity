@@ -69,7 +69,7 @@
       <ul>
         {#each session.shown as p (p.id)}
           {@const mode = session.row?.id === p.id ? session.row.mode : null}
-          <li class:current={p.id === session.id}>
+          <li class:current={p.id === session.id} class:asking={mode === 'delete'}>
             {#if mode === 'rename'}
               <input
                 class="name"
@@ -97,7 +97,6 @@
                 <Icon name="x" />
               </button>
             {:else if mode === 'delete'}
-              <span class="ask">Delete for good?</span>
               <button
                 class="icon danger"
                 aria-label="Confirm delete {p.file.title}"
@@ -219,6 +218,10 @@
   li.current .open {
     outline: 2px solid var(--blue);
   }
+  /* The card that is asked about deletion. */
+  li.asking .open {
+    outline: 2px solid var(--red);
+  }
   button {
     padding: 0.5em 0.9em;
     color: var(--ink);
@@ -248,12 +251,8 @@
     gap: 1em;
     text-align: left;
   }
-  .date,
-  .ask {
+  .date {
     color: var(--muted);
-  }
-  .ask {
-    align-self: center;
   }
   .actions {
     display: flex;
