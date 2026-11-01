@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SYMBOL_STROKE, arrowPath } from './arrows';
   import MouseGlyph from './MouseGlyph.svelte';
+  import SymbolSvg from './SymbolSvg.svelte';
 
   /**
    * A mouse button being dragged (^50, ^56): the mouse with the dragged button filled, smaller,
@@ -24,13 +25,7 @@
   ];
 </script>
 
-<svg
-  viewBox="0 0 30 30"
-  style="width: var(--symbol-size); height: var(--symbol-size)"
-  role={label ? 'img' : undefined}
-  aria-label={label}
-  aria-hidden={label ? undefined : 'true'}
->
+<SymbolSvg {label}>
   <g transform="translate({15 - 11 * SCALE} {15 - 13.5 * SCALE}) scale({SCALE})">
     <MouseGlyph {lmb} {mmb} {rmb} stroke={SYMBOL_STROKE / SCALE} />
   </g>
@@ -44,4 +39,4 @@
       stroke-linejoin="round"
     />
   {/each}
-</svg>
+</SymbolSvg>

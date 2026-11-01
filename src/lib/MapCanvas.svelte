@@ -119,8 +119,6 @@
   onMount(() => {
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
-    // Test hook for e2e/screenshots.
-    Object.assign(window, { __camera: camera, __editor: editor });
     return () => ro.disconnect();
   });
 </script>

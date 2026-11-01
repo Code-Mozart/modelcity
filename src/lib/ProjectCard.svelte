@@ -64,28 +64,12 @@
       </span>
     </button>
   {/if}
-  {#if mode === 'rename'}
+  {#if mode}
     <button
       class="icon"
-      aria-label="Confirm rename"
-      onclick={() => session.rename(p.id, draft)}
-      {...over('confirm')}
-    >
-      <Icon name="check" />
-    </button>
-    <button
-      class="icon"
-      aria-label="Cancel"
-      onclick={() => session.cancelRow()}
-      {...over('cancel')}
-    >
-      <Icon name="x" />
-    </button>
-  {:else if mode === 'delete'}
-    <button
-      class="icon danger"
-      aria-label="Confirm delete {p.file.title}"
-      onclick={() => session.confirmDelete()}
+      class:danger={mode === 'delete'}
+      aria-label={mode === 'rename' ? 'Confirm rename' : `Confirm delete ${p.file.title}`}
+      onclick={() => (mode === 'rename' ? session.rename(p.id, draft) : session.confirmDelete())}
       {...over('confirm')}
     >
       <Icon name="check" />

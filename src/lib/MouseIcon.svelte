@@ -1,5 +1,6 @@
 <script lang="ts">
   import MouseGlyph from './MouseGlyph.svelte';
+  import SymbolSvg from './SymbolSvg.svelte';
 
   /**
    * A simplified mouse (^41, ^50, ^56): left button, wheel (middle button) and right button. A
@@ -14,14 +15,8 @@
   }: { lmb?: boolean; mmb?: boolean; rmb?: boolean; label?: string } = $props();
 </script>
 
-<svg
-  viewBox="0 0 30 30"
-  style="width: var(--symbol-size); height: var(--symbol-size)"
-  role={label ? 'img' : undefined}
-  aria-label={label}
-  aria-hidden={label ? undefined : 'true'}
->
+<SymbolSvg {label}>
   <g transform="translate(4 1.5)">
     <MouseGlyph {lmb} {mmb} {rmb} />
   </g>
-</svg>
+</SymbolSvg>

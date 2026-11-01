@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SYMBOL_STROKE, chevronPath } from './arrows';
   import MouseGlyph from './MouseGlyph.svelte';
+  import SymbolSvg from './SymbolSvg.svelte';
 
   /**
    * The mouse wheel being turned (^50, ^59): the mouse with an arrowhead (no shaft) above and one
@@ -16,13 +17,7 @@
   ];
 </script>
 
-<svg
-  viewBox="0 0 30 30"
-  style="width: var(--symbol-size); height: var(--symbol-size)"
-  role={label ? 'img' : undefined}
-  aria-label={label}
-  aria-hidden={label ? undefined : 'true'}
->
+<SymbolSvg {label}>
   <g transform="translate({15 - 11 * SCALE} {15 - 13.5 * SCALE}) scale({SCALE})">
     <MouseGlyph stroke={SYMBOL_STROKE / SCALE} />
   </g>
@@ -36,4 +31,4 @@
       stroke-linejoin="round"
     />
   {/each}
-</svg>
+</SymbolSvg>
