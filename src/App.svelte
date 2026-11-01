@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Camera } from './lib/camera.svelte';
-  import Compass from './lib/Compass.svelte';
-  import { Editor } from './lib/editor.svelte';
-  import Hints from './lib/Hints.svelte';
-  import { modalHints, hintsFor } from './lib/hints';
+  import { Camera } from './lib/camera/camera.svelte';
+  import Compass from './lib/hud/Compass.svelte';
+  import { Editor } from './lib/editor/editor.svelte';
+  import Hints from './lib/hints/Hints.svelte';
+  import { hintsFor } from './lib/hints/hints';
+  import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
-  import ProjectsModal from './lib/ProjectsModal.svelte';
+  import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
   import { IndexedDbStorage } from './lib/project/storage';
   import { installTestHook } from './lib/testHook';

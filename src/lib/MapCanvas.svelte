@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import type { Camera } from './camera.svelte';
-  import type { Editor, PointerInfo } from './editor.svelte';
+  import type { Camera } from './camera/camera.svelte';
+  import type { Editor, PointerInfo } from './editor/editor.svelte';
   import { FEATURES } from './features';
-  import { chainSelection } from './model/chains';
-  import { render } from './render';
-  import { screenToWorld, worldToScreen, type Point } from './view';
+  import { chainSelection } from './editor/chains';
+  import { render } from './render/render';
+  import { screenToWorld, worldToScreen, type Point } from './camera/view';
 
   let { editor, camera }: { editor: Editor; camera: Camera } = $props();
 
@@ -119,8 +119,6 @@
   onMount(() => {
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
-    // Test hook for e2e/screenshots.
-    Object.assign(window, { __camera: camera, __editor: editor });
     return () => ro.disconnect();
   });
 </script>

@@ -47,7 +47,7 @@ interface RadiusInfo {
   auto: boolean;
 }
 
-export interface LineEdge {
+interface LineEdge {
   kind: 'line';
   pieces: Piece[];
 }
@@ -80,5 +80,3 @@ export interface TwoArcEdge extends RadiusInfo {
 }
 
 export type Edge = LineEdge | BendEdge | TwoArcEdge;
-
-export const edgeRadius = (e: Edge) => (e.kind === 'line' ? null : e.R);

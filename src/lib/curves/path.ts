@@ -4,7 +4,7 @@ import { angleOf, dist, sub, type Vec } from './vec';
 
 /**
  * A chain of nodes. Edge i joins nodes[i] and nodes[i+1] and has its own requested radius
- * (null = auto, ^8) and shape tag (null = automatic, ^7). Always replaced, never mutated.
+ * (null = auto, ^8); its shape follows from positions, headings and radius (^172). Always replaced, never mutated.
  */
 export interface Path {
   nodes: PathNode[];
@@ -17,8 +17,6 @@ export interface EdgeRef {
   q: PathNode;
   E: Edge;
 }
-
-export const emptyPath = (): Path => ({ nodes: [], radii: [] });
 
 const edgeCache = new WeakMap<Path, EdgeRef[]>();
 

@@ -30,7 +30,7 @@ An export file is exactly one such project object; the browser stores one record
 
 - **Lengths are integer millimeters**: node positions, radius, lane width and the camera position. The editor works in float meters (^4) and rounds to the millimeter when it commits a change, so a saved and loaded project is identical.
 - **Angles are radians.** A heading of 0 points east (+x); positive turns clockwise on the screen (y is down), so 1.5708 points south. A heading is the direction of travel.
-- **Camera:** `x`, `y` is the world point at the center of the viewport; `scale` is pixels per meter (float); `rotation` is the rotation of the world about that center, positive clockwise on the screen, and 0 has north (-y) at the top (as `View` in `src/lib/view.ts`, whose field is called `rot`).
+- **Camera:** `x`, `y` is the world point at the center of the viewport; `scale` is pixels per meter (float); `rotation` is the rotation of the world about that center, positive clockwise on the screen, and 0 has north (-y) at the top (as `View` in `src/lib/camera/view.ts`, whose field is called `rot`).
 - **Dates** are ISO 8601 UTC strings; `version` is an integer.
 - **Ids** are integers. A new id is the largest id of its kind in the project plus 1 (no counters are stored).
 

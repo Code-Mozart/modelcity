@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Camera } from '../camera.svelte';
-import { Editor } from '../editor.svelte';
+import { Camera } from '../camera/camera.svelte';
+import { Editor } from '../editor/editor.svelte';
 import { addNode } from '../model/graph';
 import { click } from '../testing/editorHelpers';
 import { fromFile } from './file';

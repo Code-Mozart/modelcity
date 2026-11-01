@@ -1,4 +1,5 @@
-import { edgesAt, edgesIn, edgesOut, type Graph } from './graph';
+import { autoHeading, autoHeadingBefore } from '../curves/path';
+import { addEdge, edgesAt, edgesIn, edgesOut, type Graph } from './graph';
 
 /**
  * What a click does in draw mode (^23, ^65, ^162). On the node being drawn from it finishes the
@@ -35,20 +36,33 @@ export function curveAction(d: DrawState): CurveAction {
   return 'merge';
 }
 
-/** The node at the other end of the road that ends at the leaf `id`, going through nodes with two edges. */
-export function farEnd(g: Graph, id: number): number {
-  let [cur, via] = [id, edgesAt(g, id)[0]];
-  while (via) {
-    cur = via.start === cur ? via.end : via.start;
-    const here = edgesAt(g, cur);
-    if (here.length !== 2 || cur === id) break;
-    via = here.find((e) => e.id !== via!.id);
-  }
-  return cur;
-}
-
 /** The other node of an edge. */
 const other = (e: { start: number; end: number }, id: number) => (e.start === id ? e.end : e.start);
+
+/**
+ * The nodes reached from `cur` by going on, away from the edge `via` it was reached by, through
+ * nodes with exactly two edges. Stops at any other node, or when a node comes up again (`seen`,
+ * which collects the nodes).
+ */
+function walk(g: Graph, cur: number, via: { id: number }, seen: Set<number>): number[] {
+  const out: number[] = [];
+  for (let here = edgesAt(g, cur); here.length === 2; here = edgesAt(g, cur)) {
+    const next = here.find((e) => e.id !== via.id)!;
+    [cur, via] = [other(next, cur), next];
+    if (seen.has(cur)) break;
+    seen.add(cur);
+    out.push(cur);
+  }
+  return out;
+}
+
+/** The node at the other end of the road that ends at the leaf `id`, going through nodes with two edges. */
+export function farEnd(g: Graph, id: number): number {
+  const first = edgesAt(g, id)[0];
+  if (!first) return id;
+  const start = other(first, id);
+  return walk(g, start, first, new Set([id, start])).at(-1) ?? start;
+}
 
 /**
  * Branches (^128): a chain of nodes without splits or merges. Its first and last node have a
@@ -59,16 +73,7 @@ export function branchOfEdge(g: Graph, edge: number): number[] {
   const first = g.edges.find((e) => e.id === edge);
   if (!first) return [];
   const nodes = new Set([first.start, first.end]);
-  for (const from of [first.start, first.end]) {
-    let [cur, via] = [from, first];
-    for (let here = edgesAt(g, cur); here.length === 2; here = edgesAt(g, cur)) {
-      const next = here.find((e) => e.id !== via.id)!;
-      cur = other(next, cur);
-      via = next;
-      if (nodes.has(cur)) break;
-      nodes.add(cur);
-    }
-  }
+  for (const from of [first.start, first.end]) walk(g, from, first, nodes);
   return [...nodes];
 }
 
@@ -82,3 +87,17 @@ export function branchOfNode(g: Graph, id: number): number[] {
   const e = here.length === 2 ? here[0] : (edgesOut(g, id)[0] ?? edgesIn(g, id)[0]);
   return e ? branchOfEdge(g, e.id) : [id];
 }
+
+/** Which way the next edge of the road being drawn runs (^65). */
+export type DrawEnd = 'start' | 'end';
+
+/** The heading a node placed at `pt` gets so that the edge to the node `tip` is one arc (^65). */
+export const autoHeadingFor = (end: DrawEnd) => (end === 'end' ? autoHeading : autoHeadingBefore);
+
+/** An edge between the node being drawn from and another node, in the direction of the road (^65). */
+export const linkTo = (g: Graph, active: number, end: DrawEnd, id: number): Graph =>
+  end === 'end' ? addEdge(g, active, id) : addEdge(g, id, active);
+
+/** The ends of the curve to be drawn: from the node being drawn from to `node`, or the other way. */
+export const ordered = <T>(tip: T, node: T, end: DrawEnd): [T, T] =>
+  end === 'end' ? [tip, node] : [node, tip];

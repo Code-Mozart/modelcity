@@ -3,7 +3,7 @@ import type { Path } from '../curves/path';
 import type { PathNode } from '../curves/types';
 import type { Vec } from '../curves/vec';
 import { edgeOfId, nodeOf, withNode, withRadius, type Graph } from './graph';
-import type { RoadHandle } from './chains';
+import type { RoadHandle } from '../editor/chains';
 
 const sameNode = (a: PathNode, b: PathNode) => a.x === b.x && a.y === b.y && a.th === b.th;
 

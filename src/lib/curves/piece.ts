@@ -1,5 +1,18 @@
 import type { Arc, Line, Piece } from './types';
-import { TAU, add, angleOf, cross, dist, dot, mod, mul, perp, sub, type Vec } from './vec';
+import {
+  TAU,
+  add,
+  angleOf,
+  cross,
+  dist,
+  dot,
+  mod,
+  mul,
+  onCircle,
+  perp,
+  sub,
+  type Vec,
+} from './vec';
 
 /**
  * The corner arc from P with start tangent T to end tangent U, where both tangent lengths are d.
@@ -11,13 +24,13 @@ export function cornerArc(P: Vec, T: Vec, U: Vec, d: number): Piece {
   if (Math.abs(phi) < 1e-5) return { type: 'line', P, Q };
   const r = d / Math.tan(Math.abs(phi) / 2);
   const c = add(P, mul(perp(T), Math.sign(phi) * r));
-  return { type: 'arc', P, Q, c, r, a0: Math.atan2(P.y - c.y, P.x - c.x), da: phi };
+  return { type: 'arc', P, Q, c, r, a0: angleOf(sub(P, c)), da: phi };
 }
 
 export const line = (P: Vec, Q: Vec): Line => ({ type: 'line', P, Q });
 
 export function arcAround({ c, r }: { c: Vec; r: number }, P: Vec, Q: Vec, da: number): Arc {
-  return { type: 'arc', P, Q, c, r, a0: Math.atan2(P.y - c.y, P.x - c.x), da };
+  return { type: 'arc', P, Q, c, r, a0: angleOf(sub(P, c)), da };
 }
 
 /** An arc that actually turns (others are drawn and handled as nothing). */
@@ -43,8 +56,7 @@ export function pointOn(piece: Piece, t: number): Sample {
   const an = piece.a0 + piece.da * t;
   const sg = Math.sign(piece.da);
   return {
-    x: piece.c.x + piece.r * Math.cos(an),
-    y: piece.c.y + piece.r * Math.sin(an),
+    ...onCircle(piece.c, piece.r, an),
     tx: -sg * Math.sin(an),
     ty: sg * Math.cos(an),
   };
@@ -67,15 +79,5 @@ export function nearestParam(piece: Piece, p: Vec): number {
 }
 
 /** Distance from a point to the nearest point of a piece (exact, not sampled). */
-export function distanceToPiece(piece: Piece, p: Vec): number {
-  if (piece.type === 'line') {
-    const d = sub(piece.Q, piece.P);
-    const l2 = dot(d, d);
-    const t = l2 > 0 ? Math.max(0, Math.min(1, dot(sub(p, piece.P), d) / l2)) : 0;
-    return dist(p, add(piece.P, mul(d, t)));
-  }
-  const sweep = Math.abs(piece.da);
-  const along = mod(Math.sign(piece.da) * (angleOf(sub(p, piece.c)) - piece.a0), TAU);
-  if (along <= sweep) return Math.abs(dist(p, piece.c) - piece.r);
-  return Math.min(dist(p, piece.P), dist(p, piece.Q));
-}
+export const distanceToPiece = (piece: Piece, p: Vec): number =>
+  dist(p, pointOn(piece, nearestParam(piece, p)));

@@ -1,7 +1,7 @@
 import { SvelteDate } from 'svelte/reactivity';
-import type { ModalTarget } from '../hints';
-import type { Camera } from '../camera.svelte';
-import type { Editor } from '../editor.svelte';
+import type { ModalTarget } from './modalHints';
+import type { Camera } from '../camera/camera.svelte';
+import type { Editor } from '../editor/editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
 import { fromFile, ProjectFileError, toFile, type CameraState, type Project } from './file';
 import { parseProject } from './migrate';
@@ -12,12 +12,15 @@ export const AUTOSAVE_MS = 400;
 /** The longest a change waits for its save while more changes keep coming (^183). */
 export const AUTOSAVE_MAX_WAIT_MS = 5000;
 const MAX_TITLE = 100;
+const UNTITLED = 'Untitled project';
 const LAST_KEY = 'modelcity.project';
 const NEW_CAMERA: CameraState = { x: 0, y: 0, scale: 4, rotation: 0 };
 
 const uid = () =>
   globalThis.crypto?.randomUUID?.() ??
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+const unreadable = (e: unknown) => new ProjectFileError('unreadable', '^208', String(e));
 
 const remember = (id: string) => {
   try {
@@ -44,7 +47,7 @@ export class ProjectSession {
   id = $state('');
   /** True when the projects of the browser were looked at and one was opened, if there is any. */
   ready = $state(false);
-  title = $state('Untitled project');
+  title = $state(UNTITLED);
   modalOpen = $state(false);
   /** The projects kept in the browser, newest first (shown by the modal). */
   projects = $state.raw<StoredProject[]>([]);
@@ -88,14 +91,29 @@ export class ProjectSession {
     return this.projects;
   }
 
-  private show({ id, file }: StoredProject) {
-    const p = fromFile(file);
+  /** Make the project the open one: its title, dates, map and view. */
+  private enter(id: string, p: Project) {
     this.id = id;
     [this.title, this.createdAt, this.lastUpdatedAt] = [p.title, p.createdAt, p.lastUpdatedAt];
     this.editor.load(p.graph);
     this.camera.restore(p.camera);
     this.saved = this.editor.graph;
     remember(id);
+  }
+
+  private show({ id, file }: StoredProject) {
+    this.enter(id, fromFile(file));
+  }
+
+  /** Forget a save that is waiting. */
+  private cancelSave() {
+    clearTimeout(this.timer);
+    this.waitingSince = null;
+  }
+
+  /** There is something to keep: a project is open, or the blank map has data (^189). */
+  private get worthKeeping() {
+    return this.id !== '' || this.hasData();
   }
 
   private project(): Project {
@@ -108,7 +126,7 @@ export class ProjectSession {
   }
 
   /** The first save of a map without a project makes it one (^189). */
-  private begin(title = 'Untitled project') {
+  private begin(title = UNTITLED) {
     const stamp = this.now();
     this.id = uid();
     [this.title, this.createdAt, this.lastUpdatedAt] = [title, stamp, stamp];
@@ -117,9 +135,8 @@ export class ProjectSession {
 
   /** Write the project to the browser now. Only a change of the map counts as an update, not a rename or the camera. */
   async save(touch = true) {
-    clearTimeout(this.timer);
-    this.waitingSince = null;
-    if (!this.id && !this.hasData()) return;
+    this.cancelSave();
+    if (!this.worthKeeping) return;
     if (!this.id) this.begin();
     else if (touch) this.lastUpdatedAt = this.now();
     this.saved = this.editor.graph;
@@ -128,12 +145,12 @@ export class ProjectSession {
 
   /** Save what is not saved yet (before another project opens, a modal lists them, the page closes). The date only changes if the map did. */
   async flush() {
-    if (this.id || this.hasData()) await this.save(this.editor.graph !== this.saved);
+    if (this.worthKeeping) await this.save(this.editor.graph !== this.saved);
   }
 
   /** The graph may have changed (called whenever it does): save it after a short while: debounced, but at the latest after a maximum wait, so a long edit is saved on the way (^166, ^183). Moving the camera alone does not. */
   changed() {
-    if (this.editor.graph === this.saved || (!this.id && !this.hasData())) return;
+    if (this.editor.graph === this.saved || !this.worthKeeping) return;
     const now = Date.now();
     this.waitingSince ??= now;
     clearTimeout(this.timer);
@@ -143,10 +160,9 @@ export class ProjectSession {
 
   /** A blank map and no project, until something is drawn (^171, ^189). */
   private showBlank() {
-    clearTimeout(this.timer);
-    this.waitingSince = null;
+    this.cancelSave();
     this.id = '';
-    this.title = 'Untitled project';
+    this.title = UNTITLED;
     this.editor.load(emptyGraph());
     this.camera.restore(NEW_CAMERA);
     this.saved = this.editor.graph;
@@ -154,7 +170,7 @@ export class ProjectSession {
 
   /** The new project button: save the open project, then there is no project (^171). With none, nothing changes. */
   async newProject() {
-    if (this.id || this.hasData()) {
+    if (this.worthKeeping) {
       await this.flush();
       this.showBlank();
       await this.refresh();
@@ -163,13 +179,10 @@ export class ProjectSession {
   }
 
   /** A project made of a file (^164). */
-  private async adopt({ title, graph, camera, createdAt, lastUpdatedAt }: Project) {
+  private async adopt(project: Project) {
     await this.flush();
-    this.begin(title);
     // Opening a file is not a change of the map: the project keeps the dates of the file (^214).
-    [this.createdAt, this.lastUpdatedAt] = [createdAt, lastUpdatedAt];
-    this.editor.load(graph);
-    this.camera.restore(camera);
+    this.enter(uid(), project);
     await this.save(false);
     await this.refresh();
   }
@@ -203,7 +216,7 @@ export class ProjectSession {
     try {
       text = await file.text();
     } catch (e) {
-      this.refuse(new ProjectFileError('unreadable', '^208', String(e)));
+      this.refuse(unreadable(e));
       return;
     }
     await this.importText(text);
@@ -223,9 +236,7 @@ export class ProjectSession {
       this.error = null;
       this.closeModal();
     } catch (e) {
-      this.refuse(
-        e instanceof ProjectFileError ? e : new ProjectFileError('unreadable', '^208', String(e)),
-      );
+      this.refuse(e instanceof ProjectFileError ? e : unreadable(e));
     }
   }
 

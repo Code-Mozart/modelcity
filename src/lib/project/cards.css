@@ -1,0 +1,90 @@
+/* The look of the cards of the projects modal (the project cards and the cards below the list): one place for both. */
+.dialog .name {
+  box-sizing: border-box;
+  padding: 0.5em 0.7em;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 0.4em;
+  font: inherit;
+  flex: 1;
+  min-width: 0;
+  margin: 0.3em 0 0.3em 0.3em;
+  border-color: var(--blue);
+}
+/* A card spans the whole width; what it has to the right (the icons) is inside it. */
+.dialog li.card {
+  display: flex;
+  align-items: center;
+  gap: 0.2em;
+  padding-right: 0.3em;
+  background: var(--btn);
+  border: 1px solid var(--line);
+  border-radius: 0.4em;
+}
+.dialog li.card:hover {
+  border-color: var(--muted);
+}
+.dialog li.current {
+  outline: 2px solid var(--blue);
+}
+/* The card that is asked about deletion. */
+.dialog li.asking {
+  outline: 2px solid var(--red);
+}
+.dialog button {
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+/* The icon buttons keep their place and size in every state, and have no background. */
+.dialog button.icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.4em;
+  height: 2.4em;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0.4em;
+}
+.dialog button.icon:hover {
+  color: var(--blue);
+}
+.dialog button.danger,
+.dialog button.danger:hover {
+  color: var(--red-ink);
+}
+.dialog .open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+  padding: 0.7em 0.9em;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+.dialog .line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+}
+/* The mark of the open project: a word, not only a color (^177). */
+.dialog .label {
+  color: var(--muted);
+  font-size: 0.85em;
+  font-style: italic;
+}
+.dialog .title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dialog .date {
+  flex: none;
+  white-space: nowrap;
+  color: var(--muted);
+}

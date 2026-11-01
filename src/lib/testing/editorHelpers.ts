@@ -1,6 +1,6 @@
-import { Editor, type PointerInfo } from '../editor.svelte';
+import { Editor, type PointerInfo } from '../editor/editor.svelte';
 import { pointOn } from '../curves/piece';
-import { positionOf } from '../model/chains';
+import { positionOf } from '../editor/chains';
 
 /** Helpers for tests of the editor: pointer positions, clicks, roads drawn by clicking. */
 export const at = (x: number, y: number, extra: Partial<PointerInfo> = {}): PointerInfo => ({
@@ -31,6 +31,20 @@ export const drawMode = () => {
 export const draw = (points: [number, number][]) => {
   const ed = drawMode();
   for (const [x, y] of points) click(ed, x, y);
+  return ed;
+};
+
+/** A finished road, then draw mode again: the start of most tests of splitting, merging and extending. */
+export const roadThenDrawMode = (
+  points: [number, number][] = [
+    [0, 0],
+    [40, -20],
+    [80, 0],
+  ],
+) => {
+  const ed = draw(points);
+  ed.key('Escape');
+  click(ed, 500, 500);
   return ed;
 };
 

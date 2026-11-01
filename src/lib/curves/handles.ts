@@ -103,6 +103,3 @@ export function hitHandle<H extends Handle>(
   const others = PRIORITY.flatMap((t) => handles.filter((h) => h.type === t));
   return nearest(others, pt, HIT_PX[kind] / scale);
 }
-
-/** Every handle of the path (heading handles at scale 1: their world position is not used). */
-export const contentHandles = (path: Path, edges: EdgeRef[]): Handle[] => handlesOf(path, edges, 1);

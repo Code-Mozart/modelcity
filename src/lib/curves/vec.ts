@@ -1,4 +1,4 @@
-import type { Point } from '../view';
+import type { Point } from '../camera/view';
 
 /** Small 2D vector helpers. World units are meters, y points down (^4). */
 export type Vec = Point;
@@ -15,6 +15,8 @@ export const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.y - b.y);
 export const mid = (a: Vec, b: Vec): Vec => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 export const fromAngle = (th: number): Vec => ({ x: Math.cos(th), y: Math.sin(th) });
+/** The point of the circle around `c` with radius `r` at angle `a`. */
+export const onCircle = (c: Vec, r: number, a: number): Vec => add(c, mul(fromAngle(a), r));
 export const angleOf = (a: Vec) => Math.atan2(a.y, a.x);
 /** Rotated +90 degrees (toward the left of the heading on screen with y down: clockwise). */
 export const perp = (a: Vec): Vec => ({ x: -a.y, y: a.x });
@@ -23,8 +25,5 @@ export const unitOr = (a: Vec, fallback: Vec): Vec => {
   return l > 1e-9 ? mul(a, 1 / l) : fallback;
 };
 
-export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 export const mod = (x: number, m: number) => ((x % m) + m) % m;
 export const toRad = (deg: number) => (deg * Math.PI) / 180;
-/** Radians to degrees in (-180, 180]. */
-export const toDeg = (rad: number) => (((((rad * 180) / Math.PI + 180) % 360) + 360) % 360) - 180;
