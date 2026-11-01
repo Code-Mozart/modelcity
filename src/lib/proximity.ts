@@ -1,6 +1,6 @@
 import type { Edge } from './curves/edge';
 import { distanceToPiece } from './curves/piece';
-import type { Vec } from './curves/vec';
+import { dist, type Vec } from './curves/vec';
 
 /** The pointer in world meters, with the zoom so that pixel distances can be applied. */
 export interface Pointer {
@@ -16,8 +16,7 @@ export const CURVE_NEAR_PX = 20;
 
 export function nearHandle(handle: Vec, pointer: Pointer | null): boolean {
   if (!pointer) return false;
-  const d = Math.hypot(handle.x - pointer.pt.x, handle.y - pointer.pt.y);
-  return d * pointer.scale <= HANDLE_NEAR_PX;
+  return dist(handle, pointer.pt) * pointer.scale <= HANDLE_NEAR_PX;
 }
 
 export function nearEdge(edge: Edge, pointer: Pointer | null): boolean {

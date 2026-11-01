@@ -1,3 +1,4 @@
+import { dist } from './curves/vec';
 import type { EdgeRef } from './curves/path';
 import { distanceToPiece, isDegenerate } from './curves/piece';
 import type { RoadHandle } from './model/chains';
@@ -43,7 +44,7 @@ function scoresOf(input: ScaffoldInput, ref: SegmentRef, pointer: Pointer): Scor
   const points = Math.min(
     ...input.handles
       .filter((h) => h.road === ref.road && belongs(h, ref.edge))
-      .map((h) => Math.hypot(h.x - pt.x, h.y - pt.y)),
+      .map((h) => dist(h, pt)),
   );
   return { ref, curve: curve * scale, points: points * scale };
 }
