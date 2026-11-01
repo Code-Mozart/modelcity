@@ -3,6 +3,8 @@ import { buildEdge } from '../curves/edge';
 import { handlesOf, type Handle } from '../curves/handles';
 import type { CurveHit, EdgeRef, Path } from '../curves/path';
 import { nearestOnEdges } from '../curves/path';
+import type { Sample } from '../curves/piece';
+import type { PathNode } from '../curves/types';
 import { RMIN } from '../curves/radius';
 import { dist } from '../curves/vec';
 import { DEFAULT_LANE, nodeOf, widthOf, type GEdge, type GNode, type Graph } from './graph';
@@ -101,6 +103,13 @@ export function chainsOf(g: Graph): Chain[] {
   if (!chains) cache.set(g, (chains = buildChains(g)));
   return chains;
 }
+
+/** The node a point of a curve would become: its position and the heading of the curve there. */
+export const nodeAtSample = (at: Sample): PathNode => ({
+  x: at.x,
+  y: at.y,
+  th: Math.atan2(at.ty, at.tx),
+});
 
 /** A curve hit together with the chain and the edge it is on. */
 export interface RoadHit extends CurveHit {

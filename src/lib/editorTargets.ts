@@ -1,8 +1,14 @@
-import { autoHeading, autoHeadingBefore } from './curves/path';
 import type { PathNode } from './curves/types';
-import type { RoadHandle, RoadHit } from './model/chains';
+import { nodeAtSample, type RoadHandle, type RoadHit } from './model/chains';
 import { edgeOfId, edgesIn, edgesOut, nodeOf } from './model/graph';
-import { branchOfEdge, branchOfNode, curveAction, farEnd, nodeAction } from './model/junction';
+import {
+  autoHeadingFor,
+  branchOfEdge,
+  branchOfNode,
+  curveAction,
+  farEnd,
+  nodeAction,
+} from './model/junction';
 import { allSelected, isSelected, pickedCount } from './selection';
 import type { Hover, Placement, Snapshot } from './editorTypes';
 import type { HintTarget } from './hints';
@@ -65,8 +71,7 @@ function mergeTarget(d: Drawn, hover: Hover): PathNode | null {
       : null;
   }
   if (hover.kind !== 'candidate' || curveAction(d) !== 'merge') return null;
-  const { at } = hover.hit;
-  return { x: at.x, y: at.y, th: Math.atan2(at.ty, at.tx) };
+  return nodeAtSample(hover.hit.at);
 }
 
 /**
@@ -85,7 +90,6 @@ export function mergePreview(
 /** The preview of the node a click would add: where, its heading, and the node it attaches to. */
 export function previewOf({ graph, active, end }: Drawn, at: Placement): Hover {
   const ref = (active === null ? undefined : nodeOf(graph, active)) ?? null;
-  const heading = end === 'end' ? autoHeading : autoHeadingBefore;
-  const th = at.th ?? (ref ? heading(ref, at.pt) : 0);
+  const th = at.th ?? (ref ? autoHeadingFor(end)(ref, at.pt) : 0);
   return { kind: 'preview', ref, end, node: { x: at.pt.x, y: at.pt.y, th } };
 }

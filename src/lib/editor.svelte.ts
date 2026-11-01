@@ -10,7 +10,7 @@ import {
   splitAt,
 } from './editorOps';
 import { skeletonAnchors } from './skeletonAnchors';
-import { cursorOf, extendTo, mergePreview, targetOf, type Drawn } from './editorTargets';
+import { cursorOf, extendTo, mergePreview, targetOf } from './editorTargets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { NO_HISTORY, record, redoStep, undoStep } from './history';
 import type { Pointer } from './proximity';
@@ -78,6 +78,7 @@ export class Editor {
 
   canUndo = $derived(this.history.past.length > 0);
   canRedo = $derived(this.history.future.length > 0);
+  /** The node last picked. */
   sel = $derived(this.selection.at(-1) ?? null);
   drawing = $derived(this.mode === 'draw');
   /** The chains of the graph, the shape the curve code and the drawing work on (^106). */
@@ -89,16 +90,13 @@ export class Editor {
   /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
   focus = $derived(focusOf(this.chains, this.press, this.hover));
   /** What the control hints are about (^49). */
-  hintTarget = $derived(this.press?.target ?? targetOf(this.drawn, this.hover, this.drawing));
-
-  private get drawn(): Drawn {
-    return this.snapshot();
-  }
+  hintTarget = $derived(this.press?.target ?? targetOf(this.snapshot(), this.hover, this.drawing));
 
   handles(scale: number): RoadHandle[] {
     return chainHandles(this.chains, scale);
   }
 
+  /** The state the pure editing functions work on and undo returns to. */
   private snapshot(): Snapshot {
     const { graph, active, end, origin, selection } = this;
     return { graph, active, end, origin, selection };
@@ -143,8 +141,7 @@ export class Editor {
   /** Replace everything by another map (a project was opened): no selection, no drawing, no history. */
   load(graph: Graph) {
     this.graph = graph;
-    this.mode = 'select';
-    [this.active, this.origin, this.end, this.selection] = [null, null, 'end', []];
+    this.leaveDrawing();
     [this.press, this.band, this.hover, this.pointer] = [null, null, null, null];
     this.history = NO_HISTORY;
   }
@@ -174,6 +171,12 @@ export class Editor {
     this.commit(before);
   }
 
+  /** Select mode, no road being drawn, nothing selected. */
+  private leaveDrawing() {
+    this.mode = 'select';
+    [this.active, this.origin, this.end, this.selection] = [null, null, 'end', []];
+  }
+
   /** Enter draw mode: the next click places the first node of a new road. */
   enterDrawMode() {
     this.mode = 'draw';
@@ -185,8 +188,7 @@ export class Editor {
     if (this.mode === 'select') return;
     const before = this.snapshot();
     this.graph = removeNodes(this.graph, [], null);
-    this.mode = 'select';
-    [this.active, this.origin, this.end, this.selection] = [null, null, 'end', []];
+    this.leaveDrawing();
     this.commit(before);
   }
 
@@ -198,7 +200,7 @@ export class Editor {
     if (handle) return this.grab(handle, info);
     const hit = curveAt(this.chains, info);
     if (!this.drawing) {
-      this.press = emptyPress(this.drawn, info, hit);
+      this.press = emptyPress(this.snapshot(), info, hit);
       return;
     }
     if (hit) this.onCurve(hit);
@@ -206,7 +208,7 @@ export class Editor {
   }
 
   private grab(handle: RoadHandle, info: PointerInfo) {
-    const r = dragPress(this.drawn, this.drawing, handle, info);
+    const r = dragPress(this.snapshot(), this.drawing, handle, info);
     this.selection = r.selection;
     this.press = r.press;
   }
@@ -214,8 +216,8 @@ export class Editor {
   /** A press on a curve in draw mode: a node is inserted, and the road splits off it or merges into it (^23). */
   private onCurve(hit: RoadHit) {
     const undo = this.snapshot();
-    const act = targetOf(this.drawn, { kind: 'candidate', hit }, true);
-    const r = insertAt(this.drawn, hit);
+    const act = targetOf(this.snapshot(), { kind: 'candidate', hit }, true);
+    const r = insertAt(this.snapshot(), hit);
     const kind = act.kind === 'curve' ? act.act : null;
     const then = kind === 'split' || kind === 'merge' ? kind : null;
     this.restore(r.drawn);
@@ -225,14 +227,14 @@ export class Editor {
   /** A click on a curve ends in a split or merge at the inserted node; a drag only inserts it (^133). */
   private clickedCurve(press: Extract<Press, { kind: 'place' }>) {
     if (press.moved || !press.then) return;
-    if (press.then === 'split') this.restore(splitAt(this.drawn, press.id));
+    if (press.then === 'split') this.restore(splitAt(this.snapshot(), press.id));
     else this.merge(press.id);
   }
 
   /** A node at the end of the road being drawn, or the first node of a new road (^40). */
   private place(info: PointerInfo) {
     const undo = this.snapshot();
-    const r = placeNode(this.drawn, placementAt(info.pt));
+    const r = placeNode(this.snapshot(), placementAt(info.pt));
     this.restore(r.drawn);
     const target = { kind: 'empty' } as const;
     this.press = { kind: 'place', id: r.id, undo, then: null, moved: false, target };
@@ -243,7 +245,7 @@ export class Editor {
     const press = this.press;
     if (!press) {
       const hits = { handles: this.handles(info.scale), chains: this.chains };
-      this.hover = hoverAt(this.drawn, hits, info, this.drawing);
+      this.hover = hoverAt(this.snapshot(), hits, info, this.drawing);
     } else if (press.kind === 'drag') this.moveDrag(press, info);
     else if (press.kind === 'place') this.moveHeading(press, info);
     else this.moveBand(press, info);
@@ -252,7 +254,7 @@ export class Editor {
   private moveDrag(press: Extract<Press, { kind: 'drag' }>, info: PointerInfo) {
     if (!press.moved && dist(info.pt, press.start) <= DRAG_PX / info.scale) return;
     press.moved = true;
-    this.graph = dragStep(this.drawn, press, info);
+    this.graph = dragStep(this.snapshot(), press, info);
   }
 
   /** The segments whose two nodes are selected, as (chain, index) pairs (^133). */
@@ -262,7 +264,7 @@ export class Editor {
 
   /** The curve a merge into the node or curve under the pointer would add (^123, ^125). */
   get mergePreview() {
-    return mergePreview(this.drawn, this.hover);
+    return mergePreview(this.snapshot(), this.hover);
   }
 
   /** Moving several nodes hides all scaffolds meanwhile (^78). */
@@ -299,7 +301,7 @@ export class Editor {
 
   private extendFrom(id: number) {
     const before = this.snapshot();
-    this.restore(extendTo(this.drawn, id));
+    this.restore(extendTo(this.snapshot(), id));
     this.commit(before);
   }
 
@@ -310,20 +312,25 @@ export class Editor {
     else if (press.click === 'collapse' && press.group.length) this.selection = [id];
     if (press.act === 'finish') this.finishRoad();
     else if (press.act === 'extend') this.extendFrom(id);
-    else if (press.act === 'split') this.restore(splitAt(this.drawn, id));
+    else if (press.act === 'split') this.restore(splitAt(this.snapshot(), id));
     else if (press.act === 'merge' || press.act === 'close') this.merge(id);
   }
 
   private merge(id: number) {
-    this.restore(mergeInto(this.drawn, id));
+    this.restore(mergeInto(this.snapshot(), id));
     this.finishRoad();
+  }
+
+  /** The press is over: take it, and the selection box that belonged to it. */
+  private endPress(): Press | null {
+    const press = this.press;
+    [this.press, this.band] = [null, null];
+    return press;
   }
 
   /** Left button released. */
   pointerUp() {
-    const press = this.press;
-    this.press = null;
-    this.band = null;
+    const press = this.endPress();
     if (!press) return;
     this.batching = true;
     if (press.kind === 'drag' && !press.moved) this.clickedHandle(press);
@@ -335,9 +342,7 @@ export class Editor {
 
   /** Abort what the left button was doing (a second finger came down). */
   cancelPress() {
-    const press = this.press;
-    this.press = null;
-    this.band = null;
+    const press = this.endPress();
     if (!press || press.kind === 'empty') return;
     this.restore(press.undo);
   }

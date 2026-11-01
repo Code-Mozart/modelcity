@@ -4,6 +4,7 @@ import { buildEdge } from './curves/edge';
 import { ARROW_PX } from './curves/handles';
 import type { EdgeRef, Path } from './curves/path';
 import type { RoadHandle } from './model/chains';
+import { ordered } from './model/junction';
 import { fromAngle } from './curves/vec';
 import type { Hover } from './editor.svelte';
 import type { Focus } from './focus';
@@ -99,7 +100,7 @@ function drawPreview(
   curveOnly = false,
 ) {
   if (hover.ref) {
-    const [from, to] = hover.end === 'end' ? [hover.ref, hover.node] : [hover.node, hover.ref];
+    const [from, to] = ordered(hover.ref, hover.node, hover.end);
     for (const piece of buildEdge(from, to, null).pieces) {
       strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
     }

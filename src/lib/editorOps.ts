@@ -1,20 +1,12 @@
 import { dragHeading } from './curves/drag';
-import { autoHeading, autoHeadingBefore } from './curves/path';
 import { dist, type Vec } from './curves/vec';
 import { withSharedRadius } from './editorPress';
 import type { Drawn } from './editorTargets';
 import type { Placement, PointerInfo, Press } from './editorTypes';
-import type { RoadHit } from './model/chains';
+import { nodeAtSample, type RoadHit } from './model/chains';
+import { autoHeadingFor, linkTo } from './model/junction';
 import { dragGraph } from './model/dragGraph';
-import {
-  addEdge,
-  addNode,
-  insertNode,
-  moveNodes,
-  nodeOf,
-  withNode,
-  type Graph,
-} from './model/graph';
+import { addNode, insertNode, moveNodes, nodeOf, withNode, type Graph } from './model/graph';
 
 /** The node a click at `pt` would place: where the pointer is, with the automatic heading. */
 export const placementAt = (pt: Vec): Placement => ({ pt, th: null });
@@ -29,16 +21,16 @@ export function placeNode(d: Drawn, at: Placement): { drawn: Drawn; id: number }
       id: r.id,
     };
   }
-  const heading = d.end === 'end' ? autoHeading : autoHeadingBefore;
+  const heading = autoHeadingFor(d.end);
   const r = addNode(d.graph, { x: at.pt.x, y: at.pt.y, th: at.th ?? heading(tip, at.pt) });
-  const graph = d.end === 'end' ? addEdge(r.graph, tip.id, r.id) : addEdge(r.graph, r.id, tip.id);
+  const graph = linkTo(r.graph, tip.id, d.end, r.id);
   return { drawn: { ...d, graph, active: r.id, selection: [r.id] }, id: r.id };
 }
 
 /** Insert a node on a curve; the curve does not change (^10). */
 export function insertAt(d: Drawn, hit: RoadHit): { drawn: Drawn; id: number } {
   const { at } = hit;
-  const r = insertNode(d.graph, hit.edge, { x: at.x, y: at.y, th: Math.atan2(at.ty, at.tx) });
+  const r = insertNode(d.graph, hit.edge, nodeAtSample(at));
   return { drawn: { ...d, graph: r.graph, selection: [r.id] }, id: r.id };
 }
 
@@ -54,8 +46,7 @@ export const splitAt = (d: Drawn, id: number): Drawn => ({
 /** End the road being drawn at an existing node: a merge, or a loop at its first node (^23, ^162). */
 export function mergeInto(d: Drawn, id: number): Drawn {
   if (d.active === null) return d;
-  const graph = d.end === 'end' ? addEdge(d.graph, d.active, id) : addEdge(d.graph, id, d.active);
-  return { ...d, graph, selection: [id] };
+  return { ...d, graph: linkTo(d.graph, d.active, d.end, id), selection: [id] };
 }
 
 /**
