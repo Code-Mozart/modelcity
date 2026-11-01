@@ -10,6 +10,8 @@ import type { ProjectStorage, StoredProject } from './storage';
 
 /** How long after a change the project is saved to the browser (^166). */
 export const AUTOSAVE_MS = 400;
+/** The longest a change waits for its save while more changes keep coming (^183). */
+export const AUTOSAVE_MAX_WAIT_MS = 5000;
 const MAX_TITLE = 100;
 const LAST_KEY = 'modelcity.project';
 const NEW_CAMERA: CameraState = { x: 0, y: 0, scale: 4, rotation: 0 };
@@ -57,6 +59,8 @@ export class ProjectSession {
   private lastUpdatedAt = '';
   private saved: Graph | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  /** When the oldest change that is not saved yet happened. */
+  private waitingSince: number | null = null;
 
   constructor(
     private editor: Editor,
@@ -97,17 +101,21 @@ export class ProjectSession {
   /** Write the project to the browser now. Only a change of the map counts as an update, not a rename. */
   async save(touch = true) {
     clearTimeout(this.timer);
+    this.waitingSince = null;
     if (!this.id) return;
     if (touch) this.lastUpdatedAt = this.now();
     this.saved = this.editor.graph;
     await this.storage.put({ id: this.id, file: toFile(this.project()) });
   }
 
-  /** The graph may have changed (called whenever it does): save it after a short while, debounced (^166). Moving the camera alone does not. */
+  /** The graph may have changed (called whenever it does): save it after a short while: debounced, but at the latest after a maximum wait, so a long edit is saved on the way (^166, ^183). Moving the camera alone does not. */
   changed() {
     if (!this.id || this.editor.graph === this.saved) return;
+    const now = Date.now();
+    this.waitingSince ??= now;
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => void this.save(), AUTOSAVE_MS);
+    const wait = Math.min(AUTOSAVE_MS, Math.max(0, this.waitingSince + AUTOSAVE_MAX_WAIT_MS - now));
+    this.timer = setTimeout(() => void this.save(), wait);
   }
 
   /** A new, blank project (^171). The open one is saved first. */

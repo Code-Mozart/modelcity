@@ -3,7 +3,8 @@ import { Camera } from '../camera.svelte';
 import { Editor } from '../editor.svelte';
 import { click, draw } from '../testing/editorHelpers';
 import { fromFile } from './file';
-import { AUTOSAVE_MS, ProjectSession } from './session.svelte';
+import { addNode } from '../model/graph';
+import { AUTOSAVE_MAX_WAIT_MS, AUTOSAVE_MS, ProjectSession } from './session.svelte';
 import { MemoryStorage } from './storage';
 
 let tick = 0;
@@ -207,5 +208,29 @@ describe('deleting and searching projects (^168, ^178)', () => {
     session.query = '';
     await session.open(session.id);
     expect(session.dialogOpen).toBe(false);
+  });
+});
+
+describe('autosave with a maximum wait (^166, ^183)', () => {
+  it('saves a long run of changes on the way, at the latest after the maximum wait', async () => {
+    const { session, editor, storage } = setup();
+    await session.start();
+    const change = () => {
+      editor.graph = addNode(editor.graph, { x: editor.graph.nodes.length, y: 0, th: 0 }).graph;
+      session.changed();
+    };
+    const nodes = async () => (await storage.list())[0]!.file.nodes.length;
+    for (let ms = 0; ms < AUTOSAVE_MAX_WAIT_MS - 300; ms += 300) {
+      change();
+      await vi.advanceTimersByTimeAsync(300);
+    }
+    expect(await nodes()).toBe(0);
+    change();
+    await vi.advanceTimersByTimeAsync(300);
+    expect(await nodes()).toBeGreaterThan(10);
+    const saved = await nodes();
+    change();
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + 1);
+    expect(await nodes()).toBe(saved + 1);
   });
 });

@@ -94,7 +94,12 @@
                 onkeydown={(e) => renameKey(e, p.id)}
               />
             {:else}
-              <button class="open" onclick={() => session.open(p.id)} {...over('card')}>
+              <button
+                class="open"
+                title={p.file.title}
+                onclick={() => session.open(p.id)}
+                {...over('card')}
+              >
                 <span class="title">{p.file.title}</span>
                 <span class="date">{when(p.file.lastUpdatedAt)}</span>
               </button>
