@@ -159,33 +159,40 @@ const PROJECT_HINTS: Hint[] = [
   hint({ kind: 'keys', labels: ['Ctrl', 'O'] }, 'projects'),
 ];
 
-/** What the projects dialog is doing, for its hints. */
+/** What the projects dialog is doing, for its hints: nothing special, renaming, or asking about a delete. */
 export type DialogMode = 'list' | 'rename' | 'delete';
+
+/** What the pointer is over in the projects dialog (nothing: null). */
+export type DialogTarget =
+  'card' | 'rename' | 'delete' | 'confirm' | 'cancel' | 'close' | 'new' | 'import';
+
+const CLICK: Record<DialogTarget, (mode: DialogMode) => string> = {
+  card: () => 'open project',
+  rename: () => 'rename',
+  delete: () => 'delete',
+  confirm: (mode) => (mode === 'rename' ? 'rename' : 'delete for good'),
+  cancel: () => 'cancel',
+  close: () => 'close',
+  new: () => 'new project',
+  import: () => 'import a file',
+};
+
+const ESC_TEXT: Record<DialogMode, string> = {
+  list: 'close',
+  rename: 'cancel renaming',
+  delete: 'cancel deleting',
+};
 
 /**
  * The controls while the projects dialog is up (^168): they replace all others, which do not work
- * meanwhile.
+ * meanwhile. Like all hints they say what an input does right now (^181): the click is only there
+ * over something that can be clicked.
  */
-export function dialogHints(mode: DialogMode): Hint[] {
-  if (mode === 'rename') {
-    return [
-      hint(ENTER, 'rename'),
-      hint(mouse('lmb'), 'rename (on the check mark)'),
-      hint([ESC, mouse('lmb')], 'cancel (on the cross)'),
-    ];
-  }
-  if (mode === 'delete') {
-    return [
-      hint(mouse('lmb'), 'delete for good (on the check mark)'),
-      hint([ESC, mouse('lmb')], 'cancel (on the cross)'),
-    ];
-  }
-  return [
-    hint(mouse('lmb'), 'open the project'),
-    hint(mouse('lmb'), 'rename (on the pen)'),
-    hint(mouse('lmb'), 'delete (on the bin)'),
-    hint(ESC, 'close'),
-  ];
+export function dialogHints(mode: DialogMode, over: DialogTarget | null = null): Hint[] {
+  const rows = [hint(ESC, ESC_TEXT[mode])];
+  if (mode === 'rename') rows.unshift(hint(ENTER, 'rename'));
+  if (over) rows.unshift(hint(mouse('lmb'), CLICK[over](mode)));
+  return rows;
 }
 
 export function hintsFor(

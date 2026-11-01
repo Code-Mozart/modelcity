@@ -134,7 +134,12 @@ test('the dialog shows its own controls only, searches, and closes with the cros
   await page.keyboard.press('Control+o');
   const dialog = page.getByRole('dialog', { name: 'Projects' });
   const hints = new App(page).hints();
-  await expect(hints).toContainText('open the project');
+  await expect(hints).toContainText('close');
+  await expect(hints).not.toContainText('open project');
+  await dialog.getByRole('button', { name: /^Rename/ }).hover();
+  await expect(hints).toContainText('rename');
+  await dialog.locator('.open').hover();
+  await expect(hints).toContainText('open project');
   await expect(hints).not.toContainText('pan');
   await expect(hints).not.toContainText('select');
   await dialog.getByRole('button', { name: 'New project' }).click();

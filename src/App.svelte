@@ -18,7 +18,7 @@
   // While the projects dialog is up its controls replace all others (^168).
   const hints = $derived(
     session.dialogOpen
-      ? dialogHints(session.row?.mode ?? 'list')
+      ? dialogHints(session.row?.mode ?? 'list', session.over)
       : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
           undo: editor.canUndo,
           redo: editor.canRedo,

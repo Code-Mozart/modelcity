@@ -1,5 +1,6 @@
 import { SvelteDate } from 'svelte/reactivity';
 import { fuzzyFilter } from '../fuzzy';
+import type { DialogTarget } from '../hints';
 import type { Camera } from '../camera.svelte';
 import type { Editor } from '../editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
@@ -48,6 +49,8 @@ export class ProjectSession {
   query = $state('');
   /** The card being renamed or asked to be deleted (a second click confirms), if any. */
   row = $state<{ id: string; mode: 'rename' | 'delete' } | null>(null);
+  /** What the pointer is over in the dialog, for the hints (^181). */
+  over = $state<DialogTarget | null>(null);
   private dirty = false;
   private createdAt = '';
   private lastUpdatedAt = '';
@@ -233,5 +236,6 @@ export class ProjectSession {
   closeDialog() {
     this.dialogOpen = false;
     this.row = null;
+    this.over = null;
   }
 }

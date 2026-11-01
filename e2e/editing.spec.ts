@@ -48,6 +48,7 @@ async function moveGroup(app: App) {
 test('delete, extend and move a group', async ({ page }) => {
   await page.goto('/');
   const app = new App(page);
+  await app.ready();
   await test.step('draw a road', () => drawRoad(app));
   await test.step('delete the middle node', () => deleteNode(app));
   await test.step('extend the road', () => extendTo(app, { x: 60, y: 40 }));
@@ -60,6 +61,7 @@ test('delete, extend and move a group', async ({ page }) => {
 test('close a loop', async ({ page }) => {
   await page.goto('/');
   const app = new App(page);
+  await app.ready();
   await app.click({ x: 0, y: 30 }); // empty canvas: enters draw mode
   for (const [x, y] of [
     [0, 0],

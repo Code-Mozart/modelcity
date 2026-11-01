@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hintsFor, type Hint, type HintTarget } from './hints';
+import { dialogHints, hintsFor, type Hint, type HintTarget } from './hints';
 
 /** A readable form of a hint: "LMB drag: pan". */
 const show = (h: Hint) =>
@@ -197,5 +197,31 @@ describe('project controls (^168)', () => {
     for (const drawing of [false, true]) {
       expect(hintsFor(drawing, empty).map(show).slice(-2)).toEqual(PROJECT_ROWS);
     }
+  });
+});
+
+describe('the projects dialog hints say what an input does right now (^181)', () => {
+  const rows = (...args: Parameters<typeof dialogHints>) => dialogHints(...args).map(show);
+
+  it('only Esc over nothing, and the click only over something that can be clicked', () => {
+    expect(rows('list')).toEqual(['Esc: close']);
+    expect(rows('list', 'card')).toEqual(['LMB: open project', 'Esc: close']);
+    expect(rows('list', 'rename')).toEqual(['LMB: rename', 'Esc: close']);
+    expect(rows('list', 'delete')).toEqual(['LMB: delete', 'Esc: close']);
+  });
+
+  it('while renaming: Enter renames, Esc cancels, the check mark renames, the cross cancels', () => {
+    expect(rows('rename')).toEqual(['Enter: rename', 'Esc: cancel renaming']);
+    expect(rows('rename', 'confirm')).toEqual([
+      'LMB: rename',
+      'Enter: rename',
+      'Esc: cancel renaming',
+    ]);
+    expect(rows('rename', 'cancel')[0]).toBe('LMB: cancel');
+  });
+
+  it('while asked about a delete: the check mark deletes, the cross and Esc cancel', () => {
+    expect(rows('delete', 'confirm')).toEqual(['LMB: delete for good', 'Esc: cancel deleting']);
+    expect(rows('delete', 'cancel')).toEqual(['LMB: cancel', 'Esc: cancel deleting']);
   });
 });

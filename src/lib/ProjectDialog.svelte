@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import type { DialogTarget } from './hints';
   import Icon from './Icon.svelte';
   import type { ProjectSession } from './project/session.svelte';
 
@@ -39,6 +40,12 @@
     input.select();
   }
 
+  /** What the pointer is over, for the control hints (^181). */
+  const over = (target: DialogTarget) => ({
+    onpointerenter: () => (session.over = target),
+    onpointerleave: () => (session.over = null),
+  });
+
   const when = (iso: string) => new Date(iso).toLocaleString();
 </script>
 
@@ -54,7 +61,12 @@
     >
       <header>
         <h2>Projects</h2>
-        <button class="icon" aria-label="Close" onclick={() => session.closeDialog()}>
+        <button
+          class="icon"
+          aria-label="Close"
+          onclick={() => session.closeDialog()}
+          {...over('close')}
+        >
           <Icon name="x" />
         </button>
       </header>
@@ -80,7 +92,7 @@
                 onkeydown={(e) => renameKey(e, p.id)}
               />
             {:else}
-              <button class="open" onclick={() => session.open(p.id)}>
+              <button class="open" onclick={() => session.open(p.id)} {...over('card')}>
                 <span class="title">{p.file.title}</span>
                 <span class="date">{when(p.file.lastUpdatedAt)}</span>
               </button>
@@ -90,10 +102,16 @@
                 class="icon"
                 aria-label="Confirm rename"
                 onclick={() => session.rename(p.id, draft)}
+                {...over('confirm')}
               >
                 <Icon name="check" />
               </button>
-              <button class="icon" aria-label="Cancel" onclick={() => session.cancelRow()}>
+              <button
+                class="icon"
+                aria-label="Cancel"
+                onclick={() => session.cancelRow()}
+                {...over('cancel')}
+              >
                 <Icon name="x" />
               </button>
             {:else if mode === 'delete'}
@@ -101,10 +119,16 @@
                 class="icon danger"
                 aria-label="Confirm delete {p.file.title}"
                 onclick={() => session.confirmDelete()}
+                {...over('confirm')}
               >
                 <Icon name="check" />
               </button>
-              <button class="icon" aria-label="Cancel" onclick={() => session.cancelRow()}>
+              <button
+                class="icon"
+                aria-label="Cancel"
+                onclick={() => session.cancelRow()}
+                {...over('cancel')}
+              >
                 <Icon name="x" />
               </button>
             {:else}
@@ -112,6 +136,7 @@
                 class="icon"
                 aria-label="Rename {p.file.title}"
                 onclick={() => rename(p.id, p.file.title)}
+                {...over('rename')}
               >
                 <Icon name="pen" />
               </button>
@@ -119,6 +144,7 @@
                 class="icon"
                 aria-label="Delete {p.file.title}"
                 onclick={() => session.startDelete(p.id)}
+                {...over('delete')}
               >
                 <Icon name="trash" />
               </button>
@@ -130,10 +156,10 @@
       </ul>
       {#if session.error}<p class="error" role="alert">{session.error}</p>{/if}
       <div class="actions">
-        <button onclick={() => session.create().then(() => session.closeDialog())}>
+        <button onclick={() => session.create().then(() => session.closeDialog())} {...over('new')}>
           New project
         </button>
-        <button onclick={() => file?.click()}>Import file…</button>
+        <button onclick={() => file?.click()} {...over('import')}>Import file…</button>
       </div>
       <input
         bind:this={file}
@@ -231,27 +257,39 @@
     font: inherit;
     cursor: pointer;
   }
+  /* The icon buttons keep their place and size in every state, and have no background. */
   button.icon {
+    flex: none;
     display: grid;
     place-items: center;
-    padding: 0.4em;
+    width: 2.4em;
+    padding: 0;
     background: transparent;
     border-color: transparent;
   }
   button.icon:hover {
-    background: var(--btn);
+    color: var(--blue);
   }
-  button.danger {
+  button.danger,
+  button.danger:hover {
     color: var(--red-ink);
   }
   .open {
     flex: 1;
+    min-width: 0;
     display: flex;
     justify-content: space-between;
     gap: 1em;
     text-align: left;
   }
+  .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .date {
+    flex: none;
+    white-space: nowrap;
     color: var(--muted);
   }
   .actions {

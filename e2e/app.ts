@@ -8,6 +8,11 @@ export type Pt = { x: number; y: number };
 export class App {
   constructor(readonly page: Page) {}
 
+  /** Wait until the app has opened its project (it loads from the browser first). */
+  async ready() {
+    await this.page.waitForFunction(() => window.__modelcity?.session.id);
+  }
+
   private async at(pt: Pt): Promise<Pt> {
     return this.page.evaluate((p) => window.__modelcity!.toPage(p), pt);
   }
