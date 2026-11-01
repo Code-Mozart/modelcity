@@ -11,6 +11,7 @@ import { drawCircles, drawCorners, drawGuides, drawRadiusLabels } from './guides
 import {
   dot,
   ring,
+  barbs,
   screenDir,
   segment,
   strokeChain,
@@ -55,33 +56,23 @@ export interface Scene {
 }
 
 const CURVE_PX = 2;
-const HEAD_BARB_PX = 11;
 const ARROW_STROKE_PX = 2;
+/** The heads of the heading arrows and of the direction chevrons (^80). */
+const HEAD = { size: 11, spread: 0.5, width: ARROW_STROKE_PX };
+const CHEVRON = { size: 6, spread: 0.7, width: ARROW_STROKE_PX };
 /** Distance between the direction arrows along a curve, and their size (^80). */
 const DIRECTION_SPACING_PX = 72;
-const DIRECTION_BARB_PX = 6;
 const NODE_DOT_PX = 5.5;
 /** Selected nodes are blue and 150% larger (^70). */
 const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
 
-/**
- * Two levels of gizmo (^60): the skeleton (curves and node dots) is always drawn; the scaffold of
- * a segment (everything else) only while it is needed, all or nothing, see `scaffold.ts`.
- */
 function drawArrow(f: Frame, node: { x: number; y: number; th: number }, color: string) {
   const a = toScreen(f, node);
   const t = screenDir(f, fromAngle(node.th));
   // The control point sits on the stem, half way: the arrow reaches as far beyond it as it is before it (^126).
   const tip = { x: a.x + t.x * 2 * ARROW_PX, y: a.y + t.y * 2 * ARROW_PX };
   segment(f.ctx, a, tip, { color, width: ARROW_STROKE_PX });
-  for (const side of [-1, 1]) {
-    const ang = node.th + f.view.rot + Math.PI + side * 0.5;
-    const barb = {
-      x: tip.x + HEAD_BARB_PX * Math.cos(ang),
-      y: tip.y + HEAD_BARB_PX * Math.sin(ang),
-    };
-    segment(f.ctx, tip, barb, { color, width: ARROW_STROKE_PX });
-  }
+  barbs(f.ctx, tip, node.th + f.view.rot, { ...HEAD, color });
 }
 
 /** Which segments of a road show their scaffold, and which node is selected. */
@@ -144,14 +135,7 @@ function drawDirection(f: Frame, road: RoadScene, pal: Palette) {
   for (const s of samplesAlong(pieces, DIRECTION_SPACING_PX / f.view.scale)) {
     const at = toScreen(f, s);
     const t = screenDir(f, { x: s.tx, y: s.ty });
-    for (const side of [-1, 1]) {
-      const a = Math.atan2(t.y, t.x) + Math.PI + side * 0.7;
-      const barb = {
-        x: at.x + DIRECTION_BARB_PX * Math.cos(a),
-        y: at.y + DIRECTION_BARB_PX * Math.sin(a),
-      };
-      segment(f.ctx, at, barb, { color: pal.ink, width: ARROW_STROKE_PX });
-    }
+    barbs(f.ctx, at, Math.atan2(t.y, t.x), { ...CHEVRON, color: pal.ink });
   }
 }
 
@@ -180,22 +164,13 @@ function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
   });
 }
 
-const HANDLE_COLOR = (pal: Palette) => ({
-  head: pal.orange,
-  ctrl: pal.orange,
-  mid1: pal.orange,
-  mid2: pal.orange,
-  rad: pal.orange,
-});
-
 /** The control points of the scaffolds that are shown, all filled because they can be dragged. */
 function drawHandles(f: Frame, scene: Scene, active: boolean[][], pal: Palette) {
-  const colors = HANDLE_COLOR(pal);
   for (const h of scene.handles) {
     if (h.type === 'node') continue;
     const segs = active[h.road] ?? [];
     const shown = h.type === 'head' ? arrowShown(segs, h.i) : segs[h.i] === true;
-    if (shown) dot(f.ctx, toScreen(f, h), h.type === 'rad' ? 6.5 : 5.5, colors[h.type]);
+    if (shown) dot(f.ctx, toScreen(f, h), h.type === 'rad' ? 6.5 : 5.5, pal.orange);
   }
 }
 
@@ -238,7 +213,10 @@ function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
   for (const r of roads) strokeChain(f, pieces(r), { color: pal.road, width: px(r) });
 }
 
-/** Draw all roads with the scaffolds that are needed and the current hover feedback. */
+/**
+ * Two levels of gizmo (^60): the skeleton (curves and node dots) is always drawn; the scaffold of
+ * a segment (everything else) only while it is needed, all or nothing, see `scaffold.ts`.
+ * Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const active = shownFlags(scene);
   drawLanes(f, scene.roads, pal);

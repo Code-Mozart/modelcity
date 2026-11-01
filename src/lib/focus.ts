@@ -18,8 +18,9 @@ export interface Focus {
  * tips), or on one of its own control points (^60).
  */
 export function touchesEdge(focus: Focus | null, road: number, edge: number): boolean {
-  if (!focus || focus.road !== road) return false;
-  if (focus.type === 'node' || focus.type === 'head')
-    return focus.i === edge || focus.i === edge + 1;
-  return focus.i === edge;
+  return !!focus && focus.road === road && belongsToEdge(focus, edge);
 }
+
+/** Whether a handle is one of the control points of segment `edge` of its road. */
+export const belongsToEdge = (h: { type: HandleType; i: number }, edge: number) =>
+  h.type === 'node' || h.type === 'head' ? h.i === edge || h.i === edge + 1 : h.i === edge;

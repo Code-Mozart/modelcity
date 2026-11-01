@@ -1,6 +1,6 @@
 import { buildEdge, type Edge } from './edge';
 import type { Handle } from './handles';
-import { withNode, withRadius, type Path } from './path';
+import { edgesOf, withNode, withRadius, type Path } from './path';
 import { pointOn, sweeps } from './piece';
 import { AUTO_SNAP, RMIN } from './radius';
 import { angleOf, dist, dot, len, mul, sub, toRad, type Vec } from './vec';
@@ -22,8 +22,7 @@ const RADIUS_SEARCH_STEPS = 160;
 /** Refinement steps after the coarse search of a radius. */
 const RADIUS_REFINE_STEPS = 40;
 
-const edgeAt = (path: Path, i: number) =>
-  buildEdge(path.nodes[i]!, path.nodes[i + 1]!, path.radii[i] ?? null);
+const edgeAt = (path: Path, i: number) => edgesOf(path)[i]!.E;
 
 export const startDrag = (handle: Handle): DragState => ({ handle });
 

@@ -96,7 +96,6 @@ export function text(ctx: CanvasRenderingContext2D, s: string, p: Point, t: Text
   ctx.fillText(s, p.x, p.y);
 }
 
-/** Stroke a line or arc piece; pieces that draw nothing are skipped. */
 /** Add a piece to the current canvas path (screen space); an arc is joined to the point before it. */
 function tracePiece(f: Frame, piece: Piece) {
   const { ctx } = f;
@@ -112,12 +111,8 @@ function tracePiece(f: Frame, piece: Piece) {
   }
 }
 
-export function strokePiece(f: Frame, piece: Piece, s: Stroke) {
-  f.ctx.beginPath();
-  tracePiece(f, piece);
-  f.ctx.lineCap = 'round';
-  applyStroke(f.ctx, s);
-}
+/** Stroke one piece. */
+export const strokePiece = (f: Frame, piece: Piece, s: Stroke) => strokeChain(f, [piece], s);
 
 /** Stroke pieces that follow each other as one path: round ends and joins (^21, ^91). */
 export function strokeChain(f: Frame, pieces: Piece[], s: Stroke) {
@@ -126,4 +121,20 @@ export function strokeChain(f: Frame, pieces: Piece[], s: Stroke) {
   f.ctx.lineCap = 'round';
   f.ctx.lineJoin = 'round';
   applyStroke(f.ctx, s);
+}
+
+/** The two barbs of an arrow head at `tip`: lines of `size` px going back from the direction `dir` (screen angle), `spread` radians to each side. */
+export function barbs(ctx: CanvasRenderingContext2D, tip: Point, dir: number, head: HeadStyle) {
+  for (const side of [-1, 1]) {
+    const a = dir + Math.PI + side * head.spread;
+    const end = { x: tip.x + head.size * Math.cos(a), y: tip.y + head.size * Math.sin(a) };
+    segment(ctx, tip, end, { color: head.color, width: head.width });
+  }
+}
+
+export interface HeadStyle {
+  size: number;
+  spread: number;
+  color: string;
+  width: number;
 }

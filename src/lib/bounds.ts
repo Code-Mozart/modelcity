@@ -1,4 +1,4 @@
-import { TAU, mod } from './curves/vec';
+import { TAU, mod, onCircle } from './curves/vec';
 import type { Piece } from './curves/types';
 import { panBy, worldToScreen, type Point, type Size, type View } from './view';
 
@@ -25,13 +25,6 @@ export interface Box {
   maxY: number;
 }
 
-export interface Box {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
-
 const boxOf = (pts: Point[], r: number): Box => ({
   minX: Math.min(...pts.map((p) => p.x)) - r,
   maxX: Math.max(...pts.map((p) => p.x)) + r,
@@ -49,7 +42,7 @@ function pieceExtremes(view: View, size: Size, piece: Piece): Point[] {
   const extremes = [0, 1, 2, 3]
     .map((k) => (k * Math.PI) / 2)
     .filter((ang) => mod(Math.sign(piece.da) * (ang - a0), TAU) <= Math.abs(piece.da))
-    .map((ang) => ({ x: c.x + R * Math.cos(ang), y: c.y + R * Math.sin(ang) }));
+    .map((ang) => onCircle(c, R, ang));
   return [...ends, ...extremes];
 }
 

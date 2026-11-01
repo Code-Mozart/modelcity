@@ -2,7 +2,7 @@ import { dist } from './curves/vec';
 import type { EdgeRef } from './curves/path';
 import { distanceToPiece, isDegenerate } from './curves/piece';
 import type { RoadHandle } from './model/chains';
-import { touchesEdge, type Focus } from './focus';
+import { belongsToEdge, touchesEdge, type Focus } from './focus';
 import { CURVE_NEAR_PX, HANDLE_NEAR_PX, type Pointer } from './proximity';
 
 /**
@@ -24,10 +24,6 @@ export interface SegmentRef {
   edge: number;
 }
 
-/** Whether a handle is one of the control points of segment `edge`. */
-const belongs = (h: RoadHandle, edge: number) =>
-  h.type === 'node' || h.type === 'head' ? h.i === edge || h.i === edge + 1 : h.i === edge;
-
 /** Distances, in screen pixels, from the pointer to a segment's curve and to its control points. */
 interface Scores {
   ref: SegmentRef;
@@ -43,7 +39,7 @@ function scoresOf(input: ScaffoldInput, ref: SegmentRef, pointer: Pointer): Scor
   );
   const points = Math.min(
     ...input.handles
-      .filter((h) => h.road === ref.road && belongs(h, ref.edge))
+      .filter((h) => h.road === ref.road && belongsToEdge(h, ref.edge))
       .map((h) => dist(h, pt)),
   );
   return { ref, curve: curve * scale, points: points * scale };

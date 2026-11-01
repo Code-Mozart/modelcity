@@ -15,6 +15,8 @@ export const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.y - b.y);
 export const mid = (a: Vec, b: Vec): Vec => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 export const fromAngle = (th: number): Vec => ({ x: Math.cos(th), y: Math.sin(th) });
+/** The point of the circle around `c` with radius `r` at angle `a`. */
+export const onCircle = (c: Vec, r: number, a: number): Vec => add(c, mul(fromAngle(a), r));
 export const angleOf = (a: Vec) => Math.atan2(a.y, a.x);
 /** Rotated +90 degrees (toward the left of the heading on screen with y down: clockwise). */
 export const perp = (a: Vec): Vec => ({ x: -a.y, y: a.x });

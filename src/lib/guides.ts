@@ -1,7 +1,7 @@
 import type { Arc, Edge } from './curves/types';
 import type { EdgeRef } from './curves/path';
 import { sweeps } from './curves/piece';
-import { fromAngle, type Vec } from './curves/vec';
+import { add, fromAngle, mul, onCircle, sub, unitOr, type Vec } from './curves/vec';
 import {
   dot,
   extend,
@@ -105,13 +105,10 @@ function labelAt(f: Frame, piece: Arc, t: number): Vec {
   // next to a radius point the label keeps clear of it, in the middle of the arc it hangs closer
   const gap = t === 0.5 ? 22 : 34;
   const a = piece.a0 + piece.da * t;
-  const at = toScreen(f, {
-    x: piece.c.x + piece.r * Math.cos(a),
-    y: piece.c.y + piece.r * Math.sin(a),
-  });
+  const at = toScreen(f, onCircle(piece.c, piece.r, a));
   const c = toScreen(f, piece.c);
-  const l = Math.hypot(at.x - c.x, at.y - c.y) || 1;
-  return { x: at.x + ((at.x - c.x) / l) * gap, y: at.y + ((at.y - c.y) / l) * gap };
+  const out = unitOr(sub(at, c), { x: 0, y: 0 });
+  return add(at, mul(out, gap));
 }
 
 /**
