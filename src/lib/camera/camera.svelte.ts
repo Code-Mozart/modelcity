@@ -1,5 +1,5 @@
 import { constrainView, type Anchor } from './bounds';
-import { cardinalForKey, chipAt } from './compass';
+import { cardinalForKey, chipAt } from '../hud/compass';
 import { movePivot, setRotation, startPivot, type PivotDrag } from './pivotDrag';
 import { applyTwoFinger, type Pair } from './twoFinger';
 import type { CameraState } from '../project/file';

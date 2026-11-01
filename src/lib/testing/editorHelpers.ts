@@ -1,6 +1,6 @@
 import { Editor, type PointerInfo } from '../editor/editor.svelte';
 import { pointOn } from '../curves/piece';
-import { positionOf } from '../model/chains';
+import { positionOf } from '../editor/chains';
 
 /** Helpers for tests of the editor: pointer positions, clicks, roads drawn by clicking. */
 export const at = (x: number, y: number, extra: Partial<PointerInfo> = {}): PointerInfo => ({

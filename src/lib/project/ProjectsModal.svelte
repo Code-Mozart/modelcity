@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import './cards.css';
   import FilterList from '../ui/FilterList.svelte';
   import type { ModalTarget } from './modalHints';
   import Icon from '../ui/Icon.svelte';
@@ -155,19 +156,6 @@
     margin: 0;
     font-size: 1.3em;
   }
-  .dialog :global(.name) {
-    box-sizing: border-box;
-    padding: 0.5em 0.7em;
-    color: var(--ink);
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 0.4em;
-    font: inherit;
-    flex: 1;
-    min-width: 0;
-    margin: 0.3em 0 0.3em 0.3em;
-    border-color: var(--blue);
-  }
   ul.actions {
     display: flex;
     flex: none;
@@ -180,81 +168,5 @@
   .gap {
     flex: none;
     margin-top: 0.8em;
-  }
-  /* A card spans the whole width; what it has to the right (the icons) is inside it. */
-  .dialog :global(li.card) {
-    display: flex;
-    align-items: center;
-    gap: 0.2em;
-    padding-right: 0.3em;
-    background: var(--btn);
-    border: 1px solid var(--line);
-    border-radius: 0.4em;
-  }
-  .dialog :global(li.card:hover) {
-    border-color: var(--muted);
-  }
-  .dialog :global(li.current) {
-    outline: 2px solid var(--blue);
-  }
-  /* The card that is asked about deletion. */
-  .dialog :global(li.asking) {
-    outline: 2px solid var(--red);
-  }
-  .dialog :global(button) {
-    color: var(--ink);
-    font: inherit;
-    cursor: pointer;
-  }
-  /* The icon buttons keep their place and size in every state, and have no background. */
-  .dialog :global(button.icon) {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 2.4em;
-    height: 2.4em;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    border-radius: 0.4em;
-  }
-  .dialog :global(button.icon:hover) {
-    color: var(--blue);
-  }
-  .dialog :global(button.danger),
-  .dialog :global(button.danger:hover) {
-    color: var(--red-ink);
-  }
-  .dialog :global(.open) {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.1em;
-    padding: 0.7em 0.9em;
-    text-align: left;
-    background: transparent;
-    border: 0;
-  }
-  .dialog :global(.line) {
-    display: flex;
-    justify-content: space-between;
-    gap: 1em;
-  }
-  /* The mark of the open project: a word, not only a color (^177). */
-  .dialog :global(.label) {
-    color: var(--muted);
-    font-size: 0.85em;
-    font-style: italic;
-  }
-  .dialog :global(.title) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .dialog :global(.date) {
-    flex: none;
-    white-space: nowrap;
-    color: var(--muted);
   }
 </style>

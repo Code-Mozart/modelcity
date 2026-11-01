@@ -1,5 +1,5 @@
 import type { PathNode } from '../curves/types';
-import { nodeAtSample, type RoadHandle, type RoadHit } from '../model/chains';
+import { nodeAtSample, type RoadHandle, type RoadHit } from './chains';
 import { edgeOfId, nodeOf } from '../model/graph';
 import {
   autoHeadingFor,

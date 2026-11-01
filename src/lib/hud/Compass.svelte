@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Camera } from './camera.svelte';
+  import type { Camera } from '../camera/camera.svelte';
   import { CARDINALS, DRAG_HINTS, chipOffset } from './compass';
   import Icon from '../ui/Icon.svelte';
   import KeyCap from '../hints/KeyCap.svelte';

@@ -3,7 +3,7 @@ import { outlinePx } from '../curves/lane';
 import { buildEdge } from '../curves/edge';
 import { ARROW_PX } from '../curves/handles';
 import type { EdgeRef, Path } from '../curves/path';
-import type { RoadHandle } from '../model/chains';
+import type { RoadHandle } from '../editor/chains';
 import { ordered } from '../model/junction';
 import { fromAngle } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';

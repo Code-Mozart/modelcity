@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { skeletonAnchors } from './skeletonAnchors';
 import { isDegenerate } from '../curves/piece';
-import { chainsOf } from '../model/chains';
+import { chainsOf } from '../editor/chains';
 import { graphOfPaths } from '../testing/graphs';
 import { fixture } from '../curves/testing/paths';
 

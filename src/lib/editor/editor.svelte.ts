@@ -17,13 +17,7 @@ import { NO_HISTORY, record, redoStep, undoStep } from './history';
 import type { Pointer } from './proximity';
 import { DRAG_PX, type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { curveAt, focusOf, handleAt, hoverAt } from './hits';
-import {
-  chainHandles,
-  chainSegments,
-  chainsOf,
-  type RoadHandle,
-  type RoadHit,
-} from '../model/chains';
+import { chainHandles, chainSegments, chainsOf, type RoadHandle, type RoadHit } from './chains';
 import {
   edgesIn,
   edgesOut,

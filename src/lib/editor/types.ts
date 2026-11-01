@@ -1,7 +1,7 @@
 import type { DragState } from '../curves/drag';
 import type { PathNode } from '../curves/types';
 import type { Vec } from '../curves/vec';
-import type { RoadHandle, RoadHit } from '../model/chains';
+import type { RoadHandle, RoadHit } from './chains';
 import type { Graph, Placed } from '../model/graph';
 import type { NodeAction } from '../model/junction';
 import type { HintTarget } from '../hints/hints';

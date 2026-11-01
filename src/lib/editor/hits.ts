@@ -9,7 +9,7 @@ import {
   type Chain,
   type RoadHandle,
   type RoadHit,
-} from '../model/chains';
+} from './chains';
 import type { Focus } from './focus';
 
 /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */

@@ -1,5 +1,5 @@
 import { startDrag } from '../curves/drag';
-import type { RoadHandle, RoadHit } from '../model/chains';
+import type { RoadHandle, RoadHit } from './chains';
 import { edgeOfId, nodeOf, placed, shareRadius, type Graph } from '../model/graph';
 import { branchOfEdge, branchOfNode, nodeAction } from '../model/junction';
 import { targetOf, type Drawn } from './targets';

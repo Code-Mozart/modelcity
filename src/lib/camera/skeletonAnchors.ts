@@ -1,6 +1,6 @@
 import type { Anchor } from './bounds';
 import { isDegenerate } from '../curves/piece';
-import type { Chain } from '../model/chains';
+import type { Chain } from '../editor/chains';
 
 /** Half the drawn size of a node dot (5.5 plus its outline) and of a curve (4 px wide), pixels. */
 const NODE_RADIUS_PX = 7;

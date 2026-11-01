@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Camera } from './lib/camera/camera.svelte';
-  import Compass from './lib/camera/Compass.svelte';
+  import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
   import Hints from './lib/hints/Hints.svelte';
   import { hintsFor } from './lib/hints/hints';

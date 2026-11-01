@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { chainsOf, nearestOnChains } from '../src/lib/model/chains';
+import { chainsOf, nearestOnChains } from '../src/lib/editor/chains';
 import type { Graph } from '../src/lib/model/graph';
 
 export type Pt = { x: number; y: number };

@@ -3,7 +3,7 @@
   import type { Camera } from './camera/camera.svelte';
   import type { Editor, PointerInfo } from './editor/editor.svelte';
   import { FEATURES } from './features';
-  import { chainSelection } from './model/chains';
+  import { chainSelection } from './editor/chains';
   import { render } from './render/render';
   import { screenToWorld, worldToScreen, type Point } from './camera/view';
 

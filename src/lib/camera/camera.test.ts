@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardinalForKey, chipAt, chipOffset, CARDINALS } from './compass';
+import { cardinalForKey, chipAt, chipOffset, CARDINALS } from '../hud/compass';
 import { DEAD_ZONE_PX, RAD_PER_PX, movePivot, setRotation, startPivot } from './pivotDrag';
 import { applyTwoFinger } from './twoFinger';
 import { initialView, screenToWorld, worldToScreen } from './view';

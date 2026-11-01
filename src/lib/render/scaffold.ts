@@ -1,7 +1,7 @@
 import { dist } from '../curves/vec';
 import type { EdgeRef } from '../curves/path';
 import { distanceToPiece, isDegenerate } from '../curves/piece';
-import type { RoadHandle } from '../model/chains';
+import type { RoadHandle } from '../editor/chains';
 import { belongsToEdge, touchesEdge, type Focus } from '../editor/focus';
 import { CURVE_NEAR_PX, HANDLE_NEAR_PX, type Pointer } from '../editor/proximity';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chainsOf } from '../model/chains';
+import { chainsOf } from '../editor/chains';
 import { addEdge, addNode, emptyGraph, withNode } from '../model/graph';
 
 describe('edges are kept per graph and per edge (performance)', () => {

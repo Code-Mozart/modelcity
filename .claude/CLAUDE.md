@@ -47,6 +47,14 @@ The user entrusts the details to Claude. Principles:
 - Build infrastructure, then use and combine it. Think library and client: engine/API-like code (pure, testable, no UI or input, e.g. `src/lib/camera/view.ts`, `src/lib/render/paint.ts`) versus code that uses it (components, input handling).
 - The linter enforces quality limits (complexity, function length, nesting depth, parameter count, statements, file length: see `eslint.config.js`). Fix violations by refactoring. Never disable a rule or raise a limit just to get green; raise one only deliberately and mention it in the PR.
 
+## Refactoring (^146 follow-up, learned in the first refactoring pass)
+- After every larger milestone, take a refactoring pass in its own PR (no hats, no behaviour change). Read the code; tools only find the literal part (copy-paste scanner `jscpd`, dead-code finder `knip`: run them with an exact version from `npm view`, they are not dependencies).
+- Look for duplicated *decisions*, not duplicated text: the same question answered in two places (which end is drawn from, does this handle belong to this segment, a point on a circle). Name it once. Two similar pieces of code are only worth merging when they must change together.
+- Group files by what they are for (`editor/`, `camera/`, `render/`, `hints/`, `ui/`, `project/`, `curves/`, `model/`); stored data (`model/`) stays apart from what is derived from it (`editor/chains.ts`). Library code never imports client code.
+- Tests get the same care: a fixture used by more than one test file lives in `testing/` (`editorHelpers.ts`), not in each file. A style shared by several components lives in one place (`project/cards.css`), not in one component's `:global` rules.
+- Do not keep code "for later" without a hat; knip's list of unused exports is the check.
+- Measure size as real lines (without blanks and comments). Judge a refactor by fewer places that decide the same thing, not by fewer lines.
+
 ## Glossary
 - The README has a glossary (^67) with a status per term. Use its words; when a term is new or changes, update it in the same step: `assumed` unless the user defined it.
 

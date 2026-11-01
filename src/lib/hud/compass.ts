@@ -1,5 +1,5 @@
 import { FONT_PX } from '../render/paint';
-import { rotateVec, type Point } from './view';
+import { rotateVec, type Point } from '../camera/view';
 
 /** The compass that replaces the cursor while rotating (^30, ^33). */
 export interface Cardinal {

@@ -7,7 +7,7 @@ import type { Sample } from '../curves/piece';
 import type { PathNode } from '../curves/types';
 import { RMIN } from '../curves/radius';
 import { dist } from '../curves/vec';
-import { DEFAULT_LANE, nodeOf, widthOf, type GEdge, type GNode, type Graph } from './graph';
+import { DEFAULT_LANE, nodeOf, widthOf, type GEdge, type GNode, type Graph } from '../model/graph';
 
 /**
  * Chains are derived from the graph for drawing and hit testing (^106): maximal runs of edges that

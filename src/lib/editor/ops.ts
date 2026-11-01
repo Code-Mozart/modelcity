@@ -3,7 +3,7 @@ import { dist, type Vec } from '../curves/vec';
 import { withSharedRadius } from './press';
 import type { Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
-import { nodeAtSample, type RoadHit } from '../model/chains';
+import { nodeAtSample, type RoadHit } from './chains';
 import { autoHeadingFor, farEnd, linkTo } from '../model/junction';
 import { dragGraph } from '../model/dragGraph';
 import {

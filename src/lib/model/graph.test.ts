@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nearestOnChains, chainsOf } from './chains';
+import { nearestOnChains, chainsOf } from '../editor/chains';
 import {
   addEdge,
   addNode,

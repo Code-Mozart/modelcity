@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { edgesOf } from '../curves/path';
 import { pointOn } from '../curves/piece';
-import { chainHandles, chainsOf } from '../model/chains';
+import { chainHandles, chainsOf } from '../editor/chains';
 import { graphOfPaths } from '../testing/graphs';
 import { fixture } from '../curves/testing/paths';
 import {
