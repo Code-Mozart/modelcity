@@ -14,8 +14,12 @@ const show = (h: Hint) =>
             : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}`;
+const PROJECT_ROWS = ['Ctrl+S: export', 'Ctrl+O: projects'];
+/** The hints of the mode and target, without the project controls that are always shown (^168). */
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
-  hintsFor(drawing, target, selected).map(show);
+  hintsFor(drawing, target, selected)
+    .map(show)
+    .filter((r) => !PROJECT_ROWS.includes(r));
 
 const empty: HintTarget = { kind: 'empty' };
 const node = (last: boolean, leaf = last): HintTarget => ({
@@ -185,5 +189,13 @@ describe('split and merge hints (^23)', () => {
     expect(rows(true, curve('split'))[0]).toBe('LMB: split');
     expect(rows(true, curve('merge'))[1]).toBe('LMB drag: insert and set heading');
     expect(rows(true, curve('insert'))[0]).toBe('LMB: insert here');
+  });
+});
+
+describe('project controls (^168)', () => {
+  it('are always the last hints, in every mode', () => {
+    for (const drawing of [false, true]) {
+      expect(hintsFor(drawing, empty).map(show).slice(-2)).toEqual(PROJECT_ROWS);
+    }
   });
 });

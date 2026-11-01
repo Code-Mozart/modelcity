@@ -23,7 +23,15 @@ import {
   type RoadHandle,
   type RoadHit,
 } from './model/chains';
-import { edgesIn, edgesOut, emptyGraph, nodeOf, removeNodes, type Graph } from './model/graph';
+import {
+  edgesIn,
+  edgesOut,
+  emptyGraph,
+  nodeOf,
+  removeNodes,
+  roundToMm,
+  type Graph,
+} from './model/graph';
 import {
   afterBranchClick,
   afterCurveClick,
@@ -124,10 +132,21 @@ export class Editor {
     if (active !== null) this.mode = 'draw';
   }
 
-  /** Make a step undoable if it changed the graph or the selection (^88). Inside a press only its end commits. */
+  /** Make a step undoable if it changed the graph or the selection (^88), and round it to the millimeter (^170). Inside a press only its end commits. */
   private commit(before: Snapshot) {
     const same = before.graph === this.graph && sameSelection(before.selection, this.selection);
-    if (!same && !this.batching) this.history = record(this.history, before);
+    if (same || this.batching) return;
+    this.graph = roundToMm(this.graph);
+    this.history = record(this.history, before);
+  }
+
+  /** Replace everything by another map (a project was opened): no selection, no drawing, no history. */
+  load(graph: Graph) {
+    this.graph = graph;
+    this.mode = 'select';
+    [this.active, this.origin, this.end, this.selection] = [null, null, 'end', []];
+    [this.press, this.band, this.hover, this.pointer] = [null, null, null, null];
+    this.history = NO_HISTORY;
   }
 
   deleteSelected() {

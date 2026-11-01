@@ -110,6 +110,17 @@ If that segment is one of several selected ones, all selected segments show thei
 
 Looks: blue means selected or user action (selected nodes, the hover ring, the selection box), orange is gizmo. Filled points can be dragged (heading, bend, radius and corner points, all orange, ^134); the corners of an S-curve turn the heading of their node when dragged (the pointer is on the heading line). Nothing is hollow any more. On touch there is no hover, so scaffolds appear only while something is grabbed.
 
+## Projects (^82, ^148, ^163 to ^171)
+
+The map is a project, kept in the browser (IndexedDB) and saved by itself (autosave) a short while after the map changed (nodes, edges, lanes); moving the camera alone does not save, the camera is saved with the next save. The project that was open last opens when the app starts. The controls are always in the control hints panel for now (^168).
+
+| Input | Does |
+|-------|------|
+| `Ctrl+S` | Exports the project as a file (`<title>.modelcity.json`, the format of `docs/data-model.md`) |
+| `Ctrl+O` | Opens the projects dialog: the projects of the browser (newest first) with `Delete`, `New project`, `Import file…` (a project file becomes a new project of the browser; a file that is no project, or from a newer version, is refused with a message) and `Close`. Esc closes it too; while it is open the map takes no input |
+
+Not decided yet: a title for a project (every new project is called "Untitled project"), and the UI to switch projects without the dialog (it waits for the operations search, ^97).
+
 ## Undo and redo (^81, ^88)
 
 | Input | Action |

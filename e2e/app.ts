@@ -81,6 +81,29 @@ export class App {
     }, edge);
   }
 
+  /** The projects stored in the browser (IndexedDB), as export files. */
+  stored(): Promise<{ title: string; nodes: unknown[]; edges: unknown[] }[]> {
+    return this.page.evaluate(
+      () =>
+        new Promise<{ title: string; nodes: unknown[]; edges: unknown[] }[]>((resolve, reject) => {
+          const open = indexedDB.open('modelcity', 1);
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const all = open.result.transaction('projects').objectStore('projects').getAll();
+            all.onsuccess = () => resolve(all.result.map((r: { file: never }) => r.file));
+          };
+        }),
+    );
+  }
+
+  /** Draw a road of two nodes, as a user would. */
+  async drawRoad() {
+    await this.click({ x: 0, y: 30 }); // empty canvas: enters draw mode
+    await this.click({ x: 0, y: 0 });
+    await this.click({ x: 40, y: 10 });
+    await this.page.keyboard.press('Escape');
+  }
+
   hints() {
     return this.page.getByRole('list', { name: 'Controls' });
   }

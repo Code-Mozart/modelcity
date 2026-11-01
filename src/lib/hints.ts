@@ -152,6 +152,12 @@ function historyHints({ undo, redo }: HistoryState): Hint[] {
  * The hints for the top left corner, for the current mode, what is under the pointer, how many
  * nodes are selected and what can be undone (^49).
  */
+/** The project controls are always shown for now (^168). */
+const PROJECT_HINTS: Hint[] = [
+  hint({ kind: 'keys', labels: ['Ctrl', 'S'] }, 'export'),
+  hint({ kind: 'keys', labels: ['Ctrl', 'O'] }, 'projects'),
+];
+
 export function hintsFor(
   drawing: boolean,
   target: HintTarget,
@@ -159,5 +165,5 @@ export function hintsFor(
   history: HistoryState = { undo: false, redo: false },
 ): Hint[] {
   const rows = drawing ? drawModeHints(target) : selectModeHints(target, selected);
-  return [...historyHints(history), ...rows];
+  return [...historyHints(history), ...rows, ...PROJECT_HINTS];
 }

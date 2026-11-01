@@ -2,6 +2,7 @@ import { constrainView, type Anchor } from './bounds';
 import { cardinalForKey, chipAt } from './compass';
 import { movePivot, setRotation, startPivot, type PivotDrag } from './pivotDrag';
 import { applyTwoFinger, type Pair } from './twoFinger';
+import type { CameraState } from './project/file';
 import { initialView, panBy, zoomAt, type Point, type Size, type View } from './view';
 
 const ZOOM_PER_WHEEL_PX = 0.0015;
@@ -37,6 +38,17 @@ export class Camera {
   /** Every view change goes through here so the camera cannot leave the content (^37). */
   private setView(view: View) {
     this.view = constrainView(view, this.size, this.anchors);
+  }
+
+  /** The camera as a project stores it (^170). */
+  get state(): CameraState {
+    const { cx, cy, scale, rot } = this.view;
+    return { x: cx, y: cy, scale, rotation: rot };
+  }
+
+  /** Go back to a stored camera. */
+  restore({ x, y, scale, rotation }: CameraState) {
+    this.setView({ ...initialView(), cx: x, cy: y, scale, rot: rotation });
   }
 
   /** The content moved or the window resized: keep the view on the content. */
