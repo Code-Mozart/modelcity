@@ -2,7 +2,7 @@
 export const LANE_WIDTH_M = 3;
 
 /** Width of the outline of a road on each side, screen pixels (^91). */
-export const OUTLINE_PX = 2;
+const OUTLINE_PX = 2;
 /** Both outlines together may take at most this share of the road's width... */
 const OUTLINE_SHARE = 0.2;
 

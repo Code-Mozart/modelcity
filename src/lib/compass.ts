@@ -23,7 +23,7 @@ export const CARDINALS: Cardinal[] = [
 const UI = FONT_PX / 12;
 
 /** Distance of the N/E/S/W key caps (outer ring) from the cursor, pixels. */
-export const CHIP_RADIUS_PX = 62 * UI;
+const CHIP_RADIUS_PX = 62 * UI;
 const CHIP_HIT_PX = 15 * UI;
 
 export const cardinalForKey = (key: string): Cardinal | undefined =>
@@ -53,7 +53,7 @@ export interface DragHint {
 }
 
 /** Distance of the drag-hint icons (inner ring) from the cursor, pixels. */
-export const HINT_RADIUS_PX = 34 * UI;
+const HINT_RADIUS_PX = 34 * UI;
 
 export const DRAG_HINTS: DragHint[] = [
   {

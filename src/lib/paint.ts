@@ -14,7 +14,7 @@ export interface Stroke {
   dash?: number[];
 }
 
-export const PALETTE_KEYS = [
+const PALETTE_KEYS = [
   'bg',
   'grid-minor',
   'grid-major',

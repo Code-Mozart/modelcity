@@ -40,11 +40,6 @@ function geoOf(e: GEdge, p: GNode, q: GNode): Geo {
   return geo;
 }
 
-/** The curve of the edge with this id. */
-export function curveOf(g: Graph, e: GEdge): Edge {
-  return geoOf(e, nodeOf(g, e.start)!, nodeOf(g, e.end)!).E;
-}
-
 function through(inCount: Map<number, number>, outCount: Map<number, number>, node: number) {
   return inCount.get(node) === 1 && outCount.get(node) === 1;
 }
@@ -153,7 +148,7 @@ export function positionOf(chains: Chain[], id: number): { road: number; node: n
  * Closer than this (meters) to a node, a point on a curve is not a place for a new node (^137): the
  * smallest radius (a shorter edge could not be curved).
  */
-export const MIN_NODE_GAP_M = RMIN;
+const MIN_NODE_GAP_M = RMIN;
 
 export const nearNode = (hit: CurveHit) =>
   dist(hit.at, hit.ref.p) < MIN_NODE_GAP_M || dist(hit.at, hit.ref.q) < MIN_NODE_GAP_M;

@@ -1,7 +1,7 @@
 /** The one place where keys are bound to editor actions (^11), so they are easy to change. */
 export type Action = 'finishRoad' | 'deleteNode' | 'undo' | 'redo';
 
-export const KEYMAP: Record<string, Action> = {
+const KEYMAP: Record<string, Action> = {
   Escape: 'finishRoad',
   Delete: 'deleteNode',
   Backspace: 'deleteNode',

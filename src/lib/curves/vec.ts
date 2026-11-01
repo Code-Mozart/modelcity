@@ -23,8 +23,5 @@ export const unitOr = (a: Vec, fallback: Vec): Vec => {
   return l > 1e-9 ? mul(a, 1 / l) : fallback;
 };
 
-export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 export const mod = (x: number, m: number) => ((x % m) + m) % m;
 export const toRad = (deg: number) => (deg * Math.PI) / 180;
-/** Radians to degrees in (-180, 180]. */
-export const toDeg = (rad: number) => (((((rad * 180) / Math.PI + 180) % 360) + 360) % 360) - 180;

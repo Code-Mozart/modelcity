@@ -35,7 +35,7 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
 const relative = new Intl.RelativeTimeFormat('en', { numeric: 'always' });
 
 /** After this many weeks a time is shown as a date again (^214). */
-export const AGO_WEEKS = 8;
+const AGO_WEEKS = 8;
 
 /**
  * How long ago an instant was, `just now`, `1 second ago`, `17 minutes ago`, `2 weeks ago` (^214), up to

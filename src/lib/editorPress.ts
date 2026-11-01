@@ -77,7 +77,7 @@ export function emptyPress(drawn: Drawn, info: PointerInfo, hit: RoadHit | null)
  * The segment of the radius point that is dragged and all selected segments (both nodes selected),
  * if it is one of them: they all get its radius (^77).
  */
-export function sharing(g: Graph, selection: number[], press: Press) {
+function sharing(g: Graph, selection: number[], press: Press) {
   if (press.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
   const all = selectedSegments(g, selection);
   return all.includes(press.id) ? { own: press.id, all } : null;

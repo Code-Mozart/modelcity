@@ -22,7 +22,7 @@ export const RAD_PER_PX = (0.4 * Math.PI) / 180;
  * Zoom per vertical pixel, as an exponent: 1% per pixel near the start like Blender's "Dolly"
  * zoom style (dragging up zooms in), continued exponentially so it never degenerates (^31).
  */
-export const ZOOM_PER_PX = 0.01;
+const ZOOM_PER_PX = 0.01;
 
 /**
  * Dead zone around the drag start, per axis, pixels: horizontal movement inside it does not
@@ -32,14 +32,14 @@ export const ZOOM_PER_PX = 0.01;
 export const DEAD_ZONE_PX = 20;
 
 /** A displacement with the dead zone removed (zero inside it, continuous outside). */
-export const beyondDeadZone = (d: number) => Math.sign(d) * Math.max(0, Math.abs(d) - DEAD_ZONE_PX);
+const beyondDeadZone = (d: number) => Math.sign(d) * Math.max(0, Math.abs(d) - DEAD_ZONE_PX);
 
 export function startPivot(view: View, anchor: Point): PivotDrag {
   return { view0: view, anchor, last: anchor, view, rotBase: view.rot, rotFrom: anchor.x };
 }
 
 /** Scale the drag would give at pointer height `y`, from the scale at the start of the drag. */
-export const scaleAt = (drag: PivotDrag, y: number) =>
+const scaleAt = (drag: PivotDrag, y: number) =>
   drag.view0.scale * Math.exp(-beyondDeadZone(y - drag.anchor.y) * ZOOM_PER_PX);
 
 export function movePivot(drag: PivotDrag, size: Size, to: Point): PivotDrag {

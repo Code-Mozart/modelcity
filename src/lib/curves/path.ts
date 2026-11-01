@@ -18,8 +18,6 @@ export interface EdgeRef {
   E: Edge;
 }
 
-export const emptyPath = (): Path => ({ nodes: [], radii: [] });
-
 const edgeCache = new WeakMap<Path, EdgeRef[]>();
 
 /**
