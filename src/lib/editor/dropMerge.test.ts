@@ -4,9 +4,10 @@ import { at } from '../testing/editorHelpers';
 import { drag, mapOf } from '../testing/snapHelpers';
 import { dropOf, dropPreview } from './drop';
 
-describe('merging near and showing it (^283, ^284, ^285)', () => {
-  const plain = (x: number, y: number) => at(x, y); // Ctrl held: no snapping, only the world distance counts
+/** Ctrl held: no snapping, only the world distance counts. */
+const plain = (x: number, y: number) => at(x, y);
 
+describe('merging near a curve (^283)', () => {
   it('a node within 0.1 m of a curve is merged into it, even with snapping off', () => {
     const ed = new Editor();
     ed.load(
@@ -49,7 +50,9 @@ describe('merging near and showing it (^283, ^284, ^285)', () => {
     ed.pointerUp();
     expect(ed.graph.edges).toHaveLength(2);
   });
+});
 
+describe('showing the merge (^284, ^285)', () => {
   it('the curves after the merge are shown while the node is dragged over a node', () => {
     const ed = new Editor();
     ed.load(
