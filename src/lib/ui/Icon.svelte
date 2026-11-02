@@ -6,6 +6,8 @@
     | 'zoomIn'
     | 'zoomOut'
     | 'pen'
+    | 'select'
+    | 'extend'
     | 'check'
     | 'x'
     | 'trash'
@@ -26,6 +28,15 @@
     zoomIn: [LENS, 'M11 8v6', 'M8 11h6'],
     zoomOut: [LENS, 'M8 11h6'],
     pen: ['M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z', 'm15 5 4 4'],
+    // The modes (^119): the arrow of the cursor, the pen (draw), a node with a dashed line towards a new one (extend).
+    select: ['M4 4l7.07 17 2.51-7.39L21 11.07z'],
+    extend: [
+      'M7 19a2 2 0 1 1-4 0 2 2 0 0 1 4 0',
+      'M7.5 16.5 10 14',
+      'M12.5 11.5 15 9',
+      'M19 3v6',
+      'M16 6h6',
+    ],
     check: ['M20 6 9 17l-5-5'],
     x: ['M18 6 6 18', 'm6 6 12 12'],
     info: [CIRCLE, 'M12 16v-4', 'M12 8h.01'],

@@ -34,7 +34,7 @@
   .hints {
     position: absolute;
     left: 1.1667em;
-    top: 1em;
+    top: 4em; /* below the modes (^119) */
     display: flex;
     flex-direction: column;
     gap: 1.1667em;
