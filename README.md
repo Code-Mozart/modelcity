@@ -47,6 +47,13 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Skeleton** | The gizmos that are always shown: the curves (with their direction arrows) and the node dots | decided | ^60 |
 | **Scaffold** | All other gizmos of a segment (orange lines, circle, control points, heading arrows (orange), the axis line and corner points of an S-curve or hook, the radius label). Shown all or nothing, for a single segment at a time (selected segments together), and only by need | decided | ^60, ^66 |
 | **Selection** | 0..n selected nodes, also of different roads. Selected nodes are blue and 150% larger; dragging one moves all by the same translation | decided; assumed (details) | ^70, ^71, ^72, ^73 |
+| **Snap suggestion** | A snap line or a snap point: what a point that is subject to snapping can be pulled to (^101, ^112) | decided | ^101 |
+| **Snap line** | A snap suggestion that leaves one degree of freedom (a line, for example where a parallel lane would run); drawn as a solid turquoise line | decided | ^101 |
+| **Snap point** | A snap suggestion that leaves none (a position, for example where two nodes touch, or a node itself); drawn as a solid turquoise ring | decided | ^101 |
+| **Pinned node** | A node whose snap suggestions are offered without a maximum distance, until unpinned (`pin snap suggestions`); drawn as a solid turquoise dot. A *pinned segment*, *branch* or *arm* is one whose nodes are pinned, like the selected ones (^245) | decided | ^258 |
+| **Pinned snap suggestion** | A snap line or snap point of a pinned node (*pinned snap line*, *pinned snap point*) | decided | ^258 |
+| **Node merge** | Two nodes at one position become one: the node that was dropped on stays with its heading (not the *merge* of roads above) | decided; term assumed | ^248 |
+| **Learned control** | A control whose hint is hidden for five minutes after it was used; controls that are not learnable always show their hint (the hint of `Ctrl` while snapping, the hint of the pin) | assumed | ^110 |
 | **Selection box** | The rectangle spanned by a left drag on empty canvas in select mode, axis-aligned with the viewport (also "rubber band"); selects the nodes inside it | decided | ^69, ^70 |
 | **Lane** | A strip of road traffic runs in, 3 m wide for now (`LANE_WIDTH_M`). For now a branch is a single lane, so *select branch* (Alt+click; Alt+Shift+click adds it) selects a branch; more lanes come later | decided; assumed (that a road is one lane for now) | ^22, ^76 |
 | **Step** | One undoable change of the roads (a placed node, a drag, a removal, ...), see `docs/controls.md` | assumed | ^81, ^88 |

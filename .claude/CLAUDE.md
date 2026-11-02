@@ -82,6 +82,7 @@ The user entrusts the details to Claude. Principles:
 - Design principle (^211): use the available screen space; UI is not small without a reason.
 - Design principle (^233): avoid accidental actions that discard the user's work: block them (with a message that says why) or ask first; when nothing would be lost, allow them.
 - Design principle (^251): precision grows with distance: the farther the pointer is from the point it controls, the finer the steps (angles, snapping), wherever that is feasible and sensible.
+- Design principle (^259): prefer an explicit control (a key, a click) to anything that needs the pointer to stay exactly on a thin target, to hover for a while, or in a nested menu that vanishes when the pointer leaves it by a pixel.
 - Say *operation* for something the user can do, not *action* (^180).
 - Two levels of gizmo (^60): the *skeleton* (curves and node dots, always shown) and the *scaffold* (all other gizmos of a segment, shown by need). A *segment* is the curve between two nodes.
 
