@@ -48,7 +48,7 @@ An open feature is in at most one planned milestone, and each milestone is a hat
 | Crossings | ^158 | ^25 crossings | none | ^156 |
 | Quality | ^159 | ^122 performance tests | ^145 (done) | none |
 
-Not assigned to a milestone yet: ^35 (the grid's return), ^104 (view mode, waits for ^176), ^169 (validator), ^176 (Supabase), ^179 (project previews), ^182 (showing waiting), ^183 (autosave: the numbers and failure handling), ^184 (saving in the background), ^185 (saved notification), ^187 (trackpads), ^219 (history menu), ^220 (highlight what an undo touches), ^221 (persist the history), ^224 (independent ticks, curves that are not circular).
+Not assigned to a milestone yet: ^35 (the grid's return), ^104 (view mode, waits for ^176), ^169 (validator), ^176 (Supabase), ^179 (project previews), ^182 (showing waiting), ^183 (autosave: the numbers and failure handling), ^184 (saving in the background), ^187 (trackpads), ^219 (history menu), ^220 (highlight what an undo touches), ^221 (persist the history), ^224 (independent ticks, curves that are not circular), ^228 and ^229 (the repairs on load, after the load pipeline of ^151).
 
 Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^145, ^146, ^147.
 
