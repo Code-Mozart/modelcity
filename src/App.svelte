@@ -5,13 +5,13 @@
   import { Editor } from './lib/editor/editor.svelte';
   import Hints from './lib/hints/Hints.svelte';
   import HistoryPanel from './lib/hud/HistoryPanel.svelte';
-  import { panelView } from './lib/hud/panel';
+  import { panelHints, panelView } from './lib/hud/panel';
   import { Recent } from './lib/hud/recent.svelte';
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
-  import { hintsFor, historyHints } from './lib/hints/hints';
+  import { hintsFor } from './lib/hints/hints';
   import { Usage } from './lib/hints/usage.svelte';
-  import { keyOf } from './lib/editor/keymap';
+  import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
@@ -50,9 +50,7 @@
   });
   const panelShown = $derived(recent.visible || editor.active !== null);
   const panel = $derived(panelView(editor.history));
-  const historyRows = $derived(
-    historyHints({ undo: editor.canUndo, redo: editor.canRedo }, usage.hidden),
-  );
+  const historyRows = $derived(panelHints(editor.history, usage.hidden));
 
   onMount(() => void session.start());
 
@@ -80,6 +78,17 @@
     return true;
   }
 
+  /** Undo or redo with nothing to undo or redo says so, instead of doing nothing (^242). */
+  function noHistory(e: KeyboardEvent) {
+    const mods = { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey, alt: e.altKey };
+    const action = actionFor(keyOf(e), mods);
+    if ((action === 'undo' || action === 'undoBatch') && !editor.canUndo) {
+      toasts.show('info', 'nothing to undo');
+    } else if ((action === 'redo' || action === 'redoBatch') && !editor.canRedo) {
+      toasts.show('info', 'nothing to redo');
+    }
+  }
+
   function onKeyDown(e: KeyboardEvent) {
     editor.modifiers({ alt: e.altKey, shift: e.shiftKey });
     if (session.modalOpen) {
@@ -88,6 +97,7 @@
       return;
     }
     if (e.target instanceof HTMLInputElement) return;
+    noHistory(e);
     if (projectKey(e)) e.preventDefault();
     else if (
       camera.key(e.key) ||

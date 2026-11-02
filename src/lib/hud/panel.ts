@@ -1,4 +1,5 @@
 import type { History, Step } from '../editor/history';
+import { historyHints, type Hidden, type Hint } from '../hints/hints';
 import { sameSelection } from '../editor/selection';
 import { selectionName } from '../editor/stepNames';
 
@@ -84,4 +85,14 @@ function describe(h: History, group: PanelRow[]): PanelGroup {
   const long = steps[0]!.kind !== 'select' && steps.length > MANY;
   const rows = long ? group.slice(-SHOWN) : group;
   return { more: long ? steps.length - rows.length : 0, rows };
+}
+
+/**
+ * The undo and redo hints at the bottom of the panel (^109): only while the panel has something to
+ * say. A select followed by a deselect changed nothing and has no row, though there is a step to
+ * undo; hints with no step beside them would be lonely (^241).
+ */
+export function panelHints(h: History, hidden: Hidden): Hint[] {
+  if (!panelView(h).length) return [];
+  return historyHints({ undo: h.past.length > 0, redo: h.future.length > 0 }, hidden);
 }

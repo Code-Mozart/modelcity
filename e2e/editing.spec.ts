@@ -190,3 +190,28 @@ test('the outline follows Alt without moving the mouse, and a pan or a zoom unde
   await page.mouse.up({ button: 'right' });
   expect(await hover()).toBeNull();
 });
+
+test('nothing to undo or redo is said once, and the undo hint is not alone in the panel (^241, ^242)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  const messages = page.getByRole('list', { name: 'Messages' });
+  await page.keyboard.press('Control+z');
+  await page.keyboard.press('Control+z'); // a key held down: the same message, not two
+  await expect(messages).toContainText('nothing to undo');
+  await expect(messages.getByRole('status')).toHaveCount(1);
+  await page.keyboard.press('Control+y');
+  await expect(messages).toContainText('nothing to redo');
+
+  // A freshly opened session has no history; a select and a deselect change nothing and show no row.
+  await drawRoad(app);
+  await expect.poll(async () => (await app.stored()).length).toBe(1);
+  await page.reload();
+  await app.ready();
+  await app.click({ x: 0, y: 0 });
+  await page.keyboard.press('Escape');
+  expect((await app.state()).selected).toBe(0);
+  await expect(page.getByLabel('Undo and redo')).toHaveCount(0);
+});

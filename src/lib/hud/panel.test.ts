@@ -8,7 +8,7 @@ import {
   type History,
   type StepKind,
 } from '../editor/history';
-import { panelView, type PanelGroup } from './panel';
+import { panelHints, panelView, type PanelGroup } from './panel';
 
 /** The state after `n` steps: the nodes 1 to n are selected (so every step selects one more). */
 const snap = (n: number) => ({
@@ -137,5 +137,28 @@ describe('selection rows and undo (^216)', () => {
       continues: true,
     }).history;
     expect(lines(panelView(mixed))).toEqual(['select 2 nodes', 'move node']);
+  });
+});
+
+describe('the hints at the bottom of the panel (^109, ^241)', () => {
+  const none = () => false;
+
+  it('are not shown while the panel has no row, though there is a step to undo', () => {
+    const h = record(take(['a'], 'select'), {
+      name: 'deselect all',
+      kind: 'select',
+      before: snap(1),
+      after: snap(0),
+      continues: true,
+    }).history;
+    expect(h.past).toHaveLength(2);
+    expect(panelView(h)).toEqual([]);
+    expect(panelHints(h, none)).toEqual([]);
+  });
+
+  it('are there as soon as there is a row, with undo and redo as they are', () => {
+    expect(panelHints(take(['a', 'b']), none)).toHaveLength(1);
+    expect(panelHints(undoStep(take(['a', 'b']))!.history, none)).toHaveLength(2);
+    expect(panelHints(NO_HISTORY, none)).toEqual([]);
   });
 });
