@@ -269,7 +269,6 @@ function dragHints({ type, merge }: { type: HandleType; merge: boolean }, s: Hin
     hint(mouse('lmb', true), DRAG_TEXT[type]),
     ...(merge ? [hint(mouse('lmb'), 'merge on release')] : []),
     ...(s.snapping ? [key('Ctrl', 'no snapping')] : []),
-    ...(type === 'head' ? [key('Shift', 'snap to 15°')] : []),
   ];
 }
 

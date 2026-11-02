@@ -57,8 +57,9 @@ describe('the rules (^265 to ^273, ^279)', () => {
 });
 
 describe('the rules of arcs (^269 to ^273)', () => {
-  it('an arc has lines along the normal at its ticks and, on a bend, a bisector with its tangent', () => {
+  it('an arc has radius points, lines along the normal at its ticks and, on a bend, a bisector with its tangent', () => {
     const list = map([node(1, 0, 0, 0), node(2, 50, 30, Math.PI / 2)]);
+    expect(list.filter((s) => s.rule === 'radius-point').length).toBeGreaterThanOrEqual(2);
     expect(list.filter((s) => s.rule === 'tick').length).toBeGreaterThanOrEqual(1);
     expect(list.filter((s) => s.rule === 'bend')).toHaveLength(2);
     expect(list.filter((s) => s.rule === 'offset')).toHaveLength(2);

@@ -3,12 +3,9 @@ import type { Piece } from '../curves/types';
 import { dist, type Vec } from '../curves/vec';
 import { edgesAt, nodeOf, type Graph } from '../model/graph';
 import type { SnapHit } from '../snap/types';
-import { chainsOf, nearestOnChains } from './chains';
-import { movedIds, without } from './snapping';
+import { chainsOf, nearestOnChains, type Chain } from './chains';
 import type { Press } from './types';
-
-/** A node dropped within this world distance (meters) of another node or of a curve is merged into it, whatever the zoom (^248, ^283). */
-export const MERGE_WORLD_M = 0.1;
+import { MERGE_WORLD_M, movedIds, without } from './snapping';
 
 /** Where a dragged node is merged: into a node, or into a curve at a place with its tangent (^248, ^268). */
 export type Drop = { node?: number; edge?: number; at: Vec; th: number } | null;
@@ -54,4 +51,18 @@ export function dropPreview(graph: Graph, press: Press | null, drop: Drop): Piec
     const [p, q] = e.start === press.id ? [target, other] : [other, target];
     return [buildEdge(p, q, e.radius).pieces];
   });
+}
+
+/**
+ * The chains for drawing, without the curves of the segments that a drop would replace: while the
+ * preview is dashed (^284) only the gizmo shows, the geometry of a preview is later (^155).
+ */
+export function roadsShown(chains: Chain[], graph: Graph, press: Press | null, drop: Drop) {
+  const gone = drop && press?.kind === 'drag' ? edgesAt(graph, press.id).map((e) => e.id) : [];
+  const none = { kind: 'line' as const, pieces: [] };
+  return chains.map((c) => ({
+    path: c.path,
+    width: c.width,
+    edges: c.edges.map((ref, i) => (gone.includes(c.edgeIds[i]!) ? { ...ref, E: none } : ref)),
+  }));
 }

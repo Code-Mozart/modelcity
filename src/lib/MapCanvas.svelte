@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dropOf, dropPreview } from './editor/drop';
+  import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
   import type { Editor, PointerInfo } from './editor/editor.svelte';
@@ -38,8 +38,9 @@
 
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
+    const drop = dropOf(editor.graph, editor.press, editor.snapped);
     const scene = {
-      roads: editor.chains.map((c) => ({ path: c.path, edges: c.edges, width: c.width })),
+      roads: roadsShown(editor.chains, editor.graph, editor.press, drop),
       handles: editor.handles(camera.view.scale),
       selection: chainSelection(editor.chains, editor.selection),
       band: editor.band,
@@ -53,11 +54,7 @@
       focus: editor.focus,
       pointer: editor.pointer,
       snap: editor.snapped,
-      dropPreview: dropPreview(
-        editor.graph,
-        editor.press,
-        dropOf(editor.graph, editor.press, editor.snapped),
-      ),
+      dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };

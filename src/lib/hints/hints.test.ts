@@ -315,7 +315,7 @@ describe('while a handle is dragged (^286)', () => {
       'LMB: merge on release',
       'Ctrl: no snapping',
     ]);
-    expect(rows(drag('head'))).toEqual(['LMB drag: turn heading', 'Shift: snap to 15°']);
+    expect(rows(drag('head'))).toEqual(['LMB drag: turn heading']);
     expect(rows(drag('rad'))).toEqual(['LMB drag: change radius']);
   });
 });

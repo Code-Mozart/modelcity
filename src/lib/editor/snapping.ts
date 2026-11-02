@@ -3,10 +3,13 @@ import { nodeOf, type Graph } from '../model/graph';
 import { snapTo } from '../snap/engine';
 import { suggestionsOf, type RuleEdge } from '../snap/rules';
 import type { SnapHit, Suggestion } from '../snap/types';
-import { chainsOf } from './chains';
+import { chainHandles, chainsOf, nearestOnChains, nearNode, type Chain } from './chains';
 import { placementAt } from './ops';
 import { previewOf, type Drawn } from './targets';
 import type { Hover, PointerInfo, Press } from './types';
+
+/** A node dropped within this world distance (meters) of another node or of a curve is merged into it, whatever the zoom (^248, ^283). */
+export const MERGE_WORLD_M = 0.1;
 
 /** The nodes that move with a press: the dragged one and its group (^264). */
 export function movedIds(press: Press | null): number[] {
@@ -72,28 +75,77 @@ export interface SnapArgs {
   pinned: readonly number[];
 }
 
-/** Whether the pointer places or moves a node now: over empty canvas in draw mode, or dragging a node. */
+/** Where a node is placed in draw mode: over empty canvas, a curve or a node. */
+const placing = (hover: Hover | null) =>
+  hover?.kind === 'preview' ||
+  hover?.kind === 'candidate' ||
+  (hover?.kind === 'handle' && hover.handle.type === 'node');
+
+/** Whether the pointer places or moves a node now: in draw mode, or dragging a node. */
 function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | null {
   if (press) return movedIds(press).length ? 'move' : null;
-  return drawing && hover?.kind === 'preview' ? 'place' : null;
+  return drawing && placing(hover) ? 'place' : null;
 }
 
-/** What the pointer is pulled to, if it places or moves a node and `Ctrl` is not held (^101, ^112). */
+/** What a node or curve that is hovered already is as a snap suggestion, to show it like the others (^101). */
+function hoveredHit(base: Suggestion[], hover: Hover | null): SnapHit | null {
+  if (hover?.kind === 'handle') {
+    const s = base.find((x) => x.kind === 'point' && x.node === hover.handle.id);
+    return s?.kind === 'point' ? { pt: s.at, heading: s.heading, by: [s] } : null;
+  }
+  if (hover?.kind !== 'candidate') return null;
+  const { at, edge } = hover.hit;
+  const curve = base.find((x) => x.kind === 'curve' && x.rule === 'curve' && x.edge === edge);
+  return curve ? { pt: at, heading: Math.atan2(at.ty, at.tx), by: [curve] } : null;
+}
+
+/**
+ * What the pointer is pulled to, if it places or moves a node and `Ctrl` is not held (^101, ^112).
+ * Over a node or a curve that is hovered already, that is it: splitting and merging use the same
+ * suggestions as everything else.
+ */
 export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
   const { info } = a;
   const what = snaps(a);
   if (!info || info.ctrl || !what) return null;
-  // A node is placed beside others, not on them: clicking a node merges the road into it instead (^23).
-  const list =
-    what === 'place' ? base.filter((s) => !(s.kind === 'point' && s.node !== undefined)) : base;
-  return snapTo(list, { pt: info.pt, scale: info.scale, pinned: a.pinned });
+  if (what === 'place' && a.hover?.kind !== 'preview') return hoveredHit(base, a.hover);
+  return snapTo(base, { pt: info.pt, scale: info.scale, pinned: a.pinned });
 }
 
-/** The preview of a node a click would place is where it snaps to (^101). */
+/** What a hover is made of for the snapping: the editor state and the chains with the zoom. */
+export interface SnapWorld {
+  drawn: Drawn;
+  chains: Chain[];
+  scale: number;
+}
+
+/**
+ * Where the pointer snaps in draw mode is what a click works on (^101): a node is a node, the curve
+ * of a segment or a radius point is a place on the curve (split, merge, ^278); else it is where a
+ * node would be placed.
+ */
 export function snapPreview(
   hover: Hover | null,
   snap: SnapHit | null,
-  drawn: () => Drawn,
+  world: () => SnapWorld,
 ): Hover | null {
-  return hover?.kind === 'preview' && snap ? previewOf(drawn(), placementAt(snap.pt)) : hover;
+  if (hover?.kind !== 'preview' || !snap) return hover;
+  const w = world();
+  return nodeHover(snap, w) ?? curveHover(snap, w) ?? previewOf(w.drawn, placementAt(snap.pt));
+}
+
+/** The node the pointer snapped to, as a hovered handle. */
+function nodeHover(snap: SnapHit, w: SnapWorld): Hover | null {
+  const by = snap.by[0];
+  const id = by?.kind === 'point' ? by.node : undefined;
+  const handle = chainHandles(w.chains, w.scale).find((h) => h.type === 'node' && h.id === id);
+  return id !== undefined && handle ? { kind: 'handle', handle } : null;
+}
+
+/** The place on a curve the pointer snapped to (the curve of a segment, or a radius point on it), as a candidate. */
+function curveHover(snap: SnapHit, w: SnapWorld): Hover | null {
+  const by = snap.by[0];
+  const onCurve = by?.kind === 'curve' ? by.rule === 'curve' : by?.rule === 'radius-point';
+  const hit = onCurve ? nearestOnChains(w.chains, snap.pt, MERGE_WORLD_M) : null;
+  return hit && !nearNode(hit) ? { kind: 'candidate', hit } : null;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Editor } from './editor.svelte';
-import { at } from '../testing/editorHelpers';
+import { at, draw } from '../testing/editorHelpers';
 import { drag, mapOf } from '../testing/snapHelpers';
 import { dropOf, dropPreview } from './drop';
 
@@ -73,5 +73,22 @@ describe('showing the merge (^284, ^285)', () => {
     drag(ed, [40, 0], [0.05, 0.05]);
     expect(ed.graph.nodes).toEqual([]);
     expect(ed.graph.edges).toEqual([]);
+  });
+});
+
+describe('merging in extend mode (^285)', () => {
+  it('the node being drawn from, dropped on the start of its road, is merged: the road goes on from the merged node, no segment of length zero', () => {
+    const ed = draw([
+      [0, 0],
+      [40, 0],
+    ]);
+    ed.pointerDown(plain(40, 0));
+    ed.pointerMove(plain(30, 8));
+    ed.pointerMove(plain(0.05, 0.05));
+    ed.pointerUp();
+    expect(ed.graph.edges).toEqual([]);
+    expect(ed.graph.nodes).toHaveLength(1);
+    expect(ed.phase).toBe('extend');
+    expect(ed.active).toBe(ed.graph.nodes[0]!.id);
   });
 });

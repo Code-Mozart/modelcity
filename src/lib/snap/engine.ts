@@ -3,7 +3,7 @@ import { crossings, nearestOnPieces } from './geometry';
 import type { SnapCurve, SnapHit, SnapPoint, Suggestion } from './types';
 
 /** How near (screen pixels) a point must be to a suggestion to be pulled to it, and how far its origins may be (^101). */
-export const SNAP_NEAR_PX = 35;
+export const SNAP_NEAR_PX = 25;
 export const SNAP_REACH_PX = 300;
 
 export interface SnapQuery {

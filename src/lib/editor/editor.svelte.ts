@@ -6,9 +6,7 @@ import {
   mergeInto,
   curvePress,
   placePress,
-  removeNodesFrom,
   flipArmFrom,
-  removeSegmentsFrom,
   splitAt,
 } from './ops';
 import { dropOf } from './drop';
@@ -17,6 +15,7 @@ import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { Pins } from './pins.svelte';
+import { nodesRemoval, rightClickRemoval, type Removal } from './removal';
 import { Timeline, type Move } from './timeline.svelte';
 import type { ControlId } from '../hints/hints';
 import { pressName } from './stepNames';
@@ -37,7 +36,6 @@ import { phaseOf } from './phase';
 import { emptyGraph, nodeOf, roundToMm, sameGraph, type Graph } from '../model/graph';
 import {
   afterEmptyClick,
-  branchEdges,
   hoveredEdges,
   selectedSegments,
   sameSelection,
@@ -110,7 +108,13 @@ export class Editor {
       pinned: this.active === null ? this.pins.list : [...this.pins.list, this.active],
     }),
   );
-  hover = $derived<Hover | null>(snapPreview(this.hoverRaw, this.snapped, () => this.snapshot()));
+  hover = $derived<Hover | null>(
+    snapPreview(this.hoverRaw, this.snapped, () => ({
+      drawn: this.snapshot(),
+      chains: this.chains,
+      scale: this.lastInfo?.scale ?? 1,
+    })),
+  );
   /** The three modes (^120): extend mode is draw mode while a node is being extended. */
   phase = $derived(phaseOf(this.mode, this.active, this.viewing));
   /** The chains of the graph, the shape the curve code and the drawing work on (^106). */
@@ -188,19 +192,11 @@ export class Editor {
 
   deleteSelected() {
     if (this.selection.length) this.use('delete-selected');
-    this.removeAll(this.selection);
+    this.removal(nodesRemoval(this.selection));
   }
 
-  private removeAll(ids: number[]) {
-    if (!ids.length) return;
-    const name = ids.length === 1 ? 'delete node' : `delete ${ids.length} nodes`;
-    this.edit(name, (d) => removeNodesFrom(d, ids));
-  }
-
-  /** Remove a segment, or with Alt its whole branch (^160). */
-  private removeSegments(edge: number, branch: boolean) {
-    const ids = branch ? branchEdges(this.graph, edge) : [edge];
-    this.edit(branch ? 'remove branch' : 'remove segment', (d) => removeSegmentsFrom(d, ids));
+  private removal(r: Removal | null) {
+    if (r) this.edit(r.name, r.change);
   }
 
   /** One undoable step: the editing function takes the state and gives the new one. */
@@ -247,9 +243,9 @@ export class Editor {
   pointerDown(info: PointerInfo) {
     this.lastInfo = info;
     if (this.viewing) return;
-    const handle = handleAt(this.handles(info.scale), info);
-    if (handle) return this.grab(handle, info);
-    const hit = curveAt(this.chains, info);
+    const h = this.hover;
+    if (h?.kind === 'handle') return this.grab(h.handle, info);
+    const hit = h?.kind === 'candidate' ? h.hit : null;
     if (!this.drawing) {
       this.press = emptyPress(this.snapshot(), info, hit);
       return;
@@ -390,13 +386,13 @@ export class Editor {
     this.restore(press.undo);
   }
 
-  /** Right click without moving: removes the node under the pointer, else finishes the road. */
+  /** Right click without moving: removes what is under the pointer, else finishes the road (^43, ^160, ^290). */
   rightClick(info: PointerInfo) {
     if (this.viewing) return;
     const handle = handleAt(this.handles(info.scale), info);
     const hit = handle ? null : curveAt(this.chains, info);
-    if (handle?.type === 'node') this.removeAll([handle.id]);
-    else if (hit) this.removeSegments(hit.edge, info.alt);
+    const r = rightClickRemoval(this.graph, this.selection, { handle, hit }, info.alt);
+    if (r) this.removal(r);
     else this.finishRoad();
   }
 }
