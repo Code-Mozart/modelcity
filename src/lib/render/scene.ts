@@ -26,6 +26,7 @@ import type { Pointer } from '../editor/proximity';
 import { drawOutlines } from './outline';
 import { drawSnap } from './snapGuides';
 import type { SnapHit } from '../snap/types';
+import type { Piece } from '../curves/types';
 import { activeFlags, arrowShown, withSelectedTogether } from './scaffold';
 
 /** A node of a chain (the index in the chain), where it is drawn. */
@@ -64,6 +65,8 @@ export interface Scene {
   /** What the placed or moved node is pulled to (^101), and the nodes whose suggestions are pinned (^258). */
   snap: SnapHit | null;
   pinned: NodeRef[];
+  /** The curves a dragged node's segments would have if it were dropped now: dashed, like the curve of an extend (^284). */
+  dropPreview: Piece[][];
 }
 
 const CURVE_PX = 2;
@@ -257,6 +260,9 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
   drawSnap(f, scene.snap, pal);
+  for (const pieces of scene.dropPreview) {
+    for (const piece of pieces) strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
+  }
   if (scene.mergePreview) drawPreview(f, scene.mergePreview, pal, true);
   if (scene.band) drawBand(f, scene.band, pal);
   scene.roads.forEach((road, i) => {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { dropOf, dropPreview } from './editor/drop';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
   import type { Editor, PointerInfo } from './editor/editor.svelte';
@@ -52,6 +53,11 @@
       focus: editor.focus,
       pointer: editor.pointer,
       snap: editor.snapped,
+      dropPreview: dropPreview(
+        editor.graph,
+        editor.press,
+        dropOf(editor.graph, editor.press, editor.snapped),
+      ),
       pinned: chainSelection(editor.chains, editor.pins.list),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };

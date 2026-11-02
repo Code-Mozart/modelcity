@@ -11,7 +11,8 @@ import {
   removeSegmentsFrom,
   splitAt,
 } from './ops';
-import { dropOf, snapBase, snapFor, snapPreview } from './snapping';
+import { dropOf } from './drop';
+import { snapBase, snapFor, snapPreview } from './snapping';
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
@@ -80,7 +81,7 @@ export class Editor {
    * finished road, a placed node, an undo, a key, ^238). None while the left button is down.
    */
 
-  private press = $state.raw<Press | null>(null);
+  press = $state.raw<Press | null>(null);
   readonly timeline = new Timeline();
 
   private use(id: ControlId | null) {

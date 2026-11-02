@@ -1,10 +1,11 @@
 import { startDrag } from '../curves/drag';
 import type { RoadHandle, RoadHit } from './chains';
-import { edgeOfId, nodeOf, placed, shareRadius, type Graph } from '../model/graph';
+import { edgeOfId, nodeOf, placed, type Graph } from '../model/graph';
 import { branchOfEdge, branchOfNode, curveAction, nodeAction } from '../model/junction';
 import { targetOf, type Drawn } from './targets';
 import type { ControlId } from '../hints/hints';
 import type { PointerInfo, Press } from './types';
+import { shareConcentric } from './sharedRadius';
 import { pressNode, selectedSegments } from './selection';
 
 type DragPress = Extract<Press, { kind: 'drag' }>;
@@ -102,5 +103,5 @@ function sharing(g: Graph, selection: number[], press: Press) {
 /** The radius of the dragged segment is given to all selected segments. */
 export function withSharedRadius(g: Graph, selection: number[], press: Press): Graph {
   const s = sharing(g, selection, press);
-  return s ? shareRadius(g, s.own, s.all) : g;
+  return s ? shareConcentric(g, s.own, s.all) : g;
 }

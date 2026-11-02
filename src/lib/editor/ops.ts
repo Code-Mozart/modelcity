@@ -1,7 +1,7 @@
 import { dragHeading } from '../curves/drag';
 import { dist, type Vec } from '../curves/vec';
 import { mergeNodes } from '../model/merge';
-import type { Drop } from './snapping';
+import type { Drop } from './drop';
 import { withSharedRadius } from './press';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
@@ -181,11 +181,12 @@ export function placeStep(g: Graph, id: number, info: PointerInfo): Graph {
  */
 export function droppedNode(d: Drawn, id: number, drop: NonNullable<Drop>): Drawn {
   const into =
-    'node' in drop
+    drop.node !== undefined
       ? { graph: d.graph, id: drop.node }
-      : insertNode(d.graph, drop.edge, { ...drop.at, th: drop.th });
-  const graph = mergeNodes(into.graph, id, into.id);
+      : insertNode(d.graph, drop.edge!, { ...drop.at, th: drop.th });
   const to = (n: number | null) => (n === id ? into.id : n);
+  // A node left without a segment goes, like the end of a road that was merged into its own start (^285).
+  const graph = removeNodes(mergeNodes(into.graph, id, into.id), [], to(d.active));
   const selection = [...new Set(d.selection.map((n) => to(n)!))];
   return { ...d, graph, active: to(d.active), origin: to(d.origin), selection };
 }
