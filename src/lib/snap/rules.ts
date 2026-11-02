@@ -108,16 +108,10 @@ function curveRules(e: RuleEdge): Suggestion[] {
   return [curveOf(e, pieces, 'curve'), ...offsets.map((o) => curveOf(e, o, 'offset'))];
 }
 
-/** The radius points of an arc, and the lines along the normal at its ticks (^270, ^271). */
+/** The lines along the normal at the ticks of an arc (^271). The radius points as snap points come in part 2 (^270). */
 function arcRules(e: RuleEdge, arc: Arc): Suggestion[] {
-  const from = [e.start, e.end];
   const at = (t: number) => pointOn(arc, t);
-  const points = [0, 0.5, 1].map((t) => {
-    const s = at(t);
-    return point(s, 'radius-point', from, { heading: angleOf({ x: s.tx, y: s.ty }) });
-  });
-  const ticks = [0, 1].map((t) => line(at(t), sub(at(t), arc.c), 'tick', from));
-  return [...points, ...ticks];
+  return [0, 1].map((t) => line(at(t), sub(at(t), arc.c), 'tick', [e.start, e.end]));
 }
 
 /** The bisector of a bend and the tangent of that, at the middle of its arc (^269). */

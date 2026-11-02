@@ -8,7 +8,6 @@ export type Rule =
   | 'node-points' // ^267
   | 'curve' // ^268
   | 'bend' // ^269
-  | 'radius-point' // ^270
   | 'tick' // ^271
   | 'inflection-point' // ^272
   | 'inflection-lines' // ^273

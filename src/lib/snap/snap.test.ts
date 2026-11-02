@@ -57,9 +57,8 @@ describe('the rules (^265 to ^273, ^279)', () => {
 });
 
 describe('the rules of arcs (^269 to ^273)', () => {
-  it('an arc has radius points, ticks and, on a bend, a bisector with its tangent', () => {
+  it('an arc has lines along the normal at its ticks and, on a bend, a bisector with its tangent', () => {
     const list = map([node(1, 0, 0, 0), node(2, 50, 30, Math.PI / 2)]);
-    expect(list.filter((s) => s.rule === 'radius-point').length).toBeGreaterThanOrEqual(2);
     expect(list.filter((s) => s.rule === 'tick').length).toBeGreaterThanOrEqual(1);
     expect(list.filter((s) => s.rule === 'bend')).toHaveLength(2);
     expect(list.filter((s) => s.rule === 'offset')).toHaveLength(2);
@@ -83,7 +82,7 @@ describe('the rules of arcs (^269 to ^273)', () => {
 
 describe('snapping to them (^101, ^102)', () => {
   it('a point near nothing is not pulled anywhere', () => {
-    expect(ask(straight(), 15, 1.5)).toBeNull();
+    expect(ask(straight(), 15, 8)).toBeNull();
   });
 
   it('pulls to the nearest line, within the near distance only', () => {

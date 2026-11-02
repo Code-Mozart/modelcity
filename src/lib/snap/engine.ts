@@ -3,7 +3,7 @@ import { crossings, nearestOnPieces } from './geometry';
 import type { SnapCurve, SnapHit, SnapPoint, Suggestion } from './types';
 
 /** How near (screen pixels) a point must be to a suggestion to be pulled to it, and how far its origins may be (^101). */
-export const SNAP_NEAR_PX = 14;
+export const SNAP_NEAR_PX = 35;
 export const SNAP_REACH_PX = 300;
 
 export interface SnapQuery {
@@ -67,9 +67,9 @@ export function snapTo(list: Suggestion[], q: SnapQuery): SnapHit | null {
     .sort((a, b) => dist(a.at, q.pt) - dist(b.at, q.pt));
   const best = points[0];
   if (best) {
-    const by =
-      best.rule === 'crossing' ? near.map((x) => x.s).filter((c) => touches(c, best.at)) : [best];
-    return pointHit(best, by);
+    // A point and the curves that cross at it are all shown or all hidden (^289).
+    const through = near.map((x) => x.s).filter((c) => touches(c, best.at));
+    return pointHit(best, best.rule === 'crossing' ? through : [best, ...through]);
   }
   const curve = near.sort(byNearness)[0];
   return curve
@@ -82,4 +82,4 @@ const rank = (c: SnapCurve) => (c.rule === 'curve' ? 0 : c.rule === 'offset' ? 1
 const byNearness = (a: { s: SnapCurve; n: { d: number } }, b: typeof a) =>
   Math.abs(a.n.d - b.n.d) > 1e-6 ? a.n.d - b.n.d : rank(a.s) - rank(b.s);
 
-const touches = (c: SnapCurve, at: Vec) => (nearestOnPieces(c.pieces, at)?.d ?? 1) < 1e-6;
+const touches = (c: SnapCurve, at: Vec) => (nearestOnPieces(c.pieces, at)?.d ?? 1) < 1e-3;
