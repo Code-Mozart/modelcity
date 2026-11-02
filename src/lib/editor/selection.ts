@@ -1,5 +1,7 @@
 import type { Vec } from '../curves/vec';
 import { edgesBetween, type Graph } from '../model/graph';
+import { branchOfEdge } from '../model/junction';
+import type { Hover } from './types';
 
 /** The selection box in screen pixels, axis-aligned with the viewport (^70). */
 export interface Band {
@@ -39,6 +41,13 @@ export const allSelected = (sel: number[], refs: number[]) =>
 export const afterBranchClick = (sel: number[], nodes: number[]): number[] =>
   allSelected(sel, nodes) ? nodes.reduce(withoutNode, sel) : nodes;
 
+/**
+ * Alt+Shift+click on a branch (^244): adds its nodes to the selection, or deselects them if they
+ * are all selected (the others stay).
+ */
+export const afterBranchAdd = (sel: number[], nodes: number[]): number[] =>
+  allSelected(sel, nodes) ? nodes.reduce(withoutNode, sel) : withNodes(sel, nodes);
+
 /** The segments (edge ids) whose two nodes are both selected. */
 export const selectedSegments = (g: Graph, sel: number[]): number[] =>
   edgesBetween(g, sel).map((e) => e.id);
@@ -60,7 +69,9 @@ export function pressNode(
   lane: number[],
   { shift, alt }: Modifiers,
 ): NodePress {
-  if (alt) return { selection: afterBranchClick(sel, lane), click: 'keep' };
+  if (alt) {
+    return { selection: (shift ? afterBranchAdd : afterBranchClick)(sel, lane), click: 'keep' };
+  }
   if (shift) {
     const was = isSelected(sel, ref);
     return { selection: withNodes(sel, [ref]), click: was ? 'toggle' : 'keep' };
@@ -76,4 +87,29 @@ export function nodesInBand(g: Graph, band: Band, project: (p: Vec) => Vec): num
     const s = project(n);
     return s.x >= x0! && s.x <= x1! && s.y >= y0! && s.y <= y1! ? [n.id] : [];
   });
+}
+
+/** The edges of the branch an edge is on (^128). */
+export const branchEdges = (g: Graph, edge: number): number[] =>
+  selectedSegments(g, branchOfEdge(g, edge));
+
+/** The edges a hover outline covers: the hovered one, or with Alt the whole branch (^99, ^128). */
+export function hoveredEdges(g: Graph, hover: Hover | null, alt: boolean): number[] {
+  if (hover?.kind !== 'candidate') return [];
+  const edge = hover.hit.edge;
+  return alt ? branchEdges(g, edge) : [edge];
+}
+
+/**
+ * The selection after a click that grabbed nothing, with what was pressed (^74, ^128): a curve
+ * selects its nodes (Shift adds, Alt takes its branch), empty canvas deselects; null: nothing to
+ * select or deselect, so draw mode begins (^54).
+ */
+export function afterEmptyClick(
+  sel: number[],
+  { curve, shift, alt }: { curve: number[]; shift: boolean; alt: boolean },
+): number[] | null {
+  if (!curve.length) return shift ? sel : sel.length ? [] : null;
+  if (alt) return (shift ? afterBranchAdd : afterBranchClick)(sel, curve);
+  return afterCurveClick(sel, curve, shift);
 }

@@ -28,9 +28,6 @@
 
 <style>
   .panel {
-    position: absolute;
-    right: 1.1667em;
-    top: 1em;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
@@ -38,7 +35,6 @@
     color: var(--ink);
     text-align: right;
     pointer-events: none;
-    z-index: 2;
     filter: drop-shadow(0 0 2px var(--bg)) drop-shadow(0 0 2px var(--bg));
     font:
       500 var(--font-size) / 1.3 system-ui,

@@ -3,8 +3,8 @@ import type { PathNode } from '../curves/types';
 import type { Vec } from '../curves/vec';
 import type { RoadHandle, RoadHit } from './chains';
 import type { Graph, Placed } from '../model/graph';
-import type { NodeAction } from '../model/junction';
-import type { HintTarget } from '../hints/hints';
+import type { DrawEnd, NodeAction } from '../model/junction';
+import type { ControlId, HintTarget } from '../hints/hints';
 
 /** What the pointer is doing, as seen by the editor. `pt` is in world meters. */
 export interface PointerInfo {
@@ -26,7 +26,7 @@ export interface PointerInfo {
 export type Hover =
   | { kind: 'handle'; handle: RoadHandle }
   | { kind: 'candidate'; hit: RoadHit }
-  | { kind: 'preview'; node: PathNode; ref: PathNode | null; end: 'start' | 'end' };
+  | { kind: 'preview'; node: PathNode; ref: PathNode | null; end: DrawEnd };
 
 /** Where a node would be placed: the pointer, or beside another lane with its heading (^22). */
 export interface Placement {
@@ -44,7 +44,7 @@ export const DRAG_PX = 6;
 export interface Snapshot {
   graph: Graph;
   active: number | null;
-  end: 'start' | 'end';
+  end: DrawEnd;
   origin: number | null;
   selection: number[];
 }
@@ -70,6 +70,10 @@ export type Press =
       origin: Vec;
       /** What a click without moving does to the selection (^71, ^72). */
       click: 'toggle' | 'collapse' | 'keep';
+      /** The select operation a click without moving used (^110). */
+      use: ControlId | null;
+      /** Alt on a heading control point: a click flips the arm (^234). */
+      flip: boolean;
       undo: Snapshot;
       target: HintTarget;
     }

@@ -3,11 +3,16 @@
   import type { Camera } from './camera/camera.svelte';
   import type { Editor, PointerInfo } from './editor/editor.svelte';
   import { FEATURES } from './features';
+  import type { ControlId } from './hints/hints';
   import { chainSelection } from './editor/chains';
   import { render } from './render/render';
   import { screenToWorld, worldToScreen, type Point } from './camera/view';
 
-  let { editor, camera }: { editor: Editor; camera: Camera } = $props();
+  let {
+    editor,
+    camera,
+    onUse,
+  }: { editor: Editor; camera: Camera; onUse: (id: ControlId) => void } = $props();
 
   const LINE_PX = 16;
   const PAGE_PX = 400;
@@ -39,6 +44,7 @@
       band: editor.band,
       drawing: editor.drawing,
       selectedSegments: editor.selectedSegments,
+      outline: editor.hoverSegments,
       hideScaffold: editor.movingGroup,
       hover: editor.hover,
       mergePreview: editor.mergePreview,
@@ -54,22 +60,34 @@
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
-  function info(e: PointerEvent | MouseEvent): PointerInfo {
-    const screen = localPoint(e);
+  /** Where the pointer last was on the canvas, and with what keys, to find it again when the view moves. */
+  let last: Pick<PointerInfo, 'screen' | 'touch' | 'shift' | 'alt'> | null = null;
+
+  function infoAt(at: NonNullable<typeof last>): PointerInfo {
     return {
-      pt: screenToWorld(camera.view, camera.size, screen),
-      screen,
+      ...at,
+      pt: screenToWorld(camera.view, camera.size, at.screen),
       project: (p) => worldToScreen(camera.view, camera.size, p),
       scale: camera.view.scale,
-      touch: 'pointerType' in e && e.pointerType === 'touch',
-      shift: e.shiftKey,
-      alt: e.altKey,
     };
   }
+
+  function info(e: PointerEvent | MouseEvent): PointerInfo {
+    const touch = 'pointerType' in e && e.pointerType === 'touch';
+    last = { screen: localPoint(e), touch, shift: e.shiftKey, alt: e.altKey };
+    return infoAt(last);
+  }
+
+  // The view moved (wheel, pan, rotate, keys): the pointer is over another place now (^238).
+  $effect(() => {
+    void camera.view;
+    untrack(() => last && editor.look(infoAt(last)));
+  });
 
   function onWheel(e: WheelEvent) {
     e.preventDefault();
     const unit = e.deltaMode === 1 ? LINE_PX : e.deltaMode === 2 ? PAGE_PX : 1;
+    onUse('zoom');
     camera.zoomWheel(e.deltaY * unit * (e.ctrlKey ? PINCH_BOOST : 1), localPoint(e));
   }
 
@@ -111,9 +129,14 @@
     } else if (e.button === 0) {
       camera.releaseChip();
       editor.pointerUp();
-    } else if (e.button === 1) camera.endRotate();
-    // A right click without movement removes a node or finishes the road, a right drag only pans.
-    else if (e.button === 2 && !camera.endPan()) editor.rightClick(info(e));
+    } else if (e.button === 1) {
+      camera.endRotate();
+      onUse('rotate');
+    } else if (e.button === 2) {
+      // A right click without movement removes a node or a segment, or finishes the road; a right drag only pans.
+      if (!camera.endPan()) editor.rightClick(info(e));
+      else onUse('pan');
+    }
   }
 
   onMount(() => {

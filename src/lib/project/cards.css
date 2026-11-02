@@ -69,8 +69,8 @@
 }
 .dialog .line {
   display: flex;
-  justify-content: space-between;
-  gap: 1em;
+  align-items: baseline;
+  gap: 0.6em;
 }
 /* The mark of the open project: a word, not only a color (^177). */
 .dialog .label {
@@ -79,12 +79,21 @@
   font-style: italic;
 }
 .dialog .title {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .dialog .date {
   flex: none;
+  margin-left: auto;
   white-space: nowrap;
   color: var(--muted);
+}
+/* The version of an old project sits right after its title and always fits: a long title is cut off earlier (^229). */
+.dialog .version {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.85em;
+  white-space: nowrap;
 }

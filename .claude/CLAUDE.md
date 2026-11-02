@@ -45,6 +45,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 The user entrusts the details to Claude. Principles:
 - SRP, KISS and DRY at all times.
 - Build infrastructure, then use and combine it. Think library and client: engine/API-like code (pure, testable, no UI or input, e.g. `src/lib/camera/view.ts`, `src/lib/render/paint.ts`) versus code that uses it (components, input handling).
+- State that depends on other state is *derived*, not stored and refreshed by hand: a cached value needs every operation to remember to update it, and the first one that forgets is a bug (the hover that stayed until the mouse moved, ^238). Test such a property in general (random sequences of operations), not only for the case that was found.
 - The linter enforces quality limits (complexity, function length, nesting depth, parameter count, statements, file length: see `eslint.config.js`). Fix violations by refactoring. Never disable a rule or raise a limit just to get green; raise one only deliberately and mention it in the PR.
 
 ## Refactoring (learned in the first refactoring pass, ^215)
@@ -70,6 +71,7 @@ The user entrusts the details to Claude. Principles:
 - Design principle (^181): a control hint says what an input does right now, with what is under the pointer and the state of the app; never "when you click X, Y happens".
 - Design principle (^210): a message to the user has the icon of its kind in front (error: exclamation mark in a red circle; information: i in a blue circle; warning: exclamation mark in an orange triangle; success: check mark in a green circle), never color alone (`Notice.svelte`).
 - Design principle (^211): use the available screen space; UI is not small without a reason.
+- Design principle (^233): avoid accidental actions that discard the user's work: block them (with a message that says why) or ask first; when nothing would be lost, allow them.
 - Say *operation* for something the user can do, not *action* (^180).
 - Two levels of gizmo (^60): the *skeleton* (curves and node dots, always shown) and the *scaffold* (all other gizmos of a segment, shown by need). A *segment* is the curve between two nodes.
 

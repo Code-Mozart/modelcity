@@ -124,3 +124,11 @@ export class ProjectFileError extends Error {
     super(REFUSAL_TEXT[kind](versions));
   }
 }
+
+/** The title of a stored project for a card; a project whose file is too damaged to have one gets a placeholder (^229). */
+export const titleOf = (file: { title?: unknown }): string =>
+  typeof file.title === 'string' && file.title.trim() ? file.title : '(damaged project)';
+
+/** `version 1` for a project of an older version than this one reads, else nothing: the card says so after its title (^229). */
+export const versionLabel = (file: { version?: unknown }, current = FILE_VERSION): string =>
+  typeof file.version === 'number' && file.version < current ? `version ${file.version}` : '';

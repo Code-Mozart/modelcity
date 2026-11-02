@@ -4,6 +4,15 @@ import type { Graph } from '../src/lib/model/graph';
 
 export type Pt = { x: number; y: number };
 
+/** A project as the browser keeps it: an export file. */
+export interface StoredFile {
+  title: string;
+  lastUpdatedAt: string;
+  nodes: unknown[];
+  edges: unknown[];
+  camera: { x: number; y: number; scale: number; rotation: number };
+}
+
 /** Drives the real app by mouse and keyboard (^145). Coordinates are meters; the app scrolls the view, so every click asks where its point is now. */
 export class App {
   constructor(readonly page: Page) {}
@@ -91,23 +100,42 @@ export class App {
     }, edge);
   }
 
+  /** The control point at the tip of the heading arrow of the node with this id. */
+  async headHandle(node: number): Promise<Pt> {
+    return this.page.evaluate((id) => {
+      const hook = window.__modelcity!;
+      const h = hook.editor.handles(hook.scale()).find((x) => x.type === 'head' && x.id === id)!;
+      return { x: h.x, y: h.y };
+    }, node);
+  }
+
   /** The projects stored in the browser (IndexedDB), as export files. */
-  stored(): Promise<
-    { title: string; lastUpdatedAt: string; nodes: unknown[]; edges: unknown[] }[]
-  > {
+  stored(): Promise<StoredFile[]> {
     return this.page.evaluate(
       () =>
-        new Promise<{ title: string; lastUpdatedAt: string; nodes: unknown[]; edges: unknown[] }[]>(
-          (resolve, reject) => {
-            const open = indexedDB.open('modelcity', 1);
-            open.onerror = () => reject(open.error);
-            open.onsuccess = () => {
-              const all = open.result.transaction('projects').objectStore('projects').getAll();
-              all.onsuccess = () => resolve(all.result.map((r: { file: never }) => r.file));
-            };
-          },
-        ),
+        new Promise<StoredFile[]>((resolve, reject) => {
+          const open = indexedDB.open('modelcity', 1);
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const all = open.result.transaction('projects').objectStore('projects').getAll();
+            all.onsuccess = () => resolve(all.result.map((r: { file: never }) => r.file));
+          };
+        }),
     );
+  }
+
+  /** The camera of the app: where it looks, how far in, and how it is turned. */
+  camera() {
+    return this.page.evaluate(() => window.__modelcity!.camera());
+  }
+
+  /** Pan the camera with the right button, and zoom with the wheel, as a user would. */
+  async moveCamera(dx: number, dy: number) {
+    await this.page.mouse.move(600, 400);
+    await this.page.mouse.down({ button: 'right' });
+    await this.page.mouse.move(600 + dx, 400 + dy, { steps: 8 });
+    await this.page.mouse.up({ button: 'right' });
+    await this.page.mouse.wheel(0, -200);
   }
 
   /** Draw a road of two nodes, as a user would. */

@@ -35,9 +35,14 @@ export class Camera {
   private touches: { id: number; at: Point }[] = [];
   private zoomTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** The size is 1 x 1 until the canvas has been measured: a view must not be fitted to that. */
+  private get measured() {
+    return this.size.width > 1 && this.size.height > 1;
+  }
+
   /** Every view change goes through here so the camera cannot leave the content (^37). */
   private setView(view: View) {
-    this.view = constrainView(view, this.size, this.anchors);
+    this.view = this.measured ? constrainView(view, this.size, this.anchors) : view;
   }
 
   /** The camera as a project stores it (^170). */

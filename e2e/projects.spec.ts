@@ -1,6 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { App } from './app';
+import { modalOf, projectWithRoad } from './projects';
 
 /** Saving, exporting, importing and opening projects (^82, ^148, ^163 to ^168, ^171, ^189). */
 test.beforeEach(async ({ page }) => {
@@ -8,21 +9,12 @@ test.beforeEach(async ({ page }) => {
   await new App(page).ready();
 });
 
-const modalOf = (page: Page) => page.getByRole('dialog', { name: 'Projects' });
-
-/** Draw a road and wait until it is saved as the n-th project of the browser. */
-async function projectWithRoad(app: App, count: number) {
-  await app.drawRoad();
-  await expect.poll(async () => (await app.stored()).length).toBe(count);
-  await expect.poll(async () => (await app.stored()).every((p) => p.nodes.length === 2)).toBe(true);
-}
-
 test('there is no project at first, and the first road makes one that is there after a reload', async ({
   page,
 }) => {
   const app = new App(page);
   expect(await app.stored()).toHaveLength(0);
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   const card = modalOf(page).locator('li.current');
   await expect(card).toContainText('New project');
   await card.getByRole('button').click(); // the outlined card only closes the modal
@@ -36,40 +28,47 @@ test('there is no project at first, and the first road makes one that is there a
 
 test('the project controls are always shown', async ({ page }) => {
   const hints = new App(page).hints();
-  await expect(hints).toContainText('export');
   await expect(hints).toContainText('projects');
 });
 
-test('Ctrl+S saves a file that Ctrl+O imports as a project', async ({ page }) => {
+test('Ctrl+S saves and says so; the modal exports a file that Ctrl+O imports as a project', async ({
+  page,
+}) => {
   const app = new App(page);
   await app.drawRoad();
+  await page.keyboard.press('Control+s');
+  await expect(page.getByRole('list', { name: 'Messages' })).toContainText('saved');
+  await expect.poll(async () => (await app.stored()).length).toBe(1);
+  await page.keyboard.press('p');
+  const dialog = modalOf(page);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.keyboard.press('Control+s'),
+    dialog.getByRole('button', { name: 'Export JSON' }).click(),
   ]);
   expect(download.suggestedFilename()).toBe('Untitled-project.modelcity.json');
   const path = (await download.path())!;
   expect(JSON.parse(readFileSync(path, 'utf8'))).toMatchObject({ version: 1 });
-
-  await page.keyboard.press('Control+o');
-  const dialog = modalOf(page);
   await dialog.getByRole('button', { name: 'New project' }).click();
   await expect(dialog).toBeHidden();
   expect(await app.nodes()).toHaveLength(0);
 
-  await page.keyboard.press('Control+o');
-  await page.getByLabel('Project file').setInputFiles(path);
+  // Ctrl+O opens the modal and the file window at once.
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.keyboard.press('Control+o'),
+  ]);
+  await chooser.setFiles(path);
   await expect(dialog).toBeHidden();
   expect(await app.nodes()).toHaveLength(2);
   await expect.poll(async () => (await app.stored()).length).toBe(2);
 });
 
-test('the modal has a Save to disc card, the time since the change and a label for the open project', async ({
+test('the modal has an Export JSON card, the time since the change and a label for the open project', async ({
   page,
 }) => {
   const app = new App(page);
   await projectWithRoad(app, 1);
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   const dialog = modalOf(page);
   await expect(dialog.locator('.date')).toHaveText(
     /^(just now|\d+ seconds? ago|\d+ minutes? ago)$/,
@@ -81,7 +80,7 @@ test('the modal has a Save to disc card, the time since the change and a label f
   await expect(dialog.locator('.label')).toHaveText('open');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    dialog.getByRole('button', { name: 'Save to disc…' }).click(),
+    dialog.getByRole('button', { name: 'Export JSON' }).click(),
   ]);
   expect(download.suggestedFilename()).toBe('Untitled-project.modelcity.json');
 });
@@ -92,20 +91,20 @@ test('Ctrl+O lists the projects, opens one and closes with Esc; opening does not
   const app = new App(page);
   await projectWithRoad(app, 1);
   const date = (await app.stored())[0]!.lastUpdatedAt;
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   const dialog = modalOf(page);
   await dialog.getByRole('button', { name: 'New project' }).click();
   await expect(dialog).toBeHidden();
   expect(await app.nodes()).toHaveLength(0);
 
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   await expect(dialog.locator('li').filter({ has: page.locator('.open') })).toHaveCount(4);
   await dialog.locator('.open').first().click();
   await expect(dialog).toBeHidden();
   expect(await app.nodes()).toHaveLength(2);
   expect((await app.stored())[0]!.lastUpdatedAt).toBe(date);
 
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   await expect(dialog).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
@@ -116,7 +115,7 @@ test('a file that is no project is refused with a message, the open project stay
 }) => {
   const app = new App(page);
   await app.drawRoad();
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   await page.getByLabel('Project file').setInputFiles({
     name: 'bad.json',
     mimeType: 'application/json',
@@ -131,7 +130,7 @@ test('rename: the pen opens a text field, Enter renames, Esc cancels without clo
 }) => {
   const app = new App(page);
   await projectWithRoad(app, 1);
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   const dialog = modalOf(page);
   await dialog.getByRole('button', { name: /^Rename/ }).click();
   const name = dialog.getByLabel('Project name');
@@ -152,12 +151,12 @@ test('delete asks first: the bin turns into a cross, the pen into a check mark',
 }) => {
   const app = new App(page);
   await projectWithRoad(app, 1);
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   const dialog = modalOf(page);
   await dialog.getByRole('button', { name: 'New project' }).click();
   await expect(dialog).toBeHidden();
   await projectWithRoad(app, 2);
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   await dialog
     .getByRole('button', { name: /^Delete/ })
     .first()
@@ -177,7 +176,7 @@ test('the modal shows its own controls only, one row for inputs that do the same
 }) => {
   const app = new App(page);
   await projectWithRoad(app, 1);
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   const dialog = modalOf(page);
   const hints = app.hints();
   await expect(hints).toContainText('close');
@@ -201,7 +200,7 @@ test('the modal is wide, at most three quarters of the screen tall, and the file
 }) => {
   const app = new App(page);
   await projectWithRoad(app, 1);
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   const box = (await modalOf(page).boundingBox())!;
   expect(box.width).toBeGreaterThan(600);
   expect(box.height).toBeLessThanOrEqual(0.75 * page.viewportSize()!.height);
@@ -220,7 +219,7 @@ test('the search finds fuzzily and says what a click does only while it is not t
 }) => {
   const app = new App(page);
   await projectWithRoad(app, 1);
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   const modal = modalOf(page);
   const search = modal.getByLabel('Search projects');
   await expect(search).toBeFocused();
@@ -250,7 +249,7 @@ test('an error message takes its room from the list, the modal stays within thre
   for (let i = 0; i < 14; i++) {
     await page.evaluate((text) => window.__modelcity!.session.importText(text), file);
   }
-  await page.keyboard.press('Control+o');
+  await page.keyboard.press('p');
   const modal = modalOf(page);
   // an imported project keeps the dates of its file (^214)
   await expect(modal.locator('.date').first()).toHaveAttribute('title', /^2026-10-1[23]T/);

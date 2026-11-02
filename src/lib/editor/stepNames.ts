@@ -28,22 +28,23 @@ const ACT_NAME = {
   split: 'split road',
 } as const;
 
+/** What a finished press on a handle did: a move, or a click (^216). */
+function dragName(press: Extract<Press, { kind: 'drag' }>): string {
+  if (press.moved) {
+    const group = press.group.length;
+    const handle = press.drag.handle.type;
+    return group > 0 && handle === 'node' ? `move ${group + 1} nodes` : HANDLE_NAME[handle];
+  }
+  if (press.flip) return 'flip arm';
+  return press.act ? ACT_NAME[press.act] : 'select';
+}
+
 /** What a finished press did (^216), for the name of its step. */
 export function pressName(press: Press): string {
-  if (press.kind === 'drag') {
-    if (press.moved) {
-      const group = press.group.length;
-      return group > 0 && press.drag.handle.type === 'node'
-        ? `move ${group + 1} nodes`
-        : HANDLE_NAME[press.drag.handle.type];
-    }
-    return press.act ? ACT_NAME[press.act] : 'select';
-  }
-  if (press.kind === 'place') {
-    if (!press.moved && press.then) return ACT_NAME[press.then];
-    return press.target.kind === 'curve' ? 'insert node' : 'place node';
-  }
-  return 'select';
+  if (press.kind === 'drag') return dragName(press);
+  if (press.kind !== 'place') return 'select';
+  if (!press.moved && press.then) return ACT_NAME[press.then];
+  return press.target.kind === 'curve' ? 'insert node' : 'place node';
 }
 
 /** The kind of a step, by what it changed (^216). */

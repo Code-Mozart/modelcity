@@ -12,10 +12,10 @@ const show = (h: Hint) =>
           ? i.labels.join('+')
           : i.kind === 'wheel'
             ? 'Wheel'
-            : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
+            : `${i.alt ? 'Alt+' : ''}${i.shift ? 'Shift+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}${h.note ? ` (${h.note.key} ${h.note.text})` : ''}`;
-const PROJECT_ROWS = ['Ctrl+S: export', 'Ctrl+O: projects'];
+const PROJECT_ROWS = ['P: projects'];
 /** The hints of the mode and target, without the project controls that are always shown (^168). */
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
   hintsFor(drawing, target, selected)
@@ -42,7 +42,9 @@ describe('control hints (^49)', () => {
     expect(rows(true, { kind: 'curve', act: 'merge' })).toEqual([
       'LMB: merge',
       'LMB drag: insert and set heading',
-      'Esc or RMB: finish',
+      'Esc: finish',
+      'RMB: remove segment',
+      'Alt+RMB: remove branch',
     ]);
   });
 
@@ -57,11 +59,11 @@ describe('control hints (^49)', () => {
 
 describe('control hints over nodes and handles (^49)', () => {
   it('over the last node a click finishes the road', () => {
+    // One row for both ways to finish, not two (^239).
     expect(rows(true, node(true))).toEqual([
-      'LMB: finish',
+      'LMB or Esc: finish',
       'LMB drag: move node',
       'RMB: delete node',
-      'Esc: finish',
     ]);
   });
 
@@ -80,7 +82,11 @@ describe('control hints over nodes and handles (^49)', () => {
       type,
       act: null,
     });
-    expect(rows(true, h('head'))).toEqual(['LMB drag: turn heading', 'Esc or RMB: finish']);
+    expect(rows(true, h('head'))).toEqual([
+      'LMB drag: turn heading',
+      'Alt+LMB: flip arm',
+      'Esc or RMB: finish',
+    ]);
     expect(rows(true, h('ctrl'))).toEqual(['LMB drag: bend curve', 'Esc or RMB: finish']);
     expect(rows(true, h('rad'))).toEqual(['LMB drag: change radius', 'Esc or RMB: finish']);
   });
@@ -102,6 +108,7 @@ describe('select mode hints (^49, ^74)', () => {
       'LMB: deselect all',
       'LMB drag: select',
       'Shift+LMB drag: add to selection',
+      'Esc: deselect all',
       'Del: delete selected',
       'RMB drag: pan',
       'Wheel: zoom',
@@ -116,18 +123,26 @@ describe('select mode hints over curves and nodes (^74)', () => {
     expect(rows(false, { kind: 'curve', picked: 1 }, 1)).toEqual([
       'LMB drag: select',
       'Shift+LMB drag: add to selection',
-      'LMB: select both nodes instead',
-      'Shift+LMB: add both nodes to selection',
-      'Alt+LMB: select lane',
+      'LMB: select segment instead',
+      'Shift+LMB: add segment to selection',
+      'Alt+LMB: select branch',
+      'Alt+Shift+LMB: add branch to selection',
+      'Esc: deselect all',
       'Del: delete selected',
+      'RMB: remove segment',
+      'Alt+RMB: remove branch',
       ...camera,
     ]);
     expect(rows(false, { kind: 'curve', picked: 2 }, 2)).toEqual([
       'LMB drag: select',
       'Shift+LMB drag: add to selection',
-      'Shift+LMB: deselect both nodes',
-      'Alt+LMB: select lane',
+      'Shift+LMB: deselect segment',
+      'Alt+LMB: select branch',
+      'Alt+Shift+LMB: add branch to selection',
+      'Esc: deselect all',
       'Del: delete selected',
+      'RMB: remove segment',
+      'Alt+RMB: remove branch',
       ...camera,
     ]);
   });
@@ -139,20 +154,23 @@ describe('select mode hints over nodes (^74, ^75)', () => {
       'LMB drag: move node',
       'RMB: delete node',
       'LMB: select',
-      'Alt+LMB: select lane',
+      'Alt+LMB: select branch',
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',
     ]);
-    expect(rows(false, node(false), 1).slice(2, 5)).toEqual([
+    expect(rows(false, node(false), 1).slice(2, 6)).toEqual([
       'LMB: select instead',
       'Shift+LMB: select',
-      'Alt+LMB: select lane',
+      'Alt+LMB: select branch',
+      'Alt+Shift+LMB: add branch to selection',
     ]);
     const selected: HintTarget = { ...node(false), selected: true } as HintTarget;
     expect(rows(false, selected, 1).slice(2)).toEqual([
       'Shift+LMB: deselect',
-      'Alt+LMB: select lane',
+      'Alt+LMB: select branch',
+      'Alt+Shift+LMB: add branch to selection',
+      'Esc: deselect all',
       'Del: delete selected',
       'RMB drag: pan',
       'Wheel: zoom',
@@ -195,7 +213,7 @@ describe('split and merge hints (^23)', () => {
 describe('project controls (^168)', () => {
   it('are always the last hints, in every mode', () => {
     for (const drawing of [false, true]) {
-      expect(hintsFor(drawing, empty).map(show).slice(-2)).toEqual(PROJECT_ROWS);
+      expect(hintsFor(drawing, empty).map(show).slice(-1)).toEqual(PROJECT_ROWS);
     }
   });
 });
@@ -208,7 +226,7 @@ describe('the projects modal hints say what an input does right now (^181)', () 
     expect(rows('list', 'card')).toEqual(['LMB: open', 'Esc: close']);
     expect(rows('list', 'rename')).toEqual(['LMB: rename', 'Esc: close']);
     expect(rows('list', 'delete')).toEqual(['LMB: delete', 'Esc: close']);
-    expect(rows('list', 'save')).toEqual(['LMB: save to disc', 'Esc: close']);
+    expect(rows('list', 'export')).toEqual(['LMB: export JSON', 'Esc: close']);
   });
 
   it('inputs that do the same are one row: Esc or LMB closes over the cross', () => {
@@ -224,5 +242,43 @@ describe('the projects modal hints say what an input does right now (^181)', () 
   it('while asked about a delete: the check mark deletes, the cross and Esc cancel', () => {
     expect(rows('delete', 'confirm')).toEqual(['LMB: delete', 'Esc: cancel']);
     expect(rows('delete', 'cancel')).toEqual(['Esc or LMB: cancel']);
+  });
+});
+
+describe('learned controls are hidden (^110)', () => {
+  const hiddenIds =
+    (...ids: string[]) =>
+    (id: string) =>
+      ids.includes(id);
+
+  it('a control that was used has no hint, each on its own', () => {
+    const all = rows(false, empty, 2);
+    const some = hintsFor(false, empty, 2, hiddenIds('pan', 'select-box')).map(show);
+    expect(all).toContain('RMB drag: pan');
+    expect(some).not.toContain('RMB drag: pan');
+    expect(some).not.toContain('LMB drag: select');
+    expect(some).toContain('Wheel: zoom');
+    expect(some).toContain('MMB drag: rotate');
+  });
+
+  it('with the camera and select controls learned, drawing is the only mouse hint on a blank map', () => {
+    const learned = hiddenIds('pan', 'zoom', 'rotate', 'select-box');
+    expect(hintsFor(false, empty, 0, learned).map(show)).toEqual([
+      'LMB: draw mode',
+      ...PROJECT_ROWS,
+    ]);
+  });
+
+  it('draw mode and moving are not hidden', () => {
+    const all = () => true;
+    expect(hintsFor(true, empty, 0, all).map(show)).toEqual(hintsFor(true, empty, 0).map(show));
+    expect(hintsFor(false, node(false), 0, all).map(show)).toContain('LMB drag: move node');
+  });
+
+  it('undo and redo can be learned, too', () => {
+    const rowsOf = (...ids: string[]) =>
+      historyHints({ undo: true, redo: true }, hiddenIds(...ids)).map(show);
+    expect(rowsOf()).toHaveLength(2);
+    expect(rowsOf('undo')).toEqual(['Ctrl+Y or Ctrl+Shift+Z: redo (Alt to redo batch)']);
   });
 });

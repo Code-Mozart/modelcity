@@ -1,56 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Camera } from '../camera/camera.svelte';
-import { Editor } from '../editor/editor.svelte';
 import { addNode } from '../model/graph';
 import { click } from '../testing/editorHelpers';
+import { drawRoad, resetClock, setup, two, withRoad, datesOf } from '../testing/sessionHelpers';
 import { fromFile } from './file';
-import { AUTOSAVE_MAX_WAIT_MS, AUTOSAVE_MS, ProjectSession } from './session.svelte';
-import { MemoryStorage } from './storage';
-
-let tick = 0;
-const setup = () => {
-  const editor = new Editor();
-  const camera = new Camera();
-  camera.size = { width: 1000, height: 800 };
-  const storage = new MemoryStorage();
-  const clock = () => `2026-11-01T00:00:${String(tick++).padStart(2, '0')}Z`;
-  return { editor, camera, storage, session: new ProjectSession(editor, camera, storage, clock) };
-};
-type Setup = ReturnType<typeof setup>;
-
-/** Draw a road of two nodes into the editor of the session. */
-const drawRoad = (editor: Editor, camera?: Camera) => {
-  click(editor, 500, 500);
-  click(editor, 0, 0);
-  click(editor, 30, 10);
-  editor.key('Escape');
-  camera?.setAnchors(editor.anchors);
-};
-
-/** A project with a road, saved by autosave. */
-const withRoad = async ({ session, editor, camera }: Setup) => {
-  await session.start();
-  drawRoad(editor, camera);
-  session.changed();
-  await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + 1);
-};
-
-/** Two saved projects: the first one with a road, then a second one; returns the id of the first. */
-const two = async (s: Setup) => {
-  await withRoad(s);
-  const first = s.session.id;
-  await s.session.newProject();
-  drawRoad(s.editor);
-  s.session.changed();
-  await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + 1);
-  return first;
-};
-
-const datesOf = async (storage: MemoryStorage) =>
-  (await storage.list()).map((p) => p.file.lastUpdatedAt);
+import { AUTOSAVE_MAX_WAIT_MS, AUTOSAVE_MS } from './session.svelte';
 
 beforeEach(() => {
-  tick = 0;
+  resetClock();
   vi.useFakeTimers();
 });
 afterEach(() => vi.useRealTimers());

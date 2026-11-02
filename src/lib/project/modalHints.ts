@@ -13,7 +13,7 @@ export type ModalTarget =
   | 'close'
   | 'new'
   | 'import'
-  | 'save'
+  | 'export'
   | 'search';
 
 const CLICK: Record<ModalTarget, (mode: ModalMode) => string> = {
@@ -25,7 +25,7 @@ const CLICK: Record<ModalTarget, (mode: ModalMode) => string> = {
   close: () => 'close',
   new: () => 'new project',
   import: () => 'import',
-  save: () => 'save to disc',
+  export: () => 'export JSON',
   search: () => 'search',
 };
 

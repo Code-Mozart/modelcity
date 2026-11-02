@@ -27,9 +27,9 @@ describe('extending a road from a leaf node (^65)', () => {
   it('a click on the first node extends the road backwards: new nodes are added before it', () => {
     const ed = road();
     click(ed, 0, 0);
-    expect(ed.end).toBe('start');
+    expect(ed.end).toBe('first'); // nothing placed yet: a node goes before it, a merge out of it (^239)
     ed.pointerMove(at(-30, 15));
-    expect(ed.hover).toMatchObject({ kind: 'preview', end: 'start', ref: { x: 0, y: 0 } });
+    expect(ed.hover).toMatchObject({ kind: 'preview', end: 'first', ref: { x: 0, y: 0 } });
     click(ed, -30, 15);
     const nodes = ed.chains[0]!.path.nodes;
     expect(nodes).toHaveLength(4);
@@ -47,7 +47,7 @@ describe('extending from the other end and finishing (^65)', () => {
       [20, -10],
       [40, 0],
     ]);
-    expect(ed.hintTarget).toEqual({ kind: 'empty' });
+    expect(ed.hintTarget).toMatchObject({ kind: 'handle', type: 'node', act: 'finish' });
     ed.pointerMove(at(0, 0));
     expect(ed.hintTarget).toMatchObject({ kind: 'handle', type: 'node', act: 'close' });
     click(ed, 0, 0);
@@ -98,8 +98,64 @@ describe('extending from a leaf node is a draw mode control (^65)', () => {
     ed.pointerUp();
     expect(ed.active).toBeNull();
     click(ed, 0, 0);
-    expect(ed.end).toBe('start');
+    expect(ed.end).toBe('first');
     ed.key('Escape');
     expect(ed.end).toBe('end');
+  });
+});
+
+/** Two parallel segments, A (0) to B (1) and C (2) to D (3), and draw mode. */
+const parallel = () => {
+  const ed = draw([
+    [0, 0],
+    [60, 0],
+  ]);
+  ed.key('Escape');
+  click(ed, 500, 500);
+  click(ed, 0, 40);
+  click(ed, 60, 40);
+  ed.key('Escape');
+  click(ed, 500, 500);
+  return ed;
+};
+const edges = (ed: ReturnType<typeof parallel>) => ed.graph.edges.map((e) => `${e.start}>${e.end}`);
+
+describe('a merge follows the order of the clicks (^239)', () => {
+  it('A first, then D: the segment runs from A to D, as clicked', () => {
+    const ed = parallel();
+    click(ed, 0, 0);
+    ed.pointerMove(at(60, 40));
+    expect(ed.mergePreview).toMatchObject({
+      end: 'end',
+      ref: { x: 0, y: 0 },
+      node: { x: 60, y: 40 },
+    });
+    click(ed, 60, 40);
+    expect(edges(ed)).toEqual(['0>1', '2>3', '0>3']);
+  });
+
+  it('D first, then A: from D to A', () => {
+    const ed = parallel();
+    click(ed, 60, 40);
+    click(ed, 0, 0);
+    expect(edges(ed)).toEqual(['0>1', '2>3', '3>0']);
+  });
+});
+
+describe('a merge after closing a loop or placing a node (^239)', () => {
+  it('closing the loop at the node where the road started still runs the usual way', () => {
+    const ed = parallel();
+    click(ed, 0, 0);
+    click(ed, 60, 0);
+    expect(edges(ed)).toEqual(['0>1', '2>3', '1>0']);
+  });
+
+  it('once a node was placed the road is drawn backwards: a merge goes into the new node', () => {
+    const ed = parallel();
+    click(ed, 0, 0);
+    click(ed, -30, 20);
+    expect(ed.end).toBe('start');
+    click(ed, 60, 40);
+    expect(edges(ed).at(-1)).toBe('3>4');
   });
 });

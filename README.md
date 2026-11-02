@@ -36,6 +36,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Node** | A point a road passes through, drawn as a dot. It lies on the curve and carries a heading | decided | ^6 |
 | **Heading** | The direction of the road at a node, shown as an arrow | decided | ^6, ^9 |
 | **Segment** | The curve between two nodes (`edge` in the code) | decided | ^60 |
+| **Selected segment** | A segment whose two nodes are both selected (`selectedSegments` in the code); it is drawn in the color of selected nodes, and its scaffold is shown together with those of the other selected segments | decided | ^133, ^231 |
 | **Leaf node** | A node at either end of a road, also the only node of a road | decided | ^65 |
 | **Bend** (L-curve) | A segment with one turn: straight, arc, straight | decided; assumed (that "L-curve" and "bend" are one thing) | ^6 |
 | **S-curve** | A segment that turns one way, then the other; both arcs share one radius | decided | ^6 |
@@ -47,7 +48,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Scaffold** | All other gizmos of a segment (orange lines, circle, control points, heading arrows (orange), the axis line and corner points of an S-curve or hook, the radius label). Shown all or nothing, for a single segment at a time (selected segments together), and only by need | decided | ^60, ^66 |
 | **Selection** | 0..n selected nodes, also of different roads. Selected nodes are blue and 150% larger; dragging one moves all by the same translation | decided; assumed (details) | ^70, ^71, ^72, ^73 |
 | **Selection box** | The rectangle spanned by a left drag on empty canvas in select mode, axis-aligned with the viewport (also "rubber band"); selects the nodes inside it | decided | ^69, ^70 |
-| **Lane** | A strip of road traffic runs in, 3 m wide for now (`LANE_WIDTH_M`). For now a branch is a single lane, so *select lane* selects a branch (Alt+click); more lanes come later | decided; assumed (that a road is one lane for now) | ^22, ^76 |
+| **Lane** | A strip of road traffic runs in, 3 m wide for now (`LANE_WIDTH_M`). For now a branch is a single lane, so *select branch* (Alt+click; Alt+Shift+click adds it) selects a branch; more lanes come later | decided; assumed (that a road is one lane for now) | ^22, ^76 |
 | **Step** | One undoable change of the roads (a placed node, a drag, a removal, ...), see `docs/controls.md` | assumed | ^81, ^88 |
 | **Junction node** | A node where more than one edge meets, a single node of the graph with one heading (formerly the *shared node* by position, ^92, replaced by the graph, ^106) | decided; assumed (the name) | ^23, ^106, ^170 |
 | **Operation** | Something the user can do and that has a name: undo, split, export, change the radius. Listed in the control hints, the recent history panel and the operations search. We say *operation*, not *action* (`action` is also what code calls many other things) | decided | ^180 |
@@ -82,6 +83,8 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Control hints panel** | The HTML div in the top left corner that shows the control hints; it changes with mode, context and selection (formerly "hints") | decided | ^49, ^74, ^111 |
 | **Batch** | A run of consecutive undo steps of one kind (selection changes, or the steps of one drawing session) that `Alt+Ctrl+Z` undoes at once | decided | ^103, ^216 |
 | **Control hint** | One row of the control hints panel: `[input]: action` | decided | ^49, ^111 |
+| **Message** | Any text for the user with the icon of its kind in front, always at the start (^210): a toast, or the error of a refused import in the modal | decided | ^210, ^232 |
+| **Toast** | A short message in the top right corner above the recent history panel, on a transparent background, with the icon of its kind in front (^210); it confirms what the user just did (`saved`) or reports what cannot be shown in the projects modal. It goes by itself after a few seconds | assumed | ^232, ^185 |
 | **Recent history panel** | The HTML div in the top right corner that shows the last 7 steps of the history (undone ones grayed out, with their line), batches as steps with joined lines, and the undo and redo hints at its bottom; it appears with each operation and goes after a few seconds (^107–^109, ^216) | decided | ^107, ^111 |
 | **Key cap** | The raised, key-like symbol for a keyboard key; blue and sunk in while pressed | decided | ^32, ^68 |
 | **Mouse symbols** | The symbols for mouse buttons, drag and the wheel (`MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`) | decided | ^50, ^56 |

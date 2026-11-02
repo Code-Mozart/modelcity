@@ -11,6 +11,8 @@ export interface TestHook {
   toPage(pt: Point): Point;
   /** Pixels per meter. */
   scale(): number;
+  /** The camera as a project stores it. */
+  camera(): { x: number; y: number; scale: number; rotation: number };
 }
 
 declare global {
@@ -30,6 +32,7 @@ export function installTestHook(
     editor,
     session,
     scale: () => camera.view.scale,
+    camera: () => camera.state,
     toPage(pt) {
       const s = worldToScreen(camera.view, camera.size, pt);
       const rect = canvas()?.getBoundingClientRect();

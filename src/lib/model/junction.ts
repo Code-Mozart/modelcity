@@ -19,7 +19,7 @@ export type CurveAction = 'split' | 'merge' | null;
 export interface DrawState {
   graph: Graph;
   active: number | null;
-  end: 'start' | 'end';
+  end: DrawEnd;
   origin: number | null;
 }
 
@@ -88,8 +88,17 @@ export function branchOfNode(g: Graph, id: number): number[] {
   return e ? branchOfEdge(g, e.id) : [id];
 }
 
-/** Which way the next edge of the road being drawn runs (^65). */
-export type DrawEnd = 'start' | 'end';
+/**
+ * Which way the next edge of the road being drawn runs (^65): `end`, out of the node being drawn
+ * from; `start`, into it (the road is drawn backwards). `first`: the road was just extended from
+ * its first node and nothing is placed yet: a node placed next still goes before it (like
+ * `start`), but a merge runs out of the node, in the order of the clicks (^239).
+ */
+export type DrawEnd = 'start' | 'end' | 'first';
+
+/** The way a merge into `target` runs: in the order of the clicks right after the first node was clicked, except closing the loop. */
+export const mergeEnd = (end: DrawEnd, target: number | null, origin: number | null): DrawEnd =>
+  end === 'first' && target !== origin ? 'end' : end;
 
 /** The heading a node placed at `pt` gets so that the edge to the node `tip` is one arc (^65). */
 export const autoHeadingFor = (end: DrawEnd) => (end === 'end' ? autoHeading : autoHeadingBefore);
@@ -101,3 +110,12 @@ export const linkTo = (g: Graph, active: number, end: DrawEnd, id: number): Grap
 /** The ends of the curve to be drawn: from the node being drawn from to `node`, or the other way. */
 export const ordered = <T>(tip: T, node: T, end: DrawEnd): [T, T] =>
   end === 'end' ? [tip, node] : [node, tip];
+
+/** The arm of a node (^130): all nodes connected to it by segments, itself included. */
+export function armOf(g: Graph, id: number): number[] {
+  const arm = new Set([id]);
+  for (const node of arm) {
+    for (const e of edgesAt(g, node)) arm.add(other(e, node));
+  }
+  return [...arm];
+}

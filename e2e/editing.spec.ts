@@ -101,3 +101,117 @@ test('the recent history panel shows the last steps, grays out undone ones and h
   expect((await app.state()).selected).toBe(1);
   await expect(app.history().locator('.undone')).toHaveCount(0);
 });
+
+test('a used control loses its hint, Esc deselects all, a right click removes a segment (^110, ^218, ^160)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  await drawRoad(app);
+  await expect(app.hints()).toContainText('zoom');
+  await page.mouse.move(400, 300);
+  await page.mouse.wheel(0, -120);
+  await expect(app.hints()).not.toContainText('zoom');
+  await expect(app.hints()).toContainText('pan');
+
+  await app.box({ x: -10, y: -10 }, { x: 70, y: 10 });
+  expect((await app.state()).selected).toBe(3);
+  await expect(app.hints()).toContainText('deselect all');
+  await page.keyboard.press('Escape');
+  expect((await app.state()).selected).toBe(0);
+
+  await app.rightClick({ x: 15, y: 0 });
+  expect(await nodes(app)).toHaveLength(2);
+  expect(await app.edges()).toHaveLength(1);
+});
+
+test('Alt and a click on a heading control point flips the arm; a split finished at once changes nothing (^234, ^237)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  await drawRoad(app);
+  const [first] = await app.edges();
+  const tip = await app.headHandle(0);
+  await page.keyboard.down('Alt');
+  await app.click(tip);
+  await page.keyboard.up('Alt');
+  const [flipped] = await app.edges();
+  expect([flipped!.start, flipped!.end]).toEqual([first!.end, first!.start]);
+  await expect(app.history()).toContainText('flip arm');
+
+  const before = (await app.graph()).edges.length;
+  await app.click({ x: 0, y: 30 }); // empty canvas: draw mode
+  await app.click(await app.curvePoint({ x: 15, y: 0 })); // a click on the curve: a split
+  await page.keyboard.press('Escape');
+  expect((await app.graph()).edges).toHaveLength(before);
+});
+
+test('the node just placed is hovered at once, and finishing a road takes the preview away (^238)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  const hover = () => page.evaluate(() => window.__modelcity!.editor.hover?.kind ?? null);
+  await app.click({ x: 0, y: 30 }); // empty canvas: draw mode
+  await app.click({ x: 0, y: 0 });
+  await app.click({ x: 30, y: 0 });
+  expect(await hover()).toBe('handle'); // the node under the pointer, without moving it
+  await app.hover({ x: 60, y: 20 });
+  expect(await hover()).toBe('preview');
+  await page.keyboard.press('Escape');
+  expect(await hover()).toBeNull(); // no preview left in select mode
+});
+
+test('the outline follows Alt without moving the mouse, and a pan or a zoom under a still pointer updates what it is over (^238)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  await drawRoad(app);
+  const segments = () => page.evaluate(() => window.__modelcity!.editor.hoverSegments.length);
+  const hover = () => page.evaluate(() => window.__modelcity!.editor.hover?.kind ?? null);
+  await app.hover({ x: 15, y: 0 }); // on the first segment of a branch of two
+  expect(await hover()).toBe('candidate');
+  expect(await segments()).toBe(1);
+  await page.keyboard.down('Alt'); // no mouse movement
+  expect(await segments()).toBe(2);
+  await page.keyboard.up('Alt');
+  expect(await segments()).toBe(1);
+
+  // A right drag pans the view: the pointer ends over empty canvas, though it never "moved" for the editor.
+  const p = await page.evaluate(() => window.__modelcity!.toPage({ x: 15, y: 0 }));
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(p.x, p.y + 150, { steps: 6 });
+  await page.mouse.up({ button: 'right' });
+  expect(await hover()).toBeNull();
+});
+
+test('nothing to undo or redo is said once, and the undo hint is not alone in the panel (^241, ^242)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  const messages = page.getByRole('list', { name: 'Messages' });
+  await page.keyboard.press('Control+z');
+  await page.keyboard.press('Control+z'); // a key held down: the same message, not two
+  await expect(messages).toContainText('nothing to undo');
+  await expect(messages.getByRole('status')).toHaveCount(1);
+  await page.keyboard.press('Control+y');
+  await expect(messages).toContainText('nothing to redo');
+
+  // A freshly opened session has no history; a select and a deselect change nothing and show no row.
+  await drawRoad(app);
+  await expect.poll(async () => (await app.stored()).length).toBe(1);
+  await page.reload();
+  await app.ready();
+  await app.click({ x: 0, y: 0 });
+  await page.keyboard.press('Escape');
+  expect((await app.state()).selected).toBe(0);
+  await expect(page.getByLabel('Undo and redo')).toHaveCount(0);
+});

@@ -23,6 +23,7 @@ import {
 } from './paint';
 import type { Band } from '../editor/selection';
 import type { Pointer } from '../editor/proximity';
+import { drawOutlines } from './outline';
 import { activeFlags, arrowShown, withSelectedTogether } from './scaffold';
 
 /** A node of a chain (the index in the chain), where it is drawn. */
@@ -47,6 +48,8 @@ export interface Scene {
   drawing: boolean;
   /** The segments (road, index) whose two nodes are selected: they show their scaffold together (^133). */
   selectedSegments: { road: number; i: number }[];
+  /** The segments (road, index) under the pointer that get a blue outline, a whole branch with Alt (^99). */
+  outline: { road: number; i: number }[];
   /** All scaffolds are hidden while several nodes are moved (^78). */
   hideScaffold: boolean;
   hover: Hover | null;
@@ -131,33 +134,38 @@ function drawHover(f: Frame, hover: Hover | null, drawing: boolean, pal: Palette
 }
 
 /** Small chevrons along the curves at regular pixel distances, pointing the way the road runs (^80). */
-function drawDirection(f: Frame, road: RoadScene, pal: Palette) {
+function drawDirection(f: Frame, road: RoadScene, selected: boolean[], pal: Palette) {
   const pieces = road.edges.flatMap((e) => e.E.pieces);
+  const owner = road.edges.flatMap((e, k) => e.E.pieces.map(() => k));
   for (const s of samplesAlong(pieces, DIRECTION_SPACING_PX / f.view.scale)) {
     const at = toScreen(f, s);
     const t = screenDir(f, { x: s.tx, y: s.ty });
-    barbs(f.ctx, at, Math.atan2(t.y, t.x), { ...CHEVRON, color: pal.ink });
+    const color = selected[owner[s.piece]!] ? pal.blue : pal.ink;
+    barbs(f.ctx, at, Math.atan2(t.y, t.x), { ...CHEVRON, color });
   }
 }
 
 /** What is shown of a road: which segments show their scaffold, and the radius handle in focus. */
 interface RoadShown {
   active: boolean[];
+  /** The selected segments: their curve and direction arrows are blue (^231). */
+  selected: boolean[];
   rad: Focus | null;
 }
 
 /** One road: the curves always, the construction of the segments whose scaffold is shown. */
 function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
-  const { active, rad } = shown;
+  const { active, selected, rad } = shown;
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawGuides(f, ref, pal);
     drawCircles(f, ref, pal);
   });
-  for (const { E } of road.edges) {
-    for (const piece of E.pieces) strokePiece(f, piece, { color: pal.ink, width: CURVE_PX });
-  }
-  drawDirection(f, road, pal);
+  road.edges.forEach(({ E }, k) => {
+    const color = selected[k] ? pal.blue : pal.ink;
+    for (const piece of E.pieces) strokePiece(f, piece, { color, width: CURVE_PX });
+  });
+  drawDirection(f, road, selected, pal);
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawCorners(f, ref, pal);
@@ -166,12 +174,20 @@ function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
 }
 
 /** The control points of the scaffolds that are shown, all filled because they can be dragged. */
+const isFocused = (h: RoadHandle, focus: Focus | null) =>
+  focus !== null &&
+  [h.road, h.type, h.i, h.k, h.t].every(
+    (v, n) => v === [focus.road, focus.type, focus.i, focus.k, focus.t][n],
+  );
+
 function drawHandles(f: Frame, scene: Scene, active: boolean[][], pal: Palette) {
   for (const h of scene.handles) {
     if (h.type === 'node') continue;
     const segs = active[h.road] ?? [];
     const shown = h.type === 'head' ? arrowShown(segs, h.i) : segs[h.i] === true;
-    if (shown) dot(f.ctx, toScreen(f, h), h.type === 'rad' ? 6.5 : 5.5, pal.orange);
+    // The point that is hovered or dragged is as large as a selected node (^230).
+    const size = isFocused(h, scene.focus) ? SELECTED_DOT_PX : h.type === 'rad' ? 6.5 : 5.5;
+    if (shown) dot(f.ctx, toScreen(f, h), size, pal.orange);
   }
 }
 
@@ -220,10 +236,13 @@ function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
  * Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const active = shownFlags(scene);
+  const selected = scene.roads.map((r, road) =>
+    r.edges.map((_, k) => scene.selectedSegments.some((s) => s.road === road && s.i === k)),
+  );
   drawLanes(f, scene.roads, pal);
   scene.roads.forEach((road, i) => {
     const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;
-    drawRoad(f, road, { active: active[i]!, rad }, pal);
+    drawRoad(f, road, { active: active[i]!, selected: selected[i]!, rad }, pal);
   });
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
@@ -232,4 +251,6 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   scene.roads.forEach((road, i) => {
     drawNodes(f, road, { active: active[i]!, selected: selectedIn(scene.selection, i) }, pal);
   });
+  // The outline of the hovered segment (or branch) is on top of everything (^99).
+  drawOutlines(f, scene.roads, scene.outline, pal.blue);
 }
