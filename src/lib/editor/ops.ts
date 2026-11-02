@@ -4,7 +4,7 @@ import { withSharedRadius } from './press';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
 import { nodeAtSample, type RoadHit } from './chains';
-import { armOf, autoHeadingFor, farEnd, linkTo } from '../model/junction';
+import { armOf, autoHeadingFor, farEnd, linkTo, mergeEnd } from '../model/junction';
 import { dragGraph } from '../model/dragGraph';
 import {
   addNode,
@@ -56,7 +56,8 @@ export function placeNode(d: Drawn, at: Placement): { drawn: Drawn; id: number }
   const heading = autoHeadingFor(d.end);
   const r = addNode(d.graph, { x: at.pt.x, y: at.pt.y, th: at.th ?? heading(tip, at.pt) });
   const graph = linkTo(r.graph, tip.id, d.end, r.id);
-  return { drawn: { ...d, graph, active: r.id, selection: [r.id] }, id: r.id };
+  const end = d.end === 'first' ? 'start' : d.end;
+  return { drawn: { ...d, graph, active: r.id, end, selection: [r.id] }, id: r.id };
 }
 
 /** Insert a node on a curve; the curve does not change (^10). */
@@ -73,7 +74,7 @@ export function insertAt(d: Drawn, hit: RoadHit): { drawn: Drawn; id: number } {
 export function extendTo(drawn: Drawn, id: number): Drawn {
   const { graph } = drawn;
   const start = edgesOut(graph, id).length > 0 && edgesIn(graph, id).length === 0;
-  const end = start ? 'start' : 'end';
+  const end = start ? 'first' : 'end';
   return { ...drawn, active: id, end, origin: farEnd(graph, id), selection: [id] };
 }
 
@@ -136,7 +137,8 @@ export const splitAt = (d: Drawn, id: number): Drawn => ({
 /** End the road being drawn at an existing node: a merge, or a loop at its first node (^23, ^162). */
 export function mergeInto(d: Drawn, id: number): Drawn {
   if (d.active === null) return d;
-  return { ...d, graph: linkTo(d.graph, d.active, d.end, id), selection: [id] };
+  const end = mergeEnd(d.end, id, d.origin);
+  return { ...d, graph: linkTo(d.graph, d.active, end, id), selection: [id] };
 }
 
 /**

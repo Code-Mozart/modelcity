@@ -53,7 +53,7 @@ export class Editor {
   /** The node being drawn from, null in select mode or before the first node. */
   active = $state<number | null>(null);
   /** Which way the next edge runs from the node being drawn from (^65). */
-  end = $state<'start' | 'end'>('end');
+  end = $state<Snapshot['end']>('end');
   /** The node the road being drawn started at (a click on it closes a loop, ^162). */
   origin = $state<number | null>(null);
   /** The last pointer position with its modifiers, to look at what is under it again when something changes without the pointer moving. */

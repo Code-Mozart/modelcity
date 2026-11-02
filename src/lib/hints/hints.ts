@@ -90,7 +90,9 @@ const DRAG_TEXT: Record<HandleType, string> = {
 function handleHints(target: HandleTarget): Hint[] {
   const { type, act } = target;
   const out: Hint[] = [];
-  if (act) out.push(hint(mouse('lmb'), act));
+  // Finishing is one row: the click on the node being drawn from, or Esc (^239).
+  if (act === 'finish') out.push(hint([mouse('lmb'), ESC], 'finish'));
+  else if (act) out.push(hint(mouse('lmb'), act));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
   if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
   if (type === 'head') out.push(hint(mouse('lmb', false, 'alt'), 'flip arm'));
@@ -117,7 +119,7 @@ function drawModeHints(target: HintTarget): Hint[] {
     // On a node a right click deletes it, so only Esc finishes there.
     const finish =
       target.type === 'node' ? hint(ESC, 'finish') : hint([ESC, mouse('rmb')], 'finish');
-    return [...rows, finish];
+    return target.act === 'finish' ? rows : [...rows, finish];
   }
   const drag = target.kind === 'curve' ? 'insert and set heading' : 'add node and set heading';
   return [

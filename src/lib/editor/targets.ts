@@ -6,6 +6,7 @@ import {
   branchOfEdge,
   branchOfNode,
   curveAction,
+  mergeEnd,
   nodeAction,
 } from '../model/junction';
 import { allSelected, isSelected, pickedCount } from './selection';
@@ -72,7 +73,10 @@ export function mergePreview(
 ): Extract<Hover, { kind: 'preview' }> | null {
   const from = d.active === null ? undefined : nodeOf(d.graph, d.active);
   const node = from && hover ? mergeTarget(d, hover) : null;
-  return from && node ? { kind: 'preview', ref: from, end: d.end, node } : null;
+  const target = hover?.kind === 'handle' ? hover.handle.id : null;
+  return from && node
+    ? { kind: 'preview', ref: from, end: mergeEnd(d.end, target, d.origin), node }
+    : null;
 }
 
 /** The preview of the node a click would add: where, its heading, and the node it attaches to. */

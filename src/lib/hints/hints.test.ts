@@ -59,11 +59,11 @@ describe('control hints (^49)', () => {
 
 describe('control hints over nodes and handles (^49)', () => {
   it('over the last node a click finishes the road', () => {
+    // One row for both ways to finish, not two (^239).
     expect(rows(true, node(true))).toEqual([
-      'LMB: finish',
+      'LMB or Esc: finish',
       'LMB drag: move node',
       'RMB: delete node',
-      'Esc: finish',
     ]);
   });
 
