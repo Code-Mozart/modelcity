@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Editor } from './editor.svelte';
-import { at, click, draw, roadDrawn } from '../testing/editorHelpers';
+import { at, click, draw, roadDrawn, roadThenDrawMode } from '../testing/editorHelpers';
 
 const road = (): [number, number][] => [
   [0, 0],
@@ -173,5 +173,94 @@ describe('hint target for the control hints (^49)', () => {
       selected: false,
       lane: false,
     });
+  });
+});
+
+describe('the three modes (^120)', () => {
+  it('select, draw and extend follow what is being drawn', () => {
+    const ed = new Editor();
+    expect(ed.phase).toBe('select');
+    click(ed, 10, 10);
+    expect(ed.phase).toBe('draw');
+    click(ed, 10, 10);
+    expect(ed.phase).toBe('extend');
+  });
+
+  it('finishing a road goes back to draw mode, a second right click to select mode', () => {
+    const ed = draw(road());
+    ed.rightClick(at(80, 80));
+    expect(ed.phase).toBe('draw');
+    ed.rightClick(at(80, 80));
+    expect(ed.phase).toBe('select');
+  });
+
+  it('a click on the void in draw mode starts the next road at once', () => {
+    const ed = draw(road());
+    ed.rightClick(at(80, 80));
+    click(ed, 100, 100);
+    expect(ed.phase).toBe('extend');
+    expect(ed.chains).toHaveLength(2);
+  });
+
+  it('Esc always jumps straight to select mode', () => {
+    const ed = draw(road());
+    ed.key('Escape');
+    expect(ed.phase).toBe('select');
+    click(ed, 10, 10);
+    ed.key('Escape');
+    expect(ed.phase).toBe('select');
+  });
+});
+
+describe('view mode (^104)', () => {
+  const tab = (ed: Editor) => ed.key('Tab');
+
+  it('Tab goes to view mode from every mode, and back to select mode', () => {
+    for (const make of [() => new Editor(), () => draw([[0, 0]]), () => draw(road())]) {
+      const ed = make();
+      expect(tab(ed)).toBe(true);
+      expect(ed.phase).toBe('view');
+      tab(ed);
+      expect(ed.phase).toBe('select');
+    }
+  });
+
+  it('the road being drawn is finished when entering view mode', () => {
+    const ed = draw(road());
+    tab(ed);
+    expect(ed.active).toBeNull();
+    expect(ed.chains).toHaveLength(1);
+    expect(ed.chains[0]!.path.nodes).toHaveLength(3);
+  });
+});
+
+describe('what view mode leaves alone (^104)', () => {
+  const tab = (ed: Editor) => ed.key('Tab');
+
+  it('nothing can be edited, selected or hovered in view mode', () => {
+    const ed = roadThenDrawMode();
+    tab(ed);
+    const before = ed.graph;
+    click(ed, 0, 0);
+    click(ed, 300, 300);
+    ed.rightClick(at(0, 0));
+    ed.key('Delete');
+    ed.key('z', { ctrl: true, shift: false });
+    ed.key('Escape');
+    expect(ed.graph).toBe(before);
+    expect(ed.selection).toEqual([]);
+    expect(ed.hover).toBeNull();
+    expect(ed.phase).toBe('view');
+  });
+
+  it('leaving view mode gives back the editing, with the selection that was there', () => {
+    const ed = roadThenDrawMode();
+    ed.key('Escape');
+    click(ed, 0, 0);
+    const selected = ed.selection;
+    tab(ed);
+    tab(ed);
+    expect(ed.selection).toEqual(selected);
+    expect(ed.hover).toMatchObject({ kind: 'handle' });
   });
 });

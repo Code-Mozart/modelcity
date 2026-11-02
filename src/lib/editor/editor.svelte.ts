@@ -1,7 +1,5 @@
-import { dist } from '../curves/vec';
 import { dragPress, emptyPress } from './press';
 import {
-  dragStep,
   extendTo,
   mergeInto,
   curvePress,
@@ -9,7 +7,6 @@ import {
   removeNodesFrom,
   flipArmFrom,
   removeSegmentsFrom,
-  placeStep,
   splitAt,
 } from './ops';
 import { skeletonAnchors } from '../camera/skeletonAnchors';
@@ -20,18 +17,18 @@ import type { ControlId } from '../hints/hints';
 import { pressName, takeStep } from './stepNames';
 import { controlUsed } from './usage';
 import type { Pointer } from './proximity';
-import { DRAG_PX, type Hover, type PointerInfo, type Press, type Snapshot } from './types';
+import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { curveAt, focusOf, handleAt, hoverAt } from './hits';
 import { chainHandles, chainSegments, chainsOf, type RoadHandle } from './chains';
+import { moveOf } from './moves';
+import { phaseOf } from './phase';
 import { emptyGraph, removeNodes, roundToMm, sameGraph, type Graph } from '../model/graph';
 import {
   afterEmptyClick,
   branchEdges,
   hoveredEdges,
-  nodesInBand,
   selectedSegments,
   sameSelection,
-  withNodes,
   withoutNode,
   type Band,
 } from './selection';
@@ -43,13 +40,15 @@ export type { Hover, PointerInfo } from './types';
  * No drawing and no view (zoom/pan) logic: the canvas component feeds it pointer events in world
  * coordinates (^12).
  *
- * Two modes (^48, ^54): in select mode the left button edits handles, and a click on empty
+ * Three modes (^48, ^54, ^120; `phase`): in select mode the left button edits handles, and a click on empty
  * canvas enters draw mode (it does not place a node yet). In draw mode it places nodes, the first
  * one starting a new road, inserts nodes on curves, and still edits handles.
  */
 export class Editor {
   graph = $state.raw<Graph>(emptyGraph());
   mode = $state<'select' | 'draw'>('select');
+  /** View mode (^104): nothing can be edited, only the camera works. Left with Tab. */
+  viewing = $state(false);
   /** The node being drawn from, null in select mode or before the first node. */
   active = $state<number | null>(null);
   /** Which way the next edge runs from the node being drawn from (^65). */
@@ -95,6 +94,8 @@ export class Editor {
   /** The node last picked. */
   sel = $derived(this.selection.at(-1) ?? null);
   drawing = $derived(this.mode === 'draw');
+  /** The three modes (^120): extend mode is draw mode while a node is being extended. */
+  phase = $derived(phaseOf(this.mode, this.active, this.viewing));
   /** The chains of the graph, the shape the curve code and the drawing work on (^106). */
   chains = $derived(chainsOf(this.graph));
   edges = $derived(this.chains.map((c) => c.edges));
@@ -119,10 +120,20 @@ export class Editor {
   /** Handle a key; true if it was bound. */
   key(key: string, mods: KeyMods = { ctrl: false, shift: false }): boolean {
     const action: Action | undefined = actionFor(key, mods);
-    if (action === 'escape') this.escape();
+    if (action === 'view') this.toggleView();
+    else if (this.viewing) return false;
+    else if (action === 'escape') this.escape();
     else if (action === 'deleteNode') this.deleteSelected();
     else if (action) this.move(action);
     return action !== undefined;
+  }
+
+  /** Tab: to view mode from any mode (a road being drawn is finished), and back to select mode (^104). */
+  private toggleView() {
+    if (this.press) return;
+    if (!this.viewing) this.finishRoad(true);
+    this.viewing = !this.viewing;
+    this.use('view');
   }
 
   /** Undo or redo a step (^81) or a whole batch (^103); not while the left button is down. */
@@ -168,7 +179,7 @@ export class Editor {
   /** Replace everything by another map (a project was opened): no selection, no drawing, no history. */
   load(graph: Graph) {
     this.graph = graph;
-    this.leaveDrawing();
+    this.leaveDrawing(true);
     [this.press, this.band, this.lastInfo] = [null, null, null];
     this.history = NO_HISTORY;
     this.event = null;
@@ -198,15 +209,15 @@ export class Editor {
     this.commit(before, name);
   }
 
-  /** Select mode, no road being drawn, nothing selected. */
-  private leaveDrawing() {
-    this.mode = 'select';
+  /** No road being drawn, nothing selected: draw mode again (^120), or select mode. */
+  private leaveDrawing(toSelect: boolean) {
+    [this.mode, this.viewing] = [toSelect ? 'select' : 'draw', false];
     [this.active, this.origin, this.end, this.selection] = [null, null, 'end', []];
   }
 
   /** Esc: finish the road being drawn, or with none deselect all (^218). */
   private escape() {
-    if (this.mode === 'draw') return this.finishRoad();
+    if (this.mode === 'draw') return this.finishRoad(true);
     if (!this.selection.length) return;
     this.edit('deselect all', (d) => ({ ...d, selection: [] }));
     this.use('deselect-all');
@@ -218,21 +229,25 @@ export class Editor {
     this.selection = [];
   }
 
-  /** Leave draw mode; a road being drawn with fewer than two nodes is cancelled. */
-  finishRoad() {
+  /**
+   * Finish the road being drawn (extend mode goes back to draw mode, ^120); with no road being drawn,
+   * leave draw mode. `toSelect` (Esc) always leaves it. A road with fewer than two nodes is cancelled.
+   */
+  finishRoad(toSelect = false) {
     if (this.mode === 'select') return;
     const before = this.snapshot();
     // A split on a curve that was finished at once gives the curve back (an inserted node would stay).
     const s = this.splitUndo;
     this.graph =
       s && sameGraph(this.graph, roundToMm(s.after)) ? s.before : removeNodes(this.graph, [], null);
-    this.leaveDrawing();
+    this.leaveDrawing(toSelect || this.active === null);
     this.commit(before, 'finish road');
   }
 
   /** Left button pressed. */
   pointerDown(info: PointerInfo) {
     this.lastInfo = info;
+    if (this.viewing) return;
     const handle = handleAt(this.handles(info.scale), info);
     if (handle) return this.grab(handle, info);
     const hit = curveAt(this.chains, info);
@@ -266,10 +281,8 @@ export class Editor {
 
   pointerMove(info: PointerInfo) {
     this.lastInfo = info;
-    const press = this.press;
-    if (press?.kind === 'drag') this.moveDrag(press, info);
-    else if (press?.kind === 'place') this.moveHeading(press, info);
-    else if (press) this.moveBand(press, info);
+    const moved = this.press && moveOf(this.snapshot(), this.press, info);
+    if (moved) Object.assign(this, moved);
   }
 
   /** Alt or Shift went down or up: what is under the pointer can look different, such as the hovered branch (^99), though the pointer did not move. */
@@ -280,7 +293,7 @@ export class Editor {
 
   private hoverNow(): Hover | null {
     const info = this.lastInfo;
-    if (this.press || !info) return null;
+    if (this.press || !info || this.viewing) return null;
     const hits = { handles: this.handles(info.scale), chains: this.chains };
     return hoverAt(this.snapshot(), hits, info, this.drawing);
   }
@@ -288,12 +301,6 @@ export class Editor {
   /** The view moved under a pointer that did not (zoom, pan, rotate): the same screen position is another place now. Not while the left button is down. */
   look(info: PointerInfo) {
     if (!this.press) this.lastInfo = info;
-  }
-
-  private moveDrag(press: Extract<Press, { kind: 'drag' }>, info: PointerInfo) {
-    if (!press.moved && dist(info.pt, press.start) <= DRAG_PX / info.scale) return;
-    press.moved = true;
-    this.graph = dragStep(this.snapshot(), press, info);
   }
 
   /** The segments whose two nodes are selected, as (chain, index) pairs (^133). */
@@ -320,29 +327,10 @@ export class Editor {
     return press?.kind === 'drag' && press.moved && press.group.length > 0;
   }
 
-  private moveHeading(press: Extract<Press, { kind: 'place' }>, info: PointerInfo) {
-    const next = placeStep(this.graph, press.id, info);
-    if (next === this.graph) return;
-    this.graph = next;
-    press.moved = true;
-  }
-
-  /** Dragging on empty canvas spans the selection box; shift keeps the selection and adds to it (^70, ^72). */
-  private moveBand(press: Extract<Press, { kind: 'empty' }>, info: PointerInfo) {
-    if (!press.moved && dist(info.screen, press.screen) <= DRAG_PX) return;
-    press.moved = true;
-    this.band = { a: press.screen, b: info.screen };
-    this.selection = withNodes(press.base, nodesInBand(this.graph, this.band, info.project));
-  }
-
   private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
     const next = afterEmptyClick(this.selection, press);
     if (next) this.selection = next;
     else this.enterDrawMode();
-  }
-
-  private extendFrom(id: number) {
-    this.edit('extend road', (d) => extendTo(d, id));
   }
 
   /** A click (no drag) on a node: toggles it, or in draw mode finishes, extends, splits or merges the road (^23, ^65). */
@@ -352,7 +340,7 @@ export class Editor {
     else if (press.click === 'collapse' && press.group.length) this.selection = [id];
     if (press.flip) this.restore(flipArmFrom(this.snapshot(), id));
     else if (press.act === 'finish') this.finishRoad();
-    else if (press.act === 'extend') this.extendFrom(id);
+    else if (press.act === 'extend') this.edit('extend road', (d) => extendTo(d, id));
     else if (press.act === 'split') this.restore(splitAt(this.snapshot(), id));
     else if (press.act === 'merge' || press.act === 'close') this.merge(id);
   }
@@ -395,6 +383,7 @@ export class Editor {
 
   /** Right click without moving: removes the node under the pointer, else finishes the road. */
   rightClick(info: PointerInfo) {
+    if (this.viewing) return;
     const handle = handleAt(this.handles(info.scale), info);
     const hit = handle ? null : curveAt(this.chains, info);
     if (handle?.type === 'node') this.removeAll([handle.id]);

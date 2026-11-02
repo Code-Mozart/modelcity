@@ -51,7 +51,7 @@ describe('extending from the other end and finishing (^65)', () => {
     ed.pointerMove(at(0, 0));
     expect(ed.hintTarget).toMatchObject({ kind: 'handle', type: 'node', act: 'close' });
     click(ed, 0, 0);
-    expect(ed.drawing).toBe(false);
+    expect(ed.phase).toBe('draw');
     expect(ed.graph.edges).toHaveLength(3);
     expect(ed.chains).toHaveLength(1);
     const ids = ed.chains[0]!.nodeIds;
@@ -63,7 +63,7 @@ describe('extending from the other end and finishing (^65)', () => {
     const ed = road();
     click(ed, 0, 0);
     click(ed, 0, 0);
-    expect(ed.drawing).toBe(false);
+    expect(ed.phase).toBe('draw');
     expect(ed.chains[0]!.path.nodes).toHaveLength(3);
   });
 
@@ -87,7 +87,7 @@ describe('extending from a leaf node is a draw mode control (^65)', () => {
     const ed = road();
     ed.key('Escape');
     click(ed, 40, 0);
-    expect(ed.drawing).toBe(false);
+    expect(ed.phase).toBe('select');
     expect(ed.active).toBeNull();
   });
 

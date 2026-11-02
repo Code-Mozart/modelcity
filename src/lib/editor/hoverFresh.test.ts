@@ -36,6 +36,7 @@ type Operation = (ed: Editor, rnd: () => number, now: PointerInfo) => PointerInf
 
 /** Operations that change what is under the pointer, with or without moving it. */
 const operations: [string, Operation][] = [
+  ['Tab', (ed) => ed.key('Tab')],
   ['Escape', (ed) => ed.key('Escape')],
   ['Delete', (ed) => ed.key('Delete')],
   ['undo', (ed) => ed.key('z', { ctrl: true, shift: false })],

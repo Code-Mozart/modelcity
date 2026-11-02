@@ -32,6 +32,14 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - When the user asks for something new or out of scope during a milestone, say so, admonish gently and suggest putting it on the roadmap as a hat instead. Do not build it right away.
 - Only one branch/PR at a time may add hats (numbering stays unique and gapless). Other PRs (e.g. pure refactors) add no hats.
 
+## Rhythm of a milestone (guideline)
+Roughly, and not a fixed protocol; bend it when a milestone calls for it:
+1. The user names the next milestone.
+2. Claude writes the scope, creates the branch and opens the PR with the scope in its description.
+3. Back and forth: the user approves or requests changes, Claude corrects (revisions inside the scope are all done in the PR).
+4. Claude implements, pushes everything to the PR and reports once.
+5. Back and forth again: approval or new revisions.
+
 ## Stored data model (^170)
 - The stored model is specified in `docs/data-model.md`. It is fixed: any change to it needs the user's agreement, a version bump and a migration (^173).
 - Every way a project file is refused on import has a hat (^192 to ^208, rule ^209). When the import interface changes (data model extended or changed, a migration or a check added), make or update these hats in the same step.

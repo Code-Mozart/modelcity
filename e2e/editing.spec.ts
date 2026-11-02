@@ -74,7 +74,7 @@ test('close a loop', async ({ page }) => {
   await app.hover(first);
   await expect(app.hints()).toContainText('close');
   await app.click(first);
-  expect((await app.state()).mode).toBe('select');
+  expect((await app.state()).mode).toBe('draw');
   const edges = await app.edges();
   expect(edges).toHaveLength(3);
   expect(edges.at(-1)).toMatchObject({ start: 2, end: 0 });

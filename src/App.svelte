@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { Camera } from './lib/camera/camera.svelte';
+  import ModeFrame from './lib/hud/ModeFrame.svelte';
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
   import Hints from './lib/hints/Hints.svelte';
@@ -9,7 +10,7 @@
   import { Recent } from './lib/hud/recent.svelte';
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
-  import { hintsFor } from './lib/hints/hints';
+  import { hintsFor, viewHints } from './lib/hints/hints';
   import { Usage } from './lib/hints/usage.svelte';
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
@@ -36,7 +37,9 @@
   const hints = $derived(
     session.modalOpen
       ? modalHints(session.row?.mode ?? 'list', session.over)
-      : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, usage.hidden),
+      : editor.viewing
+        ? viewHints(usage.hidden)
+        : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, usage.hidden),
   );
   // The last steps and what was undone, for a few seconds after each one, and while a road is drawn (^107, ^109).
   const recent = new Recent();
@@ -119,6 +122,7 @@
 
 <main>
   <MapCanvas {editor} {camera} onUse={(id) => usage.mark(id)} />
+  <ModeFrame phase={editor.phase} />
   <Hints {hints} />
   <div class="right">
     <ToastList {toasts} />

@@ -43,6 +43,7 @@
       selection: chainSelection(editor.chains, editor.selection),
       band: editor.band,
       drawing: editor.drawing,
+      viewing: editor.viewing,
       selectedSegments: editor.selectedSegments,
       outline: editor.hoverSegments,
       hideScaffold: editor.movingGroup,

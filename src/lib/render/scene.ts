@@ -46,6 +46,8 @@ export interface Scene {
   selection: NodeRef[];
   band: Band | null;
   drawing: boolean;
+  /** View mode (^104): only the generated geometry is drawn, no skeleton and no scaffold. */
+  viewing: boolean;
   /** The segments (road, index) whose two nodes are selected: they show their scaffold together (^133). */
   selectedSegments: { road: number; i: number }[];
   /** The segments (road, index) under the pointer that get a blue outline, a whole branch with Alt (^99). */
@@ -240,6 +242,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
     r.edges.map((_, k) => scene.selectedSegments.some((s) => s.road === road && s.i === k)),
   );
   drawLanes(f, scene.roads, pal);
+  if (scene.viewing) return;
   scene.roads.forEach((road, i) => {
     const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;
     drawRoad(f, road, { active: active[i]!, selected: selected[i]!, rad }, pal);
