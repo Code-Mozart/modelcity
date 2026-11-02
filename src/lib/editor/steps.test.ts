@@ -104,3 +104,24 @@ describe('a single step is a batch of one (^103)', () => {
     expect(ed.history.future).toHaveLength(0);
   });
 });
+
+describe('a change that changes nothing is no step (^227)', () => {
+  it('entering draw mode and finishing with no node placed', () => {
+    const ed = road();
+    const steps = ed.history.past.length;
+    click(ed, 500, 500);
+    ed.key('Escape');
+    expect(ed.history.past).toHaveLength(steps);
+  });
+
+  it('a drag that ends where it began is only a selection, and leaves the graph the object it was', () => {
+    const ed = road();
+    const graph = ed.graph;
+    ed.pointerDown(at(40, -20));
+    ed.pointerMove(at(48, -26));
+    ed.pointerMove(at(40, -20));
+    ed.pointerUp();
+    expect(names(ed).at(-1)).toBe('select node');
+    expect(ed.graph).toBe(graph);
+  });
+});
