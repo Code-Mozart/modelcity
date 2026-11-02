@@ -53,5 +53,5 @@ test('a node dropped on another node is merged into it', async ({ page }) => {
   await road(app);
   await page.keyboard.press('Escape');
   await app.drag({ x: 30, y: 0 }, { x: 0.3, y: 0.3 });
-  expect(await app.nodes()).toHaveLength(1);
+  expect(await app.nodes()).toHaveLength(0); // the only segment of the road went with it (^285)
 });
