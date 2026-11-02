@@ -56,7 +56,7 @@ describe('leaving draw mode early (^54)', () => {
     const ed = new Editor();
     ed.pointerMove(at(5, 6, { scale: 8 }));
     expect(ed.pointer).toEqual({ pt: { x: 5, y: 6 }, scale: 8 });
-    ed.pointerLeave();
+    ed.look(null);
     expect(ed.pointer).toBeNull();
   });
 });

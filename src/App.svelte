@@ -41,7 +41,7 @@
         ? viewHints(usage.hidden)
         : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
             hidden: usage.hidden,
-            pinned: editor.pinned.length,
+            pinned: editor.pins.list.length,
             snapping: editor.snapped !== null,
             rotating: camera.rotating,
           }),

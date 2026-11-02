@@ -1,7 +1,7 @@
 import { startDrag } from '../curves/drag';
 import type { RoadHandle, RoadHit } from './chains';
 import { edgeOfId, nodeOf, placed, shareRadius, type Graph } from '../model/graph';
-import { branchOfEdge, branchOfNode, nodeAction } from '../model/junction';
+import { branchOfEdge, branchOfNode, curveAction, nodeAction } from '../model/junction';
 import { targetOf, type Drawn } from './targets';
 import type { ControlId } from '../hints/hints';
 import type { PointerInfo, Press } from './types';
@@ -31,6 +31,12 @@ function pressSelection(drawn: Drawn, drawing: boolean, handle: RoadHandle, info
   return { selection, group, click: picks ? rule.click : ('keep' as const), use };
 }
 
+/** What a click on a handle does to the roads in draw mode: on a node, finish, extend, split or merge; on a radius point, split or merge there (^23, ^65, ^278). */
+function actOf(drawn: Drawn, drawing: boolean, handle: RoadHandle, info: PointerInfo) {
+  if (drawing && handle.type === 'rad') return curveAction(drawn);
+  return handle.type === 'node' && drawing && !info.shift ? nodeAction(drawn, handle.id) : null;
+}
+
 /**
  * The left button went down on a handle: the press, and the selection after it. In select mode a
  * node press selects (^71, ^72, ^76) and drags the other selected nodes along.
@@ -44,7 +50,6 @@ export function dragPress(
   const { graph } = drawn;
   const id = handle.id;
   const { selection, group, click, use } = pressSelection(drawn, drawing, handle, info);
-  const node = handle.type === 'node' && drawing;
   const n = nodeOf(graph, id);
   const press: DragPress = {
     kind: 'drag',
@@ -53,12 +58,13 @@ export function dragPress(
     drag: startDrag(handle),
     start: info.pt,
     moved: false,
-    act: node && !info.shift ? nodeAction(drawn, id) : null,
+    act: actOf(drawn, drawing, handle, info),
     group: placed(graph, group),
     origin: { x: n?.x ?? 0, y: n?.y ?? 0 },
     click,
     use,
     flip: handle.type === 'head' && info.alt,
+    curve: null,
     undo: drawn,
     target: targetOf(drawn, { kind: 'handle', handle }, drawing),
   };

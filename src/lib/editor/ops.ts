@@ -17,6 +17,8 @@ import {
   moveNodes,
   nodeOf,
   removeNodes,
+  roundToMm,
+  sameGraph,
   turnedAround,
   withNode,
   type Graph,
@@ -26,7 +28,10 @@ import {
 export const placementAt = (pt: Vec): Placement => ({ pt, th: null });
 
 /** A press on a curve in draw mode: a node is inserted, and the road splits off it or merges into it (^23). */
-export function curvePress(d: Drawn, hit: RoadHit): { drawn: Drawn; press: Press } {
+export function curvePress(
+  d: Drawn,
+  hit: RoadHit,
+): { drawn: Drawn; press: Extract<Press, { kind: 'place' }> } {
   const target = targetOf(d, { kind: 'candidate', hit }, true);
   const r = insertAt(d, hit);
   const act = target.kind === 'curve' ? target.act : null;
@@ -183,4 +188,12 @@ export function droppedNode(d: Drawn, id: number, drop: NonNullable<Drop>): Draw
   const to = (n: number | null) => (n === id ? into.id : n);
   const selection = [...new Set(d.selection.map((n) => to(n)!))];
   return { ...d, graph, active: to(d.active), origin: to(d.origin), selection };
+}
+
+/**
+ * The graph when the road being drawn is finished: a node that was inserted by a split and not
+ * continued gives the curve back (^237); else a road with fewer than two nodes is cancelled.
+ */
+export function finishedGraph(g: Graph, split: { before: Graph; after: Graph } | null): Graph {
+  return split && sameGraph(g, roundToMm(split.after)) ? split.before : removeNodes(g, [], null);
 }

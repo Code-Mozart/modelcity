@@ -52,7 +52,7 @@
       focus: editor.focus,
       pointer: editor.pointer,
       snap: editor.snapped,
-      pinned: chainSelection(editor.chains, editor.pinned),
+      pinned: chainSelection(editor.chains, editor.pins.list),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
@@ -163,7 +163,7 @@
   onpointermove={onPointerMove}
   onpointerup={onPointerUp}
   onpointercancel={onPointerUp}
-  onpointerleave={() => editor.pointerLeave()}
+  onpointerleave={() => editor.look(null)}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
   oncontextmenu={(e) => e.preventDefault()}
 ></canvas>

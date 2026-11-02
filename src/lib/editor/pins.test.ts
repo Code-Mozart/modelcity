@@ -40,12 +40,12 @@ describe('pins (^258)', () => {
   it('S pins the snap suggestions of the selected nodes; with nothing selected it unpins', () => {
     const ed = selected();
     ed.key('s');
-    expect(ed.pinned).toEqual([0]);
+    expect(ed.pins.list).toEqual([0]);
     ed.pointerDown(snapping(200, 200));
     ed.pointerUp();
     expect(ed.selection).toEqual([]);
     ed.key('s');
-    expect(ed.pinned).toEqual([]);
+    expect(ed.pins.list).toEqual([]);
   });
 
   it('a pinned node offers its suggestions at any distance', () => {
@@ -61,6 +61,6 @@ describe('pins (^258)', () => {
     const ed = selected();
     ed.key('s');
     ed.key('Delete');
-    expect(ed.pinned).toEqual([]);
+    expect(ed.pins.list).toEqual([]);
   });
 });
