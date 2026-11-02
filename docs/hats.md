@@ -39,7 +39,7 @@ An open feature is in at most one planned milestone, and each milestone is a hat
 | History (done) | ^150 | ^103 batch undo, ^107 recent history panel | ^108, ^109 | none |
 | Controls and hints | ^151 | ^160 RMB removes a segment, ^110 learned controls hidden, ^217 smaller control hint icons, ^218 Esc deselects all, ^222 P opens the projects modal, ^223 Ctrl+O jumps into the modal, ^226 Ctrl+S saves and export is a button, ^99 hover outline of segments, ^230 orange points as large as selected nodes, ^231 selected segments colored, ^232 toasts, ^185 saved confirmation, ^229 the load pipeline (without repairs), ^234 flip an arm, ^233 the principle of not discarding work, ^236 the camera bug | ^111 (names, decided) | none |
 | Operations search | ^225 | ^97 operations search | ^178 (decided) | ^150 (done), ^151 |
-| Modes | ^152 | ^119 mode outline and label | ^120 extend mode | none |
+| Modes (done) | ^152 | ^119 mode outline and label, ^120 extend mode | ^104 (view mode on desktop) | none |
 | Snapping engine | ^153 | ^101 snap lines and points | ^100, ^102, ^112, ^113, ^228 (no two nodes at one position) | ^149 (parallel segments need the lane width) |
 | Selection transforms and clipboard | ^154 | ^114 rings, ^115 rotate, ^116 crosshair and scale, ^117 clipboard | ^118 | ^153 (^112), ^149 (clipboard format) |
 | Situational rendering | ^155 | ^98 segment colors (lime for construction, yellow while a radius changes) | none | none |
