@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Snapshot } from './types';
 import { emptyGraph } from '../model/graph';
+import { lastBatchSize } from '../testing/editorHelpers';
 import {
   MAX_STEPS,
   NO_HISTORY,
-  batchSize,
   record,
   redoStep,
   undoStep,
@@ -59,10 +59,10 @@ describe('batches (^103, ^216)', () => {
   };
 
   it('consecutive steps of one kind are one batch; other steps and kinds are not', () => {
-    expect(batchSize(selects(3).past)).toBe(3);
-    expect(batchSize(take(selects(3), 3, null).past)).toBe(1);
-    expect(batchSize(take(selects(3), 3, 'draw').past)).toBe(1);
-    expect(batchSize(take(selects(3), 3, 'select', false).past)).toBe(1);
+    expect(lastBatchSize(selects(3).past)).toBe(3);
+    expect(lastBatchSize(take(selects(3), 3, null).past)).toBe(1);
+    expect(lastBatchSize(take(selects(3), 3, 'draw').past)).toBe(1);
+    expect(lastBatchSize(take(selects(3), 3, 'select', false).past)).toBe(1);
   });
 
   it('a whole batch is undone and redone at once, a single step one by one', () => {
@@ -77,12 +77,12 @@ describe('batches (^103, ^216)', () => {
     const one = undoStep(h)!;
     expect(one.steps.map((s) => s.name)).toEqual(['step 2']);
     expect(redoStep(one.history)!.to.active).toBe(3);
-    expect(batchSize(one.history.future)).toBe(1);
+    expect(lastBatchSize(one.history.future)).toBe(1);
   });
 
   it('a step after an undo starts a batch of its own', () => {
     const u = undoStep(selects(2))!;
     const h = take(u.history, 1, 'select');
-    expect(batchSize(h.past)).toBe(1);
+    expect(lastBatchSize(h.past)).toBe(1);
   });
 });

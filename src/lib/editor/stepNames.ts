@@ -66,12 +66,11 @@ export function batchTitle(steps: Step[]): string {
 /**
  * Record a step that took the editor from `before` to `after` (^216): its kind decides its name
  * (a selection change is named by the nodes that changed) and whether it joins the batch before.
- * `open`: the batch may go on.
  */
 export function takeStep(h: History, before: Snapshot, after: Snapshot, name: string) {
   const kind = kindOf(before, after);
   const label = kind === 'select' ? selectionName(before.selection, after.selection) : name;
   const continues = kind === 'select' || before.active !== null;
   const r = record(h, { name: label, kind, before, after, continues });
-  return { ...r, open: kind === 'select' || (kind === 'draw' && after.active !== null) };
+  return r;
 }

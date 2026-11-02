@@ -1,34 +1,27 @@
 <script lang="ts">
-  import { batchTitle } from '../editor/stepNames';
   import Hints from '../hints/Hints.svelte';
   import type { Hint } from '../hints/hints';
-  import type { Recent } from './recent.svelte';
+  import type { PanelGroup } from './panel';
 
   /**
-   * The recent history panel (^107, ^108, ^109): top right over the map, no background. Each item
-   * has a line on its right; a batch has a bold title with its steps below, and shows only the last
-   * 4 when there are more than 5. The undo and redo hints sit at its bottom.
+   * The recent history panel (^107, ^108, ^109): top right over the map, no background. It shows
+   * the last steps; steps that are undone are grayed out until they are redone. A batch of several
+   * steps has a bold title over its steps and one line on the right. The undo and redo hints sit at
+   * the bottom.
    */
-  let { recent, hints }: { recent: Recent; hints: Hint[] } = $props();
-
-  const SHOWN = 4;
-  const MANY = 5;
+  let { groups, hints }: { groups: PanelGroup[]; hints: Hint[] } = $props();
 </script>
 
 <div class="panel" aria-label="Recent history">
-  {#each recent.items as item (item.key)}
+  {#each groups as group, g (g)}
     <div class="item">
-      {#if item.steps.length > 1}
-        <div class="title">{item.prefix}{batchTitle(item.steps)}</div>
-        {#if item.steps.length > MANY}
-          <div class="more">({item.steps.length - SHOWN} more steps)</div>
-        {/if}
-        {#each item.steps.length > MANY ? item.steps.slice(-SHOWN) : item.steps as step (step.after)}
-          <div>{step.name}</div>
-        {/each}
-      {:else}
-        <div>{item.prefix}{item.steps[0]!.name}</div>
+      {#if group.title}
+        <div class="title" class:undone={group.rows.every((r) => r.undone)}>{group.title}</div>
       {/if}
+      {#if group.more > 0}<div class="more">({group.more} more steps)</div>{/if}
+      {#each group.rows as row (row.step)}
+        <div class:undone={row.undone}>{row.step.name}</div>
+      {/each}
     </div>
   {/each}
   {#if hints.length}<Hints {hints} inline label="Undo and redo" />{/if}
@@ -59,6 +52,10 @@
   }
   .title {
     font-weight: 700;
+  }
+  /* Undone steps are grayed out with the muted color, like other secondary text. */
+  .undone {
+    color: var(--muted);
   }
   .more {
     color: var(--muted);

@@ -14,7 +14,7 @@ import {
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
-import { batchSize, NO_HISTORY, redoStep, undoStep, type HistoryEvent, type Step } from './history';
+import { NO_HISTORY, redoStep, undoStep, type HistoryEvent, type Step } from './history';
 import { pressName, takeStep } from './stepNames';
 import type { Pointer } from './proximity';
 import { DRAG_PX, type Hover, type PointerInfo, type Press, type Snapshot } from './types';
@@ -71,9 +71,6 @@ export class Editor {
 
   canUndo = $derived(this.history.past.length > 0);
   canRedo = $derived(this.history.future.length > 0);
-  /** The next undo or redo would move a batch of several steps (^103). */
-  canUndoBatch = $derived(batchSize(this.history.past) > 1);
-  canRedoBatch = $derived(batchSize(this.history.future) > 1);
   /** The node last picked. */
   sel = $derived(this.selection.at(-1) ?? null);
   drawing = $derived(this.mode === 'draw');
@@ -115,7 +112,7 @@ export class Editor {
     if (!r) return;
     [this.history, this.hover] = [r.history, null];
     this.restore(r.to);
-    this.announce(action.slice(0, 4) as 'undo' | 'redo', r.steps, false);
+    this.announce(action.slice(0, 4) as 'undo' | 'redo', r.steps);
   }
 
   private restore({ graph, active, end, origin, selection }: Snapshot) {
@@ -136,11 +133,11 @@ export class Editor {
     this.graph = roundToMm(this.graph);
     const r = takeStep(this.history, before, this.snapshot(), name);
     this.history = r.history;
-    this.announce('step', [r.step], r.open);
+    this.announce('step', [r.step]);
   }
 
-  private announce(kind: HistoryEvent['kind'], steps: Step[], open: boolean) {
-    this.event = { seq: ++this.eventCount, kind, steps, open };
+  private announce(kind: HistoryEvent['kind'], steps: Step[]) {
+    this.event = { seq: ++this.eventCount, kind, steps };
   }
 
   /** Replace everything by another map (a project was opened): no selection, no drawing, no history. */

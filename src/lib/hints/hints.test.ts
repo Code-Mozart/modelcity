@@ -162,31 +162,20 @@ describe('select mode hints over nodes (^74, ^75)', () => {
 });
 
 describe('undo and redo hints (^81, ^103, ^109)', () => {
-  const none = { undo: false, redo: false, undoBatch: false, redoBatch: false };
-  const history = (h: Partial<typeof none>) => historyHints({ ...none, ...h }).map(show);
+  const history = (undo: boolean, redo: boolean) => historyHints({ undo, redo }).map(show);
 
   it('are not among the control hints; they belong to the recent history panel', () => {
     expect(rows(false, empty).some((r) => r.includes('undo'))).toBe(false);
   });
 
-  it('only for what can be undone or redone', () => {
-    expect(history({})).toEqual([]);
-    expect(history({ undo: true })).toEqual(['Ctrl+Z: undo']);
-    expect(history({ redo: true })).toEqual(['Ctrl+Y or Ctrl+Shift+Z: redo']);
-    expect(history({ undo: true, redo: true })).toEqual([
-      'Ctrl+Z: undo',
-      'Ctrl+Y or Ctrl+Shift+Z: redo',
-    ]);
-  });
-
-  it('a batch has its own rows, only while the next step belongs to one', () => {
-    expect(history({ undo: true, undoBatch: true, redo: true, redoBatch: true })).toEqual([
-      'Ctrl+Z: undo',
-      'Alt+Ctrl+Z: undo batch',
+  it('only for what can be undone or redone, by step and by batch (a step is a batch of one)', () => {
+    expect(history(false, false)).toEqual([]);
+    expect(history(true, false)).toEqual(['Ctrl+Z: undo', 'Alt+Ctrl+Z: undo batch']);
+    expect(history(false, true)).toEqual([
       'Ctrl+Y or Ctrl+Shift+Z: redo',
       'Alt+Ctrl+Y or Alt+Ctrl+Shift+Z: redo batch',
     ]);
-    expect(history({ undoBatch: true })).toEqual([]);
+    expect(history(true, true)).toHaveLength(4);
   });
 });
 

@@ -48,6 +48,10 @@ export const roadThenDrawMode = (
   return ed;
 };
 
+/** How many steps the batch at the end of a list of steps has (a batch is a run of steps with one number, ^103). */
+export const lastBatchSize = (steps: { batch: number }[]) =>
+  steps.filter((s) => s.batch === steps.at(-1)?.batch).length;
+
 /** The last node of chain `road` (a chain is a run of edges, ^106). */
 export const last = (ed: Editor, road = 0) => ed.chains[road]!.path.nodes.at(-1)!;
 

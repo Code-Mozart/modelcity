@@ -81,7 +81,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Control hints panel** | The HTML div in the top left corner that shows the control hints; it changes with mode, context and selection (formerly "hints") | decided | ^49, ^74, ^111 |
 | **Batch** | A run of consecutive undo steps of one kind (selection changes, or the steps of one drawing session) that `Alt+Ctrl+Z` undoes at once | decided | ^103, ^216 |
 | **Control hint** | One row of the control hints panel: `[input]: action` | decided | ^49, ^111 |
-| **Recent history panel** | The HTML div in the top right corner that shows the names of the last operations (batches with their steps) and the undo and redo control hints, each item for a few seconds; a batch of steps is one item with a title (^216). Its bottom has the undo and redo hints (^109) | decided | ^107, ^111 |
+| **Recent history panel** | The HTML div in the top right corner that shows the last 7 steps of the history (undone ones grayed out), batches under a title, and the undo and redo hints at its bottom; it appears with each operation and goes after a few seconds (^107–^109, ^216) | decided | ^107, ^111 |
 | **Key cap** | The raised, key-like symbol for a keyboard key; blue and sunk in while pressed | decided | ^32, ^68 |
 | **Mouse symbols** | The symbols for mouse buttons, drag and the wheel (`MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`) | decided | ^50, ^56 |
 | **Proximity** | The fixed pixel distance within which something counts as "near" the pointer: 20 px to a curve, 48 px to a control point | decided; assumed (the distances) | ^55, ^60 |

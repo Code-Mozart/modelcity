@@ -139,26 +139,24 @@ function selectModeHints(target: HintTarget, selected: number): Hint[] {
   ];
 }
 
-/** What can be undone or redone right now, and whether that is a batch of several steps (^81, ^103). */
+/** What can be undone or redone right now (^81). */
 export interface HistoryState {
   undo: boolean;
   redo: boolean;
-  undoBatch: boolean;
-  redoBatch: boolean;
 }
 
 /**
- * Undo and redo, only while there is something to undo or redo (^81); the rows for a batch only
- * while the next step belongs to one (^103). They are shown in the recent history panel (^109).
+ * Undo and redo, only while there is something to undo or redo (^81), by single step and by batch;
+ * a step alone is a batch of one (^103). They are shown in the recent history panel (^109).
  */
-export function historyHints({ undo, redo, undoBatch, redoBatch }: HistoryState): Hint[] {
+export function historyHints({ undo, redo }: HistoryState): Hint[] {
+  const redoKeys = [keys('Ctrl', 'Y'), keys('Ctrl', 'Shift', 'Z')];
+  const redoBatchKeys = [keys('Alt', 'Ctrl', 'Y'), keys('Alt', 'Ctrl', 'Shift', 'Z')];
   return [
-    ...(undo ? [hint(keys('Ctrl', 'Z'), 'undo')] : []),
-    ...(undo && undoBatch ? [hint(keys('Alt', 'Ctrl', 'Z'), 'undo batch')] : []),
-    ...(redo ? [hint([keys('Ctrl', 'Y'), keys('Ctrl', 'Shift', 'Z')], 'redo')] : []),
-    ...(redo && redoBatch
-      ? [hint([keys('Alt', 'Ctrl', 'Y'), keys('Alt', 'Ctrl', 'Shift', 'Z')], 'redo batch')]
+    ...(undo
+      ? [hint(keys('Ctrl', 'Z'), 'undo'), hint(keys('Alt', 'Ctrl', 'Z'), 'undo batch')]
       : []),
+    ...(redo ? [hint(redoKeys, 'redo'), hint(redoBatchKeys, 'redo batch')] : []),
   ];
 }
 

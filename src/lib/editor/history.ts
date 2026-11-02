@@ -43,9 +43,6 @@ function lastBatch(steps: Step[]): Step[] {
   return steps.slice(from);
 }
 
-/** How many steps the batch at the end of the list has. */
-export const batchSize = (steps: Step[]) => lastBatch(steps).length;
-
 /** A new step was taken; what was undone can no longer be redone. */
 export function record(
   h: History,
@@ -98,10 +95,9 @@ export function redoStep(h: History, whole = false): Moved | null {
   return { to: steps.at(-1)!.after, history, steps };
 }
 
-/** Something happened to the history: a step was taken, undone or redone (`open`: its batch may go on, ^108). */
+/** Something happened to the history: a step was taken, undone or redone (^107). */
 export interface HistoryEvent {
   seq: number;
   kind: 'step' | 'undo' | 'redo';
   steps: Step[];
-  open: boolean;
 }

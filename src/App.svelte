@@ -5,6 +5,7 @@
   import { Editor } from './lib/editor/editor.svelte';
   import Hints from './lib/hints/Hints.svelte';
   import HistoryPanel from './lib/hud/HistoryPanel.svelte';
+  import { panelView } from './lib/hud/panel';
   import { Recent } from './lib/hud/recent.svelte';
   import { hintsFor, historyHints } from './lib/hints/hints';
   import { keyOf } from './lib/editor/keymap';
@@ -25,20 +26,19 @@
       ? modalHints(session.row?.mode ?? 'list', session.over)
       : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length),
   );
-  // What the history just did, for a few seconds, with the undo and redo hints at its bottom (^107, ^109).
+  // The last steps and what was undone, for a few seconds after each one, and while a road is drawn (^107, ^109).
   const recent = new Recent();
   $effect(() => {
     const event = editor.event;
     untrack(() => recent.consume(event));
   });
-  const historyRows = $derived(
-    historyHints({
-      undo: recent.items.length > 0 && editor.canUndo,
-      redo: editor.canRedo && recent.items.some((i) => i.prefix !== ''),
-      undoBatch: editor.canUndoBatch,
-      redoBatch: editor.canRedoBatch,
-    }),
-  );
+  // Drawing a road keeps the panel up; when the road is finished the interval starts from then.
+  $effect(() => {
+    if (editor.active === null) untrack(() => recent.hideLater());
+  });
+  const panelShown = $derived(recent.visible || editor.active !== null);
+  const panel = $derived(panelView(editor.history));
+  const historyRows = $derived(historyHints({ undo: editor.canUndo, redo: editor.canRedo }));
 
   onMount(() => void session.start());
 
@@ -82,7 +82,7 @@
 <main>
   <MapCanvas {editor} {camera} />
   <Hints {hints} />
-  <HistoryPanel {recent} hints={historyRows} />
+  {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}
   <Compass {camera} />
   <ProjectsModal {session} />
 </main>

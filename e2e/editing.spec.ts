@@ -81,7 +81,7 @@ test('close a loop', async ({ page }) => {
   expect((await app.nodes()).length).toBe(3);
 });
 
-test('the recent history panel names steps, batches selecting, Alt+Ctrl+Z undoes a batch (^107)', async ({
+test('the recent history panel shows the last steps, grays out undone ones and hides when idle (^107)', async ({
   page,
 }) => {
   const app = new App(page);
@@ -90,14 +90,14 @@ test('the recent history panel names steps, batches selecting, Alt+Ctrl+Z undoes
   await drawRoad(app);
   await expect(app.history()).toContainText('finish road');
   for (const x of [0, 30, 60]) await app.click({ x, y: 0 });
-  // Three selection steps are one batch with a title; it stays until something else is done.
-  await page.waitForTimeout(3500);
   await expect(app.history()).toContainText('select node');
-  await expect(app.history()).toContainText('undo batch');
+  // After the interval without an operation the whole panel goes, and comes back with the next one.
+  await expect(app.history()).toHaveCount(0, { timeout: 6000 });
   await page.keyboard.press('Control+Alt+z');
   expect((await app.state()).selected).toBe(0);
-  await expect(app.history()).toContainText('undo: ');
+  await expect(app.history().locator('.undone').first()).toContainText('select node');
   await expect(app.history()).toContainText('redo batch');
   await page.keyboard.press('Control+Alt+Shift+z');
   expect((await app.state()).selected).toBe(1);
+  await expect(app.history().locator('.undone')).toHaveCount(0);
 });
