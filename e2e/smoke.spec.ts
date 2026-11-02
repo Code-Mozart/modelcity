@@ -9,9 +9,11 @@ const C = { x: 40, y: 40 };
 async function firstArm(app: App) {
   await app.click({ x: 0, y: 30 }); // empty canvas: enters draw mode
   expect((await app.state()).mode).toBe('draw');
+  await app.page.keyboard.down('Control'); // no snapping (^101): the nodes go where they are clicked
   await app.click(A);
   await app.drag(B, { x: 30, y: 10 }); // B with a heading: an S-curve
   await app.drag(C, { x: 40, y: 50 }); // C with a heading: an L-bend
+  await app.page.keyboard.up('Control');
   expect((await app.state()).kinds).toEqual([['S', 'C']]);
 }
 
@@ -25,7 +27,9 @@ async function changeRadius(app: App) {
 async function moveUndoRedo(app: App) {
   await app.page.keyboard.press('Escape');
   expect((await app.state()).mode).toBe('select');
+  await app.page.keyboard.down('Control'); // no snapping (^101): the node goes where it is dragged
   await app.drag(B, { x: 25, y: 10 });
+  await app.page.keyboard.up('Control');
   expect((await app.node(1)).x).toBeCloseTo(25, 0);
   await expect(app.history()).toContainText('move node');
   await expect(app.history()).toContainText('undo');
@@ -39,12 +43,14 @@ async function moveUndoRedo(app: App) {
 }
 
 async function secondArm(app: App) {
+  await app.page.keyboard.down('Control'); // no snapping (^101): the nodes go where they are clicked
   await app.click({ x: 0, y: -40 }); // empty canvas first clears the selection
   await app.click({ x: 0, y: -40 }); // then enters draw mode again
   expect((await app.state()).mode).toBe('draw');
   await app.click({ x: 10, y: -40 });
   await app.click({ x: 50, y: -40 });
   expect((await app.state()).kinds[1]).toEqual(['line']);
+  await app.page.keyboard.up('Control');
   await app.page.keyboard.press('Escape');
 }
 
