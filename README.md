@@ -68,12 +68,12 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Roadmap** | The one prioritised list of wanted work, fuzzy beyond the next items; the "Roadmap" section of `docs/hats.md`. Replaces "todo-list" and "backlog" | decided | ^146 |
 | **Roadmap item** | A `feature`, `bug` or `chore` (refactor, docs, tooling) on the roadmap | decided | ^146 |
 | **Milestone** | One PR that tackles one or more roadmap items, with a written scope (in/out); a roadmap item can be unassigned until it is planned | decided | ^146 |
-| **Extend mode** | The mode while a road is being extended from a node (dashed preview), between draw mode and select mode. Planned | decided | ^120 |
+| **Extend mode** | The mode while a road is being drawn from a node (dashed preview); finishing the road goes back to draw mode | decided | ^120 |
 | **Select mode** | No road is being drawn: you edit control points; a click enters draw mode | decided | ^48, ^54 |
-| **Draw mode** | A road is being drawn: clicks place nodes, insert nodes on curves, or extend a road from a leaf node | decided | ^48, ^65 |
+| **Draw mode** | Drawing, but no node is being extended: a click on the void starts a road, a click on a node extends, splits or merges; a second RMB (or Esc) goes to select mode | decided | ^48, ^65, ^120 |
 | **Preview** | The translucent preview of the node a click would place, with the curve to it (not called "ghost") | decided | ^40, ^48, ^68 |
 | **Extend** | Add nodes to a road at one of its ends. In draw mode a click on another leaf node makes it the end to extend from (hint: `extend road`) | decided | ^65, ^68 |
-| **Finish** | Leave draw mode (Esc, a right click on empty space, or a click on the node being drawn from). A road needs two nodes | decided | ^43 |
+| **Finish** | End the road being drawn and go back to draw mode (Esc leaves draw mode altogether, a right click on empty space, or a click on the node being drawn from). A road needs two nodes | decided | ^43 |
 | **Camera** | The view onto the world: pan, zoom and rotate | decided | ^19, ^30 |
 | **Viewport** | What the camera sees and renders, the visible area of the canvas (the user also says "viewbox") | decided | ^37, ^68 |
 | **Bounds** | The tight, screen-aligned box around the skeleton; at least 12 px of it always stay in the viewport. Never drawn | decided | ^37, ^62 |

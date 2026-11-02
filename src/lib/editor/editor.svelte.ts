@@ -23,6 +23,7 @@ import type { Pointer } from './proximity';
 import { DRAG_PX, type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { curveAt, focusOf, handleAt, hoverAt } from './hits';
 import { chainHandles, chainSegments, chainsOf, type RoadHandle } from './chains';
+import { phaseOf } from './phase';
 import { emptyGraph, removeNodes, roundToMm, sameGraph, type Graph } from '../model/graph';
 import {
   afterEmptyClick,
@@ -43,7 +44,7 @@ export type { Hover, PointerInfo } from './types';
  * No drawing and no view (zoom/pan) logic: the canvas component feeds it pointer events in world
  * coordinates (^12).
  *
- * Two modes (^48, ^54): in select mode the left button edits handles, and a click on empty
+ * Three modes (^48, ^54, ^120; `phase`): in select mode the left button edits handles, and a click on empty
  * canvas enters draw mode (it does not place a node yet). In draw mode it places nodes, the first
  * one starting a new road, inserts nodes on curves, and still edits handles.
  */
@@ -95,6 +96,8 @@ export class Editor {
   /** The node last picked. */
   sel = $derived(this.selection.at(-1) ?? null);
   drawing = $derived(this.mode === 'draw');
+  /** The three modes (^120): extend mode is draw mode while a node is being extended. */
+  phase = $derived(phaseOf(this.mode, this.active));
   /** The chains of the graph, the shape the curve code and the drawing work on (^106). */
   chains = $derived(chainsOf(this.graph));
   edges = $derived(this.chains.map((c) => c.edges));
@@ -168,7 +171,7 @@ export class Editor {
   /** Replace everything by another map (a project was opened): no selection, no drawing, no history. */
   load(graph: Graph) {
     this.graph = graph;
-    this.leaveDrawing();
+    this.leaveDrawing(true);
     [this.press, this.band, this.lastInfo] = [null, null, null];
     this.history = NO_HISTORY;
     this.event = null;
@@ -198,15 +201,15 @@ export class Editor {
     this.commit(before, name);
   }
 
-  /** Select mode, no road being drawn, nothing selected. */
-  private leaveDrawing() {
-    this.mode = 'select';
+  /** No road being drawn, nothing selected: draw mode again (^120), or select mode. */
+  private leaveDrawing(toSelect: boolean) {
+    this.mode = toSelect ? 'select' : 'draw';
     [this.active, this.origin, this.end, this.selection] = [null, null, 'end', []];
   }
 
   /** Esc: finish the road being drawn, or with none deselect all (^218). */
   private escape() {
-    if (this.mode === 'draw') return this.finishRoad();
+    if (this.mode === 'draw') return this.finishRoad(true);
     if (!this.selection.length) return;
     this.edit('deselect all', (d) => ({ ...d, selection: [] }));
     this.use('deselect-all');
@@ -218,15 +221,18 @@ export class Editor {
     this.selection = [];
   }
 
-  /** Leave draw mode; a road being drawn with fewer than two nodes is cancelled. */
-  finishRoad() {
+  /**
+   * Finish the road being drawn (extend mode goes back to draw mode, ^120); with no road being drawn,
+   * leave draw mode. `toSelect` (Esc) always leaves it. A road with fewer than two nodes is cancelled.
+   */
+  finishRoad(toSelect = false) {
     if (this.mode === 'select') return;
     const before = this.snapshot();
     // A split on a curve that was finished at once gives the curve back (an inserted node would stay).
     const s = this.splitUndo;
     this.graph =
       s && sameGraph(this.graph, roundToMm(s.after)) ? s.before : removeNodes(this.graph, [], null);
-    this.leaveDrawing();
+    this.leaveDrawing(toSelect || this.active === null);
     this.commit(before, 'finish road');
   }
 
@@ -341,10 +347,6 @@ export class Editor {
     else this.enterDrawMode();
   }
 
-  private extendFrom(id: number) {
-    this.edit('extend road', (d) => extendTo(d, id));
-  }
-
   /** A click (no drag) on a node: toggles it, or in draw mode finishes, extends, splits or merges the road (^23, ^65). */
   private clickedHandle(press: Extract<Press, { kind: 'drag' }>) {
     const id = press.id;
@@ -352,7 +354,7 @@ export class Editor {
     else if (press.click === 'collapse' && press.group.length) this.selection = [id];
     if (press.flip) this.restore(flipArmFrom(this.snapshot(), id));
     else if (press.act === 'finish') this.finishRoad();
-    else if (press.act === 'extend') this.extendFrom(id);
+    else if (press.act === 'extend') this.edit('extend road', (d) => extendTo(d, id));
     else if (press.act === 'split') this.restore(splitAt(this.snapshot(), id));
     else if (press.act === 'merge' || press.act === 'close') this.merge(id);
   }

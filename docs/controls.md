@@ -6,12 +6,15 @@ Code: editor keys in `src/lib/editor/keymap.ts`, pointer rules in `src/lib/edito
 
 Mouse buttons: **LMB** left, **MMB** middle (wheel button), **RMB** right. "Click" means press and release without moving; "drag" means moving while the button is held.
 
-## Two modes (^48)
+## Three modes (^48, ^120)
+
+The screen has a thin outline in the color of the mode, and the mode's name shows at the top center for under a second whenever the mode changes (^119): select blue, draw dark (the node color), extend orange.
 
 - **Select mode:** no road is being drawn. The cursor is the default arrow and there is no preview.
-- **Draw mode:** a road is being drawn. The cursor is a crosshair and a preview shows the node a click would add, with the curve to it.
+- **Draw mode:** the user is drawing, but no node is being extended. The cursor is a crosshair and a preview shows the node a click would add. A click on empty canvas starts a new road; a click on a node starts extending, splitting or merging as below.
+- **Extend mode:** a node is being extended (a road is being drawn, with the dashed preview line to the next node).
 
-A left click on empty canvas in select mode only enters draw mode (it places no node, ^54); the next click places node 1 of a new road. A left drag in select mode does not enter draw mode: it spans the selection box (^70). Leaving draw mode: Esc, an RMB click on empty space, or an LMB click on the node being drawn from (^43).
+A left click on empty canvas in select mode only enters draw mode (it places no node, ^54); the next click places node 1 of a new road (extend mode). A left drag in select mode does not enter draw mode: it spans the selection box (^70). Finishing the road (an RMB click on empty space, a click on the node being extended, a merge or a closed loop) goes back to **draw mode**; a second RMB click on empty space, or Esc at any time, leaves draw mode for select mode (^43, ^120). Esc from extend mode jumps straight to select mode.
 
 ## What the left button does
 

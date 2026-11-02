@@ -58,10 +58,11 @@ async function splitAndMerge(app: App) {
   expect(edges).toHaveLength(6);
   const end = nodes.find((n) => n.id === edges.at(-1)!.end)!;
   expect(Math.hypot(end.x - 32.4, end.y - 11.2)).toBeLessThan(1);
-  expect((await app.state()).mode).toBe('select');
+  expect((await app.state()).mode).toBe('draw');
 }
 
 async function selectBranch(app: App) {
+  await app.page.keyboard.press('Escape'); // from draw mode straight to select mode (^120)
   const onBranch = await app.curvePoint({ x: 25, y: -20 });
   await app.page.keyboard.down('Alt');
   await app.click(onBranch);

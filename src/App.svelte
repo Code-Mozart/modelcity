@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { Camera } from './lib/camera/camera.svelte';
+  import ModeFrame from './lib/hud/ModeFrame.svelte';
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
   import Hints from './lib/hints/Hints.svelte';
@@ -119,6 +120,7 @@
 
 <main>
   <MapCanvas {editor} {camera} onUse={(id) => usage.mark(id)} />
+  <ModeFrame phase={editor.phase} />
   <Hints {hints} />
   <div class="right">
     <ToastList {toasts} />

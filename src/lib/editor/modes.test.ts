@@ -175,3 +175,39 @@ describe('hint target for the control hints (^49)', () => {
     });
   });
 });
+
+describe('the three modes (^120)', () => {
+  it('select, draw and extend follow what is being drawn', () => {
+    const ed = new Editor();
+    expect(ed.phase).toBe('select');
+    click(ed, 10, 10);
+    expect(ed.phase).toBe('draw');
+    click(ed, 10, 10);
+    expect(ed.phase).toBe('extend');
+  });
+
+  it('finishing a road goes back to draw mode, a second right click to select mode', () => {
+    const ed = draw(road());
+    ed.rightClick(at(80, 80));
+    expect(ed.phase).toBe('draw');
+    ed.rightClick(at(80, 80));
+    expect(ed.phase).toBe('select');
+  });
+
+  it('a click on the void in draw mode starts the next road at once', () => {
+    const ed = draw(road());
+    ed.rightClick(at(80, 80));
+    click(ed, 100, 100);
+    expect(ed.phase).toBe('extend');
+    expect(ed.chains).toHaveLength(2);
+  });
+
+  it('Esc always jumps straight to select mode', () => {
+    const ed = draw(road());
+    ed.key('Escape');
+    expect(ed.phase).toBe('select');
+    click(ed, 10, 10);
+    ed.key('Escape');
+    expect(ed.phase).toBe('select');
+  });
+});

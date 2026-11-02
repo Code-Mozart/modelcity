@@ -37,7 +37,7 @@ describe('splitting (^23)', () => {
     ed.key('Escape');
     expect(ed.graph.nodes).toHaveLength(3);
     expect(ed.graph.edges).toHaveLength(2);
-    expect(ed.drawing).toBe(false);
+    expect(ed.phase).toBe('select');
   });
 });
 
@@ -48,7 +48,7 @@ describe('merging (^23)', () => {
     click(ed, 20, 80);
     click(ed, 40, 40);
     click(ed, 40, -20);
-    expect(ed.drawing).toBe(false);
+    expect(ed.phase).toBe('draw');
     expect(ed.graph.edges).toHaveLength(4);
     expect(edgesIn(ed.graph, b)).toHaveLength(2);
     expect(edgesOut(ed.graph, b)).toHaveLength(1);
@@ -62,7 +62,7 @@ describe('merging (^23)', () => {
     click(ed, on.x, on.y);
     expect(ed.graph.nodes).toHaveLength(6);
     expect(ed.graph.edges).toHaveLength(5);
-    expect(ed.drawing).toBe(false);
+    expect(ed.phase).toBe('draw');
   });
 });
 
@@ -122,7 +122,7 @@ describe('undo of splits and merges (^23, ^81)', () => {
     click(ed, 40, 100);
     click(ed, 80, 0);
     expect(ed.graph.edges).toHaveLength(3);
-    expect(ed.drawing).toBe(false);
+    expect(ed.phase).toBe('draw');
   });
 });
 
@@ -190,7 +190,7 @@ describe('merging into the road being drawn (^191)', () => {
     expect(ed.hintTarget).toMatchObject({ kind: 'curve', act: 'merge' });
     expect(ed.mergePreview).not.toBeNull();
     click(ed, on.x, on.y);
-    expect(ed.drawing).toBe(false);
+    expect(ed.phase).toBe('draw');
     expect(ed.graph.nodes).toHaveLength(4);
     expect(ed.graph.edges).toHaveLength(4);
     const inserted = ed.graph.nodes[3]!.id;
