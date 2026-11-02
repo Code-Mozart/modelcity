@@ -1,5 +1,7 @@
 <script lang="ts">
+  import KeyCap from '../hints/KeyCap.svelte';
   import Icon from './Icon.svelte';
+  import { partsOf } from './toastText';
   import type { Toasts } from './toasts.svelte';
 
   /**
@@ -12,8 +14,10 @@
   function fit(node: HTMLElement) {
     const range = document.createRange();
     range.selectNodeContents(node);
-    const widths = [...range.getClientRects()].map((r) => r.width);
-    if (widths.length > 1) node.style.width = `${Math.ceil(Math.max(...widths)) + 1}px`;
+    const rects = [...range.getClientRects()];
+    // The text is left aligned: its longest line ends at the rightmost box.
+    const width = Math.max(...rects.map((r) => r.right)) - node.getBoundingClientRect().left;
+    if (rects.length > 1) node.style.width = `${Math.ceil(width) + 1}px`;
   }
 </script>
 
@@ -24,7 +28,10 @@
       role={toast.kind === 'error' || toast.kind === 'warning' ? 'alert' : 'status'}
     >
       <Icon name={toast.kind} />
-      <span use:fit>{toast.text}</span>
+      <span use:fit
+        >{#each partsOf(toast.text) as part, i (i)}{#if 'key' in part}<KeyCap>{part.key}</KeyCap
+            >{:else}{part.text}{/if}{/each}</span
+      >
     </li>
   {/each}
 </ul>
