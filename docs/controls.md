@@ -206,3 +206,19 @@ The hint of a control the user has just used is hidden, each control on its own:
 ## Toasts (^232, ^185)
 
 A *message* (glossary) is any text for the user with the icon of its kind in front: a toast, or the error of a refused import in the modal (^210). Short messages in the top right corner, above the recent history panel, on a transparent background, each with the icon of its kind in front (^210): `saved` (`Ctrl+S`), `nothing to save yet`, `nothing to undo` and `nothing to redo` (`Ctrl+Z`, `Ctrl+Y` and their `Alt` forms with nothing to move, ^242), `exported <file>`, `imported <title>`, and the texts of a project that cannot be loaded from the browser storage (the same texts as a refused import, ^209; the stored project stays as it is and the app starts with a new, empty project; opening such a card tells it again and changes nothing). Confirmations stay 3 seconds, warnings and errors 8 seconds (assumed); several stack, but a message that is showing already does not appear twice: its time starts again (^242). The icon is always at the start of the text (user). `Ctrl+S` also says `modelcity saves automatically` in a second toast (info), every time (user).
+
+## Snapping (^101, ^153)
+
+A node that is **placed** (draw mode, empty canvas) or **moved** (dragged, also a group: the dragged node snaps, the others follow, ^264) is pulled to the nearest *snap suggestion* within 14 px (assumed): a snap point, a snap line or a snap curve (glossary). A turquoise guide shows what it is pulled to: a line or curve, and a ring at a point or where two cross (^280). The suggestions are made by rules (^265 to ^273, ^279): the line along the normal and along the heading of every node, three points at a node (on it and one lane width to each side), the curve of every segment and its two offsets one lane width away, the bisector and its tangent of a bend, the radius points, the lines along the normal at the ticks, and the inflection point of an S-curve or hook with the lines along its tangent and normal (drawn as a ring, ^260). Only those near their nodes (300 px, assumed) are offered, except those of **pinned** nodes. While nodes are moved their previous positions are snap points (^113); a node that is placed does not snap to the position of a node (clicking a node splits or merges, ^23).
+
+| Input | What it does |
+|---|---|
+| `Ctrl` (held) | Turns snapping off; its hint `[Ctrl]: no snapping` shows only while a node snaps |
+| `S` (nodes selected) | Pins the snap suggestions of the selected nodes: offered at any distance, the nodes turn turquoise; each pin replaces the one before (`[S]: pin snap suggestions`, never hidden). While the middle button is held (the compass) `S` is the compass key |
+| `S` (nothing selected, something pinned) | Unpins all (`[S]: unpin all snap suggestions`) |
+| Drop a node on another node (within the snap radius, or 0.1 m at any zoom) | The nodes are merged: the node dropped on stays, with its heading; one undoable step (^248) |
+| Drop a node on the curve of a segment | The node joins the segment, which is split there; the node takes the tangent of the curve (^268) |
+| LMB click on a radius point (draw or extend mode) | Splits or merges there, like a click on the curve; a drag moves the radius (^278) |
+| LMB click on the node inserted by a split (draw mode) | Keeps the node and goes back to draw mode (^276); Esc or a right click right after the split still gives the curve back (^237) |
+
+Following a snap suggestion for 1.5 s shows the tip `Select the node and press S to pin its snap suggestions`, at most once a minute (^258).
