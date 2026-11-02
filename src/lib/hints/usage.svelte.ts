@@ -1,11 +1,11 @@
 import type { ControlId } from './hints';
 
-/** How long a control that was used is considered learned, and its hint stays hidden (user, ^110: 5 minutes for now). */
-export const LEARNED_MS = 5 * 60 * 1000;
+/** How long a control that was used is considered visited, and its hint stays hidden (user, ^110: 5 minutes for now). */
+export const VISITED_MS = 5 * 60 * 1000;
 
 /**
  * Which controls the user used, and when (^110): the hint of a control that was used within the
- * last `LEARNED_MS` is hidden, each control on its own. Not stored: a new session starts with all
+ * last `VISITED_MS` is hidden, each control on its own. Not stored: a new session starts with all
  * hints shown.
  */
 export class Usage {
@@ -27,15 +27,15 @@ export class Usage {
   /** Whether the hint of the control is hidden right now. */
   hidden = (id: ControlId): boolean => {
     const at = this.last[id];
-    return at !== undefined && this.now - at < LEARNED_MS;
+    return at !== undefined && this.now - at < VISITED_MS;
   };
 
   /** Bring the hints back when the first used control runs out (the time is only looked at then). */
   private watch() {
     clearTimeout(this.timer);
-    const times = Object.values(this.last).filter((t) => this.now - t < LEARNED_MS);
+    const times = Object.values(this.last).filter((t) => this.now - t < VISITED_MS);
     if (!times.length) return;
-    const wait = Math.min(...times) + LEARNED_MS - this.now;
+    const wait = Math.min(...times) + VISITED_MS - this.now;
     this.timer = setTimeout(() => {
       this.now = this.clock();
       this.watch();

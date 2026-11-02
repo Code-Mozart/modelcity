@@ -26,8 +26,7 @@ export type ControlId =
   | 'delete-selected'
   | 'undo'
   | 'redo'
-  | 'view'
-  | 'pin';
+  | 'view';
 
 /** A control hint: the inputs (alternatives) and what they do, e.g. [Esc] or [RMB]: finish. */
 export interface Hint {
@@ -203,7 +202,7 @@ function selectModeHints(target: HintTarget, selected: number): Hint[] {
 /** Whether the user used a control lately, so that its hint is hidden (^110). */
 export type Hidden = (id: ControlId) => boolean;
 
-const learned = (row: Hint, hidden: Hidden) => row.id !== undefined && hidden(row.id);
+const visited = (row: Hint, hidden: Hidden) => row.id !== undefined && hidden(row.id);
 
 /** What can be undone or redone right now (^81). */
 export interface HistoryState {
@@ -222,7 +221,7 @@ export function historyHints({ undo, redo }: HistoryState, hidden: Hidden = () =
     ...(undo ? [{ ...hint(keys('Ctrl', 'Z'), 'undo', 'undo'), note: note('to undo batch') }] : []),
     ...(redo ? [{ ...hint(redoKeys, 'redo', 'redo'), note: note('to redo batch') }] : []),
   ];
-  return rows.filter((r) => !learned(r, hidden));
+  return rows.filter((r) => !visited(r, hidden));
 }
 
 /**
@@ -232,27 +231,47 @@ export function historyHints({ undo, redo }: HistoryState, hidden: Hidden = () =
 /** The project controls are always shown for now (^168). */
 const PROJECT_HINTS: Hint[] = [hint({ kind: 'key', label: 'P' }, 'projects')];
 
-/** Tab switches to view mode, and back (^104); hidden once learned like the other controls (^110). */
+/** Tab switches to view mode, and back (^104); hidden once visited like the other controls (^110). */
 const tabHints = (text: string, hidden: Hidden): Hint[] =>
-  [hint({ kind: 'key', label: 'Tab' }, text, 'view')].filter((r) => !learned(r, hidden));
+  [hint({ kind: 'key', label: 'Tab' }, text, 'view')].filter((r) => !visited(r, hidden));
 
 /** View mode: only the camera and the way out. */
 export const viewHints = (hidden: Hidden = () => false): Hint[] => [
   ...tabHints('select mode', hidden),
-  ...CAMERA.filter((r) => !learned(r, hidden)),
+  ...CAMERA.filter((r) => !visited(r, hidden)),
   ...PROJECT_HINTS,
 ];
+
+/** What else the hints depend on: what was visited lately (^110), the pins, whether a node snaps, the compass (^258, ^101). */
+export interface HintState {
+  hidden?: Hidden;
+  pinned?: number;
+  snapping?: boolean;
+  /** The middle button is held: the compass uses `S` and the other letters. */
+  rotating?: boolean;
+}
+
+/** Ctrl while the editor snaps, and the pin; neither can be visited, so they are never hidden (^101, ^258). */
+function snapHints(selected: number, s: HintState): Hint[] {
+  const ctrl = s.snapping ? [hint({ kind: 'key', label: 'Ctrl' }, 'no snapping')] : [];
+  const key = { kind: 'key', label: 'S' } as const;
+  if (s.rotating) return ctrl;
+  if (selected > 0) return [...ctrl, hint(key, 'pin snap suggestions')];
+  return s.pinned ? [...ctrl, hint(key, 'unpin all snap suggestions')] : ctrl;
+}
 
 export function hintsFor(
   drawing: boolean,
   target: HintTarget,
   selected = 0,
-  hidden: Hidden = () => false,
+  state: HintState = {},
 ): Hint[] {
+  const hidden = state.hidden ?? (() => false);
   const rows = drawing ? drawModeHints(target) : selectModeHints(target, selected);
   return [
     ...tabHints('view mode', hidden),
-    ...rows.filter((r) => !learned(r, hidden)),
+    ...rows.filter((r) => !visited(r, hidden)),
+    ...snapHints(selected, state),
     ...PROJECT_HINTS,
   ];
 }

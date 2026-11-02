@@ -45,6 +45,7 @@ const PAIRS: [string, string, number][] = [
   ['key-on-bg', 'bg', 3],
   ['blue', 'bg', 3],
   ['orange', 'bg', 3],
+  ['turquoise', 'bg', 3],
   ['red', 'bg', 3],
 ];
 

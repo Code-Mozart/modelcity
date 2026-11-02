@@ -3,7 +3,6 @@ import type { EdgeRef } from '../curves/path';
 import { sweeps } from '../curves/piece';
 import { add, fromAngle, mul, onCircle, sub, unitOr, type Vec } from '../curves/vec';
 import {
-  dot,
   extend,
   ring,
   screenDir,
@@ -93,7 +92,8 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
  */
 export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   if (E.kind === 'line' || E.kind === 'C') return;
-  dot(f.ctx, toScreen(f, E.J), 6, pal.orange);
+  // Derived, not draggable: a ring like the corners of a hook (^260).
+  ring(f.ctx, toScreen(f, E.J), 5.5, { color: pal.orange, width: 2 });
   if (E.kind !== 'H') return;
   for (const k of [E.k1, E.k2]) {
     if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.orange, width: 2 });

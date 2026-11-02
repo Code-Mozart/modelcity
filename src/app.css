@@ -16,6 +16,8 @@
   --blue: #1c4dff;
   --red: #d92a3f;
   --orange: #c75f00;
+  /* The snap guides and the pinned nodes (^101, ^258). */
+  --turquoise: #00796b;
   /* Text variants: graphics need 3:1, text needs 4.5:1 against the background. */
   --red-ink: #c4182c;
   --orange-ink: #a64d00;
@@ -46,6 +48,7 @@
     --blue: #7f9cff;
     --red: #ff7a88;
     --orange: #ffa94d;
+    --turquoise: #2dd4bf;
     --red-ink: #ff7a88;
     --orange-ink: #ffa94d;
     --btn: #232832;

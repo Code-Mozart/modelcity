@@ -39,7 +39,12 @@
       ? modalHints(session.row?.mode ?? 'list', session.over)
       : editor.viewing
         ? viewHints(usage.hidden)
-        : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, usage.hidden),
+        : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
+            hidden: usage.hidden,
+            pinned: editor.pinned.length,
+            snapping: editor.snapped !== null,
+            rotating: camera.rotating,
+          }),
   );
   // The last steps and what was undone, for a few seconds after each one, and while a road is drawn (^107, ^109).
   const recent = new Recent();

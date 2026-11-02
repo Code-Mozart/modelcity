@@ -81,7 +81,7 @@ export class Editor {
   }
   /** The curve before and after a split on it: finishing at once goes back to the first (^237). */
   private splitUndo: { before: Graph; after: Graph } | null = null;
-  /** The last control used that has a hint that is hidden once it is learned (^110). */
+  /** The last control used that has a hint that is hidden once it is visited (^110). */
   used = $state.raw<{ seq: number; id: ControlId } | null>(null);
   /** True while the end of a press runs, so everything it does is one step. */
   private batching = false;
@@ -143,7 +143,6 @@ export class Editor {
   /** `S`: pin the snap suggestions of the selected nodes, each pin replaces the one before; with nothing selected unpin all (^258). */
   private pin() {
     this.pins = [...this.selection];
-    this.use('pin');
   }
 
   /** Tab: to view mode from any mode (a road being drawn is finished), and back to select mode (^104). */

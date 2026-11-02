@@ -51,6 +51,8 @@
       mergePreview: editor.mergePreview,
       focus: editor.focus,
       pointer: editor.pointer,
+      snap: editor.snapped,
+      pinned: chainSelection(editor.chains, editor.pinned),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });

@@ -199,9 +199,9 @@ There is no one-finger pan any more: empty space belongs to creating (^14 is sup
 - Typed length/angle, guide snapping and undo from the handover (^11).
 - The HUD beyond the control hints (^20, ^29), where the grid returns (^35), and a permanent rotation indicator (^31).
 
-## Learned controls are hidden (^110)
+## Visited controls are hidden (^110)
 
-The hint of a control the user has just used is hidden, each control on its own: the camera controls (`pan`, `zoom`, `rotate`), the select operations (`select`, with a box, `add to selection` with Shift, `select branch` with Alt, `deselect all` with Esc, `delete selected`) and the two history hints (`undo`, `redo`). It comes back after 5 minutes (user, for now) without using that control. Nothing is stored: a new session starts with all hints. Draw mode, moving and the project controls are not affected, nor is `[LMB]: draw mode`, so on a blank map it is the only mouse hint once the camera and select controls are learned.
+The hint of a control the user has just used is hidden, each control on its own: the camera controls (`pan`, `zoom`, `rotate`), the select operations (`select`, with a box, `add to selection` with Shift, `select branch` with Alt, `deselect all` with Esc, `delete selected`) and the two history hints (`undo`, `redo`). It comes back after 5 minutes (user, for now) without using that control. Nothing is stored: a new session starts with all hints. Draw mode, moving and the project controls are not affected, nor is `[LMB]: draw mode`, so on a blank map it is the only mouse hint once the camera and select controls are visited.
 
 ## Toasts (^232, ^185)
 
