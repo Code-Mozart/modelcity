@@ -11,6 +11,7 @@
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
   import { hintsFor, viewHints } from './lib/hints/hints';
+  import { Dwell } from './lib/hints/dwell';
   import { Usage } from './lib/hints/usage.svelte';
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
@@ -55,6 +56,15 @@
   // Drawing a road keeps the panel up; when the road is finished the interval starts from then.
   $effect(() => {
     if (editor.active === null) untrack(() => recent.hideLater());
+  });
+  // Following a snap suggestion of a node for a while says how to pin it (^258).
+  const dwell = new Dwell(() =>
+    toasts.show('info', 'Select the node and press S to pin its snap suggestions'),
+  );
+  $effect(() => {
+    const by = editor.snapped?.by.filter((s) => s.kind === 'curve' && s.limited);
+    const key = by?.length ? by.map((s) => `${s.rule}${s.from}`).join() : null;
+    untrack(() => dwell.follow(key));
   });
   const panelShown = $derived(recent.visible || editor.active !== null);
   const panel = $derived(panelView(editor.timeline.history));
