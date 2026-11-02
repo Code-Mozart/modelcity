@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Phase } from '../editor/phase';
   import Icon from '../ui/Icon.svelte';
-  import { MODES, PHASES } from './modes';
+  import { MODES, shownIn } from './modes';
 
   let { phase }: { phase: Phase } = $props();
   const mode = $derived(MODES[phase]);
@@ -9,7 +9,7 @@
 
 <div class="frame" data-testid="mode-frame" data-mode={phase} style:--mode={mode.outline}></div>
 <div class="modes" aria-hidden="true">
-  {#each PHASES as p (p)}
+  {#each shownIn(phase) as p (p)}
     <span class="mode" class:on={p === phase} style:--mode={MODES[p].color} title={MODES[p].label}>
       <Icon name={MODES[p].icon} />
     </span>

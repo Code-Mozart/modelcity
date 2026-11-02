@@ -237,8 +237,8 @@ const tabHints = (text: string, hidden: Hidden): Hint[] =>
 
 /** View mode: only the camera and the way out. */
 export const viewHints = (hidden: Hidden = () => false): Hint[] => [
-  ...CAMERA.filter((r) => !learned(r, hidden)),
   ...tabHints('select mode', hidden),
+  ...CAMERA.filter((r) => !learned(r, hidden)),
   ...PROJECT_HINTS,
 ];
 
@@ -250,8 +250,8 @@ export function hintsFor(
 ): Hint[] {
   const rows = drawing ? drawModeHints(target) : selectModeHints(target, selected);
   return [
-    ...rows.filter((r) => !learned(r, hidden)),
     ...tabHints('view mode', hidden),
+    ...rows.filter((r) => !learned(r, hidden)),
     ...PROJECT_HINTS,
   ];
 }

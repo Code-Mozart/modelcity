@@ -15,12 +15,12 @@ const show = (h: Hint) =>
             : `${i.alt ? 'Alt+' : ''}${i.shift ? 'Shift+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}${h.note ? ` (${h.note.key} ${h.note.text})` : ''}`;
-const PROJECT_ROWS = ['Tab: view mode', 'P: projects'];
-/** The hints of the mode and target, without the project controls that are always shown (^168). */
+const PROJECT_ROWS = ['P: projects'];
+/** The hints of the mode and target, without the Tab and project controls that are always shown (^104, ^168). */
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
   hintsFor(drawing, target, selected)
     .map(show)
-    .filter((r) => !PROJECT_ROWS.includes(r));
+    .filter((r) => !PROJECT_ROWS.includes(r) && r !== 'Tab: view mode');
 
 const hiddenIds =
   (...ids: string[]) =>
@@ -218,7 +218,7 @@ describe('split and merge hints (^23)', () => {
 describe('project controls (^168)', () => {
   it('are always the last hints, in every mode', () => {
     for (const drawing of [false, true]) {
-      expect(hintsFor(drawing, empty).map(show).slice(-2)).toEqual(PROJECT_ROWS);
+      expect(hintsFor(drawing, empty).map(show).slice(-1)).toEqual(PROJECT_ROWS);
     }
   });
 });
@@ -262,7 +262,7 @@ describe('learned controls are hidden (^110)', () => {
   });
 
   it('with the camera and select controls learned, drawing is the only mouse hint on a blank map', () => {
-    const learned = hiddenIds('pan', 'zoom', 'rotate', 'select-box');
+    const learned = hiddenIds('pan', 'zoom', 'rotate', 'select-box', 'view');
     expect(hintsFor(false, empty, 0, learned).map(show)).toEqual([
       'LMB: draw mode',
       ...PROJECT_ROWS,
@@ -283,10 +283,10 @@ describe('Tab (^104)', () => {
     expect(hintsFor(false, empty).map(show)).toContain('Tab: view mode');
     expect(hintsFor(false, empty, 0, hiddenIds('view')).map(show)).not.toContain('Tab: view mode');
     expect(viewHints().map(show)).toEqual([
+      'Tab: select mode',
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',
-      'Tab: select mode',
       'P: projects',
     ]);
   });

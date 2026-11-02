@@ -19,4 +19,7 @@ export const MODES: Record<
 };
 
 /** The modes in the order they are shown. */
-export const PHASES: Phase[] = ['select', 'draw', 'extend', 'view'];
+export const PHASES: Phase[] = ['view', 'select', 'draw', 'extend'];
+
+/** View mode shows only itself and select mode, its way out (^104). */
+export const shownIn = (phase: Phase): Phase[] => (phase === 'view' ? ['view', 'select'] : PHASES);

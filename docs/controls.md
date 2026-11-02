@@ -8,7 +8,7 @@ Mouse buttons: **LMB** left, **MMB** middle (wheel button), **RMB** right. "Clic
 
 ## Four modes (^48, ^104, ^120)
 
-The modes are shown as icons at the top left (cursor: select, pen: draw, node with a dashed line: extend, eye: view); the current one is in the color of the mode and in a ring, the others in the text color. The screen has a hairline outline (0.5 px) in the same color: select blue, draw dark (the node color), extend orange, view none.
+The modes are shown as icons at the top left (eye: view, cursor: select, pen: draw, node with a dashed line: extend; view mode shows only the eye and the cursor); the current one is in the color of the mode and in a ring, the others in the text color. The screen has a hairline outline (0.5 px) in the same color: select blue, draw dark (the node color), extend orange, view none.
 - **View mode (^104):** nothing can be selected or edited, only the camera works (pan, zoom, rotate). Only the generated geometry is drawn: no skeleton (curves, node dots) and no scaffold. The icon is in the text color and there is no outline. `Tab` enters it from every mode (a road being drawn is finished; the selection is kept, though not shown), and `Tab` leaves it for select mode. In view mode the keys for editing, undo and redo do nothing. The icons are not clickable, the keyboard is the way (^44).
 
 - **Select mode:** no road is being drawn. The cursor is the default arrow and there is no preview.
@@ -81,7 +81,7 @@ Entering draw mode, finishing a road and removing nodes clear the selection.
 | Esc | Finish the road being drawn. With only one node the road is cancelled, because a road needs at least two nodes | ^43 |
 | Alt + RMB click on a curve (either mode) | Remove the whole **branch** the segment is on (^160): all its segments, and the nodes that had no other segment. While drawing: the road goes on from the node being drawn from if that is still there, else from a neighbour that still has a segment, else it is no longer drawn. Hint `[Alt]+[RMB]: remove branch` | ^160 |
 | Alt + LMB click on a heading control point | **Flip the arm** (^234, arm: ^130): every node connected to this one turns around (every heading a half circle) and every segment between them runs the other way, so the curves stay the same and their direction arrows turn. While drawing the road goes on from the same node. Hint `[Alt]+[LMB]: flip arm`. A click, not a drag: dragging the point turns the heading as always | ^234 |
-| Tab (any mode) | Enter view mode; in view mode, back to select mode (^104). The hint `[Tab]: view mode` is hidden once used, like the camera hints (^110) | ^104 |
+| Tab (any mode) | Enter view mode; in view mode, back to select mode (^104). The hint `[Tab]: view mode` is the top row of the hints and is hidden once used, like the camera hints (^110) | ^104 |
 | Esc (select mode, something selected) | Deselect all: a selection step like a click on empty canvas, so it joins the batch of selection steps before (^218) | ^218 |
 | LMB click on the node being drawn from (draw mode: the road's last node, or its first node if the road was extended backwards; a road with one node: that node) | Same as Esc. A click, not a drag: dragging the node moves it and keeps drawing | ^43 |
 
