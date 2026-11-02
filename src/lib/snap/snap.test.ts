@@ -25,7 +25,7 @@ function map(nodes: RuleNode[]): Suggestion[] {
 }
 
 const ask = (list: Suggestion[], x: number, y: number, pinned: number[] = []) =>
-  snapTo(list, { pt: { x, y }, scale: 10, pinned: new Set(pinned) });
+  snapTo(list, { pt: { x, y }, scale: 10, pinned });
 
 const straight = () => map([node(1, 0, 0, 0), node(2, 30, 0, 0)]);
 

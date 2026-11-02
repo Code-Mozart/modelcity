@@ -22,18 +22,18 @@ describe('undo and redo in the editor (^81)', () => {
       [20, -10],
       [40, 0],
     ]);
-    expect(ed.canUndo).toBe(true);
+    expect(ed.timeline.canUndo).toBe(true);
     ed.key('z', undo);
     expect(ed.chains[0]!.path.nodes).toHaveLength(2);
     expect(ed.drawing).toBe(true);
     ed.key('z', undo);
     ed.key('z', undo);
     expect(ed.chains).toEqual([]);
-    expect(ed.canUndo).toBe(false);
+    expect(ed.timeline.canUndo).toBe(false);
     ed.key('y', undo);
     ed.key('Z', redo);
     expect(ed.chains[0]!.path.nodes).toHaveLength(2);
-    expect(ed.canRedo).toBe(true);
+    expect(ed.timeline.canRedo).toBe(true);
   });
 });
 
@@ -45,21 +45,21 @@ describe('undo steps of dragging (^81)', () => {
     ]);
     ed.key('Escape');
     click(ed, 20, -10);
-    const steps = ed.history.past.length;
+    const steps = ed.timeline.history.past.length;
     click(ed, 20, -10);
-    expect(ed.history.past).toHaveLength(steps);
+    expect(ed.timeline.history.past).toHaveLength(steps);
     ed.pointerDown(at(20, -10));
     ed.pointerMove(at(30, -12));
     ed.pointerMove(at(35, -14));
     ed.pointerUp();
-    expect(ed.history.past).toHaveLength(steps + 1);
+    expect(ed.timeline.history.past).toHaveLength(steps + 1);
     ed.key('z', undo);
     expect(ed.chains[0]!.path.nodes[1]).toMatchObject({ x: 20, y: -10 });
-    expect(ed.canRedo).toBe(true);
+    expect(ed.timeline.canRedo).toBe(true);
     ed.pointerDown(at(20, -10));
     ed.pointerMove(at(25, -10));
     ed.pointerUp();
-    expect(ed.canRedo).toBe(false);
+    expect(ed.timeline.canRedo).toBe(false);
   });
 });
 
@@ -99,12 +99,12 @@ describe('undo of selecting (^88)', () => {
       [20, 0],
     ]);
     ed.key('Escape');
-    const before = ed.history.past.length;
+    const before = ed.timeline.history.past.length;
     ed.pointerDown(at(-5, -5));
     ed.pointerMove(at(25, 5));
     ed.pointerUp();
     expect(ed.selection).toHaveLength(2);
-    expect(ed.history.past).toHaveLength(before + 1);
+    expect(ed.timeline.history.past).toHaveLength(before + 1);
     ed.key('z', undo);
     expect(ed.selection).toEqual([]);
     ed.key('z', redo);

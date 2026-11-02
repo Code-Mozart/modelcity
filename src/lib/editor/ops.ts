@@ -1,5 +1,7 @@
 import { dragHeading } from '../curves/drag';
 import { dist, type Vec } from '../curves/vec';
+import { mergeNodes } from '../model/merge';
+import type { Drop } from './snapping';
 import { withSharedRadius } from './press';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
@@ -165,4 +167,20 @@ export function placeStep(g: Graph, id: number, info: PointerInfo): Graph {
   if (!n || dist(info.pt, n) < 6 / info.scale) return g;
   const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, info.shift).nodes[0]!.th;
   return withNode(g, id, { th });
+}
+
+/**
+ * A node was dropped to merge (^248, ^268): into a node, or into a curve, where the curve is split
+ * by a node with the heading of the curve there, so the curve does not change. The dropped node
+ * goes; the road being drawn and the selection follow it.
+ */
+export function droppedNode(d: Drawn, id: number, drop: NonNullable<Drop>): Drawn {
+  const into =
+    'node' in drop
+      ? { graph: d.graph, id: drop.node }
+      : insertNode(d.graph, drop.edge, { ...drop.at, th: drop.th });
+  const graph = mergeNodes(into.graph, id, into.id);
+  const to = (n: number | null) => (n === id ? into.id : n);
+  const selection = [...new Set(d.selection.map((n) => to(n)!))];
+  return { ...d, graph, active: to(d.active), origin: to(d.origin), selection };
 }

@@ -100,11 +100,11 @@ describe('opening and deleting projects (^167, ^189)', () => {
     s.camera.restore({ x: 3, y: 4, scale: 6, rotation: 0.5 });
     const first = s.session.id;
     await s.session.newProject();
-    expect(s.editor.canUndo).toBe(false);
+    expect(s.editor.timeline.canUndo).toBe(false);
     await s.session.open(first);
     expect(s.editor.graph.nodes).toHaveLength(2);
     expect(s.camera.state).toMatchObject({ x: 3, y: 4, scale: 6, rotation: 0.5 });
-    expect(s.editor.canUndo).toBe(false);
+    expect(s.editor.timeline.canUndo).toBe(false);
   });
 
   it('deleting the open project opens another, or there is none', async () => {

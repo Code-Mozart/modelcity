@@ -17,6 +17,8 @@ export interface PointerInfo {
   touch: boolean;
   shift: boolean;
   alt: boolean;
+  /** Ctrl turns snapping off while it is held (^101). */
+  ctrl: boolean;
 }
 
 /**

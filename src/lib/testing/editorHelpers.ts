@@ -11,6 +11,8 @@ export const at = (x: number, y: number, extra: Partial<PointerInfo> = {}): Poin
   touch: false,
   shift: false,
   alt: false,
+  // Snapping off, so that tests of other things place nodes exactly where they say (^101); tests of snapping pass `ctrl: false`.
+  ctrl: true,
   ...extra,
 });
 

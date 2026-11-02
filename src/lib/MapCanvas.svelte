@@ -62,7 +62,7 @@
   }
 
   /** Where the pointer last was on the canvas, and with what keys, to find it again when the view moves. */
-  let last: Pick<PointerInfo, 'screen' | 'touch' | 'shift' | 'alt'> | null = null;
+  let last: Pick<PointerInfo, 'screen' | 'touch' | 'shift' | 'alt' | 'ctrl'> | null = null;
 
   function infoAt(at: NonNullable<typeof last>): PointerInfo {
     return {
@@ -75,7 +75,13 @@
 
   function info(e: PointerEvent | MouseEvent): PointerInfo {
     const touch = 'pointerType' in e && e.pointerType === 'touch';
-    last = { screen: localPoint(e), touch, shift: e.shiftKey, alt: e.altKey };
+    last = {
+      screen: localPoint(e),
+      touch,
+      shift: e.shiftKey,
+      alt: e.altKey,
+      ctrl: e.ctrlKey || e.metaKey,
+    };
     return infoAt(last);
   }
 

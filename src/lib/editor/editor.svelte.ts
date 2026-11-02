@@ -1,5 +1,6 @@
 import { dragPress, emptyPress } from './press';
 import {
+  droppedNode,
   extendTo,
   mergeInto,
   curvePress,
@@ -9,12 +10,13 @@ import {
   removeSegmentsFrom,
   splitAt,
 } from './ops';
+import { dropOf, snapBase, snapFor, snapPreview } from './snapping';
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
-import { NO_HISTORY, redoStep, undoStep, type HistoryEvent, type Step } from './history';
+import { Timeline, type Move } from './timeline.svelte';
 import type { ControlId } from '../hints/hints';
-import { pressName, takeStep } from './stepNames';
+import { pressName } from './stepNames';
 import { controlUsed } from './usage';
 import type { Pointer } from './proximity';
 import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
@@ -22,7 +24,7 @@ import { curveAt, focusOf, handleAt, hoverAt } from './hits';
 import { chainHandles, chainSegments, chainsOf, type RoadHandle } from './chains';
 import { moveOf } from './moves';
 import { phaseOf } from './phase';
-import { emptyGraph, removeNodes, roundToMm, sameGraph, type Graph } from '../model/graph';
+import { emptyGraph, nodeOf, removeNodes, roundToMm, sameGraph, type Graph } from '../model/graph';
 import {
   afterEmptyClick,
   branchEdges,
@@ -70,11 +72,9 @@ export class Editor {
    * the editor, so it is right whenever either changes, also when the pointer did not move (a
    * finished road, a placed node, an undo, a key, ^238). None while the left button is down.
    */
-  hover = $derived<Hover | null>(this.hoverNow());
+
   private press = $state.raw<Press | null>(null);
-  /** The steps that can be undone and redone (^81). */
-  history = $state.raw(NO_HISTORY);
-  private eventCount = 0;
+  readonly timeline = new Timeline();
 
   private use(id: ControlId | null) {
     if (id) this.used = { seq: (this.used?.seq ?? 0) + 1, id };
@@ -86,14 +86,25 @@ export class Editor {
   /** True while the end of a press runs, so everything it does is one step. */
   private batching = false;
 
-  /** The last thing that happened to the history, for the recent history panel (^107). */
-  event = $state.raw<HistoryEvent | null>(null);
-
-  canUndo = $derived(this.history.past.length > 0);
-  canRedo = $derived(this.history.future.length > 0);
   /** The node last picked. */
   sel = $derived(this.selection.at(-1) ?? null);
   drawing = $derived(this.mode === 'draw');
+  private hoverRaw = $derived<Hover | null>(this.hoverNow());
+  /** The nodes whose snap suggestions are pinned (^258); gone nodes drop out by themselves. */
+  private pins = $state.raw<number[]>([]);
+  pinned = $derived(this.pins.filter((id) => nodeOf(this.graph, id)));
+  private base = $derived(snapBase(this.press ? this.press.undo.graph : this.graph, this.press));
+  /** What the pointer is pulled to while it places or moves a node (^101): derived like the hover. */
+  snapped = $derived(
+    snapFor(this.base, {
+      info: this.lastInfo,
+      press: this.press,
+      hover: this.hoverRaw,
+      drawing: this.drawing,
+      pinned: this.pinned,
+    }),
+  );
+  hover = $derived<Hover | null>(snapPreview(this.hoverRaw, this.snapped, () => this.snapshot()));
   /** The three modes (^120): extend mode is draw mode while a node is being extended. */
   phase = $derived(phaseOf(this.mode, this.active, this.viewing));
   /** The chains of the graph, the shape the curve code and the drawing work on (^106). */
@@ -124,8 +135,15 @@ export class Editor {
     else if (this.viewing) return false;
     else if (action === 'escape') this.escape();
     else if (action === 'deleteNode') this.deleteSelected();
+    else if (action === 'pin') this.pin();
     else if (action) this.move(action);
     return action !== undefined;
+  }
+
+  /** `S`: pin the snap suggestions of the selected nodes, each pin replaces the one before; with nothing selected unpin all (^258). */
+  private pin() {
+    this.pins = [...this.selection];
+    this.use('pin');
   }
 
   /** Tab: to view mode from any mode (a road being drawn is finished), and back to select mode (^104). */
@@ -137,14 +155,10 @@ export class Editor {
   }
 
   /** Undo or redo a step (^81) or a whole batch (^103); not while the left button is down. */
-  private move(action: 'undo' | 'redo' | 'undoBatch' | 'redoBatch') {
-    if (this.press) return;
-    const go = action.startsWith('undo') ? undoStep : redoStep;
-    const r = go(this.history, action.endsWith('Batch'));
-    if (!r) return;
-    this.history = r.history;
-    this.restore(r.to);
-    this.announce(action.slice(0, 4) as 'undo' | 'redo', r.steps);
+  private move(action: Move) {
+    const to = this.press ? null : this.timeline.go(action);
+    if (!to) return;
+    this.restore(to);
     this.use(action.startsWith('undo') ? 'undo' : 'redo');
   }
 
@@ -167,13 +181,7 @@ export class Editor {
     // A graph with the same content stays the object it was (a drag back to where it began), so nothing else sees a change.
     if (sameGraph(before.graph, this.graph)) this.graph = before.graph;
     if (before.graph === this.graph && sameSelection(before.selection, this.selection)) return;
-    const r = takeStep(this.history, before, this.snapshot(), name);
-    this.history = r.history;
-    this.announce('step', [r.step]);
-  }
-
-  private announce(kind: HistoryEvent['kind'], steps: Step[]) {
-    this.event = { seq: ++this.eventCount, kind, steps };
+    this.timeline.record(before, this.snapshot(), name);
   }
 
   /** Replace everything by another map (a project was opened): no selection, no drawing, no history. */
@@ -181,8 +189,7 @@ export class Editor {
     this.graph = graph;
     this.leaveDrawing(true);
     [this.press, this.band, this.lastInfo] = [null, null, null];
-    this.history = NO_HISTORY;
-    this.event = null;
+    this.timeline.clear();
   }
 
   deleteSelected() {
@@ -255,7 +262,11 @@ export class Editor {
       this.press = emptyPress(this.snapshot(), info, hit);
       return;
     }
-    this.begin(hit ? curvePress(this.snapshot(), hit) : placePress(this.snapshot(), info));
+    this.begin(
+      hit
+        ? curvePress(this.snapshot(), hit)
+        : placePress(this.snapshot(), this.snapped ? { ...info, pt: this.snapped.pt } : info),
+    );
   }
 
   private grab(handle: RoadHandle, info: PointerInfo) {
@@ -281,14 +292,14 @@ export class Editor {
 
   pointerMove(info: PointerInfo) {
     this.lastInfo = info;
-    const moved = this.press && moveOf(this.snapshot(), this.press, info);
+    const moved = this.press && moveOf(this.snapshot(), this.press, info, this.snapped?.pt);
     if (moved) Object.assign(this, moved);
   }
 
   /** Alt or Shift went down or up: what is under the pointer can look different, such as the hovered branch (^99), though the pointer did not move. */
-  modifiers({ alt, shift }: { alt: boolean; shift: boolean }) {
+  modifiers({ alt, shift, ctrl }: { alt: boolean; shift: boolean; ctrl?: boolean }) {
     if (!this.lastInfo) return;
-    this.lastInfo = { ...this.lastInfo, alt, shift };
+    this.lastInfo = { ...this.lastInfo, alt, shift, ctrl: ctrl ?? this.lastInfo.ctrl };
   }
 
   private hoverNow(): Hover | null {
@@ -359,9 +370,11 @@ export class Editor {
 
   /** Left button released. */
   pointerUp() {
+    const drop = dropOf(this.graph, this.press, this.snapped);
     const press = this.endPress();
     if (!press) return;
     this.batching = true;
+    if (drop && press.kind === 'drag') this.restore(droppedNode(this.snapshot(), press.id, drop));
     if (press.kind === 'drag' && !press.moved) this.clickedHandle(press);
     if (press.kind === 'empty' && !press.moved) this.clickedEmpty(press);
     if (press.kind === 'place') this.clickedCurve(press);

@@ -11,13 +11,13 @@ export interface SnapQuery {
   /** Pixels per meter. */
   scale: number;
   /** Nodes whose suggestions are offered at any distance (^258). */
-  pinned: ReadonlySet<number>;
+  pinned: readonly number[];
 }
 
 /** Whether a suggestion is offered at all: the pointer is near one of its origins, or one of its nodes is pinned. */
 function offered(s: Suggestion, q: SnapQuery): boolean {
   if (s.kind === 'curve' && !s.limited) return true;
-  if (s.from.some((id) => q.pinned.has(id))) return true;
+  if (s.from.some((id) => q.pinned.includes(id))) return true;
   const origins = s.kind === 'curve' ? s.origins : [s.at];
   return origins.some((o) => dist(o, q.pt) * q.scale <= SNAP_REACH_PX);
 }
