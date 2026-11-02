@@ -7,6 +7,14 @@
    * like the recent history panel: the text with the icon of its kind in front (^210), no box.
    */
   let { toasts }: { toasts: Toasts } = $props();
+
+  /** A wrapped text is as wide as its longest line, so that the toast stays at the right edge, not as wide as its room. */
+  function fit(node: HTMLElement) {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const widths = [...range.getClientRects()].map((r) => r.width);
+    if (widths.length > 1) node.style.width = `${Math.ceil(Math.max(...widths)) + 1}px`;
+  }
 </script>
 
 <ul class="toasts" aria-label="Messages">
@@ -15,7 +23,8 @@
       class={toast.kind}
       role={toast.kind === 'error' || toast.kind === 'warning' ? 'alert' : 'status'}
     >
-      <Icon name={toast.kind} />{toast.text}
+      <Icon name={toast.kind} />
+      <span use:fit>{toast.text}</span>
     </li>
   {/each}
 </ul>
@@ -35,15 +44,18 @@
       500 var(--font-size) / 1.3 system-ui,
       sans-serif;
   }
-  /* The icon is the first character of the text, so a long message wraps under it at the right edge (^210). */
+  /* The icon beside the text; a long text wraps left aligned under its first line, not under the icon (^210). */
   li {
-    text-align: right;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+  }
+  li span {
+    text-align: left;
     text-wrap: balance;
   }
   li :global(svg) {
-    display: inline-block;
-    vertical-align: -0.3em;
-    margin-right: 0.5em;
+    flex: none;
   }
   /* The icon has the color of its kind, the text stays readable (^210). */
   .info :global(svg) {
