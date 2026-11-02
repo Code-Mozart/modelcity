@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LABEL_MS, MODES } from './modes';
+import { MODES } from './modes';
 
 describe('mode labels (^119)', () => {
   it('each mode has a lower case name and its own color', () => {
@@ -9,6 +9,5 @@ describe('mode labels (^119)', () => {
       'extend mode',
     ]);
     expect(new Set(Object.values(MODES).map((m) => m.color)).size).toBe(3);
-    expect(LABEL_MS).toBeLessThan(1000);
   });
 });

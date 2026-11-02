@@ -8,7 +8,7 @@ Mouse buttons: **LMB** left, **MMB** middle (wheel button), **RMB** right. "Clic
 
 ## Three modes (^48, ^120)
 
-The three modes are shown as icons at the top left (arrow: select, pen: draw, node with a dashed line: extend); the current one is in the color of the mode and in a ring, the others in the text color. The screen has a hairline outline (0.5 px) in the same color, and the mode's name shows next to the icons for under a second whenever the mode changes (^119): select blue, draw dark (the node color), extend orange.
+The three modes are shown as icons at the top left (cursor: select, pen: draw, node with a dashed line: extend); the current one is in the color of the mode and in a ring, the others in the text color. The screen has a hairline outline (0.5 px) in the same color: select blue, draw dark (the node color), extend orange.
 
 - **Select mode:** no road is being drawn. The cursor is the default arrow and there is no preview.
 - **Draw mode:** the user is drawing, but no node is being extended. The cursor is a crosshair and a preview shows the node a click would add. A click on empty canvas starts a new road; a click on a node starts extending, splitting or merging as below.
