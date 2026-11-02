@@ -20,7 +20,7 @@ import { Timeline, type Move } from './timeline.svelte';
 import type { ControlId } from '../hints/hints';
 import { pressName } from './stepNames';
 import { controlUsed } from './usage';
-import type { Pointer } from './proximity';
+import { pointerOf } from './proximity';
 import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { curveAt, focusOf, handleAt, hoverAt } from './hits';
 import {
@@ -69,9 +69,7 @@ export class Editor {
   /** The last pointer position with its modifiers, to look at what is under it again when something changes without the pointer moving. */
   private lastInfo = $state.raw<PointerInfo | null>(null);
   /** Where the pointer is, for showing handles that are near it (^55). */
-  pointer = $derived<Pointer | null>(
-    this.lastInfo && { pt: this.lastInfo.pt, scale: this.lastInfo.scale },
-  );
+  pointer = $derived(pointerOf(this.lastInfo));
   /** The selected nodes (^70); the last one is `sel`. */
   selection = $state.raw<number[]>([]);
   /** The selection box while it is dragged, in screen pixels. */
@@ -108,7 +106,7 @@ export class Editor {
       press: this.press,
       hover: this.hoverRaw,
       drawing: this.drawing,
-      pinned: this.pins.list,
+      pinned: this.active === null ? this.pins.list : [...this.pins.list, this.active],
     }),
   );
   hover = $derived<Hover | null>(snapPreview(this.hoverRaw, this.snapped, () => this.snapshot()));

@@ -55,7 +55,7 @@ describe('leaving draw mode early (^54)', () => {
   it('remembers where the pointer is, until it leaves', () => {
     const ed = new Editor();
     ed.pointerMove(at(5, 6, { scale: 8 }));
-    expect(ed.pointer).toEqual({ pt: { x: 5, y: 6 }, scale: 8 });
+    expect(ed.pointer).toMatchObject({ pt: { x: 5, y: 6 }, scale: 8 });
     ed.look(null);
     expect(ed.pointer).toBeNull();
   });

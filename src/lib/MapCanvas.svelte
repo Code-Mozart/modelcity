@@ -46,7 +46,7 @@
       viewing: editor.viewing,
       selectedSegments: editor.selectedSegments,
       outline: editor.hoverSegments,
-      hideScaffold: editor.movingGroup,
+      hideScaffold: editor.movingGroup || editor.pointer?.ctrl === true,
       hover: editor.hover,
       mergePreview: editor.mergePreview,
       focus: editor.focus,
