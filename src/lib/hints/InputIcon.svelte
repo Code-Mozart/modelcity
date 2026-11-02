@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { heldView } from './held.svelte';
   import type { Input } from './hints';
   import KeyCap from './KeyCap.svelte';
   import MouseDragIcon from './MouseDragIcon.svelte';
@@ -8,52 +7,40 @@
 
   /** The symbol for one input of a control hint (^49, ^50). */
   let { input }: { input: Input } = $props();
-  const held = heldView();
 </script>
 
 <span class="combo">
   {#if input.kind === 'mouse' && input.shift}
-    <KeyCap pressed={held.key('Shift')}>Shift</KeyCap>
+    <KeyCap>Shift</KeyCap>
   {:else if input.kind === 'mouse' && input.alt}
-    <KeyCap pressed={held.key('Alt')}>Alt</KeyCap>
+    <KeyCap>Alt</KeyCap>
   {/if}
   {#if input.kind === 'key'}
-    <KeyCap pressed={held.key(input.label)}>{input.label}</KeyCap>
+    <KeyCap>{input.label}</KeyCap>
   {:else if input.kind === 'keys'}
     {#each input.labels as label, n (n)}
-      <KeyCap pressed={held.key(label)}>{label}</KeyCap>
+      <KeyCap>{label}</KeyCap>
     {/each}
   {:else if input.kind === 'wheel'}
     <MouseWheelIcon label="mouse wheel" />
+  {:else if input.drag}
+    <MouseDragIcon
+      lmb={input.button === 'lmb'}
+      mmb={input.button === 'mmb'}
+      rmb={input.button === 'rmb'}
+      label="{input.button.toUpperCase()} drag"
+    />
   {:else}
-    <!-- A button that is down turns the symbol blue, like a key cap (^243). -->
-    <span class="symbol" class:pressed={held.mouse(input.button, !!input.drag)}>
-      {#if input.drag}
-        <MouseDragIcon
-          lmb={input.button === 'lmb'}
-          mmb={input.button === 'mmb'}
-          rmb={input.button === 'rmb'}
-          label="{input.button.toUpperCase()} drag"
-        />
-      {:else}
-        <MouseIcon
-          lmb={input.button === 'lmb'}
-          mmb={input.button === 'mmb'}
-          rmb={input.button === 'rmb'}
-          label={input.button.toUpperCase()}
-        />
-      {/if}
-    </span>
+    <MouseIcon
+      lmb={input.button === 'lmb'}
+      mmb={input.button === 'mmb'}
+      rmb={input.button === 'rmb'}
+      label={input.button.toUpperCase()}
+    />
   {/if}
 </span>
 
 <style>
-  .symbol {
-    display: inline-flex;
-  }
-  .symbol.pressed {
-    color: var(--blue);
-  }
   /* Keys pressed together sit close together, with no plus sign between them. */
   .combo {
     display: inline-flex;

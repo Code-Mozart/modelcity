@@ -31,7 +31,7 @@ export class Camera {
 
   /** Everything grabbable; the view must stay on it (^37). */
   private anchors: Anchor[] = [];
-  private pan = $state.raw<{ last: Point; travel: number } | null>(null);
+  private pan: { last: Point; travel: number } | null = null;
   private touches: { id: number; at: Point }[] = [];
   private zoomTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -85,11 +85,6 @@ export class Camera {
     const dy = at.y - this.pan.last.y;
     this.setView(panBy(this.view, dx, dy));
     this.pan = { last: at, travel: this.pan.travel + Math.hypot(dx, dy) };
-  }
-
-  /** A button of the camera is down and has been moved: a drag, not a click (^243). */
-  get dragging(): boolean {
-    return this.rotation !== null || (this.pan?.travel ?? 0) > CLICK_SLOP_PX;
   }
 
   /** Stop panning; true if the pointer actually moved (so it was a drag, not a click). */

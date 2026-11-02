@@ -104,8 +104,6 @@ export class Editor {
   /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
   focus = $derived(focusOf(this.chains, this.press, this.hover));
   /** What the control hints are about (^49). */
-  /** The left button is down and has been moved: a drag (^243). */
-  dragging = $derived(this.press?.moved === true);
   hintTarget = $derived(this.press?.target ?? targetOf(this.snapshot(), this.hover, this.drawing));
 
   handles(scale: number): RoadHandle[] {
@@ -276,7 +274,8 @@ export class Editor {
 
   /** Alt or Shift went down or up: what is under the pointer can look different, such as the hovered branch (^99), though the pointer did not move. */
   modifiers({ alt, shift }: { alt: boolean; shift: boolean }) {
-    if (this.lastInfo) this.look({ ...this.lastInfo, alt, shift });
+    if (!this.lastInfo) return;
+    this.lastInfo = { ...this.lastInfo, alt, shift };
   }
 
   private hoverNow(): Hover | null {
@@ -293,7 +292,7 @@ export class Editor {
 
   private moveDrag(press: Extract<Press, { kind: 'drag' }>, info: PointerInfo) {
     if (!press.moved && dist(info.pt, press.start) <= DRAG_PX / info.scale) return;
-    this.press = { ...press, moved: true }; // a new object: the views of the press see the change (^243)
+    press.moved = true;
     this.graph = dragStep(this.snapshot(), press, info);
   }
 
@@ -325,13 +324,13 @@ export class Editor {
     const next = placeStep(this.graph, press.id, info);
     if (next === this.graph) return;
     this.graph = next;
-    this.press = { ...press, moved: true };
+    press.moved = true;
   }
 
   /** Dragging on empty canvas spans the selection box; shift keeps the selection and adds to it (^70, ^72). */
   private moveBand(press: Extract<Press, { kind: 'empty' }>, info: PointerInfo) {
     if (!press.moved && dist(info.screen, press.screen) <= DRAG_PX) return;
-    this.press = { ...press, moved: true };
+    press.moved = true;
     this.band = { a: press.screen, b: info.screen };
     this.selection = withNodes(press.base, nodesInBand(this.graph, this.band, info.project));
   }

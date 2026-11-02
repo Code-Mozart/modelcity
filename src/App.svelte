@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, setContext, untrack } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { Camera } from './lib/camera/camera.svelte';
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
@@ -10,7 +10,6 @@
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
   import { hintsFor } from './lib/hints/hints';
-  import { HELD, Held } from './lib/hints/held.svelte';
   import { Usage } from './lib/hints/usage.svelte';
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
@@ -27,12 +26,6 @@
     notify: (kind, text) => toasts.show(kind, text),
   });
   installTestHook(editor, camera, session, () => document.querySelector('canvas'));
-  // What is held down right now, so that the symbols of the hints show it pressed (^243).
-  const held = new Held();
-  setContext(
-    HELD,
-    held.view((button) => (button === 'lmb' ? editor.dragging : camera.dragging)),
-  );
   // A control that was used lately has its hint hidden for a while (^110).
   const usage = new Usage();
   $effect(() => {
@@ -97,7 +90,6 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    held.keyDown(e);
     editor.modifiers({ alt: e.altKey, shift: e.shiftKey });
     if (session.modalOpen) {
       if (e.key === 'Escape' && session.row) session.cancelRow();
@@ -119,23 +111,14 @@
   onkeydown={onKeyDown}
   onkeyup={(e) => {
     camera.keyUp(e.key);
-    held.keyUp(e);
     editor.modifiers({ alt: e.altKey, shift: e.shiftKey });
   }}
-  onblur={() => {
-    editor.modifiers({ alt: false, shift: false });
-    held.clear();
-  }}
+  onblur={() => editor.modifiers({ alt: false, shift: false })}
   onpagehide={() => void session.flush()}
 />
 
 <main>
-  <MapCanvas
-    {editor}
-    {camera}
-    onUse={(id) => usage.mark(id)}
-    onHold={(button, down) => held.button(button, down)}
-  />
+  <MapCanvas {editor} {camera} onUse={(id) => usage.mark(id)} />
   <Hints {hints} />
   <div class="right">
     <ToastList {toasts} />
