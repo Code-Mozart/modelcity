@@ -22,7 +22,9 @@
       </span>
       <span>{h.text}</span>
       {#if h.note}
-        <span class="note">(<KeyCap>{h.note.key}</KeyCap> {h.note.text})</span>
+        <span class="note"
+          >(<span class="cap"><KeyCap>{h.note.key}</KeyCap></span>{h.note.text})</span
+        >
       {/if}
     </li>
   {/each}
@@ -71,9 +73,13 @@
   }
   .note {
     display: inline-flex;
-    gap: 0.3em;
     align-items: center;
     color: var(--muted);
+  }
+  /* The key cap sits close to the bracket and has a normal space after it. */
+  .cap {
+    display: inline-flex;
+    margin: 0 0.35em 0 0.15em;
   }
   .or {
     color: var(--muted);
