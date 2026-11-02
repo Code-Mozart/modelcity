@@ -36,6 +36,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Node** | A point a road passes through, drawn as a dot. It lies on the curve and carries a heading | decided | ^6 |
 | **Heading** | The direction of the road at a node, shown as an arrow | decided | ^6, ^9 |
 | **Segment** | The curve between two nodes (`edge` in the code) | decided | ^60 |
+| **Selected segment** | A segment whose two nodes are both selected (`selectedSegments` in the code); it is drawn in the color of selected nodes, and its scaffold is shown together with those of the other selected segments | decided | ^133, ^231 |
 | **Leaf node** | A node at either end of a road, also the only node of a road | decided | ^65 |
 | **Bend** (L-curve) | A segment with one turn: straight, arc, straight | decided; assumed (that "L-curve" and "bend" are one thing) | ^6 |
 | **S-curve** | A segment that turns one way, then the other; both arcs share one radius | decided | ^6 |
@@ -82,6 +83,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Control hints panel** | The HTML div in the top left corner that shows the control hints; it changes with mode, context and selection (formerly "hints") | decided | ^49, ^74, ^111 |
 | **Batch** | A run of consecutive undo steps of one kind (selection changes, or the steps of one drawing session) that `Alt+Ctrl+Z` undoes at once | decided | ^103, ^216 |
 | **Control hint** | One row of the control hints panel: `[input]: action` | decided | ^49, ^111 |
+| **Toast** | A short message in the top right corner above the recent history panel, on a transparent background, with the icon of its kind in front (^210); it confirms what the user just did (`saved`) or reports what cannot be shown in the projects modal. It goes by itself after a few seconds | assumed | ^232, ^185 |
 | **Recent history panel** | The HTML div in the top right corner that shows the last 7 steps of the history (undone ones grayed out, with their line), batches as steps with joined lines, and the undo and redo hints at its bottom; it appears with each operation and goes after a few seconds (^107–^109, ^216) | decided | ^107, ^111 |
 | **Key cap** | The raised, key-like symbol for a keyboard key; blue and sunk in while pressed | decided | ^32, ^68 |
 | **Mouse symbols** | The symbols for mouse buttons, drag and the wheel (`MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`) | decided | ^50, ^56 |
