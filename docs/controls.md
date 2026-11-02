@@ -81,7 +81,7 @@ Entering draw mode, finishing a road and removing nodes clear the selection.
 
 ## The hints (top left)
 
-The corner shows what the mouse and keys do right now, as rows of `[input]: action`, with symbols for the inputs (^49, ^50; `MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`, `KeyCap`). The rows change with the mode and with what is under the pointer:
+The corner shows what the mouse and keys do right now, as rows of `[input]: action`, with symbols for the inputs (a key or mouse button that is held down is shown pressed: key caps blue and sunk, mouse symbols blue; a click row while the button is down and has not moved, the drag row once it has; the wheel not, ^243) (^49, ^50; `MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`, `KeyCap`). The rows change with the mode and with what is under the pointer:
 
 | Mode and context | Rows |
 |------------------|------|

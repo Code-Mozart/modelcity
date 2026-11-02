@@ -3,6 +3,7 @@
   import type { Camera } from './camera/camera.svelte';
   import type { Editor, PointerInfo } from './editor/editor.svelte';
   import { FEATURES } from './features';
+  import type { MouseButton } from './hints/held.svelte';
   import type { ControlId } from './hints/hints';
   import { chainSelection } from './editor/chains';
   import { render } from './render/render';
@@ -12,7 +13,13 @@
     editor,
     camera,
     onUse,
-  }: { editor: Editor; camera: Camera; onUse: (id: ControlId) => void } = $props();
+    onHold,
+  }: {
+    editor: Editor;
+    camera: Camera;
+    onUse: (id: ControlId) => void;
+    onHold: (button: MouseButton, down: boolean) => void;
+  } = $props();
 
   const LINE_PX = 16;
   const PAGE_PX = 400;
@@ -103,7 +110,13 @@
     else editor.pointerDown(info(e));
   }
 
+  /** The button of a pointer event; a finger is the left button (^40). */
+  const buttonOf = (e: PointerEvent): MouseButton | undefined =>
+    e.pointerType === 'touch' ? 'lmb' : (['lmb', 'mmb', 'rmb'] as const)[e.button];
+
   function onPointerDown(e: PointerEvent) {
+    const held = buttonOf(e);
+    if (held) onHold(held, true);
     canvas.setPointerCapture(e.pointerId);
     const at = localPoint(e);
     camera.cursor = at;
@@ -123,6 +136,8 @@
   }
 
   function onPointerUp(e: PointerEvent) {
+    const held = buttonOf(e);
+    if (held) onHold(held, false);
     if (e.pointerType === 'touch') {
       camera.touchUp(e.pointerId);
       editor.pointerUp();

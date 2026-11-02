@@ -215,3 +215,28 @@ test('nothing to undo or redo is said once, and the undo hint is not alone in th
   expect((await app.state()).selected).toBe(0);
   await expect(page.getByLabel('Undo and redo')).toHaveCount(0);
 });
+
+test('the control hints show held keys and mouse buttons pressed, a drag in its own row (^243)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  await drawRoad(app);
+  const pressedKeys = page.locator('kbd.pressed');
+  await page.keyboard.down('Control');
+  await expect(pressedKeys.first()).toHaveText('Ctrl'); // the Ctrl of the undo hint
+  await page.keyboard.up('Control');
+  await expect(pressedKeys).toHaveCount(0);
+
+  const pressedButtons = app.hints().locator('.symbol.pressed');
+  const empty = await page.evaluate(() => window.__modelcity!.toPage({ x: 20, y: 60 }));
+  await page.mouse.move(empty.x, empty.y);
+  await page.mouse.down();
+  await expect(pressedButtons).toHaveCount(1); // the click row: `LMB: draw mode`
+  await expect(pressedButtons.locator('xpath=ancestor::li')).toContainText('draw mode');
+  await page.mouse.move(empty.x + 80, empty.y + 40, { steps: 5 });
+  await expect(pressedButtons.locator('xpath=ancestor::li')).toContainText('select'); // the drag row
+  await page.mouse.up();
+  await expect(pressedButtons).toHaveCount(0);
+});
