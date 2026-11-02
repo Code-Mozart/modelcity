@@ -245,6 +245,8 @@ export const viewHints = (hidden: Hidden = () => false): Hint[] => [
 /** What else the hints depend on: what was visited lately (^110), the pins, whether a node snaps, the compass (^258, ^101). */
 export interface HintState {
   hidden?: Hidden;
+  /** A handle is being dragged: what it is and whether letting go merges it (^286). */
+  drag?: { type: HandleType; merge: boolean } | null;
   pinned?: number;
   snapping?: boolean;
   /** The middle button is held: the compass uses `S` and the other letters. */
@@ -260,12 +262,24 @@ function snapHints(selected: number, s: HintState): Hint[] {
   return s.pinned ? [...ctrl, hint(key, 'unpin all snap suggestions')] : ctrl;
 }
 
+/** While a handle is dragged only what matters now: what the drag does, what a key changes, and whether it merges (^286). */
+function dragHints({ type, merge }: { type: HandleType; merge: boolean }, s: HintState): Hint[] {
+  const key = (label: string, text: string) => hint({ kind: 'key', label }, text);
+  return [
+    hint(mouse('lmb', true), DRAG_TEXT[type]),
+    ...(merge ? [hint(mouse('lmb'), 'merge on release')] : []),
+    ...(s.snapping ? [key('Ctrl', 'no snapping')] : []),
+    ...(type === 'head' ? [key('Shift', 'snap to 15°')] : []),
+  ];
+}
+
 export function hintsFor(
   drawing: boolean,
   target: HintTarget,
   selected = 0,
   state: HintState = {},
 ): Hint[] {
+  if (state.drag) return dragHints(state.drag, state);
   const hidden = state.hidden ?? (() => false);
   const rows = drawing ? drawModeHints(target) : selectModeHints(target, selected);
   return [

@@ -94,7 +94,8 @@ describe('snapping to them (^101, ^102)', () => {
   it('a point beats a line, and a crossing of two lines is a point (^280)', () => {
     const hit = ask(straight(), 0.2, 3.2)!;
     expect(hit.pt).toEqual({ x: 0, y: 3 });
-    expect(hit.by.length).toBeGreaterThan(0);
+    // The point and the lines that cross at it are shown together (^289).
+    expect(hit.by.map((b) => b.kind).sort()).toEqual(['curve', 'curve', 'point']);
     const two = map([node(1, 0, 0, 0), node(2, 20, 10, Math.PI / 2)]);
     const cross = ask(two, 0.3, 9.8)!;
     expect(cross.pt).toEqual({ x: 0, y: 10 });

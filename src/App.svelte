@@ -15,6 +15,7 @@
   import { Usage } from './lib/hints/usage.svelte';
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
+  import { dropOf } from './lib/editor/drop';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
@@ -34,6 +35,12 @@
     const used = editor.used;
     untrack(() => used && usage.mark(used.id));
   });
+  // While a handle is dragged, the hints are about the drag only (^286); the graph is read so that it follows the drag.
+  const drag = $derived.by(() => {
+    const [press, graph] = [editor.press, editor.graph];
+    if (press?.kind !== 'drag' || !press.moved) return null;
+    return { type: press.drag.handle.type, merge: dropOf(graph, press, editor.snapped) !== null };
+  });
   // While the projects modal is up its controls replace all others (^168).
   const hints = $derived(
     session.modalOpen
@@ -45,6 +52,7 @@
             pinned: editor.pins.list.length,
             snapping: editor.snapped !== null,
             rotating: camera.rotating,
+            drag,
           }),
   );
   // The last steps and what was undone, for a few seconds after each one, and while a road is drawn (^107, ^109).
