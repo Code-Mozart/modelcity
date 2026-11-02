@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { modalHints } from '../project/modalHints';
-import { hintsFor, type Hint, type HintTarget } from './hints';
+import { hintsFor, historyHints, type Hint, type HintTarget } from './hints';
 
 /** A readable form of a hint: "LMB drag: pan". */
 const show = (h: Hint) =>
@@ -14,7 +14,7 @@ const show = (h: Hint) =>
             ? 'Wheel'
             : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
-    .join(' or ')}: ${h.text}`;
+    .join(' or ')}: ${h.text}${h.note ? ` (${h.note.key} ${h.note.text})` : ''}`;
 const PROJECT_ROWS = ['Ctrl+S: export', 'Ctrl+O: projects'];
 /** The hints of the mode and target, without the project controls that are always shown (^168). */
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
@@ -161,19 +161,18 @@ describe('select mode hints over nodes (^74, ^75)', () => {
   });
 });
 
-describe('undo and redo hints (^81)', () => {
-  it('come first, and only for what can be undone or redone', () => {
+describe('undo and redo hints (^81, ^103, ^109)', () => {
+  const history = (undo: boolean, redo: boolean) => historyHints({ undo, redo }).map(show);
+
+  it('are not among the control hints; they belong to the recent history panel', () => {
     expect(rows(false, empty).some((r) => r.includes('undo'))).toBe(false);
-    expect(hintsFor(false, empty, 0, { undo: true, redo: false }).map(show)[0]).toBe(
-      'Ctrl+Z: undo',
-    );
-    expect(hintsFor(true, empty, 0, { undo: false, redo: true }).map(show)[0]).toBe(
-      'Ctrl+Y or Ctrl+Shift+Z: redo',
-    );
-    expect(hintsFor(true, empty, 0, { undo: true, redo: true }).map(show).slice(0, 2)).toEqual([
-      'Ctrl+Z: undo',
-      'Ctrl+Y or Ctrl+Shift+Z: redo',
-    ]);
+  });
+
+  it('only for what can be undone or redone; holding Alt does it by batch', () => {
+    expect(history(false, false)).toEqual([]);
+    expect(history(true, false)).toEqual(['Ctrl+Z: undo (Alt to undo batch)']);
+    expect(history(false, true)).toEqual(['Ctrl+Y or Ctrl+Shift+Z: redo (Alt to redo batch)']);
+    expect(history(true, true)).toHaveLength(2);
   });
 });
 

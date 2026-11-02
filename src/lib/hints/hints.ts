@@ -13,6 +13,8 @@ export type Input =
 export interface Hint {
   inputs: Input[];
   text: string;
+  /** What a held key changes: `(Alt to undo batch)`. */
+  note?: { key: string; text: string };
 }
 
 /** What the pointer is over, for contextual hints. */
@@ -145,17 +147,22 @@ export interface HistoryState {
   redo: boolean;
 }
 
-/** Undo and redo come first, and only while there is something to undo or redo (^81). */
-function historyHints({ undo, redo }: HistoryState): Hint[] {
+/**
+ * Undo and redo, only while there is something to undo or redo (^81); holding Alt does it by batch,
+ * and a step alone is a batch of one (^103), which the note says. They are shown in the recent history panel (^109).
+ */
+export function historyHints({ undo, redo }: HistoryState): Hint[] {
+  const note = (text: string) => ({ key: 'Alt', text });
+  const redoKeys = [keys('Ctrl', 'Y'), keys('Ctrl', 'Shift', 'Z')];
   return [
-    ...(undo ? [hint(keys('Ctrl', 'Z'), 'undo')] : []),
-    ...(redo ? [hint([keys('Ctrl', 'Y'), keys('Ctrl', 'Shift', 'Z')], 'redo')] : []),
+    ...(undo ? [{ ...hint(keys('Ctrl', 'Z'), 'undo'), note: note('to undo batch') }] : []),
+    ...(redo ? [{ ...hint(redoKeys, 'redo'), note: note('to redo batch') }] : []),
   ];
 }
 
 /**
- * The hints for the top left corner, for the current mode, what is under the pointer, how many
- * nodes are selected and what can be undone (^49).
+ * The hints for the top left corner, for the current mode, what is under the pointer and how many
+ * nodes are selected (^49).
  */
 /** The project controls are always shown for now (^168). */
 const PROJECT_HINTS: Hint[] = [
@@ -163,12 +170,7 @@ const PROJECT_HINTS: Hint[] = [
   hint({ kind: 'keys', labels: ['Ctrl', 'O'] }, 'projects'),
 ];
 
-export function hintsFor(
-  drawing: boolean,
-  target: HintTarget,
-  selected = 0,
-  history: HistoryState = { undo: false, redo: false },
-): Hint[] {
+export function hintsFor(drawing: boolean, target: HintTarget, selected = 0): Hint[] {
   const rows = drawing ? drawModeHints(target) : selectModeHints(target, selected);
-  return [...historyHints(history), ...rows, ...PROJECT_HINTS];
+  return [...rows, ...PROJECT_HINTS];
 }

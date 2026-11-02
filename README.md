@@ -20,7 +20,8 @@ Then open the URL it prints (http://localhost:5173 by default).
 - How we work (conventions, branches, code rules, commands): [`.claude/CLAUDE.md`](.claude/CLAUDE.md)
 - Controls (mouse, keyboard, touch): [`docs/controls.md`](docs/controls.md)
 - Product background and design decisions: [`docs/handover.md`](docs/handover.md)
-- Decisions, questions and milestones: [`docs/hats.md`](docs/hats.md)
+- The roadmap and its milestones: [`docs/hats.md#roadmap`](docs/hats.md#roadmap)
+- All decisions, questions and ideas (the hats): [`docs/hats.md`](docs/hats.md)
 
 ## Glossary
 
@@ -79,8 +80,9 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Dead zone** | The 20 px around where a middle-button drag started in which that axis does nothing yet | decided | ^31 |
 | **Compass** | The cursor while the middle button is held: a needle to north, N/E/S/W key caps, and drag hints | decided | ^33 |
 | **Control hints panel** | The HTML div in the top left corner that shows the control hints; it changes with mode, context and selection (formerly "hints") | decided | ^49, ^74, ^111 |
+| **Batch** | A run of consecutive undo steps of one kind (selection changes, or the steps of one drawing session) that `Alt+Ctrl+Z` undoes at once | decided | ^103, ^216 |
 | **Control hint** | One row of the control hints panel: `[input]: action` | decided | ^49, ^111 |
-| **Recent history panel** | The HTML div in the top right corner that shows the names of the last operations (batches with their steps) and the undo and redo control hints, each item for a few seconds. Planned (^107–^109) | decided | ^107, ^111 |
+| **Recent history panel** | The HTML div in the top right corner that shows the last 7 steps of the history (undone ones grayed out, with their line), batches as steps with joined lines, and the undo and redo hints at its bottom; it appears with each operation and goes after a few seconds (^107–^109, ^216) | decided | ^107, ^111 |
 | **Key cap** | The raised, key-like symbol for a keyboard key; blue and sunk in while pressed | decided | ^32, ^68 |
 | **Mouse symbols** | The symbols for mouse buttons, drag and the wheel (`MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`) | decided | ^50, ^56 |
 | **Proximity** | The fixed pixel distance within which something counts as "near" the pointer: 20 px to a curve, 48 px to a control point | decided; assumed (the distances) | ^55, ^60 |

@@ -46,6 +46,11 @@ export class App {
     await this.drag(from, to);
   }
 
+  /** The recent history panel with the undo and redo hints (^107, ^109). */
+  history() {
+    return this.page.getByLabel('Recent history');
+  }
+
   /** The graph of nodes and edges (^106) as plain data. */
   graph(): Promise<Graph> {
     return this.page.evaluate(() => JSON.parse(JSON.stringify(window.__modelcity!.editor.graph)));

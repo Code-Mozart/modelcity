@@ -80,3 +80,24 @@ test('close a loop', async ({ page }) => {
   expect(edges.at(-1)).toMatchObject({ start: 2, end: 0 });
   expect((await app.nodes()).length).toBe(3);
 });
+
+test('the recent history panel shows the last steps, grays out undone ones and hides when idle (^107)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  await drawRoad(app);
+  await expect(app.history()).toContainText('finish road');
+  for (const x of [0, 30, 60]) await app.click({ x, y: 0 });
+  await expect(app.history()).toContainText('select node');
+  // After the interval without an operation the whole panel goes, and comes back with the next one.
+  await expect(app.history()).toHaveCount(0, { timeout: 6000 });
+  await page.keyboard.press('Control+Alt+z');
+  expect((await app.state()).selected).toBe(0);
+  await expect(app.history().locator('.undone').first()).toContainText('select node');
+  await expect(app.history()).toContainText('to redo batch');
+  await page.keyboard.press('Control+Alt+Shift+z');
+  expect((await app.state()).selected).toBe(1);
+  await expect(app.history().locator('.undone')).toHaveCount(0);
+});

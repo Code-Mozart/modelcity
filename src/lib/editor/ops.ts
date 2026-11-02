@@ -54,6 +54,13 @@ export function extendTo(drawn: Drawn, id: number): Drawn {
   return { ...drawn, active: id, end, origin: farEnd(graph, id), selection: [id] };
 }
 
+/** The node the road being drawn goes on from when its node is removed: the one before it. */
+export function neighbourOf({ graph, active, end }: Drawn): number | null {
+  if (active === null) return null;
+  const e = (end === 'end' ? edgesIn(graph, active) : edgesOut(graph, active))[0];
+  return e ? (end === 'end' ? e.start : e.end) : null;
+}
+
 /** Start a new road at an existing node: a split (^23). The new road shares the node. */
 export const splitAt = (d: Drawn, id: number): Drawn => ({
   ...d,

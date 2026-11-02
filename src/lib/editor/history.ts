@@ -1,35 +1,103 @@
 import type { Snapshot } from './types';
 
 /**
- * Undo and redo (^81): the states before each step, oldest first, and the states undone. Pure:
- * every function returns the new history.
+ * Undo and redo (^81, ^103): the steps taken, oldest first, and the steps undone. Pure: every
+ * function returns the new history.
+ *
+ * A *batch* (^216) is a run of consecutive steps of one kind: selection changes, or the steps of
+ * one drawing session. `Ctrl+Z` moves one step, `Alt+Ctrl+Z` a whole batch.
  */
-export interface History {
-  past: Snapshot[];
-  future: Snapshot[];
+export type StepKind = 'select' | 'draw' | null;
+
+export interface Step {
+  /** What the step did, lower case (^216): `move node`, `select 3 nodes`. */
+  name: string;
+  kind: StepKind;
+  /** Steps of one batch share the number. */
+  batch: number;
+  before: Snapshot;
+  after: Snapshot;
 }
 
-export const NO_HISTORY: History = { past: [], future: [] };
+export interface History {
+  past: Step[];
+  future: Step[];
+  /** An undo or redo happened since the last step: the next step starts a batch of its own. */
+  sealed: boolean;
+  nextBatch: number;
+}
+
+export const NO_HISTORY: History = { past: [], future: [], sealed: false, nextBatch: 0 };
 
 /** The most steps that are kept. */
 export const MAX_STEPS = 200;
 
-/** A new step was taken from `before`; what was undone can no longer be redone. */
-export const record = (h: History, before: Snapshot): History => ({
-  past: [...h.past, before].slice(-MAX_STEPS),
-  future: [],
-});
+/** A step that was just taken; `continues` says it may join the batch of the step before. */
+export type NewStep = Omit<Step, 'batch'> & { continues: boolean };
 
-/** Go one step back from `current`: the state to show and the new history, or null. */
-export function undoStep(h: History, current: Snapshot) {
-  const to = h.past.at(-1);
-  if (!to) return null;
-  return { to, history: { past: h.past.slice(0, -1), future: [...h.future, current] } };
+/** The steps of the batch at the end of the list, in the order of the list. */
+function lastBatch(steps: Step[]): Step[] {
+  const batch = steps.at(-1)?.batch;
+  let from = steps.length;
+  while (from > 0 && steps[from - 1]!.batch === batch) from--;
+  return steps.slice(from);
 }
 
-/** Go one step forward again. */
-export function redoStep(h: History, current: Snapshot) {
-  const to = h.future.at(-1);
-  if (!to) return null;
-  return { to, history: { past: [...h.past, current], future: h.future.slice(0, -1) } };
+/** A new step was taken; what was undone can no longer be redone. */
+export function record(
+  h: History,
+  { continues, ...step }: NewStep,
+): { history: History; step: Step } {
+  const last = h.past.at(-1);
+  const joins = continues && !h.sealed && step.kind !== null && last?.kind === step.kind;
+  const batch = joins ? last!.batch : h.nextBatch;
+  const taken: Step = { ...step, batch };
+  const history = {
+    past: [...h.past, taken].slice(-MAX_STEPS),
+    future: [],
+    sealed: false,
+    nextBatch: joins ? h.nextBatch : h.nextBatch + 1,
+  };
+  return { history, step: taken };
+}
+
+/** What an undo or redo did: the state to show, the new history and the steps that moved. */
+export interface Moved {
+  to: Snapshot;
+  history: History;
+  steps: Step[];
+}
+
+/** Go back one step, or a whole batch. */
+export function undoStep(h: History, whole = false): Moved | null {
+  const steps = whole ? lastBatch(h.past) : h.past.slice(-1);
+  if (!steps.length) return null;
+  const history = {
+    ...h,
+    past: h.past.slice(0, h.past.length - steps.length),
+    future: [...h.future, ...[...steps].reverse()],
+    sealed: true,
+  };
+  return { to: steps[0]!.before, history, steps };
+}
+
+/** Go forward again, one step or a whole batch. */
+export function redoStep(h: History, whole = false): Moved | null {
+  const taken = whole ? lastBatch(h.future) : h.future.slice(-1);
+  if (!taken.length) return null;
+  const steps = [...taken].reverse();
+  const history = {
+    ...h,
+    past: [...h.past, ...steps],
+    future: h.future.slice(0, h.future.length - taken.length),
+    sealed: true,
+  };
+  return { to: steps.at(-1)!.after, history, steps };
+}
+
+/** Something happened to the history: a step was taken, undone or redone (^107). */
+export interface HistoryEvent {
+  seq: number;
+  kind: 'step' | 'undo' | 'redo';
+  steps: Step[];
 }

@@ -1,10 +1,14 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { Camera } from './lib/camera/camera.svelte';
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
   import Hints from './lib/hints/Hints.svelte';
-  import { hintsFor } from './lib/hints/hints';
+  import HistoryPanel from './lib/hud/HistoryPanel.svelte';
+  import { panelView } from './lib/hud/panel';
+  import { Recent } from './lib/hud/recent.svelte';
+  import { hintsFor, historyHints } from './lib/hints/hints';
+  import { keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
@@ -20,11 +24,21 @@
   const hints = $derived(
     session.modalOpen
       ? modalHints(session.row?.mode ?? 'list', session.over)
-      : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
-          undo: editor.canUndo,
-          redo: editor.canRedo,
-        }),
+      : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length),
   );
+  // The last steps and what was undone, for a few seconds after each one, and while a road is drawn (^107, ^109).
+  const recent = new Recent();
+  $effect(() => {
+    const event = editor.event;
+    untrack(() => recent.consume(event));
+  });
+  // Drawing a road keeps the panel up; when the road is finished the interval starts from then.
+  $effect(() => {
+    if (editor.active === null) untrack(() => recent.hideLater());
+  });
+  const panelShown = $derived(recent.visible || editor.active !== null);
+  const panel = $derived(panelView(editor.history));
+  const historyRows = $derived(historyHints({ undo: editor.canUndo, redo: editor.canRedo }));
 
   onMount(() => void session.start());
 
@@ -53,7 +67,7 @@
     if (projectKey(e)) e.preventDefault();
     else if (
       camera.key(e.key) ||
-      editor.key(e.key, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey })
+      editor.key(keyOf(e), { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey, alt: e.altKey })
     )
       e.preventDefault();
   }
@@ -68,6 +82,7 @@
 <main>
   <MapCanvas {editor} {camera} />
   <Hints {hints} />
+  {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}
   <Compass {camera} />
   <ProjectsModal {session} />
 </main>

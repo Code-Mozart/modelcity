@@ -5,6 +5,7 @@ import {
   extendTo,
   insertAt,
   mergeInto,
+  neighbourOf,
   placementAt,
   placeNode,
   placeStep,
@@ -13,20 +14,13 @@ import {
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
-import { NO_HISTORY, record, redoStep, undoStep } from './history';
+import { NO_HISTORY, redoStep, undoStep, type HistoryEvent, type Step } from './history';
+import { pressName, takeStep } from './stepNames';
 import type { Pointer } from './proximity';
 import { DRAG_PX, type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { curveAt, focusOf, handleAt, hoverAt } from './hits';
 import { chainHandles, chainSegments, chainsOf, type RoadHandle, type RoadHit } from './chains';
-import {
-  edgesIn,
-  edgesOut,
-  emptyGraph,
-  nodeOf,
-  removeNodes,
-  roundToMm,
-  type Graph,
-} from '../model/graph';
+import { emptyGraph, nodeOf, removeNodes, roundToMm, type Graph } from '../model/graph';
 import {
   afterBranchClick,
   afterCurveClick,
@@ -68,8 +62,12 @@ export class Editor {
   private press = $state.raw<Press | null>(null);
   /** The steps that can be undone and redone (^81). */
   history = $state.raw(NO_HISTORY);
+  private eventCount = 0;
   /** True while the end of a press runs, so everything it does is one step. */
   private batching = false;
+
+  /** The last thing that happened to the history, for the recent history panel (^107). */
+  event = $state.raw<HistoryEvent | null>(null);
 
   canUndo = $derived(this.history.past.length > 0);
   canRedo = $derived(this.history.future.length > 0);
@@ -102,16 +100,19 @@ export class Editor {
     const action: Action | undefined = actionFor(key, mods);
     if (action === 'finishRoad') this.finishRoad();
     else if (action === 'deleteNode') this.deleteSelected();
-    else if (action) this.step(action);
+    else if (action) this.move(action);
     return action !== undefined;
   }
 
-  /** Undo or redo one step (^81); not while the left button is down. */
-  private step(action: 'undo' | 'redo') {
-    const go = action === 'undo' ? undoStep : redoStep;
-    const r = this.press ? null : go(this.history, this.snapshot());
-    if (r) [this.history, this.hover] = [r.history, null];
-    if (r) this.restore(r.to);
+  /** Undo or redo a step (^81) or a whole batch (^103); not while the left button is down. */
+  private move(action: 'undo' | 'redo' | 'undoBatch' | 'redoBatch') {
+    if (this.press) return;
+    const go = action.startsWith('undo') ? undoStep : redoStep;
+    const r = go(this.history, action.endsWith('Batch'));
+    if (!r) return;
+    [this.history, this.hover] = [r.history, null];
+    this.restore(r.to);
+    this.announce(action.slice(0, 4) as 'undo' | 'redo', r.steps);
   }
 
   private restore({ graph, active, end, origin, selection }: Snapshot) {
@@ -126,11 +127,17 @@ export class Editor {
   }
 
   /** Make a step undoable if it changed the graph or the selection (^88), and round it to the millimeter (^170). Inside a press only its end commits. */
-  private commit(before: Snapshot) {
+  private commit(before: Snapshot, name: string) {
     const same = before.graph === this.graph && sameSelection(before.selection, this.selection);
     if (same || this.batching) return;
     this.graph = roundToMm(this.graph);
-    this.history = record(this.history, before);
+    const r = takeStep(this.history, before, this.snapshot(), name);
+    this.history = r.history;
+    this.announce('step', [r.step]);
+  }
+
+  private announce(kind: HistoryEvent['kind'], steps: Step[]) {
+    this.event = { seq: ++this.eventCount, kind, steps };
   }
 
   /** Replace everything by another map (a project was opened): no selection, no drawing, no history. */
@@ -139,31 +146,25 @@ export class Editor {
     this.leaveDrawing();
     [this.press, this.band, this.hover, this.pointer] = [null, null, null, null];
     this.history = NO_HISTORY;
+    this.event = null;
   }
 
   deleteSelected() {
     this.removeAll(this.selection);
   }
 
-  /** The node the road being drawn goes on from when its node is removed: the one before it. */
-  private neighbour(): number | null {
-    const { graph, active, end } = this;
-    if (active === null) return null;
-    const e = (end === 'end' ? edgesIn(graph, active) : edgesOut(graph, active))[0];
-    return e ? (end === 'end' ? e.start : e.end) : null;
-  }
-
   private removeAll(ids: number[]) {
     if (!ids.length) return;
     const before = this.snapshot();
-    const tip = this.active !== null && ids.includes(this.active) ? this.neighbour() : this.active;
+    const tip =
+      this.active !== null && ids.includes(this.active) ? neighbourOf(before) : this.active;
     this.graph = removeNodes(this.graph, ids, tip);
     const alive = (id: number | null) => (id !== null && nodeOf(this.graph, id) ? id : null);
     this.active = alive(tip);
     this.origin = alive(this.origin);
     if (this.active === null) this.end = 'end';
     this.selection = [];
-    this.commit(before);
+    this.commit(before, ids.length === 1 ? 'delete node' : `delete ${ids.length} nodes`);
   }
 
   /** Select mode, no road being drawn, nothing selected. */
@@ -184,7 +185,7 @@ export class Editor {
     const before = this.snapshot();
     this.graph = removeNodes(this.graph, [], null);
     this.leaveDrawing();
-    this.commit(before);
+    this.commit(before, 'finish road');
   }
 
   /** Left button pressed. */
@@ -297,7 +298,7 @@ export class Editor {
   private extendFrom(id: number) {
     const before = this.snapshot();
     this.restore(extendTo(this.snapshot(), id));
-    this.commit(before);
+    this.commit(before, 'extend road');
   }
 
   /** A click (no drag) on a node: toggles it, or in draw mode finishes, extends, splits or merges the road (^23, ^65). */
@@ -332,7 +333,7 @@ export class Editor {
     if (press.kind === 'empty' && !press.moved) this.clickedEmpty(press);
     if (press.kind === 'place') this.clickedCurve(press);
     this.batching = false;
-    this.commit(press.undo);
+    this.commit(press.undo, pressName(press));
   }
 
   /** Abort what the left button was doing (a second finger came down). */

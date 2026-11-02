@@ -27,10 +27,13 @@ async function moveUndoRedo(app: App) {
   expect((await app.state()).mode).toBe('select');
   await app.drag(B, { x: 25, y: 10 });
   expect((await app.node(1)).x).toBeCloseTo(25, 0);
-  await expect(app.hints()).toContainText('undo');
+  await expect(app.history()).toContainText('move node');
+  await expect(app.history()).toContainText('undo');
   await app.page.keyboard.press('Control+z');
   expect((await app.node(1)).x).toBeCloseTo(20, 0);
-  await expect(app.hints()).toContainText('redo');
+  // The undone step stays in the panel, grayed out, and the redo hint appears.
+  await expect(app.history().locator('.undone')).toContainText('move node');
+  await expect(app.history()).toContainText('redo');
   await app.page.keyboard.press('Control+y');
   expect((await app.node(1)).x).toBeCloseTo(25, 0);
 }
