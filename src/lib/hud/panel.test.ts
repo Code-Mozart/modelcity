@@ -73,16 +73,20 @@ describe('the recent history panel window (^107)', () => {
 });
 
 describe('batches in the panel (^108)', () => {
-  it('steps of a batch share a title; a single step has none', () => {
-    const groups = panelView(take(['x', 'y', 'z'], 'select'));
-    expect(groups).toHaveLength(1);
-    expect(groups[0]!.title).toBe('select node');
-    expect(panelView(take(['x']))[0]!.title).toBeNull();
+  it('the steps of a batch are one group, other steps are groups of their own', () => {
+    expect(panelView(take(['x', 'y', 'z'], 'select'))).toHaveLength(1);
+    expect(panelView(take(['x', 'y', 'z']))).toHaveLength(3);
   });
 
   it('a long batch shows its last 4 steps and how many it leaves out', () => {
     const groups = panelView(take(six, 'select'));
     expect(groups[0]!.rows.map((r) => r.step.name)).toEqual(['c', 'd', 'e', 'f']);
     expect(groups[0]!.more).toBe(2);
+  });
+
+  it('a batch can be partly undone: its steps keep their place, only the undone ones are marked', () => {
+    const h = undoStep(undoStep(take(['x', 'y', 'z'], 'select'))!.history)!.history;
+    expect(panelView(h)).toHaveLength(1);
+    expect(lines(panelView(h))).toEqual(['x', '(y)', '(z)']);
   });
 });

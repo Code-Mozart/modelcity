@@ -52,17 +52,6 @@ export function kindOf(before: Snapshot, after: Snapshot): Step['kind'] {
   return before.graph === after.graph ? 'select' : null;
 }
 
-/** The title of a batch of steps, for the recent history panel (^108). */
-export function batchTitle(steps: Step[]): string {
-  const last = steps.at(-1)!;
-  if (last.kind === 'draw') return 'draw road';
-  if (last.kind === 'select') {
-    const n = last.after.selection.length;
-    return n === 0 ? 'deselect all' : `select ${nodes(n)}`;
-  }
-  return last.name;
-}
-
 /**
  * Record a step that took the editor from `before` to `after` (^216): its kind decides its name
  * (a selection change is named by the nodes that changed) and whether it joins the batch before.
