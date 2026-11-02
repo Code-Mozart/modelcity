@@ -71,10 +71,15 @@ export function snapTo(list: Suggestion[], q: SnapQuery): SnapHit | null {
       best.rule === 'crossing' ? near.map((x) => x.s).filter((c) => touches(c, best.at)) : [best];
     return pointHit(best, by);
   }
-  const curve = near.sort((a, b) => a.n.d - b.n.d)[0];
+  const curve = near.sort(byNearness)[0];
   return curve
     ? { pt: curve.n.pt, heading: angleOf({ x: curve.n.tx, y: curve.n.ty }), by: [curve.s] }
     : null;
 }
+
+/** The curve of a segment wins a tie with a line on top of it: it is the one a node can join (^268). */
+const rank = (c: SnapCurve) => (c.rule === 'curve' ? 0 : c.rule === 'offset' ? 1 : 2);
+const byNearness = (a: { s: SnapCurve; n: { d: number } }, b: typeof a) =>
+  Math.abs(a.n.d - b.n.d) > 1e-6 ? a.n.d - b.n.d : rank(a.s) - rank(b.s);
 
 const touches = (c: SnapCurve, at: Vec) => (nearestOnPieces(c.pieces, at)?.d ?? 1) < 1e-6;
