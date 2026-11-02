@@ -20,7 +20,8 @@ Then open the URL it prints (http://localhost:5173 by default).
 - How we work (conventions, branches, code rules, commands): [`.claude/CLAUDE.md`](.claude/CLAUDE.md)
 - Controls (mouse, keyboard, touch): [`docs/controls.md`](docs/controls.md)
 - Product background and design decisions: [`docs/handover.md`](docs/handover.md)
-- Decisions, questions and milestones: [`docs/hats.md`](docs/hats.md)
+- The roadmap and its milestones: [`docs/hats.md#roadmap`](docs/hats.md#roadmap)
+- All decisions, questions and ideas (the hats): [`docs/hats.md`](docs/hats.md)
 
 ## Glossary
 
