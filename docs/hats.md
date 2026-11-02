@@ -1,4 +1,4 @@
-next: ^293
+next: ^294
 
 # Hats
 
@@ -49,7 +49,7 @@ An open feature is in at most one planned milestone, and each milestone is a hat
 | Crossings | ^158 | ^25 crossings | none | ^156 |
 | Quality | ^159 | ^122 performance tests | ^145 (done) | none |
 
-Not assigned to a milestone yet: ^35 (the grid's return), ^104 (view mode on touch devices, waits for ^176), ^169 (validator), ^176 (Supabase), ^179 (project previews), ^182 (showing waiting), ^183 (autosave: the numbers and failure handling), ^184 (saving in the background), ^187 (trackpads), ^219 (history menu), ^220 (highlight what an undo touches), ^221 (persist the history), ^224 (independent ticks, curves that are not circular), ^228 and ^229 (the repairs on load, after the load pipeline of ^151), ^245 (true segment selection, a question).
+Not assigned to a milestone yet: ^35 (the grid's return), ^104 (view mode on touch devices, waits for ^176), ^169 (validator), ^176 (Supabase), ^179 (project previews), ^182 (showing waiting), ^183 (autosave: the numbers and failure handling), ^184 (saving in the background), ^187 (trackpads), ^219 (history menu), ^220 (highlight what an undo touches), ^221 (persist the history), ^224 (independent ticks, curves that are not circular), ^228 and ^229 (the repairs on load, after the load pipeline of ^151), ^245 (true segment selection, a question), ^293 (toasts stay as long as they take to read).
 
 Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^145, ^146, ^147.
 
@@ -329,3 +329,4 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^290 | feature | done (milestone ^153, PR #30) | **A right click on the selection removes all of it (user):** with several nodes selected, a right click on one of them, or on a segment between two of them, removes all selected nodes (as `Del` does, hint `delete selected`); on something that is not selected, or with one node selected, it removes only what is under the pointer (^160). |
 | ^291 | feature | done (milestone ^153, PR #30) | **Split and merge use the snap suggestions (user):** in draw and extend mode, a node near the pointer (25 px, also further than the 9 px of a hit), the curve of a segment and a radius point (^270, ^278) are what a click works on: splits, merges, extends, closes a loop, as a click on them was before; the guide shows them like any other snap suggestion (turquoise); `Ctrl` turns it off. A node placed beside a curve is no longer left unconnected on it. |
 | ^292 | feature | planned (user's note, with the validator ^169) | **The validator shows two kinds of error (user):** nodes that are closer to each other than the merge distance (0.1 m, ^248) and should have been merged but were not, and segments of length zero. |
+| ^293 | feature | planned (user's idea; no milestone yet, on the roadmap) | **Toasts stay as long as they take to read (user):** the time a toast shows (3 s for confirmations, 8 s for warnings and errors, ^232) gets a minimum that grows with the number of words, with a generous reading speed. Proposal (Claude, assumed): about 2 words per second (120 words per minute, half of a normal reader's speed) plus 1.5 s, and never less than today's times, so `saved` stays 3 s and `Select the node and press S to pin its snap suggestions` (10 words) stays 6.5 s. A message that is showing and appears again restarts its time as before. |
