@@ -66,7 +66,12 @@ export class Editor {
   selection = $state.raw<number[]>([]);
   /** The selection box while it is dragged, in screen pixels. */
   band = $state.raw<Band | null>(null);
-  hover = $state.raw<Hover | null>(null);
+  /**
+   * What is under the pointer. Derived, not kept: from the last pointer position and the state of
+   * the editor, so it is right whenever either changes, also when the pointer did not move (a
+   * finished road, a placed node, an undo, a key, ^238). None while the left button is down.
+   */
+  hover = $derived<Hover | null>(this.hoverNow());
   private press = $state.raw<Press | null>(null);
   /** The steps that can be undone and redone (^81). */
   history = $state.raw(NO_HISTORY);
@@ -75,8 +80,6 @@ export class Editor {
   private use(id: ControlId | null) {
     if (id) this.used = { seq: (this.used?.seq ?? 0) + 1, id };
   }
-  /** Alt was held at the last pointer move (the hovered branch, ^99). */
-  private altHeld = $state(false);
   /** The curve before and after a split on it: finishing at once goes back to the first (^237). */
   private splitUndo: { before: Graph; after: Graph } | null = null;
   /** The last control used that has a hint that is hidden once it is learned (^110). */
@@ -119,7 +122,6 @@ export class Editor {
     if (action === 'escape') this.escape();
     else if (action === 'deleteNode') this.deleteSelected();
     else if (action) this.move(action);
-    this.refreshHover();
     return action !== undefined;
   }
 
@@ -129,7 +131,7 @@ export class Editor {
     const go = action.startsWith('undo') ? undoStep : redoStep;
     const r = go(this.history, action.endsWith('Batch'));
     if (!r) return;
-    [this.history, this.hover] = [r.history, null];
+    this.history = r.history;
     this.restore(r.to);
     this.announce(action.slice(0, 4) as 'undo' | 'redo', r.steps);
     this.use(action.startsWith('undo') ? 'undo' : 'redo');
@@ -167,7 +169,7 @@ export class Editor {
   load(graph: Graph) {
     this.graph = graph;
     this.leaveDrawing();
-    [this.press, this.band, this.hover, this.lastInfo] = [null, null, null, null];
+    [this.press, this.band, this.lastInfo] = [null, null, null];
     this.history = NO_HISTORY;
     this.event = null;
   }
@@ -230,7 +232,6 @@ export class Editor {
 
   /** Left button pressed. */
   pointerDown(info: PointerInfo) {
-    this.hover = null;
     this.lastInfo = info;
     const handle = handleAt(this.handles(info.scale), info);
     if (handle) return this.grab(handle, info);
@@ -264,21 +265,29 @@ export class Editor {
   }
 
   pointerMove(info: PointerInfo) {
-    this.altHeld = info.alt;
     this.lastInfo = info;
     const press = this.press;
-    if (!press) this.refreshHover();
-    else if (press.kind === 'drag') this.moveDrag(press, info);
-    else if (press.kind === 'place') this.moveHeading(press, info);
-    else this.moveBand(press, info);
+    if (press?.kind === 'drag') this.moveDrag(press, info);
+    else if (press?.kind === 'place') this.moveHeading(press, info);
+    else if (press) this.moveBand(press, info);
   }
 
-  /** Look at what is under the pointer again (it did not move, but the map or the mode may have changed). */
-  private refreshHover() {
+  /** Alt or Shift went down or up: what is under the pointer can look different, such as the hovered branch (^99), though the pointer did not move. */
+  modifiers({ alt, shift }: { alt: boolean; shift: boolean }) {
+    if (!this.lastInfo) return;
+    this.lastInfo = { ...this.lastInfo, alt, shift };
+  }
+
+  private hoverNow(): Hover | null {
     const info = this.lastInfo;
-    if (this.press || !info) return;
+    if (this.press || !info) return null;
     const hits = { handles: this.handles(info.scale), chains: this.chains };
-    this.hover = hoverAt(this.snapshot(), hits, info, this.drawing);
+    return hoverAt(this.snapshot(), hits, info, this.drawing);
+  }
+
+  /** The view moved under a pointer that did not (zoom, pan, rotate): the same screen position is another place now. Not while the left button is down. */
+  look(info: PointerInfo) {
+    if (!this.press) this.lastInfo = info;
   }
 
   private moveDrag(press: Extract<Press, { kind: 'drag' }>, info: PointerInfo) {
@@ -294,7 +303,10 @@ export class Editor {
 
   /** The segments under the pointer that get an outline: the one, or with Alt held the whole branch (^99, ^128). */
   get hoverSegments() {
-    return chainSegments(this.chains, hoveredEdges(this.graph, this.hover, this.altHeld));
+    return chainSegments(
+      this.chains,
+      hoveredEdges(this.graph, this.hover, this.lastInfo?.alt ?? false),
+    );
   }
 
   /** The curve a merge into the node or curve under the pointer would add (^123, ^125). */
@@ -368,7 +380,6 @@ export class Editor {
     this.batching = false;
     this.commit(press.undo, pressName(press));
     this.use(controlUsed(press));
-    this.refreshHover();
   }
 
   /** Abort what the left button was doing (a second finger came down). */
@@ -376,13 +387,10 @@ export class Editor {
     const press = this.endPress();
     if (!press || press.kind === 'empty') return;
     this.restore(press.undo);
-    this.refreshHover();
   }
 
   pointerLeave() {
-    if (this.press) return;
-    this.hover = null;
-    this.lastInfo = null;
+    if (!this.press) this.lastInfo = null;
   }
 
   /** Right click without moving: removes the node under the pointer, else finishes the road. */
@@ -392,6 +400,5 @@ export class Editor {
     if (handle?.type === 'node') this.removeAll([handle.id]);
     else if (hit) this.removeSegments(hit.edge, info.alt);
     else this.finishRoad();
-    this.refreshHover();
   }
 }

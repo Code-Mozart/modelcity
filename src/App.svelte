@@ -81,6 +81,7 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
+    editor.modifiers({ alt: e.altKey, shift: e.shiftKey });
     if (session.modalOpen) {
       if (e.key === 'Escape' && session.row) session.cancelRow();
       else if (e.key === 'Escape') session.closeModal();
@@ -98,7 +99,11 @@
 
 <svelte:window
   onkeydown={onKeyDown}
-  onkeyup={(e) => camera.keyUp(e.key)}
+  onkeyup={(e) => {
+    camera.keyUp(e.key);
+    editor.modifiers({ alt: e.altKey, shift: e.shiftKey });
+  }}
+  onblur={() => editor.modifiers({ alt: false, shift: false })}
   onpagehide={() => void session.flush()}
 />
 

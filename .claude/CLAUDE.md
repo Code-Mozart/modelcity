@@ -45,6 +45,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 The user entrusts the details to Claude. Principles:
 - SRP, KISS and DRY at all times.
 - Build infrastructure, then use and combine it. Think library and client: engine/API-like code (pure, testable, no UI or input, e.g. `src/lib/camera/view.ts`, `src/lib/render/paint.ts`) versus code that uses it (components, input handling).
+- State that depends on other state is *derived*, not stored and refreshed by hand: a cached value needs every operation to remember to update it, and the first one that forgets is a bug (the hover that stayed until the mouse moved, ^238). Test such a property in general (random sequences of operations), not only for the case that was found.
 - The linter enforces quality limits (complexity, function length, nesting depth, parameter count, statements, file length: see `eslint.config.js`). Fix violations by refactoring. Never disable a rule or raise a limit just to get green; raise one only deliberately and mention it in the PR.
 
 ## Refactoring (learned in the first refactoring pass, ^215)

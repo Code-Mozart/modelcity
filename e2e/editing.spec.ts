@@ -165,3 +165,28 @@ test('the node just placed is hovered at once, and finishing a road takes the pr
   await page.keyboard.press('Escape');
   expect(await hover()).toBeNull(); // no preview left in select mode
 });
+
+test('the outline follows Alt without moving the mouse, and a pan or a zoom under a still pointer updates what it is over (^238)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  await drawRoad(app);
+  const segments = () => page.evaluate(() => window.__modelcity!.editor.hoverSegments.length);
+  const hover = () => page.evaluate(() => window.__modelcity!.editor.hover?.kind ?? null);
+  await app.hover({ x: 15, y: 0 }); // on the first segment of a branch of two
+  expect(await hover()).toBe('candidate');
+  expect(await segments()).toBe(1);
+  await page.keyboard.down('Alt'); // no mouse movement
+  expect(await segments()).toBe(2);
+  await page.keyboard.up('Alt');
+  expect(await segments()).toBe(1);
+
+  // A right drag pans the view: the pointer ends over empty canvas, though it never "moved" for the editor.
+  const p = await page.evaluate(() => window.__modelcity!.toPage({ x: 15, y: 0 }));
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(p.x, p.y + 150, { steps: 6 });
+  await page.mouse.up({ button: 'right' });
+  expect(await hover()).toBeNull();
+});

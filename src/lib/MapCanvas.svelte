@@ -60,18 +60,29 @@
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
-  function info(e: PointerEvent | MouseEvent): PointerInfo {
-    const screen = localPoint(e);
+  /** Where the pointer last was on the canvas, and with what keys, to find it again when the view moves. */
+  let last: Pick<PointerInfo, 'screen' | 'touch' | 'shift' | 'alt'> | null = null;
+
+  function infoAt(at: NonNullable<typeof last>): PointerInfo {
     return {
-      pt: screenToWorld(camera.view, camera.size, screen),
-      screen,
+      ...at,
+      pt: screenToWorld(camera.view, camera.size, at.screen),
       project: (p) => worldToScreen(camera.view, camera.size, p),
       scale: camera.view.scale,
-      touch: 'pointerType' in e && e.pointerType === 'touch',
-      shift: e.shiftKey,
-      alt: e.altKey,
     };
   }
+
+  function info(e: PointerEvent | MouseEvent): PointerInfo {
+    const touch = 'pointerType' in e && e.pointerType === 'touch';
+    last = { screen: localPoint(e), touch, shift: e.shiftKey, alt: e.altKey };
+    return infoAt(last);
+  }
+
+  // The view moved (wheel, pan, rotate, keys): the pointer is over another place now (^238).
+  $effect(() => {
+    void camera.view;
+    untrack(() => last && editor.look(infoAt(last)));
+  });
 
   function onWheel(e: WheelEvent) {
     e.preventDefault();
@@ -123,8 +134,8 @@
       onUse('rotate');
     } else if (e.button === 2) {
       // A right click without movement removes a node or a segment, or finishes the road; a right drag only pans.
-      if (camera.endPan()) onUse('pan');
-      else editor.rightClick(info(e));
+      if (!camera.endPan()) editor.rightClick(info(e));
+      else onUse('pan');
     }
   }
 
