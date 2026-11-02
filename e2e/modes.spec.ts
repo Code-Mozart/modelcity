@@ -22,3 +22,20 @@ test('the outline follow select, draw and extend mode', async ({ page }) => {
   await app.rightClick({ x: 50, y: 50 });
   await expect(frame).toHaveAttribute('data-mode', 'select');
 });
+
+/** View mode (^104): Tab, an eye icon, no outline, no skeleton, no editing. */
+test('Tab shows only the roads, and leaves again', async ({ page }) => {
+  const app = new App(page);
+  const frame = page.getByTestId('mode-frame');
+  await app.click({ x: 0, y: 30 });
+  for (const x of [0, 30, 60]) await app.click({ x, y: 0 });
+  await expect(app.hints()).toContainText('view mode');
+  await page.keyboard.press('Tab'); // from extend mode
+  await expect(frame).toHaveAttribute('data-mode', 'view');
+  await expect(frame).toHaveCSS('border-top-color', 'rgba(0, 0, 0, 0)');
+  expect(await app.nodes()).toHaveLength(3);
+  await app.click({ x: 30, y: 0 }); // nothing happens
+  expect((await app.state()).selected).toBe(0);
+  await page.keyboard.press('Tab');
+  await expect(frame).toHaveAttribute('data-mode', 'select');
+});

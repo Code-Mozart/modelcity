@@ -7,6 +7,7 @@ describe('mode labels (^119)', () => {
       'select mode',
       'draw mode',
       'extend mode',
+      'view mode',
     ]);
     expect(new Set(Object.values(MODES).map((m) => m.color)).size).toBe(3);
   });

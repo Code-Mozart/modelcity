@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { modalHints } from '../project/modalHints';
-import { hintsFor, historyHints, type Hint, type HintTarget } from './hints';
+import { hintsFor, historyHints, viewHints, type Hint, type HintTarget } from './hints';
 
 /** A readable form of a hint: "LMB drag: pan". */
 const show = (h: Hint) =>
@@ -15,12 +15,17 @@ const show = (h: Hint) =>
             : `${i.alt ? 'Alt+' : ''}${i.shift ? 'Shift+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}${h.note ? ` (${h.note.key} ${h.note.text})` : ''}`;
-const PROJECT_ROWS = ['P: projects'];
+const PROJECT_ROWS = ['Tab: view mode', 'P: projects'];
 /** The hints of the mode and target, without the project controls that are always shown (^168). */
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
   hintsFor(drawing, target, selected)
     .map(show)
     .filter((r) => !PROJECT_ROWS.includes(r));
+
+const hiddenIds =
+  (...ids: string[]) =>
+  (id: string) =>
+    ids.includes(id);
 
 const empty: HintTarget = { kind: 'empty' };
 const node = (last: boolean, leaf = last): HintTarget => ({
@@ -213,7 +218,7 @@ describe('split and merge hints (^23)', () => {
 describe('project controls (^168)', () => {
   it('are always the last hints, in every mode', () => {
     for (const drawing of [false, true]) {
-      expect(hintsFor(drawing, empty).map(show).slice(-1)).toEqual(PROJECT_ROWS);
+      expect(hintsFor(drawing, empty).map(show).slice(-2)).toEqual(PROJECT_ROWS);
     }
   });
 });
@@ -246,11 +251,6 @@ describe('the projects modal hints say what an input does right now (^181)', () 
 });
 
 describe('learned controls are hidden (^110)', () => {
-  const hiddenIds =
-    (...ids: string[]) =>
-    (id: string) =>
-      ids.includes(id);
-
   it('a control that was used has no hint, each on its own', () => {
     const all = rows(false, empty, 2);
     const some = hintsFor(false, empty, 2, hiddenIds('pan', 'select-box')).map(show);
@@ -271,8 +271,24 @@ describe('learned controls are hidden (^110)', () => {
 
   it('draw mode and moving are not hidden', () => {
     const all = () => true;
-    expect(hintsFor(true, empty, 0, all).map(show)).toEqual(hintsFor(true, empty, 0).map(show));
+    const rows = (h: ReturnType<typeof hintsFor>) =>
+      h.map(show).filter((r) => !r.startsWith('Tab'));
+    expect(rows(hintsFor(true, empty, 0, all))).toEqual(rows(hintsFor(true, empty, 0)));
     expect(hintsFor(false, node(false), 0, all).map(show)).toContain('LMB drag: move node');
+  });
+});
+
+describe('Tab (^104)', () => {
+  it('is learned like the others, in view mode too (^104)', () => {
+    expect(hintsFor(false, empty).map(show)).toContain('Tab: view mode');
+    expect(hintsFor(false, empty, 0, hiddenIds('view')).map(show)).not.toContain('Tab: view mode');
+    expect(viewHints().map(show)).toEqual([
+      'RMB drag: pan',
+      'Wheel: zoom',
+      'MMB drag: rotate',
+      'Tab: select mode',
+      'P: projects',
+    ]);
   });
 
   it('undo and redo can be learned, too', () => {

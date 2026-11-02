@@ -7,7 +7,7 @@
   const mode = $derived(MODES[phase]);
 </script>
 
-<div class="frame" data-testid="mode-frame" data-mode={phase} style:--mode={mode.color}></div>
+<div class="frame" data-testid="mode-frame" data-mode={phase} style:--mode={mode.outline}></div>
 <div class="modes" aria-hidden="true">
   {#each PHASES as p (p)}
     <span class="mode" class:on={p === phase} style:--mode={MODES[p].color} title={MODES[p].label}>

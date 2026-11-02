@@ -25,7 +25,8 @@ export type ControlId =
   | 'deselect-all'
   | 'delete-selected'
   | 'undo'
-  | 'redo';
+  | 'redo'
+  | 'view';
 
 /** A control hint: the inputs (alternatives) and what they do, e.g. [Esc] or [RMB]: finish. */
 export interface Hint {
@@ -230,6 +231,17 @@ export function historyHints({ undo, redo }: HistoryState, hidden: Hidden = () =
 /** The project controls are always shown for now (^168). */
 const PROJECT_HINTS: Hint[] = [hint({ kind: 'key', label: 'P' }, 'projects')];
 
+/** Tab switches to view mode, and back (^104); hidden once learned like the other controls (^110). */
+const tabHints = (text: string, hidden: Hidden): Hint[] =>
+  [hint({ kind: 'key', label: 'Tab' }, text, 'view')].filter((r) => !learned(r, hidden));
+
+/** View mode: only the camera and the way out. */
+export const viewHints = (hidden: Hidden = () => false): Hint[] => [
+  ...CAMERA.filter((r) => !learned(r, hidden)),
+  ...tabHints('select mode', hidden),
+  ...PROJECT_HINTS,
+];
+
 export function hintsFor(
   drawing: boolean,
   target: HintTarget,
@@ -237,5 +249,9 @@ export function hintsFor(
   hidden: Hidden = () => false,
 ): Hint[] {
   const rows = drawing ? drawModeHints(target) : selectModeHints(target, selected);
-  return [...rows.filter((r) => !learned(r, hidden)), ...PROJECT_HINTS];
+  return [
+    ...rows.filter((r) => !learned(r, hidden)),
+    ...tabHints('view mode', hidden),
+    ...PROJECT_HINTS,
+  ];
 }

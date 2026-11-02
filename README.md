@@ -69,6 +69,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Roadmap item** | A `feature`, `bug` or `chore` (refactor, docs, tooling) on the roadmap | decided | ^146 |
 | **Milestone** | One PR that tackles one or more roadmap items, with a written scope (in/out); a roadmap item can be unassigned until it is planned | decided | ^146 |
 | **Extend mode** | The mode while a road is being drawn from a node (dashed preview); finishing the road goes back to draw mode | decided | ^120 |
+| **View mode** | Nothing can be edited, only the camera works, and only the generated geometry is drawn (no skeleton). `Tab` in and out; shown by an eye icon, no outline | decided | ^104 |
 | **Select mode** | No road is being drawn: you edit control points; a click enters draw mode | decided | ^48, ^54 |
 | **Draw mode** | Drawing, but no node is being extended: a click on the void starts a road, a click on a node extends, splits or merges; a second RMB (or Esc) goes to select mode | decided | ^48, ^65, ^120 |
 | **Preview** | The translucent preview of the node a click would place, with the curve to it (not called "ghost") | decided | ^40, ^48, ^68 |
