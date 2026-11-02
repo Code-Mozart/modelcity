@@ -101,3 +101,27 @@ test('the recent history panel shows the last steps, grays out undone ones and h
   expect((await app.state()).selected).toBe(1);
   await expect(app.history().locator('.undone')).toHaveCount(0);
 });
+
+test('a used control loses its hint, Esc deselects all, a right click removes a segment (^110, ^218, ^160)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  await drawRoad(app);
+  await expect(app.hints()).toContainText('zoom');
+  await page.mouse.move(400, 300);
+  await page.mouse.wheel(0, -120);
+  await expect(app.hints()).not.toContainText('zoom');
+  await expect(app.hints()).toContainText('pan');
+
+  await app.box({ x: -10, y: -10 }, { x: 70, y: 10 });
+  expect((await app.state()).selected).toBe(3);
+  await expect(app.hints()).toContainText('deselect all');
+  await page.keyboard.press('Escape');
+  expect((await app.state()).selected).toBe(0);
+
+  await app.rightClick({ x: 15, y: 0 });
+  expect(await nodes(app)).toHaveLength(2);
+  expect(await app.edges()).toHaveLength(1);
+});

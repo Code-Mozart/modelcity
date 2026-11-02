@@ -8,11 +8,14 @@ import { autoHeadingFor, farEnd, linkTo } from '../model/junction';
 import { dragGraph } from '../model/dragGraph';
 import {
   addNode,
+  edgeOfId,
+  edgesAt,
   edgesIn,
   edgesOut,
   insertNode,
   moveNodes,
   nodeOf,
+  removeNodes,
   withNode,
   type Graph,
 } from '../model/graph';
@@ -52,6 +55,35 @@ export function extendTo(drawn: Drawn, id: number): Drawn {
   const start = edgesOut(graph, id).length > 0 && edgesIn(graph, id).length === 0;
   const end = start ? 'start' : 'end';
   return { ...drawn, active: id, end, origin: farEnd(graph, id), selection: [id] };
+}
+
+/** The state after a removal: the road goes on from `tip` if that is still there, else it is not drawn (^160). */
+function afterRemoval(d: Drawn, graph: Graph, tip: number | null): Drawn {
+  const alive = (id: number | null) => (id !== null && nodeOf(graph, id) ? id : null);
+  const active = alive(tip);
+  const end = active === null ? 'end' : d.end;
+  return { ...d, graph, active, end, origin: alive(d.origin), selection: [] };
+}
+
+/** Remove nodes (^70): the road being drawn goes on from the node before, if its node goes. */
+export function removeNodesFrom(d: Drawn, ids: number[]): Drawn {
+  const tip = d.active !== null && ids.includes(d.active) ? neighbourOf(d) : d.active;
+  return afterRemoval(d, removeNodes(d.graph, ids, tip), tip);
+}
+
+/**
+ * Remove one segment (^160). Its nodes go with it if it was their only one, except the node being
+ * drawn from, which stays; if that was left with no segment, the road goes on from the node at the
+ * other end of the removed segment.
+ */
+export function removeSegmentFrom(d: Drawn, edge: number): Drawn {
+  const e = edgeOfId(d.graph, edge);
+  if (!e) return d;
+  const without = { ...d.graph, edges: d.graph.edges.filter((x) => x.id !== edge) };
+  const stranded =
+    (d.active === e.start || d.active === e.end) && !edgesAt(without, d.active!).length;
+  const tip = stranded ? (e.start === d.active ? e.end : e.start) : d.active;
+  return afterRemoval(d, removeNodes(without, [], tip), tip);
 }
 
 /** The node the road being drawn goes on from when its node is removed: the one before it. */

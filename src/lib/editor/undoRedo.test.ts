@@ -11,7 +11,7 @@ describe('undo and redo keys (^81)', () => {
     expect(actionFor('Z', redo)).toBe('redo');
     expect(actionFor('y', undo)).toBe('redo');
     expect(actionFor('q', undo)).toBeUndefined();
-    expect(actionFor('Escape', { ctrl: false, shift: false })).toBe('finishRoad');
+    expect(actionFor('Escape', { ctrl: false, shift: false })).toBe('escape');
   });
 });
 

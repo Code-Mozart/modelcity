@@ -3,6 +3,7 @@ import type { RoadHandle, RoadHit } from './chains';
 import { edgeOfId, nodeOf, placed, shareRadius, type Graph } from '../model/graph';
 import { branchOfEdge, branchOfNode, nodeAction } from '../model/junction';
 import { targetOf, type Drawn } from './targets';
+import type { ControlId } from '../hints/hints';
 import type { PointerInfo, Press } from './types';
 import { pressNode, selectedSegments } from './selection';
 
@@ -14,13 +15,20 @@ function selects(handle: RoadHandle, drawing: boolean, { shift, alt }: PointerIn
   return handle.type === 'node' || (handle.type === 'head' && !shift && !alt);
 }
 
+/** The select operation a press on a node used: Alt a branch, Shift adding, else a plain select (^110). */
+const selectUse = ({ shift, alt }: PointerInfo): ControlId => {
+  if (alt) return 'select-lane';
+  return shift ? 'select-add' : 'select';
+};
+
 /** The selection after a press on a handle, and what a click without moving does to it. */
 function pressSelection(drawn: Drawn, drawing: boolean, handle: RoadHandle, info: PointerInfo) {
   const rule = pressNode(drawn.selection, handle.id, branchOfNode(drawn.graph, handle.id), info);
   const picks = selects(handle, drawing, info);
   const selection = picks ? rule.selection : drawn.selection;
   const group = picks && handle.type === 'node' ? selection.filter((s) => s !== handle.id) : [];
-  return { selection, group, click: picks ? rule.click : ('keep' as const) };
+  const use = picks ? selectUse(info) : null;
+  return { selection, group, click: picks ? rule.click : ('keep' as const), use };
 }
 
 /**
@@ -35,7 +43,7 @@ export function dragPress(
 ): { press: DragPress; selection: Drawn['selection'] } {
   const { graph } = drawn;
   const id = handle.id;
-  const { selection, group, click } = pressSelection(drawn, drawing, handle, info);
+  const { selection, group, click, use } = pressSelection(drawn, drawing, handle, info);
   const node = handle.type === 'node' && drawing;
   const n = nodeOf(graph, id);
   const press: DragPress = {
@@ -49,6 +57,7 @@ export function dragPress(
     group: placed(graph, group),
     origin: { x: n?.x ?? 0, y: n?.y ?? 0 },
     click,
+    use,
     undo: drawn,
     target: targetOf(drawn, { kind: 'handle', handle }, drawing),
   };

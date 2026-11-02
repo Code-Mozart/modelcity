@@ -7,7 +7,10 @@
   import HistoryPanel from './lib/hud/HistoryPanel.svelte';
   import { panelView } from './lib/hud/panel';
   import { Recent } from './lib/hud/recent.svelte';
+  import { Toasts } from './lib/ui/toasts.svelte';
+  import ToastList from './lib/ui/ToastList.svelte';
   import { hintsFor, historyHints } from './lib/hints/hints';
+  import { Usage } from './lib/hints/usage.svelte';
   import { keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
@@ -18,13 +21,22 @@
 
   const editor = new Editor();
   const camera = new Camera();
-  const session = new ProjectSession(editor, camera, new IndexedDbStorage());
+  const toasts = new Toasts();
+  const session = new ProjectSession(editor, camera, new IndexedDbStorage(), {
+    notify: (kind, text) => toasts.show(kind, text),
+  });
   installTestHook(editor, camera, session, () => document.querySelector('canvas'));
+  // A control that was used lately has its hint hidden for a while (^110).
+  const usage = new Usage();
+  $effect(() => {
+    const used = editor.used;
+    untrack(() => used && usage.mark(used.id));
+  });
   // While the projects modal is up its controls replace all others (^168).
   const hints = $derived(
     session.modalOpen
       ? modalHints(session.row?.mode ?? 'list', session.over)
-      : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length),
+      : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, usage.hidden),
   );
   // The last steps and what was undone, for a few seconds after each one, and while a road is drawn (^107, ^109).
   const recent = new Recent();
@@ -38,7 +50,9 @@
   });
   const panelShown = $derived(recent.visible || editor.active !== null);
   const panel = $derived(panelView(editor.history));
-  const historyRows = $derived(historyHints({ undo: editor.canUndo, redo: editor.canRedo }));
+  const historyRows = $derived(
+    historyHints({ undo: editor.canUndo, redo: editor.canRedo }, usage.hidden),
+  );
 
   onMount(() => void session.start());
 
@@ -48,11 +62,14 @@
     session.changed();
   });
 
-  /** Ctrl+S exports, Ctrl+O opens the projects (^168). */
+  /** `Ctrl+S` saves; `P` opens the projects, `Ctrl+O` with the file window (^168, ^222, ^223, ^226). */
   function projectKey(e: KeyboardEvent): boolean {
-    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return false;
-    if (e.key === 's') session.download();
-    else if (e.key === 'o') void session.openModal();
+    if (e.shiftKey || e.altKey) return false;
+    const ctrl = e.ctrlKey || e.metaKey;
+    const key = e.key.toLowerCase();
+    if (ctrl && key === 's') void session.saveNow();
+    else if (ctrl && key === 'o') void session.openModal(true);
+    else if (!ctrl && key === 'p') void session.openModal();
     else return false;
     return true;
   }
@@ -80,14 +97,29 @@
 />
 
 <main>
-  <MapCanvas {editor} {camera} />
+  <MapCanvas {editor} {camera} onUse={(id) => usage.mark(id)} />
   <Hints {hints} />
-  {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}
+  <div class="right">
+    <ToastList {toasts} />
+    {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}
+  </div>
   <Compass {camera} />
   <ProjectsModal {session} />
 </main>
 
 <style>
+  /* The toasts and the recent history panel share one column, so they never overlap (^232). */
+  .right {
+    position: absolute;
+    right: 1.1667em;
+    top: 1em;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.8em;
+    pointer-events: none;
+  }
   main {
     position: relative;
     flex: 1;

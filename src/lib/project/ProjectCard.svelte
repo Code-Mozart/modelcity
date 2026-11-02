@@ -2,6 +2,7 @@
   import type { ModalTarget } from './modalHints';
   import Icon from '../ui/Icon.svelte';
   import type { ProjectSession } from './session.svelte';
+  import { titleOf, versionLabel } from './file';
   import type { StoredProject } from './storage';
   import { formatAgo, formatLocalIso } from './time';
 
@@ -24,7 +25,7 @@
   const mode = $derived(session.row?.id === p.id ? session.row.mode : null);
 
   function startRename() {
-    draft = p.file.title;
+    draft = titleOf(p.file);
     session.startRename(p.id);
   }
 
@@ -54,10 +55,16 @@
       onkeydown={renameKey}
     />
   {:else}
-    <button class="open" title={p.file.title} onclick={() => session.open(p.id)} {...over('card')}>
+    <button
+      class="open"
+      title={titleOf(p.file)}
+      onclick={() => session.open(p.id)}
+      {...over('card')}
+    >
       {#if p.id === session.id}<span class="label">open</span>{/if}
       <span class="line">
-        <span class="title">{p.file.title}</span>
+        <span class="title">{titleOf(p.file)}</span>
+        {#if versionLabel(p.file)}<span class="version">{versionLabel(p.file)}</span>{/if}
         <span class="date" title={formatLocalIso(p.file.lastUpdatedAt)}>
           {formatAgo(p.file.lastUpdatedAt, Date.now())}
         </span>
@@ -68,7 +75,7 @@
     <button
       class="icon"
       class:danger={mode === 'delete'}
-      aria-label={mode === 'rename' ? 'Confirm rename' : `Confirm delete ${p.file.title}`}
+      aria-label={mode === 'rename' ? 'Confirm rename' : `Confirm delete ${titleOf(p.file)}`}
       onclick={() => (mode === 'rename' ? session.rename(p.id, draft) : session.confirmDelete())}
       {...over('confirm')}
     >
@@ -85,7 +92,7 @@
   {:else}
     <button
       class="icon"
-      aria-label="Rename {p.file.title}"
+      aria-label="Rename {titleOf(p.file)}"
       onclick={startRename}
       {...over('rename')}
     >
@@ -93,7 +100,7 @@
     </button>
     <button
       class="icon"
-      aria-label="Delete {p.file.title}"
+      aria-label="Delete {titleOf(p.file)}"
       onclick={() => session.startDelete(p.id)}
       {...over('delete')}
     >

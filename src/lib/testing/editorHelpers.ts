@@ -55,16 +55,16 @@ export const lastBatchSize = (steps: { batch: number }[]) =>
 /** The last node of chain `road` (a chain is a run of edges, ^106). */
 export const last = (ed: Editor, road = 0) => ed.chains[road]!.path.nodes.at(-1)!;
 
-/** A point on a curve that is not close to any handle (so pressing there inserts, not edits). */
-export const bareCurvePoint = (ed: Editor) => {
+/**
+ * A point on a curve that is not close to any handle (so pressing there inserts, not edits); on
+ * edge number `edge` of all (in the order of the chains), else on any.
+ */
+export const bareCurvePoint = (ed: Editor, edge?: number) => {
   const handles = ed.handles(4);
-  const samples = ed.edges
-    .flat()
-    .flatMap(({ E }) =>
-      E.pieces.flatMap((piece) =>
-        Array.from({ length: 19 }, (_, i) => pointOn(piece, (i + 1) / 20)),
-      ),
-    );
+  const all = ed.edges.flat();
+  const samples = (edge === undefined ? all : [all[edge]!]).flatMap(({ E }) =>
+    E.pieces.flatMap((piece) => Array.from({ length: 19 }, (_, i) => pointOn(piece, (i + 1) / 20))),
+  );
   const bare = samples.find((p) => handles.every((h) => Math.hypot(h.x - p.x, h.y - p.y) > 4));
   if (!bare) throw new Error('no bare point on the curves');
   return bare;

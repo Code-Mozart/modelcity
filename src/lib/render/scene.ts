@@ -23,6 +23,7 @@ import {
 } from './paint';
 import type { Band } from '../editor/selection';
 import type { Pointer } from '../editor/proximity';
+import { drawOutlines } from './outline';
 import { activeFlags, arrowShown, withSelectedTogether } from './scaffold';
 
 /** A node of a chain (the index in the chain), where it is drawn. */
@@ -47,6 +48,8 @@ export interface Scene {
   drawing: boolean;
   /** The segments (road, index) whose two nodes are selected: they show their scaffold together (^133). */
   selectedSegments: { road: number; i: number }[];
+  /** The segments (road, index) under the pointer that get a blue outline, a whole branch with Alt (^99). */
+  outline: { road: number; i: number }[];
   /** All scaffolds are hidden while several nodes are moved (^78). */
   hideScaffold: boolean;
   hover: Hover | null;
@@ -166,12 +169,20 @@ function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
 }
 
 /** The control points of the scaffolds that are shown, all filled because they can be dragged. */
+const isFocused = (h: RoadHandle, focus: Focus | null) =>
+  focus !== null &&
+  [h.road, h.type, h.i, h.k, h.t].every(
+    (v, n) => v === [focus.road, focus.type, focus.i, focus.k, focus.t][n],
+  );
+
 function drawHandles(f: Frame, scene: Scene, active: boolean[][], pal: Palette) {
   for (const h of scene.handles) {
     if (h.type === 'node') continue;
     const segs = active[h.road] ?? [];
     const shown = h.type === 'head' ? arrowShown(segs, h.i) : segs[h.i] === true;
-    if (shown) dot(f.ctx, toScreen(f, h), h.type === 'rad' ? 6.5 : 5.5, pal.orange);
+    // The point that is hovered or dragged is as large as a selected node (^230).
+    const size = isFocused(h, scene.focus) ? SELECTED_DOT_PX : h.type === 'rad' ? 6.5 : 5.5;
+    if (shown) dot(f.ctx, toScreen(f, h), size, pal.orange);
   }
 }
 
@@ -204,7 +215,12 @@ function shownFlags(scene: Scene): boolean[][] {
  * The surface of all roads, 3 m wide with an outline (^90): all outlines first, then all surfaces,
  * so that roads that cross or touch merge into one shape.
  */
-function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
+function drawLanes(
+  f: Frame,
+  roads: RoadScene[],
+  selected: { road: number; i: number }[],
+  pal: Palette,
+) {
   const px = (r: RoadScene) => r.width * f.view.scale;
   const pieces = (r: RoadScene) => r.edges.flatMap((e) => e.E.pieces);
   for (const r of roads) {
@@ -212,6 +228,11 @@ function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
     strokeChain(f, pieces(r), edge);
   }
   for (const r of roads) strokeChain(f, pieces(r), { color: pal.road, width: px(r) });
+  // Selected segments, both nodes selected, in the color of selected nodes (^231).
+  for (const { road, i } of selected) {
+    const r = roads[road];
+    if (r) strokeChain(f, r.edges[i]?.E.pieces ?? [], { color: pal.blue, width: px(r) });
+  }
 }
 
 /**
@@ -220,7 +241,7 @@ function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
  * Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const active = shownFlags(scene);
-  drawLanes(f, scene.roads, pal);
+  drawLanes(f, scene.roads, scene.selectedSegments, pal);
   scene.roads.forEach((road, i) => {
     const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;
     drawRoad(f, road, { active: active[i]!, rad }, pal);
@@ -232,4 +253,6 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   scene.roads.forEach((road, i) => {
     drawNodes(f, road, { active: active[i]!, selected: selectedIn(scene.selection, i) }, pal);
   });
+  // The outline of the hovered segment (or branch) is on top of everything (^99).
+  drawOutlines(f, scene.roads, scene.outline, pal.blue);
 }

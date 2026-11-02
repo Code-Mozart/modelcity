@@ -116,6 +116,13 @@ export function validate(f: Record<string, unknown>): ProjectFile {
   return f as unknown as ProjectFile;
 }
 
+/**
+ * A project of any source (an import, the browser storage, later Supabase) in the current version
+ * and checked: the one pipeline (^229). A project of an older version is migrated by the same
+ * converters; with no converter for its version it is refused (^196).
+ */
+export const readProject = (json: unknown): ProjectFile => validate(migrate(json));
+
 /** Parse the text of a project file: migrated to the current version and checked. */
 export function parseProject(text: string): ProjectFile {
   let json: unknown;
@@ -128,5 +135,5 @@ export function parseProject(text: string): ProjectFile {
       `the file is not valid JSON (${e instanceof Error ? e.message : e})`,
     );
   }
-  return validate(migrate(json));
+  return readProject(json);
 }

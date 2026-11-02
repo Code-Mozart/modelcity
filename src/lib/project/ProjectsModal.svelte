@@ -5,12 +5,13 @@
   import type { ModalTarget } from './modalHints';
   import Icon from '../ui/Icon.svelte';
   import Notice from '../ui/Notice.svelte';
+  import { titleOf } from './file';
   import ProjectCard from './ProjectCard.svelte';
   import type { ProjectSession } from './session.svelte';
 
   /**
    * The projects of the browser, opened with Ctrl+O (^168, ^171): search, open, rename, delete,
-   * import a file, save to disc, new project. Everything is a card of the full width; only the list
+   * import a file, export JSON, new project. Everything is a card of the full width; only the list
    * of projects scrolls (^211).
    */
   let { session }: { session: ProjectSession } = $props();
@@ -19,11 +20,15 @@
   let query = $state('');
   let searching = $state(false);
 
-  // Typing right after Ctrl+O searches (^178).
+  // Typing right after Ctrl+O searches (^178); with `Ctrl+O` the file window opens as well (^223).
   $effect(() => {
     if (!session.modalOpen) return;
     query = '';
-    void tick().then(() => list?.focus());
+    void tick().then(() => {
+      if (session.wantsImport) file?.click();
+      session.wantsImport = false;
+      list?.focus();
+    });
   });
 
   async function pick() {
@@ -41,7 +46,7 @@
   /** The cards below the list. */
   const actions = $derived([
     { target: 'import', label: 'Import file…', run: () => file?.click(), current: false },
-    { target: 'save', label: 'Save to disc…', run: () => session.download(), current: false },
+    { target: 'export', label: 'Export JSON', run: () => session.exportJson(), current: false },
     {
       target: 'new',
       label: 'New project',
@@ -90,7 +95,7 @@
         bind:query
         items={session.projects}
         key={(p) => p.id}
-        textOf={(p) => p.file.title}
+        textOf={(p) => titleOf(p.file)}
         label="Search projects"
         none="No project matches."
         {searchAttrs}

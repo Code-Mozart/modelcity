@@ -45,7 +45,7 @@ The map is a graph of nodes and edges (^106, `docs/data-model.md`); a road is a 
 
 ## Selection (^70, ^71, ^72)
 
-A selection is 0..n nodes, also of different roads. Selected nodes are drawn blue and 150% larger (^73).
+A selection is 0..n nodes, also of different roads. Selected nodes are drawn blue and 150% larger (^73). A *selected segment* (both its nodes selected) is drawn blue as well (^231). A **hovered segment** gets a blue outline, 20 px across (like the ring of a hovered node, 10 px in radius; at least a little wider than the road), with a half circle at each end and on top of everything; with Alt held the outline covers the whole branch that Alt+click would select (^99, ^128).
 
 | Input | Action |
 |-------|--------|
@@ -69,9 +69,11 @@ Entering draw mode, finishing a road and removing nodes clear the selection.
 | Input | Action | Hats |
 |-------|--------|------|
 | RMB click on a node (either mode) | Remove that node. A road left with fewer than two nodes disappears, except the road being drawn, which may have one node | ^11, ^31, ^43 |
+| RMB click on a curve (either mode) | Remove that **segment**, and its nodes if it was their only segment. A segment in the middle of a road splits the road in two. While drawing, the road is not finished: it goes on from the node being drawn from if that is still there, else from its neighbour (the node at the other end of the removed segment) | ^160 |
 | Del or Backspace | Remove the selected nodes (same rule) | ^11 |
 | RMB click on empty space | Finish the road being drawn (leaves draw mode); nothing in select mode | ^43 |
 | Esc | Finish the road being drawn. With only one node the road is cancelled, because a road needs at least two nodes | ^43 |
+| Esc (select mode, something selected) | Deselect all: a selection step like a click on empty canvas, so it joins the batch of selection steps before (^218) | ^218 |
 | LMB click on the node being drawn from (draw mode: the road's last node, or its first node if the road was extended backwards; a road with one node: that node) | Same as Esc. A click, not a drag: dragging the node moves it and keeps drawing | ^43 |
 
 ## The hints (top left)
@@ -80,11 +82,11 @@ The corner shows what the mouse and keys do right now, as rows of `[input]: acti
 
 | Mode and context | Rows |
 |------------------|------|
-| Select mode, empty canvas | `[LMB]: draw mode` (with a selection: `[LMB]: deselect all`), `[LMB drag]: select`, `[Shift]+[LMB drag]: add to selection` (only while something is selected), `[Del]: delete selected` (same), `[RMB drag]: pan`, `[Wheel]: zoom`, `[MMB drag]: rotate` |
+| Select mode, empty canvas | `[LMB]: draw mode` (with a selection: `[LMB]: deselect all`), `[LMB drag]: select`, `[Shift]+[LMB drag]: add to selection` (only while something is selected), `[Esc]: deselect all` and `[Del]: delete selected` (same; ^218), `[RMB drag]: pan`, `[Wheel]: zoom`, `[MMB drag]: rotate` |
 | Select mode, over a curve | `[LMB]: select both nodes` (not if both are selected; `… instead` when something else is selected), `[LMB drag]: select`, `[Shift]+[LMB]: add both nodes to selection` or `deselect both nodes` (only with a selection), `[Alt]+[LMB]: select lane` (`deselect lane` if the whole branch is selected), `[Del]`, then the camera rows |
 | Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), on a node `[RMB]: delete node`, `[LMB]: select` (`select instead` if something else is selected; not if it is selected), `[Shift]+[LMB]: select` (only with a selection) or `deselect`, `[Alt]+[LMB]: select lane` (`deselect lane` if the whole branch is selected), then `[Del]` and the camera rows |
 | Draw mode, empty canvas | `[LMB]: add node`, `[LMB drag]: add node and set heading`, `[Esc] or [RMB]: finish` |
-| Draw mode, over a curve | `[LMB]: split` (nothing being drawn), `merge` (any curve while drawing, the road's own too, ^191), `[LMB drag]: insert and set heading`, `[Esc] or [RMB]: finish` |
+| Draw mode, over a curve | `[LMB]: split` (nothing being drawn), `merge` (any curve while drawing, the road's own too, ^191), `[LMB drag]: insert and set heading`, `[Esc]: finish`, `[RMB]: remove segment` (^160) |
 | Draw mode, over a node | `[LMB]: split` or `extend` (nothing being drawn), `merge` (another road's node while drawing), `close` (the node the road started at), `[LMB drag]: move node`, `[RMB]: delete node`, `[Esc]: finish`. The node being drawn from also has `[LMB]: finish` |
 | Draw mode, over another handle | what dragging it does, `[Esc] or [RMB]: finish` |
 
@@ -106,7 +108,7 @@ Only a single segment shows its scaffold at a time (^66), over all roads, with o
 
 If that segment is one of several selected ones, all selected segments show their scaffold, with their heading arrows (^133); if it is not, the selected ones show nothing. The heading arrows of the two nodes of the shown segment are shown with it, and no other arrows. A node of a road that has no segment yet always shows its heading arrow. A node being placed counts as dragged.
 
-Looks: blue means selected or user action (selected nodes, the hover ring, the selection box), orange is gizmo. Filled points can be dragged (heading, bend, radius and corner points, all orange, ^134); the corners of an S-curve turn the heading of their node when dragged (the pointer is on the heading line). Nothing is hollow any more. On touch there is no hover, so scaffolds appear only while something is grabbed.
+Looks: blue means selected or user action (selected nodes and segments, the hover ring and outline, the selection box), orange is gizmo; an orange point that is hovered or dragged is as large as a selected node (^230). Filled points can be dragged (heading, bend, radius and corner points, all orange, ^134); the corners of an S-curve turn the heading of their node when dragged (the pointer is on the heading line). Nothing is hollow any more. On touch there is no hover, so scaffolds appear only while something is grabbed.
 
 ## Projects (^82, ^148, ^163 to ^171)
 
@@ -114,8 +116,11 @@ The map is a project, kept in the browser (IndexedDB) and saved by itself (autos
 
 | Input | Does |
 |-------|------|
-| `Ctrl+S` | Exports the project as a file (`<title>.modelcity.json`, the format of `docs/data-model.md`) |
-| `Ctrl+O` | Opens the projects modal (below) |
+| `Ctrl+S` | Saves the open project to the browser at once (what autosave does a short while after a change) and says `saved` in a toast (^226, ^185, ^232); with nothing to save it says `nothing to save yet`. It does not export a file any more |
+| `P` | Opens the projects modal (below; ^222) |
+| `Ctrl+O` | Opens the projects modal and, at once, the file window of `Import file…` (^223; a browser only opens a file window right after a key press, so it is to be tried in each browser) |
+
+The card `Export JSON` in the modal (formerly `Save to disc…`, ^226; no hotkey) downloads the project as a file (`<title>.modelcity.json`, the format of `docs/data-model.md`) and says so in a toast.
 
 **The projects modal** (^168, ^171, ^178, ^189): while it is up the control hints panel shows only its controls (what an input does right now, as briefly as is clear, ^181: Esc always, the click only over something that can be clicked, `Enter` while renaming; inputs that do the same are one row, `Esc or LMB: cancel`) and the map takes no input. A search field (focused on opening, so typing right away searches) filters the list, which is newest first. Everything is a card of the full width; the icons of a card are inside it. A project card shows the title (cut off with … if it is long; the full title is its tooltip, ^188) and how long ago it was changed (`just now`, `17 minutes ago`; after 8 weeks the date `YYYY-MM-DD hh:mm:ss` in local time; the tooltip is the exact time in ISO form with the offset, ^190, ^214); the open project has a blue outline and the italic label "open" on its own line. A click on a card opens that project (on the open one it just closes the modal); opening a project does not change any date. The pen turns the title into a text field and itself into a check mark: Enter or the check mark renames, Esc or the cross cancels (the modal stays); a rename is written at once, the modal is blocked meanwhile, and the date of the last change stays. The bin asks first: it turns into a cross and the pen into a check mark, and the card gets a red outline; the check mark deletes (for good, there is no bin to bring a project back), the cross or Esc cancels; the check mark is on the left, so a double click on the bin cancels. Below the list three cards without icons: `Import file…` (a project file becomes a new project of the browser and keeps the dates of the file, opening a file is not a change of the map; a file that is no project, or from a newer version, is refused with a message), `Save to disc…` (the same as `Ctrl+S`) and `New project`. **No project:** at first, and after `New project` or after the last project was deleted, there is a blank map and no project; then the `New project` card has the blue outline and a click on it only closes the modal. The map becomes a project (called "Untitled project") when it has something in it, a short while after: nothing is stored before. A refused file shows a red message with an error icon (^210, ^209: not a project, newer version, old version, damaged, unreadable; the details with where in the file are in the browser console, F12). The modal is wide and up to three quarters of the screen tall; only the list scrolls, also when a message takes room (^211). Hovering the search field says `search` while it is not the one typed in. The cross in the top right corner, Esc and a click next to the modal close the modal.
 
@@ -181,3 +186,11 @@ There is no one-finger pan any more: empty space belongs to creating (^14 is sup
 
 - Typed length/angle, guide snapping and undo from the handover (^11).
 - The HUD beyond the control hints (^20, ^29), where the grid returns (^35), and a permanent rotation indicator (^31).
+
+## Learned controls are hidden (^110)
+
+The hint of a control the user has just used is hidden, each control on its own: the camera controls (`pan`, `zoom`, `rotate`), the select operations (`select`, with a box, `add to selection` with Shift, `select lane` with Alt, `deselect all` with Esc, `delete selected`) and the two history hints (`undo`, `redo`). It comes back after 2 minutes (assumed) without using that control. Nothing is stored: a new session starts with all hints. Draw mode, moving and the project controls are not affected, nor is `[LMB]: draw mode`, so on a blank map it is the only mouse hint once the camera and select controls are learned.
+
+## Toasts (^232, ^185)
+
+Short messages in the top right corner, above the recent history panel, on a transparent background, each with the icon of its kind in front (^210): `saved` (`Ctrl+S`), `nothing to save yet`, `exported <file>`, `imported <title>`, and the texts of a project that cannot be loaded from the browser storage (the same texts as a refused import, ^209; the stored project stays as it is and the app starts with a new, empty project; opening such a card tells it again and changes nothing). Confirmations stay 3 seconds, warnings and errors 8 seconds (assumed); several stack.

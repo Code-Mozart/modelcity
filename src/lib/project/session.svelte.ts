@@ -4,7 +4,8 @@ import type { Camera } from '../camera/camera.svelte';
 import type { Editor } from '../editor/editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
 import { fromFile, ProjectFileError, toFile, type CameraState, type Project } from './file';
-import { parseProject } from './migrate';
+import { parseProject, readProject } from './migrate';
+import type { ToastKind } from '../ui/toasts.svelte';
 import type { ProjectStorage, StoredProject } from './storage';
 
 /** How long after a change the project is saved to the browser (^166). */
@@ -15,6 +16,9 @@ const MAX_TITLE = 100;
 const UNTITLED = 'Untitled project';
 const LAST_KEY = 'modelcity.project';
 const NEW_CAMERA: CameraState = { x: 0, y: 0, scale: 4, rotation: 0 };
+
+/** Tell the user something (a toast, ^232). */
+export type Notify = (kind: ToastKind, text: string) => void;
 
 const uid = () =>
   globalThis.crypto?.randomUUID?.() ??
@@ -56,6 +60,8 @@ export class ProjectSession {
   row = $state<{ id: string; mode: 'rename' | 'delete' } | null>(null);
   /** What the pointer is over in the modal, for the hints (^181). */
   over = $state<ModalTarget | null>(null);
+  /** The modal was opened to import: it opens the file window as soon as it is there (^223). */
+  wantsImport = $state(false);
   /** True while a rename is written: the modal does not react meanwhile. */
   busy = $state(false);
   private createdAt = '';
@@ -70,24 +76,32 @@ export class ProjectSession {
     return this.id === '';
   }
 
+  private now: () => string;
+  private notify: Notify;
+
   constructor(
     private editor: Editor,
     private camera: Camera,
     private storage: ProjectStorage,
-    private now: () => string = () => new SvelteDate().toISOString(),
-  ) {}
+    deps: { now?: () => string; notify?: Notify } = {},
+  ) {
+    this.now = deps.now ?? (() => new SvelteDate().toISOString());
+    this.notify = deps.notify ?? (() => {});
+  }
 
   /** Open the project that was open last, or the newest; with none, there is no project yet (^189). */
   async start() {
     const all = await this.refresh();
     const last = all.find((p) => p.id === lastId()) ?? all[0];
-    if (last) this.show(last);
+    if (last && !this.tryShow(last)) this.showBlank();
     this.ready = true;
   }
 
   private async refresh() {
     const all = await this.storage.list();
-    this.projects = all.sort((a, b) => b.file.lastUpdatedAt.localeCompare(a.file.lastUpdatedAt));
+    this.projects = all.sort((a, b) =>
+      String(b.file.lastUpdatedAt ?? '').localeCompare(String(a.file.lastUpdatedAt ?? '')),
+    );
     return this.projects;
   }
 
@@ -101,8 +115,21 @@ export class ProjectSession {
     remember(id);
   }
 
-  private show({ id, file }: StoredProject) {
-    this.enter(id, fromFile(file));
+  /**
+   * Open a stored project through the one pipeline (^229): migrated and checked like an import. One
+   * that is refused is told to the user in a toast (the same texts as an import, ^209) and stays in
+   * the storage as it is; nothing changes. False when it was refused.
+   */
+  private tryShow({ id, file }: StoredProject): boolean {
+    try {
+      this.enter(id, fromFile(readProject(file)));
+      return true;
+    } catch (e) {
+      const refusal = e instanceof ProjectFileError ? e : unreadable(e);
+      console.error(`[modelcity] load refused (${refusal.hat}): ${refusal.detail}`);
+      this.notify('error', refusal.message);
+      return false;
+    }
   }
 
   /** Forget a save that is waiting. */
@@ -195,8 +222,7 @@ export class ProjectSession {
     const target = (await this.refresh()).find((p) => p.id === id);
     if (!target) return;
     await this.flush();
-    this.show(target);
-    this.closeModal();
+    if (this.tryShow(target)) this.closeModal();
   }
 
   async remove(id: string) {
@@ -206,8 +232,7 @@ export class ProjectSession {
       return;
     }
     const rest = await this.refresh();
-    if (rest[0]) this.show(rest[0]);
-    else this.showBlank();
+    if (!rest[0] || !this.tryShow(rest[0])) this.showBlank();
   }
 
   /** Open a project from a file the user picked; one that cannot be read is refused like one that is no project (^208). */
@@ -234,6 +259,7 @@ export class ProjectSession {
       const p = fromFile(parseProject(text));
       await this.adopt(p);
       this.error = null;
+      this.notify('success', `imported ${p.title}`);
       this.closeModal();
     } catch (e) {
       this.refuse(e instanceof ProjectFileError ? e : unreadable(e));
@@ -292,8 +318,15 @@ export class ProjectSession {
     return JSON.stringify(toFile(p), null, 2);
   }
 
-  /** Let the user save the project as a file. */
-  download() {
+  /** `Ctrl+S` (^226): save the open project to the browser at once, and say so (^232). */
+  async saveNow() {
+    if (!this.worthKeeping) return this.notify('info', 'nothing to save yet');
+    await this.flush();
+    this.notify('success', 'saved');
+  }
+
+  /** Let the user save the project as a file: the button `Export JSON` (^226). */
+  exportJson() {
     const name =
       this.title
         .trim()
@@ -306,13 +339,16 @@ export class ProjectSession {
     });
     a.click();
     URL.revokeObjectURL(url);
+    this.notify('success', `exported ${name}.modelcity.json`);
   }
 
-  async openModal() {
+  /** Open the projects modal; `importFile`: and its file window (`Ctrl+O`, ^223). */
+  async openModal(importFile = false) {
     this.error = null;
     this.row = null;
     await this.flush();
     await this.refresh();
+    this.wantsImport = importFile;
     this.modalOpen = true;
   }
 
