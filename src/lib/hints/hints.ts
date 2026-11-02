@@ -13,6 +13,8 @@ export type Input =
 export interface Hint {
   inputs: Input[];
   text: string;
+  /** What a held key changes: `(Alt to undo batch)`. */
+  note?: { key: string; text: string };
 }
 
 /** What the pointer is over, for contextual hints. */
@@ -146,17 +148,15 @@ export interface HistoryState {
 }
 
 /**
- * Undo and redo, only while there is something to undo or redo (^81), by single step and by batch;
- * a step alone is a batch of one (^103). They are shown in the recent history panel (^109).
+ * Undo and redo, only while there is something to undo or redo (^81); holding Alt does it by batch,
+ * and a step alone is a batch of one (^103), which the note says. They are shown in the recent history panel (^109).
  */
 export function historyHints({ undo, redo }: HistoryState): Hint[] {
+  const note = (text: string) => ({ key: 'Alt', text });
   const redoKeys = [keys('Ctrl', 'Y'), keys('Ctrl', 'Shift', 'Z')];
-  const redoBatchKeys = [keys('Alt', 'Ctrl', 'Y'), keys('Alt', 'Ctrl', 'Shift', 'Z')];
   return [
-    ...(undo
-      ? [hint(keys('Ctrl', 'Z'), 'undo'), hint(keys('Alt', 'Ctrl', 'Z'), 'undo batch')]
-      : []),
-    ...(redo ? [hint(redoKeys, 'redo'), hint(redoBatchKeys, 'redo batch')] : []),
+    ...(undo ? [{ ...hint(keys('Ctrl', 'Z'), 'undo'), note: note('to undo batch') }] : []),
+    ...(redo ? [{ ...hint(redoKeys, 'redo'), note: note('to redo batch') }] : []),
   ];
 }
 

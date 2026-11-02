@@ -96,7 +96,7 @@ test('the recent history panel shows the last steps, grays out undone ones and h
   await page.keyboard.press('Control+Alt+z');
   expect((await app.state()).selected).toBe(0);
   await expect(app.history().locator('.undone').first()).toContainText('select node');
-  await expect(app.history()).toContainText('redo batch');
+  await expect(app.history()).toContainText('to redo batch');
   await page.keyboard.press('Control+Alt+Shift+z');
   expect((await app.state()).selected).toBe(1);
   await expect(app.history().locator('.undone')).toHaveCount(0);

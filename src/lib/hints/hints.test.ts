@@ -14,7 +14,7 @@ const show = (h: Hint) =>
             ? 'Wheel'
             : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
-    .join(' or ')}: ${h.text}`;
+    .join(' or ')}: ${h.text}${h.note ? ` (${h.note.key} ${h.note.text})` : ''}`;
 const PROJECT_ROWS = ['Ctrl+S: export', 'Ctrl+O: projects'];
 /** The hints of the mode and target, without the project controls that are always shown (^168). */
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
@@ -168,14 +168,11 @@ describe('undo and redo hints (^81, ^103, ^109)', () => {
     expect(rows(false, empty).some((r) => r.includes('undo'))).toBe(false);
   });
 
-  it('only for what can be undone or redone, by step and by batch (a step is a batch of one)', () => {
+  it('only for what can be undone or redone; holding Alt does it by batch', () => {
     expect(history(false, false)).toEqual([]);
-    expect(history(true, false)).toEqual(['Ctrl+Z: undo', 'Alt+Ctrl+Z: undo batch']);
-    expect(history(false, true)).toEqual([
-      'Ctrl+Y or Ctrl+Shift+Z: redo',
-      'Alt+Ctrl+Y or Alt+Ctrl+Shift+Z: redo batch',
-    ]);
-    expect(history(true, true)).toHaveLength(4);
+    expect(history(true, false)).toEqual(['Ctrl+Z: undo (Alt to undo batch)']);
+    expect(history(false, true)).toEqual(['Ctrl+Y or Ctrl+Shift+Z: redo (Alt to redo batch)']);
+    expect(history(true, true)).toHaveLength(2);
   });
 });
 

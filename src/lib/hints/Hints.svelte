@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Hint } from './hints';
   import InputIcon from './InputIcon.svelte';
+  import KeyCap from './KeyCap.svelte';
 
   /** Control hints in the top left corner over the map, without a background (^41, ^49). */
   let {
@@ -20,6 +21,9 @@
         {/each}
       </span>
       <span>{h.text}</span>
+      {#if h.note}
+        <span class="note">(<KeyCap>{h.note.key}</KeyCap> {h.note.text})</span>
+      {/if}
     </li>
   {/each}
 </ul>
@@ -64,6 +68,12 @@
     gap: 0.5em;
     align-items: center;
     justify-content: flex-start;
+  }
+  .note {
+    display: inline-flex;
+    gap: 0.3em;
+    align-items: center;
+    color: var(--muted);
   }
   .or {
     color: var(--muted);
