@@ -1,7 +1,7 @@
 import type { ControlId } from './hints';
 
-/** How long a control that was used is considered learned, and its hint stays hidden (assumed, ^110). */
-export const LEARNED_MS = 2 * 60 * 1000;
+/** How long a control that was used is considered learned, and its hint stays hidden (user, ^110: 5 minutes for now). */
+export const LEARNED_MS = 5 * 60 * 1000;
 
 /**
  * Which controls the user used, and when (^110): the hint of a control that was used within the

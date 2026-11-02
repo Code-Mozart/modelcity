@@ -83,6 +83,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Control hints panel** | The HTML div in the top left corner that shows the control hints; it changes with mode, context and selection (formerly "hints") | decided | ^49, ^74, ^111 |
 | **Batch** | A run of consecutive undo steps of one kind (selection changes, or the steps of one drawing session) that `Alt+Ctrl+Z` undoes at once | decided | ^103, ^216 |
 | **Control hint** | One row of the control hints panel: `[input]: action` | decided | ^49, ^111 |
+| **Message** | Any text for the user with the icon of its kind in front, always at the start (^210): a toast, or the error of a refused import in the modal | decided | ^210, ^232 |
 | **Toast** | A short message in the top right corner above the recent history panel, on a transparent background, with the icon of its kind in front (^210); it confirms what the user just did (`saved`) or reports what cannot be shown in the projects modal. It goes by itself after a few seconds | assumed | ^232, ^185 |
 | **Recent history panel** | The HTML div in the top right corner that shows the last 7 steps of the history (undone ones grayed out, with their line), batches as steps with joined lines, and the undo and redo hints at its bottom; it appears with each operation and goes after a few seconds (^107–^109, ^216) | decided | ^107, ^111 |
 | **Key cap** | The raised, key-like symbol for a keyboard key; blue and sunk in while pressed | decided | ^32, ^68 |

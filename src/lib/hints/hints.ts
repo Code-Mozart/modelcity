@@ -93,6 +93,7 @@ function handleHints(target: HandleTarget): Hint[] {
   if (act) out.push(hint(mouse('lmb'), act));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
   if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
+  if (type === 'head') out.push(hint(mouse('lmb', false, 'alt'), 'flip arm'));
   return out;
 }
 
@@ -102,6 +103,12 @@ function curveText(target: HintTarget): string {
   if (target.act === 'split') return 'split';
   return 'merge';
 }
+
+/** Over a curve a right click removes the segment, with Alt its whole branch (^160). */
+const segmentRemoval = [
+  hint(mouse('rmb'), 'remove segment'),
+  hint(mouse('rmb', false, 'alt'), 'remove branch'),
+];
 
 /** Draw mode: a road is being drawn. */
 function drawModeHints(target: HintTarget): Hint[] {
@@ -117,7 +124,7 @@ function drawModeHints(target: HintTarget): Hint[] {
     hint(mouse('lmb'), curveText(target)),
     hint(mouse('lmb', true), drag),
     ...(target.kind === 'curve'
-      ? [hint(ESC, 'finish'), hint(mouse('rmb'), 'remove segment')]
+      ? [hint(ESC, 'finish'), ...segmentRemoval]
       : [hint([ESC, mouse('rmb')], 'finish')]),
   ];
 }
@@ -165,7 +172,7 @@ function selectModeHints(target: HintTarget, selected: number): Hint[] {
     ...(selected
       ? [hint(ESC, 'deselect all', 'deselect-all'), hint(DEL, 'delete selected', 'delete-selected')]
       : []),
-    ...(target.kind === 'curve' ? [hint(mouse('rmb'), 'remove segment')] : []),
+    ...(target.kind === 'curve' ? segmentRemoval : []),
     ...CAMERA,
   ];
 }
@@ -200,10 +207,7 @@ export function historyHints({ undo, redo }: HistoryState, hidden: Hidden = () =
  * nodes are selected (^49).
  */
 /** The project controls are always shown for now (^168). */
-const PROJECT_HINTS: Hint[] = [
-  hint(keys('Ctrl', 'S'), 'save'),
-  hint([{ kind: 'key', label: 'P' }, keys('Ctrl', 'O')], 'projects'),
-];
+const PROJECT_HINTS: Hint[] = [hint({ kind: 'key', label: 'P' }, 'projects')];
 
 export function hintsFor(
   drawing: boolean,

@@ -72,6 +72,8 @@ export type Press =
       click: 'toggle' | 'collapse' | 'keep';
       /** The select operation a click without moving used (^110). */
       use: ControlId | null;
+      /** Alt on a heading control point: a click flips the arm (^234). */
+      flip: boolean;
       undo: Snapshot;
       target: HintTarget;
     }

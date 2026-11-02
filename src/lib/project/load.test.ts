@@ -89,10 +89,17 @@ describe('what the user asked for is confirmed (^185, ^226, ^232)', () => {
     const s = setup(tellMe);
     await s.session.start();
     await s.session.saveNow();
-    expect(told).toEqual([['info', 'nothing to save yet']]);
+    expect(told).toEqual([
+      ['info', 'nothing to save yet'],
+      ['info', 'modelcity saves automatically'],
+    ]);
+    told.length = 0;
     drawRoad(s.editor, s.camera);
     await s.session.saveNow();
-    expect(told.at(-1)).toEqual(['success', 'saved']);
+    expect(told).toEqual([
+      ['success', 'saved'],
+      ['info', 'modelcity saves automatically'],
+    ]);
     expect(await s.storage.list()).toHaveLength(1);
   });
 
@@ -103,5 +110,29 @@ describe('what the user asked for is confirmed (^185, ^226, ^232)', () => {
     expect(session.wantsImport).toBe(true);
     await session.openModal();
     expect(session.wantsImport).toBe(false);
+  });
+});
+
+describe('the rename in the modal is not thrown away by accident (^233)', () => {
+  it('while the name was changed the modal does not close, nothing else opens; unchanged it may', async () => {
+    const s = setup(tellMe);
+    await withRoad(s);
+    await s.session.openModal();
+    const id = s.session.id;
+    s.session.startRename(id);
+    s.session.requestClose();
+    expect(s.session.modalOpen).toBe(false);
+    await s.session.openModal();
+    s.session.startRename(id);
+    s.session.renameDirty = true;
+    told.length = 0;
+    s.session.requestClose();
+    expect(s.session.modalOpen).toBe(true);
+    expect(told).toEqual([['warning', 'Finish or cancel the rename first.']]);
+    await s.session.newProject();
+    expect(s.session.id).toBe(id);
+    s.session.cancelRow();
+    s.session.requestClose();
+    expect(s.session.modalOpen).toBe(false);
   });
 });

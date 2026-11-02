@@ -56,6 +56,12 @@
 
   onMount(() => void session.start());
 
+  // Save the camera once it rests, if it moved (^236).
+  $effect(() => {
+    void camera.view;
+    session.cameraMoved();
+  });
+
   // Save the project a short while after the map changed (^166).
   $effect(() => {
     void editor.graph;

@@ -15,8 +15,8 @@
       class={toast.kind}
       role={toast.kind === 'error' || toast.kind === 'warning' ? 'alert' : 'status'}
     >
-      <span>{toast.text}</span>
       <Icon name={toast.kind} />
+      <span>{toast.text}</span>
     </li>
   {/each}
 </ul>

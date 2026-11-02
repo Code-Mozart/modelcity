@@ -68,7 +68,7 @@
 </script>
 
 {#if session.modalOpen}
-  <div class="backdrop" role="presentation" onpointerdown={() => session.closeModal()}>
+  <div class="backdrop" role="presentation" onpointerdown={() => session.requestClose()}>
     <div
       class="dialog"
       role="dialog"
@@ -84,7 +84,7 @@
         <button
           class="icon"
           aria-label="Close"
-          onclick={() => session.closeModal()}
+          onclick={() => session.requestClose()}
           {...over('close')}
         >
           <Icon name="x" />

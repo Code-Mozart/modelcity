@@ -101,3 +101,12 @@ export const linkTo = (g: Graph, active: number, end: DrawEnd, id: number): Grap
 /** The ends of the curve to be drawn: from the node being drawn from to `node`, or the other way. */
 export const ordered = <T>(tip: T, node: T, end: DrawEnd): [T, T] =>
   end === 'end' ? [tip, node] : [node, tip];
+
+/** The arm of a node (^130): all nodes connected to it by segments, itself included. */
+export function armOf(g: Graph, id: number): number[] {
+  const arm = new Set([id]);
+  for (const node of arm) {
+    for (const e of edgesAt(g, node)) arm.add(other(e, node));
+  }
+  return [...arm];
+}

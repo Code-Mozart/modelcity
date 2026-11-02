@@ -80,11 +80,15 @@ export function nodesInBand(g: Graph, band: Band, project: (p: Vec) => Vec): num
   });
 }
 
+/** The edges of the branch an edge is on (^128). */
+export const branchEdges = (g: Graph, edge: number): number[] =>
+  selectedSegments(g, branchOfEdge(g, edge));
+
 /** The edges a hover outline covers: the hovered one, or with Alt the whole branch (^99, ^128). */
 export function hoveredEdges(g: Graph, hover: Hover | null, alt: boolean): number[] {
   if (hover?.kind !== 'candidate') return [];
   const edge = hover.hit.edge;
-  return alt ? selectedSegments(g, branchOfEdge(g, edge)) : [edge];
+  return alt ? branchEdges(g, edge) : [edge];
 }
 
 /**

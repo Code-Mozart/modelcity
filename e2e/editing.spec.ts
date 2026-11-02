@@ -125,3 +125,26 @@ test('a used control loses its hint, Esc deselects all, a right click removes a 
   expect(await nodes(app)).toHaveLength(2);
   expect(await app.edges()).toHaveLength(1);
 });
+
+test('Alt and a click on a heading control point flips the arm; a split finished at once changes nothing (^234, ^237)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  await drawRoad(app);
+  const [first] = await app.edges();
+  const tip = await app.headHandle(0);
+  await page.keyboard.down('Alt');
+  await app.click(tip);
+  await page.keyboard.up('Alt');
+  const [flipped] = await app.edges();
+  expect([flipped!.start, flipped!.end]).toEqual([first!.end, first!.start]);
+  await expect(app.history()).toContainText('flip arm');
+
+  const before = (await app.graph()).edges.length;
+  await app.click({ x: 0, y: 30 }); // empty canvas: draw mode
+  await app.click(await app.curvePoint({ x: 15, y: 0 })); // a click on the curve: a split
+  await page.keyboard.press('Escape');
+  expect((await app.graph()).edges).toHaveLength(before);
+});

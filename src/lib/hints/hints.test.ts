@@ -15,7 +15,7 @@ const show = (h: Hint) =>
             : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}${h.note ? ` (${h.note.key} ${h.note.text})` : ''}`;
-const PROJECT_ROWS = ['Ctrl+S: save', 'P or Ctrl+O: projects'];
+const PROJECT_ROWS = ['P: projects'];
 /** The hints of the mode and target, without the project controls that are always shown (^168). */
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
   hintsFor(drawing, target, selected)
@@ -44,6 +44,7 @@ describe('control hints (^49)', () => {
       'LMB drag: insert and set heading',
       'Esc: finish',
       'RMB: remove segment',
+      'Alt+RMB: remove branch',
     ]);
   });
 
@@ -81,7 +82,11 @@ describe('control hints over nodes and handles (^49)', () => {
       type,
       act: null,
     });
-    expect(rows(true, h('head'))).toEqual(['LMB drag: turn heading', 'Esc or RMB: finish']);
+    expect(rows(true, h('head'))).toEqual([
+      'LMB drag: turn heading',
+      'Alt+LMB: flip arm',
+      'Esc or RMB: finish',
+    ]);
     expect(rows(true, h('ctrl'))).toEqual(['LMB drag: bend curve', 'Esc or RMB: finish']);
     expect(rows(true, h('rad'))).toEqual(['LMB drag: change radius', 'Esc or RMB: finish']);
   });
@@ -124,6 +129,7 @@ describe('select mode hints over curves and nodes (^74)', () => {
       'Esc: deselect all',
       'Del: delete selected',
       'RMB: remove segment',
+      'Alt+RMB: remove branch',
       ...camera,
     ]);
     expect(rows(false, { kind: 'curve', picked: 2 }, 2)).toEqual([
@@ -134,6 +140,7 @@ describe('select mode hints over curves and nodes (^74)', () => {
       'Esc: deselect all',
       'Del: delete selected',
       'RMB: remove segment',
+      'Alt+RMB: remove branch',
       ...camera,
     ]);
   });
@@ -202,7 +209,7 @@ describe('split and merge hints (^23)', () => {
 describe('project controls (^168)', () => {
   it('are always the last hints, in every mode', () => {
     for (const drawing of [false, true]) {
-      expect(hintsFor(drawing, empty).map(show).slice(-2)).toEqual(PROJECT_ROWS);
+      expect(hintsFor(drawing, empty).map(show).slice(-1)).toEqual(PROJECT_ROWS);
     }
   });
 });

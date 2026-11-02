@@ -23,6 +23,10 @@
 
   let draft = $state('');
   const mode = $derived(session.row?.id === p.id ? session.row.mode : null);
+  // A name that was changed is work that closing the modal would throw away (^233).
+  $effect(() => {
+    if (mode === 'rename') session.renameDirty = draft.trim() !== titleOf(p.file);
+  });
 
   function startRename() {
     draft = titleOf(p.file);

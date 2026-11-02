@@ -134,33 +134,38 @@ function drawHover(f: Frame, hover: Hover | null, drawing: boolean, pal: Palette
 }
 
 /** Small chevrons along the curves at regular pixel distances, pointing the way the road runs (^80). */
-function drawDirection(f: Frame, road: RoadScene, pal: Palette) {
+function drawDirection(f: Frame, road: RoadScene, selected: boolean[], pal: Palette) {
   const pieces = road.edges.flatMap((e) => e.E.pieces);
+  const owner = road.edges.flatMap((e, k) => e.E.pieces.map(() => k));
   for (const s of samplesAlong(pieces, DIRECTION_SPACING_PX / f.view.scale)) {
     const at = toScreen(f, s);
     const t = screenDir(f, { x: s.tx, y: s.ty });
-    barbs(f.ctx, at, Math.atan2(t.y, t.x), { ...CHEVRON, color: pal.ink });
+    const color = selected[owner[s.piece]!] ? pal.blue : pal.ink;
+    barbs(f.ctx, at, Math.atan2(t.y, t.x), { ...CHEVRON, color });
   }
 }
 
 /** What is shown of a road: which segments show their scaffold, and the radius handle in focus. */
 interface RoadShown {
   active: boolean[];
+  /** The selected segments: their curve and direction arrows are blue (^231). */
+  selected: boolean[];
   rad: Focus | null;
 }
 
 /** One road: the curves always, the construction of the segments whose scaffold is shown. */
 function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
-  const { active, rad } = shown;
+  const { active, selected, rad } = shown;
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawGuides(f, ref, pal);
     drawCircles(f, ref, pal);
   });
-  for (const { E } of road.edges) {
-    for (const piece of E.pieces) strokePiece(f, piece, { color: pal.ink, width: CURVE_PX });
-  }
-  drawDirection(f, road, pal);
+  road.edges.forEach(({ E }, k) => {
+    const color = selected[k] ? pal.blue : pal.ink;
+    for (const piece of E.pieces) strokePiece(f, piece, { color, width: CURVE_PX });
+  });
+  drawDirection(f, road, selected, pal);
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawCorners(f, ref, pal);
@@ -215,12 +220,7 @@ function shownFlags(scene: Scene): boolean[][] {
  * The surface of all roads, 3 m wide with an outline (^90): all outlines first, then all surfaces,
  * so that roads that cross or touch merge into one shape.
  */
-function drawLanes(
-  f: Frame,
-  roads: RoadScene[],
-  selected: { road: number; i: number }[],
-  pal: Palette,
-) {
+function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
   const px = (r: RoadScene) => r.width * f.view.scale;
   const pieces = (r: RoadScene) => r.edges.flatMap((e) => e.E.pieces);
   for (const r of roads) {
@@ -228,11 +228,6 @@ function drawLanes(
     strokeChain(f, pieces(r), edge);
   }
   for (const r of roads) strokeChain(f, pieces(r), { color: pal.road, width: px(r) });
-  // Selected segments, both nodes selected, in the color of selected nodes (^231).
-  for (const { road, i } of selected) {
-    const r = roads[road];
-    if (r) strokeChain(f, r.edges[i]?.E.pieces ?? [], { color: pal.blue, width: px(r) });
-  }
 }
 
 /**
@@ -241,10 +236,13 @@ function drawLanes(
  * Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const active = shownFlags(scene);
-  drawLanes(f, scene.roads, scene.selectedSegments, pal);
+  const selected = scene.roads.map((r, road) =>
+    r.edges.map((_, k) => scene.selectedSegments.some((s) => s.road === road && s.i === k)),
+  );
+  drawLanes(f, scene.roads, pal);
   scene.roads.forEach((road, i) => {
     const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;
-    drawRoad(f, road, { active: active[i]!, rad }, pal);
+    drawRoad(f, road, { active: active[i]!, selected: selected[i]!, rad }, pal);
   });
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
