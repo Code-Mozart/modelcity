@@ -37,10 +37,12 @@
       500 var(--font-size) / 1.3 system-ui,
       sans-serif;
   }
+  /* A long message wraps beside its icon, left aligned; the messages themselves stay at the right edge. */
   li {
     display: flex;
     align-items: flex-start;
     gap: 0.5em;
+    text-align: left;
   }
   li :global(svg) {
     flex: none;
