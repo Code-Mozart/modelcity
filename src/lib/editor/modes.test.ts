@@ -125,6 +125,9 @@ describe('focus: what is hovered or dragged (^51)', () => {
     expect(ed.hover).toBeNull();
     expect(ed.focus).toEqual({ road: 0, type: 'node', i: 1 });
     ed.pointerUp();
+    // The node is under the pointer when the button is released, so it is hovered again at once.
+    expect(ed.focus).toEqual({ road: 0, type: 'node', i: 1 });
+    ed.pointerMove(at(200, 200));
     expect(ed.focus).toBeNull();
   });
 
@@ -139,6 +142,9 @@ describe('focus: what is hovered or dragged (^51)', () => {
 describe('hint target for the control hints (^49)', () => {
   it('describes what is under the pointer, and stays while the button is down', () => {
     const ed = draw(road());
+    // The node that was just placed is under the pointer: it is what the hints are about (^237).
+    expect(ed.hintTarget).toMatchObject({ kind: 'handle', type: 'node', act: 'finish' });
+    ed.pointerMove(at(200, 200));
     expect(ed.hintTarget).toEqual({ kind: 'empty' });
     ed.pointerMove(at(40, 0));
     expect(ed.hintTarget).toEqual({

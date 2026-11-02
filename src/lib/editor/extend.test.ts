@@ -47,7 +47,7 @@ describe('extending from the other end and finishing (^65)', () => {
       [20, -10],
       [40, 0],
     ]);
-    expect(ed.hintTarget).toEqual({ kind: 'empty' });
+    expect(ed.hintTarget).toMatchObject({ kind: 'handle', type: 'node', act: 'finish' });
     ed.pointerMove(at(0, 0));
     expect(ed.hintTarget).toMatchObject({ kind: 'handle', type: 'node', act: 'close' });
     click(ed, 0, 0);

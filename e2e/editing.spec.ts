@@ -148,3 +148,20 @@ test('Alt and a click on a heading control point flips the arm; a split finished
   await page.keyboard.press('Escape');
   expect((await app.graph()).edges).toHaveLength(before);
 });
+
+test('the node just placed is hovered at once, and finishing a road takes the preview away (^238)', async ({
+  page,
+}) => {
+  const app = new App(page);
+  await page.goto('/');
+  await app.ready();
+  const hover = () => page.evaluate(() => window.__modelcity!.editor.hover?.kind ?? null);
+  await app.click({ x: 0, y: 30 }); // empty canvas: draw mode
+  await app.click({ x: 0, y: 0 });
+  await app.click({ x: 30, y: 0 });
+  expect(await hover()).toBe('handle'); // the node under the pointer, without moving it
+  await app.hover({ x: 60, y: 20 });
+  expect(await hover()).toBe('preview');
+  await page.keyboard.press('Escape');
+  expect(await hover()).toBeNull(); // no preview left in select mode
+});

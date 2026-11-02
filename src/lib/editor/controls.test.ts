@@ -257,3 +257,38 @@ describe('a split on a curve that is finished at once changes nothing (^237)', (
     expect(ed.graph.nodes).toHaveLength(nodes);
   });
 });
+
+describe('what is under the pointer is looked at again when something changes (^238)', () => {
+  it('finishing the road takes the preview away without the pointer moving', () => {
+    const ed = draw([
+      [0, 0],
+      [40, -20],
+    ]);
+    ed.pointerMove(at(100, 50));
+    expect(ed.hover?.kind).toBe('preview');
+    ed.key('Escape');
+    expect(ed.hover).toBeNull();
+    ed.rightClick(at(100, 50));
+    expect(ed.hover).toBeNull();
+  });
+
+  it('a node that was just placed is hovered at once: its ring and its hints', () => {
+    const ed = roadThenDrawMode();
+    click(ed, 80, 0); // the end node: the road is extended from it
+    ed.pointerMove(at(100, 50));
+    click(ed, 100, 50);
+    expect(ed.hover?.kind).toBe('handle');
+    expect(ed.hintTarget).toMatchObject({ kind: 'handle', type: 'node', act: 'finish' });
+    expect(ed.focus).toMatchObject({ type: 'node' });
+  });
+
+  it('undo and deleting show what is under the pointer now', () => {
+    const ed = road();
+    ed.pointerMove(at(40, -20));
+    expect(ed.hover?.kind).toBe('handle');
+    ed.key('Delete');
+    ed.pointerMove(at(40, -20));
+    ed.key('z', { ctrl: true, shift: false });
+    expect(ed.hover?.kind).toBe('handle');
+  });
+});

@@ -56,8 +56,12 @@ export class Editor {
   end = $state<'start' | 'end'>('end');
   /** The node the road being drawn started at (a click on it closes a loop, ^162). */
   origin = $state<number | null>(null);
+  /** The last pointer position with its modifiers, to look at what is under it again when something changes without the pointer moving. */
+  private lastInfo = $state.raw<PointerInfo | null>(null);
   /** Where the pointer is, for showing handles that are near it (^55). */
-  pointer = $state.raw<Pointer | null>(null);
+  pointer = $derived<Pointer | null>(
+    this.lastInfo && { pt: this.lastInfo.pt, scale: this.lastInfo.scale },
+  );
   /** The selected nodes (^70); the last one is `sel`. */
   selection = $state.raw<number[]>([]);
   /** The selection box while it is dragged, in screen pixels. */
@@ -115,6 +119,7 @@ export class Editor {
     if (action === 'escape') this.escape();
     else if (action === 'deleteNode') this.deleteSelected();
     else if (action) this.move(action);
+    this.refreshHover();
     return action !== undefined;
   }
 
@@ -162,7 +167,7 @@ export class Editor {
   load(graph: Graph) {
     this.graph = graph;
     this.leaveDrawing();
-    [this.press, this.band, this.hover, this.pointer] = [null, null, null, null];
+    [this.press, this.band, this.hover, this.lastInfo] = [null, null, null, null];
     this.history = NO_HISTORY;
     this.event = null;
   }
@@ -226,7 +231,7 @@ export class Editor {
   /** Left button pressed. */
   pointerDown(info: PointerInfo) {
     this.hover = null;
-    this.pointer = { pt: info.pt, scale: info.scale };
+    this.lastInfo = info;
     const handle = handleAt(this.handles(info.scale), info);
     if (handle) return this.grab(handle, info);
     const hit = curveAt(this.chains, info);
@@ -260,14 +265,20 @@ export class Editor {
 
   pointerMove(info: PointerInfo) {
     this.altHeld = info.alt;
-    this.pointer = { pt: info.pt, scale: info.scale };
+    this.lastInfo = info;
     const press = this.press;
-    if (!press) {
-      const hits = { handles: this.handles(info.scale), chains: this.chains };
-      this.hover = hoverAt(this.snapshot(), hits, info, this.drawing);
-    } else if (press.kind === 'drag') this.moveDrag(press, info);
+    if (!press) this.refreshHover();
+    else if (press.kind === 'drag') this.moveDrag(press, info);
     else if (press.kind === 'place') this.moveHeading(press, info);
     else this.moveBand(press, info);
+  }
+
+  /** Look at what is under the pointer again (it did not move, but the map or the mode may have changed). */
+  private refreshHover() {
+    const info = this.lastInfo;
+    if (this.press || !info) return;
+    const hits = { handles: this.handles(info.scale), chains: this.chains };
+    this.hover = hoverAt(this.snapshot(), hits, info, this.drawing);
   }
 
   private moveDrag(press: Extract<Press, { kind: 'drag' }>, info: PointerInfo) {
@@ -357,6 +368,7 @@ export class Editor {
     this.batching = false;
     this.commit(press.undo, pressName(press));
     this.use(controlUsed(press));
+    this.refreshHover();
   }
 
   /** Abort what the left button was doing (a second finger came down). */
@@ -364,12 +376,13 @@ export class Editor {
     const press = this.endPress();
     if (!press || press.kind === 'empty') return;
     this.restore(press.undo);
+    this.refreshHover();
   }
 
   pointerLeave() {
     if (this.press) return;
     this.hover = null;
-    this.pointer = null;
+    this.lastInfo = null;
   }
 
   /** Right click without moving: removes the node under the pointer, else finishes the road. */
@@ -379,5 +392,6 @@ export class Editor {
     if (handle?.type === 'node') this.removeAll([handle.id]);
     else if (hit) this.removeSegments(hit.edge, info.alt);
     else this.finishRoad();
+    this.refreshHover();
   }
 }
