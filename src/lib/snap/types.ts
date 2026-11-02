@@ -53,4 +53,9 @@ export interface SnapHit {
   pt: Vec;
   heading: number | null;
   by: Suggestion[];
+  /**
+   * How far of the maximum distance the pointer is from the nodes that made it, 0 to 1 (^294); null
+   * if it has none (the curve of a segment, a pinned node, ^258).
+   */
+  reach?: number | null;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildEdge } from '../curves/edge';
 import type { PathNode } from '../curves/types';
-import { snapTo, SNAP_NEAR_PX } from './engine';
+import { REACH_WARN, snapTo, SNAP_NEAR_PX } from './engine';
 import { suggestionsOf, type RuleEdge, type RuleNode } from './rules';
 import type { Suggestion } from './types';
 
@@ -53,6 +53,19 @@ describe('the rules (^265 to ^273, ^279)', () => {
     expect(list.filter((s) => s.rule === 'offset')).toHaveLength(2);
     expect(ask(list, 10, 3.05)).toMatchObject({ pt: { x: 10, y: 3 } });
     expect(ask(list, 10, -2.96)).toMatchObject({ pt: { x: 10, y: -3 } });
+  });
+});
+
+describe('how far of the maximum distance a hit is (^294)', () => {
+  it('grows with the distance to the nodes that made it, and is none for pinned nodes', () => {
+    const list = straight();
+    expect(ask(list, 0.1, 10)?.reach).toBeCloseTo(100 / 300, 2);
+    expect(ask(list, 0.1, 27)?.reach).toBeGreaterThanOrEqual(REACH_WARN);
+    expect(ask(list, 0.1, 27, [1])?.reach).toBeNull();
+  });
+
+  it('the curve of a segment has none, it is offered anywhere', () => {
+    expect(ask(straight(), 15, 0.1)?.reach).toBeNull();
   });
 });
 

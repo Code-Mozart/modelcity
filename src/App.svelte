@@ -11,7 +11,8 @@
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
   import { hintsFor, viewHints } from './lib/hints/hints';
-  import { Dwell } from './lib/hints/dwell';
+  import { PIN_TIP } from './lib/hints/pinTip';
+  import { REACH_WARN } from './lib/snap/engine';
   import { Usage } from './lib/hints/usage.svelte';
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
@@ -65,14 +66,14 @@
   $effect(() => {
     if (editor.active === null) untrack(() => recent.hideLater());
   });
-  // Following a snap suggestion of a node for a while says how to pin it (^258).
-  const dwell = new Dwell(() =>
-    toasts.show('info', 'Select the node and press S to pin its snap suggestions'),
-  );
+  // Pulling a snap suggestion of a node towards its maximum distance says how to pin it (^258, ^294); not while pinning is visited.
   $effect(() => {
-    const by = editor.snapped?.by.filter((s) => s.kind === 'curve' && s.limited);
-    const key = by?.length ? by.map((s) => `${s.rule}${s.from}`).join() : null;
-    untrack(() => dwell.follow(key));
+    const far = (editor.snapped?.reach ?? 0) >= REACH_WARN;
+    untrack(() => far && !usage.hidden('pin') && toasts.show('info', PIN_TIP));
+  });
+  // Pinning is a control like the others: used, its tip is not shown for a while (^110).
+  $effect(() => {
+    if (editor.pins.list.length) untrack(() => usage.mark('pin'));
   });
   const panelShown = $derived(recent.visible || editor.active !== null);
   const panel = $derived(panelView(editor.timeline.history));

@@ -26,7 +26,8 @@ export type ControlId =
   | 'delete-selected'
   | 'undo'
   | 'redo'
-  | 'view';
+  | 'view'
+  | 'pin';
 
 /** A control hint: the inputs (alternatives) and what they do, e.g. [Esc] or [RMB]: finish. */
 export interface Hint {

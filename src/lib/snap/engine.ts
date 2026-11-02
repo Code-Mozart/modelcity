@@ -14,6 +14,21 @@ export interface SnapQuery {
   pinned: readonly number[];
 }
 
+/** Reaching this share of the maximum distance, the tip about pinning shows (^294). */
+export const REACH_WARN = 0.85;
+
+/** How far of the maximum distance the pointer is from the origins of the suggestions it snaps to, if they are limited (^294). */
+function reachOf(by: Suggestion[], q: SnapQuery): number | null {
+  const limited = by.filter(
+    (s) => !(s.kind === 'curve' && !s.limited) && !s.from.some((id) => q.pinned.includes(id)),
+  );
+  const far = limited.map((s) => {
+    const origins = s.kind === 'curve' ? s.origins : [s.at];
+    return Math.min(...origins.map((o) => dist(o, q.pt))) * q.scale;
+  });
+  return far.length ? Math.max(...far) / SNAP_REACH_PX : null;
+}
+
 /** Whether a suggestion is offered at all: the pointer is near one of its origins, or one of its nodes is pinned. */
 function offered(s: Suggestion, q: SnapQuery): boolean {
   if (s.kind === 'curve' && !s.limited) return true;
@@ -56,6 +71,11 @@ function pointHit(s: SnapPoint, by: Suggestion[]): SnapHit {
  * of several curves is used, so no two parallel lines show at once (^102).
  */
 export function snapTo(list: Suggestion[], q: SnapQuery): SnapHit | null {
+  const hit = snapNearest(list, q);
+  return hit && { ...hit, reach: reachOf(hit.by, q) };
+}
+
+function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
   const here = list.filter((s) => offered(s, q));
   const near = nearCurves(
     here.filter((s): s is SnapCurve => s.kind === 'curve'),

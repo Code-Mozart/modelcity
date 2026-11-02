@@ -15,8 +15,7 @@
       class={toast.kind}
       role={toast.kind === 'error' || toast.kind === 'warning' ? 'alert' : 'status'}
     >
-      <Icon name={toast.kind} />
-      <span>{toast.text}</span>
+      <Icon name={toast.kind} />{toast.text}
     </li>
   {/each}
 </ul>
@@ -31,21 +30,20 @@
     padding: 0;
     list-style: none;
     color: var(--ink);
-    text-align: right;
     max-width: 28em;
     font:
       500 var(--font-size) / 1.3 system-ui,
       sans-serif;
   }
-  /* A long message wraps beside its icon, left aligned; the messages themselves stay at the right edge. */
+  /* The icon is the first character of the text, so a long message wraps under it at the right edge (^210). */
   li {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5em;
-    text-align: left;
+    text-align: right;
+    text-wrap: balance;
   }
   li :global(svg) {
-    flex: none;
+    display: inline-block;
+    vertical-align: -0.3em;
+    margin-right: 0.5em;
   }
   /* The icon has the color of its kind, the text stays readable (^210). */
   .info :global(svg) {
