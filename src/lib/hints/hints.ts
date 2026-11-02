@@ -47,13 +47,13 @@ export type HintTarget =
 export const mouse = (
   button: 'lmb' | 'mmb' | 'rmb',
   drag = false,
-  mod?: 'shift' | 'alt',
+  mod?: 'shift' | 'alt' | 'alt+shift',
 ): Input => ({
   kind: 'mouse',
   button,
   drag,
-  shift: mod === 'shift',
-  alt: mod === 'alt',
+  shift: mod === 'shift' || mod === 'alt+shift',
+  alt: mod === 'alt' || mod === 'alt+shift',
 });
 export const hint = (input: Input | Input[], text: string, id?: ControlId): Hint => ({
   inputs: Array.isArray(input) ? input : [input],
@@ -134,8 +134,32 @@ function drawModeHints(target: HintTarget): Hint[] {
 /** The Alt row: select the branch under the pointer, or deselect it if it is wholly selected (^128). */
 function laneHint(target: HintTarget): Hint {
   const selected = target.kind !== 'empty' && target.lane;
-  const text = selected ? 'deselect lane' : 'select lane';
+  const text = selected ? 'deselect branch' : 'select branch';
   return hint(mouse('lmb', false, 'alt'), text, 'select-lane');
+}
+
+/** The Alt+Shift row: add the branch to the selection, or deselect it if it is wholly selected (^244). */
+function branchAddHint(target: HintTarget): Hint {
+  const selected = target.kind !== 'empty' && target.lane;
+  const text = selected ? 'deselect branch' : 'add branch to selection';
+  return hint(mouse('lmb', false, 'alt+shift'), text, 'select-lane');
+}
+
+/** The Alt rows of a node or a curve: select the branch, and with something selected add it (^128, ^244). */
+const branchHints = (target: HintTarget, selected: number): Hint[] => [
+  laneHint(target),
+  ...(selected > 0 ? [branchAddHint(target)] : []),
+];
+
+const shiftRow = (text: string) => hint(mouse('lmb', false, 'shift'), text, 'select-add');
+
+/** Selecting with the left button over a node (^72, ^75, ^128). */
+function nodePickHints(target: Extract<HintTarget, { kind: 'handle' }>, selected: number): Hint[] {
+  const branch = branchHints(target, selected);
+  if (target.selected) return [shiftRow('deselect'), ...branch];
+  const add = selected > 0 ? [shiftRow('select')] : [];
+  const instead = selected > 0 ? ' instead' : '';
+  return [hint(mouse('lmb'), `select${instead}`, 'select'), ...add, ...branch];
 }
 
 /**
@@ -143,19 +167,14 @@ function laneHint(target: HintTarget): Hint {
  * selected, Shift would add nothing to what LMB does, so no Shift row then.
  */
 function pickHints(target: HintTarget, selected: number): Hint[] {
-  const shift = (text: string) => hint(mouse('lmb', false, 'shift'), text, 'select-add');
-  const instead = selected > 0 ? ' instead' : '';
-  if (target.kind === 'handle' && target.type === 'node') {
-    if (target.selected) return [shift('deselect'), laneHint(target)];
-    const add = selected > 0 ? [shift('select')] : [];
-    return [hint(mouse('lmb'), `select${instead}`, 'select'), ...add, laneHint(target)];
-  }
+  if (target.kind === 'handle' && target.type === 'node') return nodePickHints(target, selected);
   if (target.kind !== 'curve') return [];
   const all = target.picked === 2;
+  const instead = selected > 0 ? ' instead' : '';
   return [
-    ...(all ? [] : [hint(mouse('lmb'), `select both nodes${instead}`, 'select')]),
-    ...(selected > 0 ? [shift(all ? 'deselect both nodes' : 'add both nodes to selection')] : []),
-    laneHint(target),
+    ...(all ? [] : [hint(mouse('lmb'), `select segment${instead}`, 'select')]),
+    ...(selected > 0 ? [shiftRow(all ? 'deselect segment' : 'add segment to selection')] : []),
+    ...branchHints(target, selected),
   ];
 }
 

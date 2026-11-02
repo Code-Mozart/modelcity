@@ -41,6 +41,13 @@ export const allSelected = (sel: number[], refs: number[]) =>
 export const afterBranchClick = (sel: number[], nodes: number[]): number[] =>
   allSelected(sel, nodes) ? nodes.reduce(withoutNode, sel) : nodes;
 
+/**
+ * Alt+Shift+click on a branch (^244): adds its nodes to the selection, or deselects them if they
+ * are all selected (the others stay).
+ */
+export const afterBranchAdd = (sel: number[], nodes: number[]): number[] =>
+  allSelected(sel, nodes) ? nodes.reduce(withoutNode, sel) : withNodes(sel, nodes);
+
 /** The segments (edge ids) whose two nodes are both selected. */
 export const selectedSegments = (g: Graph, sel: number[]): number[] =>
   edgesBetween(g, sel).map((e) => e.id);
@@ -62,7 +69,9 @@ export function pressNode(
   lane: number[],
   { shift, alt }: Modifiers,
 ): NodePress {
-  if (alt) return { selection: afterBranchClick(sel, lane), click: 'keep' };
+  if (alt) {
+    return { selection: (shift ? afterBranchAdd : afterBranchClick)(sel, lane), click: 'keep' };
+  }
   if (shift) {
     const was = isSelected(sel, ref);
     return { selection: withNodes(sel, [ref]), click: was ? 'toggle' : 'keep' };
@@ -100,7 +109,7 @@ export function afterEmptyClick(
   sel: number[],
   { curve, shift, alt }: { curve: number[]; shift: boolean; alt: boolean },
 ): number[] | null {
-  if (curve.length) return alt ? afterBranchClick(sel, curve) : afterCurveClick(sel, curve, shift);
-  if (shift) return sel;
-  return sel.length ? [] : null;
+  if (!curve.length) return shift ? sel : sel.length ? [] : null;
+  if (alt) return (shift ? afterBranchAdd : afterBranchClick)(sel, curve);
+  return afterCurveClick(sel, curve, shift);
 }

@@ -74,7 +74,7 @@ export function emptyPress(drawn: Drawn, info: PointerInfo, hit: RoadHit | null)
     kind: 'empty',
     screen: info.screen,
     base: info.shift ? drawn.selection : [],
-    shift: info.shift && !info.alt,
+    shift: info.shift,
     alt: !!lane,
     curve: hit && lane ? branchOfEdge(drawn.graph, hit.edge) : ends,
     moved: false,

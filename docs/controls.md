@@ -53,13 +53,14 @@ A selection is 0..n nodes, also of different roads. Selected nodes are drawn blu
 | LMB drag on empty canvas (select mode) | Spans the selection box, axis-aligned with the viewport. The nodes inside are the new selection, live while dragging |
 | Shift + LMB drag on empty canvas | Same, but the nodes inside are added to the current selection |
 | LMB on an unselected node | It becomes the whole selection (select mode only: in draw mode a click on a node does not select, ^75) |
+| Alt + Shift + LMB click on a node or curve | Add the **branch** to the selection, or deselect it (the other nodes stay) if all its nodes are selected already (^244). Hint `[Alt]+[Shift]+[LMB]: add branch to selection` or `deselect branch`, only while something is selected | ^244 |
 | Alt + LMB click on a node or curve | Select the **branch** (a chain of nodes between two nodes where branches split, merge or end, both of them included, ^130, ^131); if the whole branch is selected already, deselect it instead. Alt + drag on a node moves the branch. On a node where branches meet or end, the branch that goes on from it in drawing direction (else the one before it) is meant (assumed) |
 | LMB click on empty canvas (something selected) | Deselect all; with nothing selected it enters draw mode instead (^75) |
 | LMB drag a selected node | All selected nodes move by the same translation; all scaffold gizmos are hidden meanwhile (^78). A click without moving reduces the selection to that node |
 | LMB drag a radius point of a segment whose two nodes are selected | The radius of all selected segments (both nodes selected) is set to the dragged value; their scaffolds are shown while the radius point is hovered or dragged (^77, ^129) |
 | Shift + LMB click on a node | Toggle whether the node is selected |
 | LMB click on a curve (select mode) | Select its two nodes (^74) |
-| Shift + LMB click on a curve | Add both nodes to the selection; only if both are selected already, deselect them (^74) |
+| Shift + LMB click on a curve | Add the segment (its two nodes) to the selection; only if both are selected already, deselect it (^74) |
 | Shift + LMB drag a node | Adds the node to the selection and moves the group |
 | Del or Backspace | Remove all selected nodes |
 
@@ -86,8 +87,8 @@ The corner shows what the mouse and keys do right now, as rows of `[input]: acti
 | Mode and context | Rows |
 |------------------|------|
 | Select mode, empty canvas | `[LMB]: draw mode` (with a selection: `[LMB]: deselect all`), `[LMB drag]: select`, `[Shift]+[LMB drag]: add to selection` (only while something is selected), `[Esc]: deselect all` and `[Del]: delete selected` (same; ^218), `[RMB drag]: pan`, `[Wheel]: zoom`, `[MMB drag]: rotate` |
-| Select mode, over a curve | `[LMB]: select both nodes` (not if both are selected; `… instead` when something else is selected), `[LMB drag]: select`, `[Shift]+[LMB]: add both nodes to selection` or `deselect both nodes` (only with a selection), `[Alt]+[LMB]: select lane` (`deselect lane` if the whole branch is selected), `[Del]`, then the camera rows |
-| Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), on a node `[RMB]: delete node`, `[LMB]: select` (`select instead` if something else is selected; not if it is selected), `[Shift]+[LMB]: select` (only with a selection) or `deselect`, `[Alt]+[LMB]: select lane` (`deselect lane` if the whole branch is selected), then `[Del]` and the camera rows |
+| Select mode, over a curve | `[LMB]: select segment` (not if both are selected; `… instead` when something else is selected), `[LMB drag]: select`, `[Shift]+[LMB]: add segment to selection` or `deselect segment` (only with a selection), `[Alt]+[LMB]: select branch` (`deselect branch` if the whole branch is selected), `[Del]`, then the camera rows |
+| Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), on a node `[RMB]: delete node`, `[LMB]: select` (`select instead` if something else is selected; not if it is selected), `[Shift]+[LMB]: select` (only with a selection) or `deselect`, `[Alt]+[LMB]: select branch` (`deselect branch` if the whole branch is selected), then `[Del]` and the camera rows |
 | Draw mode, empty canvas | `[LMB]: add node`, `[LMB drag]: add node and set heading`, `[Esc] or [RMB]: finish` |
 | Draw mode, over a curve | `[LMB]: split` (nothing being drawn), `merge` (any curve while drawing, the road's own too, ^191), `[LMB drag]: insert and set heading`, `[Esc]: finish`, `[RMB]: remove segment` (^160) |
 | Draw mode, over a node | `[LMB]: split` or `extend` (nothing being drawn), `merge` (another road's node while drawing), `close` (the node the road started at), `[LMB drag]: move node`, `[RMB]: delete node`, `[Esc]: finish`. The node being drawn from also has `[LMB]: finish` |
@@ -195,7 +196,7 @@ There is no one-finger pan any more: empty space belongs to creating (^14 is sup
 
 ## Learned controls are hidden (^110)
 
-The hint of a control the user has just used is hidden, each control on its own: the camera controls (`pan`, `zoom`, `rotate`), the select operations (`select`, with a box, `add to selection` with Shift, `select lane` with Alt, `deselect all` with Esc, `delete selected`) and the two history hints (`undo`, `redo`). It comes back after 5 minutes (user, for now) without using that control. Nothing is stored: a new session starts with all hints. Draw mode, moving and the project controls are not affected, nor is `[LMB]: draw mode`, so on a blank map it is the only mouse hint once the camera and select controls are learned.
+The hint of a control the user has just used is hidden, each control on its own: the camera controls (`pan`, `zoom`, `rotate`), the select operations (`select`, with a box, `add to selection` with Shift, `select branch` with Alt, `deselect all` with Esc, `delete selected`) and the two history hints (`undo`, `redo`). It comes back after 5 minutes (user, for now) without using that control. Nothing is stored: a new session starts with all hints. Draw mode, moving and the project controls are not affected, nor is `[LMB]: draw mode`, so on a blank map it is the only mouse hint once the camera and select controls are learned.
 
 ## Toasts (^232, ^185)
 

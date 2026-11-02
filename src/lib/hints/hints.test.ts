@@ -12,7 +12,7 @@ const show = (h: Hint) =>
           ? i.labels.join('+')
           : i.kind === 'wheel'
             ? 'Wheel'
-            : `${i.shift ? 'Shift+' : i.alt ? 'Alt+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
+            : `${i.alt ? 'Alt+' : ''}${i.shift ? 'Shift+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
     )
     .join(' or ')}: ${h.text}${h.note ? ` (${h.note.key} ${h.note.text})` : ''}`;
 const PROJECT_ROWS = ['P: projects'];
@@ -123,9 +123,10 @@ describe('select mode hints over curves and nodes (^74)', () => {
     expect(rows(false, { kind: 'curve', picked: 1 }, 1)).toEqual([
       'LMB drag: select',
       'Shift+LMB drag: add to selection',
-      'LMB: select both nodes instead',
-      'Shift+LMB: add both nodes to selection',
-      'Alt+LMB: select lane',
+      'LMB: select segment instead',
+      'Shift+LMB: add segment to selection',
+      'Alt+LMB: select branch',
+      'Alt+Shift+LMB: add branch to selection',
       'Esc: deselect all',
       'Del: delete selected',
       'RMB: remove segment',
@@ -135,8 +136,9 @@ describe('select mode hints over curves and nodes (^74)', () => {
     expect(rows(false, { kind: 'curve', picked: 2 }, 2)).toEqual([
       'LMB drag: select',
       'Shift+LMB drag: add to selection',
-      'Shift+LMB: deselect both nodes',
-      'Alt+LMB: select lane',
+      'Shift+LMB: deselect segment',
+      'Alt+LMB: select branch',
+      'Alt+Shift+LMB: add branch to selection',
       'Esc: deselect all',
       'Del: delete selected',
       'RMB: remove segment',
@@ -152,20 +154,22 @@ describe('select mode hints over nodes (^74, ^75)', () => {
       'LMB drag: move node',
       'RMB: delete node',
       'LMB: select',
-      'Alt+LMB: select lane',
+      'Alt+LMB: select branch',
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',
     ]);
-    expect(rows(false, node(false), 1).slice(2, 5)).toEqual([
+    expect(rows(false, node(false), 1).slice(2, 6)).toEqual([
       'LMB: select instead',
       'Shift+LMB: select',
-      'Alt+LMB: select lane',
+      'Alt+LMB: select branch',
+      'Alt+Shift+LMB: add branch to selection',
     ]);
     const selected: HintTarget = { ...node(false), selected: true } as HintTarget;
     expect(rows(false, selected, 1).slice(2)).toEqual([
       'Shift+LMB: deselect',
-      'Alt+LMB: select lane',
+      'Alt+LMB: select branch',
+      'Alt+Shift+LMB: add branch to selection',
       'Esc: deselect all',
       'Del: delete selected',
       'RMB drag: pan',

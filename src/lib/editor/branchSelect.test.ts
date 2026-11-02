@@ -40,7 +40,7 @@ describe('Alt+click selects a branch (^128)', () => {
     expect(before).toBeGreaterThan(0);
     ed.pointerMove(at(p.x, p.y));
     const rows = hintsFor(false, ed.hintTarget, ed.selection.length).map((h) => h.text);
-    expect(rows).toContain('deselect lane');
+    expect(rows).toContain('deselect branch');
     alt(ed, p.x, p.y);
     expect(ed.selection).toEqual([]);
   });
@@ -50,6 +50,65 @@ describe('Alt+click selects a branch (^128)', () => {
     const p = bareCurvePoint(ed);
     ed.pointerMove(at(p.x, p.y));
     const rows = hintsFor(false, ed.hintTarget, 0).map((h) => h.text);
-    expect(rows).toContain('select lane');
+    expect(rows).toContain('select branch');
+  });
+});
+
+const altShift = (ed: ReturnType<typeof tee>, x: number, y: number) => {
+  ed.pointerDown(at(x, y, { alt: true, shift: true }));
+  ed.pointerUp();
+};
+const nodesOf = (ed: ReturnType<typeof tee>) => [...ed.selection].sort((a, b) => a - b);
+
+describe('Alt+Shift+click adds a branch or deselects it (^244)', () => {
+  it('adds the branch to what is selected; Alt alone would replace the selection', () => {
+    const first = tee();
+    const [a, b] = [bareCurvePoint(first, 0), bareCurvePoint(first, 2)];
+    alt(first, a.x, a.y);
+    const one = nodesOf(first);
+    altShift(first, b.x, b.y);
+    expect(nodesOf(first).length).toBeGreaterThan(one.length);
+    expect(one.every((id) => first.selection.includes(id))).toBe(true);
+
+    const second = tee();
+    alt(second, a.x, a.y);
+    alt(second, b.x, b.y);
+    expect(one.every((id) => second.selection.includes(id))).toBe(false);
+  });
+
+  it('deselects the branch if all its nodes are selected, the other nodes stay', () => {
+    const ed = tee();
+    const [a, b] = [bareCurvePoint(ed, 0), bareCurvePoint(ed, 2)];
+    alt(ed, a.x, a.y);
+    altShift(ed, b.x, b.y);
+    const both = nodesOf(ed);
+    altShift(ed, b.x, b.y);
+    const rest = nodesOf(ed);
+    expect(rest.length).toBeLessThan(both.length);
+    expect(rest.length).toBeGreaterThan(0);
+    expect(both.some((id) => !rest.includes(id))).toBe(true);
+  });
+});
+
+describe('the hints of Alt+Shift+click (^244)', () => {
+  it('say what it does: add the branch, or deselect it', () => {
+    const ed = tee();
+    const [a, b] = [bareCurvePoint(ed, 0), bareCurvePoint(ed, 2)];
+    alt(ed, a.x, a.y);
+    ed.pointerMove(at(b.x, b.y));
+    const texts = () => hintsFor(false, ed.hintTarget, ed.selection.length).map((h) => h.text);
+    expect(texts()).toContain('add branch to selection');
+    altShift(ed, b.x, b.y);
+    ed.pointerMove(at(b.x, b.y));
+    expect(texts().filter((t) => t === 'deselect branch')).toHaveLength(2); // Alt and Alt+Shift
+    expect(texts()).not.toContain('add branch to selection');
+  });
+
+  it('with nothing selected there is no Alt+Shift row, as with Shift', () => {
+    const ed = tee();
+    const p = bareCurvePoint(ed, 0);
+    ed.pointerMove(at(p.x, p.y));
+    const rows = hintsFor(false, ed.hintTarget, 0);
+    expect(rows.some((r) => r.text === 'add branch to selection')).toBe(false);
   });
 });

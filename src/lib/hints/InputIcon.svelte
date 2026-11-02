@@ -10,11 +10,8 @@
 </script>
 
 <span class="combo">
-  {#if input.kind === 'mouse' && input.shift}
-    <KeyCap>Shift</KeyCap>
-  {:else if input.kind === 'mouse' && input.alt}
-    <KeyCap>Alt</KeyCap>
-  {/if}
+  {#if input.kind === 'mouse' && input.alt}<KeyCap>Alt</KeyCap>{/if}
+  {#if input.kind === 'mouse' && input.shift}<KeyCap>Shift</KeyCap>{/if}
   {#if input.kind === 'key'}
     <KeyCap>{input.label}</KeyCap>
   {:else if input.kind === 'keys'}
