@@ -19,7 +19,7 @@
         <div class="more" class:undone={group.rows[0]?.undone}>({group.more} more steps)</div>
       {/if}
       {#each group.rows as row (row.step)}
-        <div class:undone={row.undone}>{row.step.name}</div>
+        <div class:undone={row.undone}>{row.name}</div>
       {/each}
     </div>
   {/each}
