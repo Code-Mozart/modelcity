@@ -1,4 +1,5 @@
 import type { History, Step } from '../editor/history';
+import { sameSelection } from '../editor/selection';
 import { selectionName } from '../editor/stepNames';
 
 /** How many rows the recent history panel shows, and the most of them that are undone (^107, 7 and 3: the user's numbers). */
@@ -23,9 +24,6 @@ export interface PanelGroup {
   more: number;
   rows: PanelRow[];
 }
-
-const sameNodes = (a: number[], b: number[]) =>
-  a.length === b.length && a.every((id) => b.includes(id));
 
 /**
  * The steps in the order they happened, as rows. A run of selection steps of one batch that are
@@ -57,7 +55,7 @@ function rowsOf(h: History): PanelRow[] {
 function collapse(run: { step: Step; undone: boolean }[]): PanelRow[] {
   const [first, last] = [run[0]!, run.at(-1)!];
   const [from, to] = [first.step.before.selection, last.step.after.selection];
-  if (sameNodes(from, to)) return [];
+  if (sameSelection(from, to)) return [];
   return [{ step: first.step, name: selectionName(from, to), undone: first.undone }];
 }
 

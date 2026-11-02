@@ -7,8 +7,9 @@ export interface Band {
   b: Vec;
 }
 
+/** The same nodes, whatever the order they were picked in. */
 export const sameSelection = (a: number[], b: number[]) =>
-  a.length === b.length && a.every((id, i) => id === b[i]);
+  a.length === b.length && a.every((id) => b.includes(id));
 
 export const isSelected = (sel: number[], ref: number) => sel.includes(ref);
 

@@ -138,7 +138,18 @@ function removeNode(g: Graph, id: number): Graph {
 export function removeNodes(g: Graph, ids: number[], keep: number | null): Graph {
   const removed = ids.reduce(removeNode, g);
   const used = new Set(removed.edges.flatMap((e) => [e.start, e.end]));
-  return { ...removed, nodes: removed.nodes.filter((n) => used.has(n.id) || n.id === keep) };
+  const nodes = removed.nodes.filter((n) => used.has(n.id) || n.id === keep);
+  return nodes.length === removed.nodes.length ? removed : { ...removed, nodes };
+}
+
+/** Whether two graphs hold the same nodes, edges and lanes, whichever objects they are. */
+export function sameGraph(a: Graph, b: Graph): boolean {
+  if (a === b) return true;
+  const same = <T extends object>(x: T[], y: T[]) =>
+    x.length === y.length &&
+    x.every((item, i) => Object.entries(item).every(([k, v]) => v === (y[i] as never)[k]));
+  const lanes = (g: Graph) => Object.entries(g.lanes).map(([id, l]) => ({ id, ...l }));
+  return same(a.nodes, b.nodes) && same(a.edges, b.edges) && same(lanes(a), lanes(b));
 }
 
 const mm = (m: number) => Math.round(m * 1000) / 1000;

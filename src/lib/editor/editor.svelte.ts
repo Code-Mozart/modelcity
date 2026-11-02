@@ -20,7 +20,7 @@ import type { Pointer } from './proximity';
 import { DRAG_PX, type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { curveAt, focusOf, handleAt, hoverAt } from './hits';
 import { chainHandles, chainSegments, chainsOf, type RoadHandle, type RoadHit } from './chains';
-import { emptyGraph, nodeOf, removeNodes, roundToMm, type Graph } from '../model/graph';
+import { emptyGraph, nodeOf, removeNodes, roundToMm, sameGraph, type Graph } from '../model/graph';
 import {
   afterBranchClick,
   afterCurveClick,
@@ -128,9 +128,11 @@ export class Editor {
 
   /** Make a step undoable if it changed the graph or the selection (^88), and round it to the millimeter (^170). Inside a press only its end commits. */
   private commit(before: Snapshot, name: string) {
-    const same = before.graph === this.graph && sameSelection(before.selection, this.selection);
-    if (same || this.batching) return;
+    if (this.batching) return;
     this.graph = roundToMm(this.graph);
+    // A graph with the same content stays the object it was (a drag back to where it began), so nothing else sees a change.
+    if (sameGraph(before.graph, this.graph)) this.graph = before.graph;
+    if (before.graph === this.graph && sameSelection(before.selection, this.selection)) return;
     const r = takeStep(this.history, before, this.snapshot(), name);
     this.history = r.history;
     this.announce('step', [r.step]);

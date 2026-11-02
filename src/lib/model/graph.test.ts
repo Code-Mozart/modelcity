@@ -9,7 +9,10 @@ import {
   emptyGraph,
   insertNode,
   removeNodes,
+  sameGraph,
   shareRadius,
+  withNode,
+  withRadius,
   type Graph,
 } from './graph';
 import { branchOfEdge, branchOfNode, curveAction, farEnd, nodeAction } from './junction';
@@ -120,5 +123,24 @@ describe('actions and branches (^23, ^128, ^162)', () => {
     const tee = addEdge(side.graph, ids[1]!, side.id);
     expect(edgesAt(tee, ids[1]!)).toHaveLength(3);
     expect(branchOfEdge(tee, 0).sort()).toEqual([ids[0], ids[1]].sort());
+  });
+});
+
+describe('sameGraph and removing nothing (^227)', () => {
+  const g = addEdge(
+    addNode(addNode(emptyGraph(), { x: 0, y: 0, th: 0 }).graph, { x: 9, y: 0, th: 0 }).graph,
+    0,
+    1,
+  );
+
+  it('graphs with the same content are the same, whichever objects they are', () => {
+    expect(sameGraph(g, { ...g, nodes: g.nodes.map((n) => ({ ...n })) })).toBe(true);
+    expect(sameGraph(g, withNode(g, 1, { x: 9.001 }))).toBe(false);
+    expect(sameGraph(g, withRadius(g, 0, 5))).toBe(false);
+    expect(sameGraph(g, addNode(g, { x: 1, y: 1, th: 0 }).graph)).toBe(false);
+  });
+
+  it('removing no node, with no node left over, gives the same graph', () => {
+    expect(removeNodes(g, [], null)).toBe(g);
   });
 });
