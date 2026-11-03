@@ -237,6 +237,7 @@ export class Editor {
     // A split on a curve that was finished at once gives the curve back (an inserted node would stay), unless the click was on the inserted node (^276).
     this.graph = finishedGraph(this.graph, keep ? null : this.splitUndo);
     this.leaveDrawing(toSelect || this.active === null);
+    this.splitUndo = null;
     this.commit(before, 'finish road');
   }
 

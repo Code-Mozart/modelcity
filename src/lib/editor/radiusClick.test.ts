@@ -55,6 +55,16 @@ describe('a click on the node inserted by a split (^276)', () => {
     expect(ed.phase).toBe('draw');
   });
 
+  it('stays when draw mode is left afterwards (^298)', () => {
+    const ed = bend();
+    const h = middle(ed);
+    click(ed, h.x, h.y);
+    click(ed, h.x, h.y);
+    ed.key('Escape');
+    expect(ed.phase).toBe('select');
+    expect(ed.graph.nodes).toHaveLength(3);
+  });
+
   it('Esc right after the split still gives the curve back (^237)', () => {
     const ed = bend();
     const h = middle(ed);
