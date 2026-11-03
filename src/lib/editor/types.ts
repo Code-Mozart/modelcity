@@ -34,6 +34,8 @@ export type Hover =
 export interface Placement {
   pt: Vec;
   th: number | null;
+  /** The pointer snapped to a snap line (not a curve of a segment): a heading dragged there copies nothing (^319). */
+  line?: boolean;
   /** The node the pointer snapped onto, if any: a radius point on a node of its segment means auto (^141). */
   node?: number | null;
 }
@@ -95,6 +97,8 @@ export type Press =
       angleFrom: number;
       /** The first node of a new arm: its heading snaps to the compass directions, and a compass is shown (^316). */
       compass: boolean;
+      /** The node was placed on a snap line (^319). */
+      onLine: boolean;
     }
   | {
       kind: 'empty';

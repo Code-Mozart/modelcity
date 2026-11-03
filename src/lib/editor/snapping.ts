@@ -30,8 +30,14 @@ export function snappedTo(
   // A heading takes the heading of what it snapped to, the pointer stays where it is (^313).
   if (turningNode(press) !== null)
     return { pt: info.pt, th: headingFrom(hit, info.alt), node: null };
-  return { pt: hit.pt, th: placedHeading(hit, info.alt), node: nodeAt(hit) };
+  return { pt: hit.pt, th: placedHeading(hit, info.alt), node: nodeAt(hit), line: onLine(hit) };
 }
+
+/** Whether the snap is a snap line, not the curve of a segment or its offset (^319). */
+const onLine = (hit: SnapHit): boolean => {
+  const s = hit.by[0];
+  return s?.kind === 'curve' && s.straight && s.rule !== 'curve' && s.rule !== 'offset';
+};
 
 /** The node whose place the snap is (a snap point of a node, ^248). */
 const nodeAt = (hit: SnapHit): number | null => {

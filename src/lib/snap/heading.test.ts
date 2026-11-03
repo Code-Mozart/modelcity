@@ -40,6 +40,7 @@ describe('the heading a snap gives (^313, ^317, ^318, ^301)', () => {
 
   it('a node placed on the normal line of a node copies the heading of the node (^318)', () => {
     expect(norm(placedHeading(at(0.4, 12), false))).toBeCloseTo(0);
+    expect(placedHeading(at(30, 0.3), false)).toBeNull(); // on the line along the heading: no sideways heading
     expect(norm(placedHeading(at(0.4, 12), true))).toBeCloseTo(Math.PI);
   });
 });

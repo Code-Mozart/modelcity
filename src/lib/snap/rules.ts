@@ -71,7 +71,8 @@ export function nodeRules(n: RuleNode, width: number): Suggestion[] {
   const heading = n.th;
   return [
     line(n, perp(dir), { rule: 'node-normal', from: [n.id], heading }),
-    line(n, dir, { rule: 'node-heading', from: [n.id], heading: heading + Math.PI / 2 }),
+    // No heading: a road drawn on along the heading keeps its automatic one, not a sideways one (^318).
+    line(n, dir, { rule: 'node-heading', from: [n.id] }),
     point(n, 'node-points', [n.id], { heading, node: n.id }),
     point(add(n, side), 'node-points', [n.id], { heading }),
     // Right-hand traffic (^253): on the right the lane runs the same way, on the left the opposite way.

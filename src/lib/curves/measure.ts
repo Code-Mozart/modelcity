@@ -23,3 +23,30 @@ export function middleOf(pieces: Piece[]): (Vec & { tx: number; ty: number }) | 
   }
   return null;
 }
+
+/** What the measurements panel shows (^323): the total length of all segments and statistics of the bend radii (null without bends). */
+export interface Summary {
+  length: number;
+  radius: { min: number; max: number; avg: number; median: number } | null;
+}
+
+/** The measurements of all segments, from their pieces (^323). */
+export function summaryOf(segments: Piece[][]): Summary {
+  const radii = segments
+    .flat()
+    .flatMap((p) => (p.type === 'arc' && Math.abs(p.da) > 1e-3 ? [p.r] : []))
+    .sort((a, b) => a - b);
+  const mid = Math.floor(radii.length / 2);
+  const median = radii.length % 2 ? radii[mid]! : ((radii[mid - 1] ?? 0) + (radii[mid] ?? 0)) / 2;
+  return {
+    length: segments.reduce((s, pieces) => s + lengthOf(pieces), 0),
+    radius: radii.length
+      ? {
+          min: radii[0]!,
+          max: radii.at(-1)!,
+          avg: radii.reduce((s, r) => s + r, 0) / radii.length,
+          median,
+        }
+      : null,
+  };
+}

@@ -50,6 +50,7 @@ export function curvePress(
       target,
       angleFrom: nodeOf(r.drawn.graph, r.id)?.th ?? 0,
       compass: false,
+      onLine: false,
     },
   };
 }
@@ -65,6 +66,7 @@ export function placePress(d: Drawn, at: Placement): { drawn: Drawn; press: Pres
     ...{ kind: 'place' as const, id: r.id, undo: d, then: null, moved: false, target },
     angleFrom,
     compass,
+    onLine: at.line === true,
   };
   return { drawn: r.drawn, press };
 }

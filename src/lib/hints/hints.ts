@@ -27,7 +27,8 @@ export type ControlId =
   | 'undo'
   | 'redo'
   | 'view'
-  | 'pin';
+  | 'pin'
+  | 'copy-heading';
 
 /** A control hint: the inputs (alternatives) and what they do, e.g. [Esc] or [RMB]: finish. */
 export interface Hint {
