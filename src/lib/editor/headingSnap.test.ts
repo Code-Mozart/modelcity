@@ -55,4 +55,9 @@ describe('dragging a heading snaps (^251, ^313, ^315)', () => {
     expect(turn(load(), [-30, -60.5])).toBeCloseTo(Math.PI);
     expect(turn(load(), [-30, -60.5], { alt: true })).toBeCloseTo(0);
   });
+
+  it('Shift aims at the snap point, Shift+Alt away from it (^335)', () => {
+    expect(turn(load(), [0.5, -59.5], { shift: true })).toBeCloseTo((3 * Math.PI) / 2);
+    expect(turn(load(), [0.5, -59.5], { shift: true, alt: true })).toBeCloseTo(Math.PI / 2);
+  });
 });

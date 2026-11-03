@@ -31,6 +31,8 @@ export function snappedTo(
 ): Placement | null {
   if (!hit) return null;
   // A heading takes the heading of what it snapped to, the pointer stays where it is (^313).
+  if (turningNode(press) !== null && info.shift)
+    return { pt: info.pt, th: null, aim: { at: hit.pt, away: info.alt } };
   if (turningNode(press) !== null) return { pt: info.pt, th: headingFrom(hit, info.alt) };
   return { pt: hit.pt, th: placedHeading(hit, info.alt), line: onLine(hit) };
 }
@@ -242,7 +244,9 @@ export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
   if (!info || info.ctrl || !what) return null;
   const query = { pt: info.pt, scale: info.scale, pinned: a.pinned };
   if (what === 'place' && a.hover?.kind !== 'preview') return hoveredHit(base, a.hover, query);
-  return snapTo(base, query);
+  // Aiming (`Shift`) wants a point, not a line or a curve (^335).
+  const aiming = what === 'turn' && info.shift;
+  return snapTo(aiming ? base.filter((s) => s.kind === 'point') : base, query);
 }
 
 /** What a hover is made of for the snapping: the editor state and the chains with the zoom. */

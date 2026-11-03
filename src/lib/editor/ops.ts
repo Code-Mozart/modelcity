@@ -204,9 +204,18 @@ function snappedDrag(
   const dragged = dragGraph(g, handle, to?.pt ?? how.info.pt, { angle: how.angle });
   if (!to) return dragged;
   // A snapped heading is copied (^313); a node that snapped takes the heading of the place (^254).
-  if (handle.type === 'node' || handle.type === 'head')
-    return to.th == null ? dragged : withNode(dragged, handle.id, { th: to.th });
+  if (handle.type === 'node' || handle.type === 'head') {
+    const th = headingOf(nodeOf(dragged, handle.id), to);
+    return th === null ? dragged : withNode(dragged, handle.id, { th });
+  }
   return dragged;
+}
+
+/** The heading a snap gives a node: copied, or aimed at a snap point, or away from it (^313, ^335). Null if none. */
+function headingOf(n: { x: number; y: number } | undefined, to: Placement | null): number | null {
+  if (!to?.aim || !n) return to?.th ?? null;
+  if (dist(to.aim.at, n) < 1e-6) return null;
+  return Math.atan2(to.aim.at.y - n.y, to.aim.at.x - n.x) + (to.aim.away ? Math.PI : 0);
 }
 
 /** Dragging while a node is placed sets its heading, from where it was placed (^40). */
@@ -214,10 +223,11 @@ export function placeStep(
   g: Graph,
   press: Extract<Press, { kind: 'place' }>,
   info: PointerInfo,
-  copied: number | null,
+  to: Placement | null,
 ): Graph {
   const n = nodeOf(g, press.id);
   if (!n || dist(info.pt, n) < 6 / info.scale) return g;
+  const copied = headingOf(n, to);
   if (copied !== null) return withNode(g, press.id, { th: copied });
   const angle = info.ctrl ? null : { scale: info.scale, from: press.angleFrom };
   const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, angle).nodes[0]!.th;

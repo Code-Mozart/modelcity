@@ -38,7 +38,7 @@ export function moveOf(
   const to = snappedTo(hit, info, press);
   if (press.kind === 'drag') return dragMove(snap, press, info, to);
   if (press.kind === 'place') {
-    const graph = placeStep(snap.graph, press, info, to?.th ?? null);
+    const graph = placeStep(snap.graph, press, info, to);
     if (graph === snap.graph) return null;
     press.moved = true;
     return { graph };

@@ -43,6 +43,8 @@ export interface Placement {
   th: number | null;
   /** The pointer snapped to a snap line (not a curve of a segment): a heading dragged there copies nothing (^319). */
   line?: boolean;
+  /** `Shift`: the heading aims at this snap point, or away from it (^335). */
+  aim?: { at: Vec; away: boolean };
 }
 
 /** Pointer travel (screen pixels) that turns a press into a drag. */

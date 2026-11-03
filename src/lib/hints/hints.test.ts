@@ -321,7 +321,12 @@ describe('while a handle is dragged (^286)', () => {
         show,
       ),
     ).toEqual(['LMB drag: move node', 'Esc: cancel', 'Ctrl: no snapping', 'Alt: opposite heading']);
-    expect(rows(drag('head'))).toEqual(['LMB drag: turn heading', 'Esc: cancel']);
+    expect(rows(drag('head'))).toEqual([
+      'LMB drag: turn heading',
+      'Esc: cancel',
+      'Shift: aim at snap point',
+      'Shift+Alt: aim away from snap point',
+    ]);
     expect(rows(drag('rad'))).toEqual(['LMB drag: change radius', 'Esc: cancel']);
   });
 });
