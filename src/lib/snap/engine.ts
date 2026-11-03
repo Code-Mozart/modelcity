@@ -109,4 +109,10 @@ const rank = (c: SnapCurve) => (c.rule === 'curve' ? 0 : c.rule === 'offset' ? 1
 const byNearness = (a: { s: SnapCurve; n: { d: number } }, b: typeof a) =>
   Math.abs(a.n.d - b.n.d) > 1e-6 ? a.n.d - b.n.d : rank(a.s) - rank(b.s);
 
+/** The curves that are offered and pass through a place, whatever the pointer: shown with the point there (^289). */
+export function curvesThrough(list: Suggestion[], at: Vec, q: SnapQuery): SnapCurve[] {
+  const curves = list.filter((s): s is SnapCurve => s.kind === 'curve' && offered(s, q));
+  return curves.filter((c) => touches(c, at));
+}
+
 const touches = (c: SnapCurve, at: Vec) => (nearestOnPieces(c.pieces, at)?.d ?? 1) < 1e-3;

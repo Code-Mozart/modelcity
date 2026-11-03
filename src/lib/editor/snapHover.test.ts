@@ -17,6 +17,8 @@ describe('split and merge use the snap suggestions (^101)', () => {
     ed.pointerMove(look(-2.8, 0));
     expect(ed.hover).toMatchObject({ kind: 'handle', handle: { type: 'node', id: 0 } });
     expect(ed.snapped?.pt).toEqual({ x: 0, y: 0 });
+    // The point and the lines through it are shown together, also when the node is grabbed (^289).
+    expect(ed.snapped?.by.filter((b) => b.kind === 'curve').length).toBeGreaterThanOrEqual(2);
   });
 
   it('a click there acts on the node: it starts a new road from it', () => {

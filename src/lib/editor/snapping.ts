@@ -1,7 +1,7 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import { nodeOf, type Graph } from '../model/graph';
 import { dist } from '../curves/vec';
-import { snapTo } from '../snap/engine';
+import { curvesThrough, snapTo, type SnapQuery } from '../snap/engine';
 import { suggestionsOf, type RuleEdge } from '../snap/rules';
 import type { SnapHit, Suggestion } from '../snap/types';
 import {
@@ -96,7 +96,15 @@ function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | null {
 }
 
 /** What a node or curve that is hovered already is as a snap suggestion, to show it like the others (^101). */
-function hoveredHit(base: Suggestion[], hover: Hover | null): SnapHit | null {
+function hoveredHit(base: Suggestion[], hover: Hover | null, q: SnapQuery): SnapHit | null {
+  const hit = hoveredPlace(base, hover);
+  if (!hit) return null;
+  // The curves through the place are shown with it, as when the pointer is pulled there (^289).
+  const through = curvesThrough(base, hit.pt, q).filter((c) => !hit.by.includes(c));
+  return { ...hit, by: [...hit.by, ...through] };
+}
+
+function hoveredPlace(base: Suggestion[], hover: Hover | null): SnapHit | null {
   if (hover?.kind === 'handle') {
     const h = hover.handle;
     // A node, or a radius point: the snap point that is where the handle is (^296).
@@ -122,8 +130,9 @@ export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
   const { info } = a;
   const what = snaps(a);
   if (!info || info.ctrl || !what) return null;
-  if (what === 'place' && a.hover?.kind !== 'preview') return hoveredHit(base, a.hover);
-  return snapTo(base, { pt: info.pt, scale: info.scale, pinned: a.pinned });
+  const query = { pt: info.pt, scale: info.scale, pinned: a.pinned };
+  if (what === 'place' && a.hover?.kind !== 'preview') return hoveredHit(base, a.hover, query);
+  return snapTo(base, query);
 }
 
 /** What a hover is made of for the snapping: the editor state and the chains with the zoom. */
