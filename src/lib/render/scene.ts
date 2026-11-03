@@ -10,7 +10,7 @@ import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides } from './guides';
 import { drawMeasures } from './measures';
-import { drawCompass, type Turning } from './compass';
+import { drawCompass, drawOffset, type Turning } from './compass';
 import {
   dot,
   ring,
@@ -104,13 +104,24 @@ interface NodeState {
   turning: Turning | null;
 }
 
+/** What says how far the heading of a node is turned: its degrees with the compass, or the offset (^316, ^341). */
+function drawTurning(
+  f: Frame,
+  n: { x: number; y: number; th: number },
+  turning: Turning,
+  pal: Palette,
+) {
+  if (turning.compass) drawCompass(f, n, pal);
+  else if (turning.offset !== null) drawOffset(f, n, turning.offset, pal);
+}
+
 /** The node dots (skeleton) and, with the scaffold, the heading arrows. */
 function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
   const { active, selected } = state;
   road.path.nodes.forEach((n, i) => {
     const turning = state.turning?.i === i ? state.turning : null;
     if (turning || arrowShown(active, i)) drawArrow(f, n, pal.orange);
-    if (turning?.compass) drawCompass(f, n, pal);
+    if (turning) drawTurning(f, n, turning, pal);
     const picked = selected.includes(i);
     const color = picked ? pal.blue : state.pinned.includes(i) ? pal.turquoise : pal.ink;
     dot(f.ctx, toScreen(f, n), picked ? SELECTED_DOT_PX : NODE_DOT_PX, color);

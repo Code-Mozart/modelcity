@@ -7,10 +7,24 @@ export interface Turning {
   i: number;
   /** The first node of an arm: the label with the compass icon is shown (^316). */
   compass: boolean;
+  /** The offset in degrees from the heading before the drag, counter-clockwise, for an existing node (^341); null for the compass. */
+  offset: number | null;
 }
 
 const ICON_R = 14;
 const ICON_GAP = 30;
+/** Where along the arrow the offset label sits, pixels from the node. */
+const ARROW_REACH_PX = 60;
+
+/** The offset of a heading in degrees (^341): a label beside the arrow of the node, to its left. */
+export function drawOffset(f: Frame, node: Vec & { th: number }, offset: number, pal: Palette) {
+  const t = screenDir(f, fromAngle(node.th));
+  const at = toScreen(f, node);
+  const [along, aside] = [ARROW_REACH_PX, 16];
+  const p = { x: at.x + t.x * along + t.y * aside, y: at.y + t.y * along - t.x * aside };
+  const sign = offset > 0 ? '+' : offset < 0 ? '-' : '';
+  text(f.ctx, `${sign}${Math.abs(offset)}°`, p, { color: pal.ink, align: 'center' });
+}
 
 /** The bearing of a heading in degrees: 0 is north, counter-clockwise (^316). */
 export const bearingOf = (th: number): number =>
