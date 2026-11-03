@@ -39,3 +39,18 @@ test('Tab shows only the roads, and leaves again', async ({ page }) => {
   await page.keyboard.press('Tab');
   await expect(frame).toHaveAttribute('data-mode', 'select');
 });
+
+/** Panning with the right button in draw mode: the preview stays at the pointer (^277). */
+test('the preview follows the pointer while the map is panned', async ({ page }) => {
+  await page.mouse.click(500, 350);
+  await page.mouse.move(520, 360);
+  await page.mouse.down({ button: 'right' });
+  for (let i = 1; i <= 6; i++) await page.mouse.move(520 + i * 25, 360 + i * 10, { steps: 2 });
+  const preview = await page.evaluate(() => {
+    const h = window.__modelcity!.editor.hover;
+    return h?.kind === 'preview' ? window.__modelcity!.toPage(h.node) : null;
+  });
+  await page.mouse.up({ button: 'right' });
+  expect(preview?.x).toBeCloseTo(670, 0);
+  expect(preview?.y).toBeCloseTo(420, 0);
+});

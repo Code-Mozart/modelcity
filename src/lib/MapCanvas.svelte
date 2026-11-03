@@ -130,10 +130,12 @@
   function onPointerMove(e: PointerEvent) {
     const at = localPoint(e);
     camera.cursor = at;
+    // Also while the view moves, so that the preview follows the pointer over the map (^277).
+    const pointer = info(e);
     if (e.pointerType === 'touch' && camera.touchMove(e.pointerId, at)) return;
     if (camera.rotating) camera.moveRotate(at);
     else if (camera.panning) camera.movePan(at);
-    else editor.pointerMove(info(e));
+    else editor.pointerMove(pointer);
   }
 
   function onPointerUp(e: PointerEvent) {
