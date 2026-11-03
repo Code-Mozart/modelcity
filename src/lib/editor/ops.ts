@@ -5,11 +5,12 @@ import type { Drop } from './drop';
 import { withSharedRadius } from './press';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
-import { nodeAtSample, type RoadHit } from './chains';
+import { nodeAtSample, type RoadHandle, type RoadHit } from './chains';
 import { armOf, autoHeadingFor, farEnd, linkTo, mergeEnd } from '../model/junction';
 import { dragGraph } from '../model/dragGraph';
 import {
   addNode,
+  edgeOfId,
   edgesAt,
   edgesIn,
   edgesOut,
@@ -21,6 +22,7 @@ import {
   sameGraph,
   turnedAround,
   withNode,
+  withRadius,
   type Graph,
 } from '../model/graph';
 
@@ -156,20 +158,30 @@ export function dragStep(
   d: Drawn,
   press: Extract<Press, { kind: 'drag' }>,
   info: PointerInfo,
-  th: number | null = null,
+  to: Placement | null = null,
 ): Graph {
   const handle = { ...press.drag.handle, road: press.road, id: press.id };
-  const dragged = dragGraph(d.graph, handle, info.pt, {
-    angleScale: info.ctrl ? null : info.scale,
-  });
-  // A node that snapped to a touching point takes its heading (^254).
-  const turned =
-    th !== null && handle.type === 'node' ? withNode(dragged, press.id, { th }) : dragged;
-  const next = withSharedRadius(turned, d.selection, press);
-  const to = nodeOf(next, press.id);
-  const group = handle.type === 'node' && to ? press.group : [];
-  if (!to || !group.length) return next;
-  return moveNodes(next, group, { x: to.x - press.origin.x, y: to.y - press.origin.y });
+  const next = withSharedRadius(snappedDrag(d.graph, handle, info, to), d.selection, press);
+  const node = nodeOf(next, press.id);
+  const group = handle.type === 'node' && node ? press.group : [];
+  if (!node || !group.length) return next;
+  return moveNodes(next, group, { x: node.x - press.origin.x, y: node.y - press.origin.y });
+}
+
+/** The handle dragged to the pointer, or where it snapped: a node takes the heading of a touching point (^254), a radius point on a node of its segment sets the radius to auto (^141). */
+function snappedDrag(g: Graph, handle: RoadHandle, info: PointerInfo, to: Placement | null): Graph {
+  const mods = { angleScale: info.ctrl ? null : info.scale };
+  const dragged = dragGraph(g, handle, to?.pt ?? info.pt, mods);
+  if (!to) return dragged;
+  if (handle.type === 'node')
+    return to.th == null ? dragged : withNode(dragged, handle.id, { th: to.th });
+  return handle.type === 'rad' ? autoOnNode(dragged, handle.id, to.node ?? null) : dragged;
+}
+
+/** A radius point snapped onto a node of its own segment: the radius is automatic, the largest that fits (^141). */
+function autoOnNode(g: Graph, id: number, node: number | null): Graph {
+  const e = edgeOfId(g, id);
+  return e && node !== null && (e.start === node || e.end === node) ? withRadius(g, id, null) : g;
 }
 
 /** Dragging while a node is placed sets its heading, from where it was placed (^40). */

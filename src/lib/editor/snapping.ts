@@ -31,7 +31,13 @@ export function touchingHeading(hit: SnapHit | null, alt: boolean): number | nul
 
 /** Where a node goes when the pointer snapped: the place, with the heading it gets there (^254, ^301). */
 export const snappedTo = (hit: SnapHit | null, info: PointerInfo): Placement | null =>
-  hit && { pt: hit.pt, th: touchingHeading(hit, info.alt) };
+  hit && { pt: hit.pt, th: touchingHeading(hit, info.alt), node: nodeAt(hit) };
+
+/** The node whose place the snap is (a snap point of a node, ^248). */
+const nodeAt = (hit: SnapHit): number | null => {
+  const s = hit.by[0];
+  return s?.kind === 'point' ? (s.node ?? null) : null;
+};
 
 /** The nodes that move with a press: the dragged one and its group (^264). */
 export function movedIds(press: Press | null): number[] {
@@ -39,6 +45,17 @@ export function movedIds(press: Press | null): number[] {
     ? [press.id, ...press.group.map((g) => g.id)]
     : [];
 }
+
+/** The control points of a segment that snap like a position: the radius, the bend and the S-curve points (^249). */
+export const controlEdge = (press: Press | null): number | null =>
+  press?.kind === 'drag' && ['rad', 'ctrl', 'mid1', 'mid2'].includes(press.drag.handle.type)
+    ? press.id
+    : null;
+
+const withoutEdge = (g: Graph, id: number): Graph => ({
+  ...g,
+  edges: g.edges.filter((e) => e.id !== id),
+});
 
 /** The graph without some nodes and the edges at them: what the others offer while those move. */
 export function without(g: Graph, ids: number[]): Graph {
@@ -70,6 +87,9 @@ export function suggestionsOfGraph(g: Graph): Suggestion[] {
  */
 export function snapBase(graph: Graph, press: Press | null): Suggestion[] {
   const moving = movedIds(press);
+  // A control point of a segment snaps to everything but the segment itself, whose shape it changes (^249).
+  const control = controlEdge(press);
+  if (control !== null) return suggestionsOfGraph(withoutEdge(graph, control));
   if (!moving.length || !press || press.kind !== 'drag') return suggestionsOfGraph(graph);
   const before = press.undo.graph;
   const were = moving.flatMap((id) => nodeOf(before, id) ?? []);
@@ -110,7 +130,7 @@ const placing = (hover: Hover | null) =>
 
 /** Whether the pointer places or moves a node now: in draw mode, or dragging a node. */
 function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | null {
-  if (press) return movedIds(press).length ? 'move' : null;
+  if (press) return movedIds(press).length || controlEdge(press) !== null ? 'move' : null;
   return drawing && placing(hover) ? 'place' : null;
 }
 

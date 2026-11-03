@@ -34,6 +34,8 @@ export type Hover =
 export interface Placement {
   pt: Vec;
   th: number | null;
+  /** The node the pointer snapped onto, if any: a radius point on a node of its segment means auto (^141). */
+  node?: number | null;
 }
 
 /** Pointer travel (screen pixels) that turns a press into a drag. */

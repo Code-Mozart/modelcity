@@ -19,7 +19,7 @@ function dragMove(
 ): Moved | null {
   if (!press.moved && dist(info.pt, press.start) <= DRAG_PX / info.scale) return null;
   press.moved = true;
-  return { graph: dragStep(snap, press, to ? { ...info, pt: to.pt } : info, to?.th ?? null) };
+  return { graph: dragStep(snap, press, info, to) };
 }
 
 /**
