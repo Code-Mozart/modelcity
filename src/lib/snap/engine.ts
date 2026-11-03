@@ -84,7 +84,7 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
   const crossed = crossingPoints(near);
   const points = [...here.filter((s): s is SnapPoint => s.kind === 'point'), ...crossed]
     .filter((s) => nearPoint(s, q))
-    .sort((a, b) => dist(a.at, q.pt) - dist(b.at, q.pt));
+    .sort((a, b) => byPoint(a, b, q.pt));
   const best = points[0];
   if (best) {
     // A point and the curves that cross at it are all shown or all hidden (^289).
@@ -96,6 +96,13 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
     ? { pt: curve.n.pt, heading: angleOf({ x: curve.n.tx, y: curve.n.ty }), by: [curve.s] }
     : null;
 }
+
+/** A node comes before other points and a crossing last when they are at the same place (a crossing is computed, ^280). */
+const pointRank = (p: SnapPoint) => (p.node !== undefined ? 0 : p.rule === 'crossing' ? 2 : 1);
+const byPoint = (a: SnapPoint, b: SnapPoint, pt: Vec) => {
+  const d = dist(a.at, pt) - dist(b.at, pt);
+  return Math.abs(d) > 1e-6 ? d : pointRank(a) - pointRank(b);
+};
 
 /** The curve of a segment wins a tie with a line on top of it: it is the one a node can join (^268). */
 const rank = (c: SnapCurve) => (c.rule === 'curve' ? 0 : c.rule === 'offset' ? 1 : 2);

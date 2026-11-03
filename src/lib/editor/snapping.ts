@@ -4,7 +4,14 @@ import { dist } from '../curves/vec';
 import { snapTo } from '../snap/engine';
 import { suggestionsOf, type RuleEdge } from '../snap/rules';
 import type { SnapHit, Suggestion } from '../snap/types';
-import { chainHandles, chainsOf, nearestOnChains, nearNode, type Chain } from './chains';
+import {
+  chainHandles,
+  chainsOf,
+  nearestOnChains,
+  nearNode,
+  type Chain,
+  type RoadHandle,
+} from './chains';
 import { placementAt } from './ops';
 import { previewOf, type Drawn } from './targets';
 import type { Hover, PointerInfo, Press } from './types';
@@ -143,10 +150,10 @@ export function snapPreview(
 
 /** The node the pointer snapped to, as a hovered handle. */
 function nodeHover(snap: SnapHit, w: SnapWorld): Hover | null {
-  const by = snap.by[0];
-  const id = by?.kind === 'point' ? by.node : undefined;
-  const handle = chainHandles(w.chains, w.scale).find((h) => h.type === 'node' && h.id === id);
-  return id !== undefined && handle ? { kind: 'handle', handle } : null;
+  // Wherever a node is, it is that node: never a second one on top of it (^248, ^296).
+  const at = (h: RoadHandle) => h.type === 'node' && dist(h, snap.pt) < MERGE_WORLD_M;
+  const handle = chainHandles(w.chains, w.scale).find(at);
+  return handle ? { kind: 'handle', handle } : null;
 }
 
 /** The place on a curve the pointer snapped to (the curve of a segment, or a radius point on it), as a candidate. */
