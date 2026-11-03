@@ -8,15 +8,15 @@ export interface BarShape {
   side: Vec;
 }
 
-const BAR_PX = 3;
+const BAR_PX = 5;
 
 /**
- * The bars (^350): a thick line that touches the circles of the nodes of a run on one side, like a
- * rubber band around them, from the first node to the last; `radius` is the radius of a node circle in pixels.
+ * The bars (^350): a thick line whose middle runs along the circles of the nodes of a run on one
+ * side (centered on where it touches them, not outside), from the first node to the last; `radius` is the radius of a node circle in pixels.
  */
 export function drawBars(f: Frame, bars: BarShape[], radius: number, pal: Palette) {
   for (const { from, to, side } of bars) {
-    const out = mul(screenDir(f, side), radius + BAR_PX / 2);
+    const out = mul(screenDir(f, side), radius);
     segment(f.ctx, add(toScreen(f, from), out), add(toScreen(f, to), out), {
       color: pal.ink,
       width: BAR_PX,
