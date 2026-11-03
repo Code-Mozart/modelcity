@@ -55,7 +55,7 @@
       focus: editor.focus,
       pointer: editor.pointer,
       snap: editor.snapped,
-      previous: previousPlaces(editor.press),
+      previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
     };
