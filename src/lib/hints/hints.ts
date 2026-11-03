@@ -269,6 +269,7 @@ function dragHints({ type, merge }: { type: HandleType; merge: boolean }, s: Hin
   return [
     hint(mouse('lmb', true), DRAG_TEXT[type]),
     ...(merge ? [hint(mouse('lmb'), 'merge on release')] : []),
+    hint(ESC, 'cancel'),
     ...(s.snapping ? [key('Ctrl', 'no snapping')] : []),
   ];
 }

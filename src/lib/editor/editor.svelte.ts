@@ -212,8 +212,9 @@ export class Editor {
     [this.active, this.origin, this.end, this.selection] = [null, null, 'end', []];
   }
 
-  /** Esc: finish the road being drawn, or with none deselect all (^218). */
+  /** Esc: cancel a drag (^295); else finish the road being drawn, or with none deselect all (^218). */
   private escape() {
+    if (this.press && this.press.kind !== 'empty') return this.cancelPress();
     if (this.mode === 'draw') return this.finishRoad(true);
     if (!this.selection.length) return;
     this.edit('deselect all', (d) => ({ ...d, selection: [] }));
@@ -379,7 +380,7 @@ export class Editor {
     this.use(controlUsed(press));
   }
 
-  /** Abort what the left button was doing (a second finger came down). */
+  /** Abort what the left button was doing (a second finger came down, or Esc, ^295). */
   cancelPress() {
     const press = this.endPress();
     if (!press || press.kind === 'empty') return;

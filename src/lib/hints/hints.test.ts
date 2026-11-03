@@ -309,13 +309,14 @@ describe('while a handle is dragged (^286)', () => {
   it('only what the drag does, what a key changes and whether it merges', () => {
     const rows = (d: ReturnType<typeof drag>, snapping = false) =>
       hintsFor(false, node(false), 1, { drag: d, snapping }).map(show);
-    expect(rows(drag('node'))).toEqual(['LMB drag: move node']);
+    expect(rows(drag('node'))).toEqual(['LMB drag: move node', 'Esc: cancel']);
     expect(rows(drag('node', true), true)).toEqual([
       'LMB drag: move node',
       'LMB: merge on release',
+      'Esc: cancel',
       'Ctrl: no snapping',
     ]);
-    expect(rows(drag('head'))).toEqual(['LMB drag: turn heading']);
-    expect(rows(drag('rad'))).toEqual(['LMB drag: change radius']);
+    expect(rows(drag('head'))).toEqual(['LMB drag: turn heading', 'Esc: cancel']);
+    expect(rows(drag('rad'))).toEqual(['LMB drag: change radius', 'Esc: cancel']);
   });
 });

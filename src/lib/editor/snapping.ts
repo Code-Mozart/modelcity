@@ -1,5 +1,6 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import { nodeOf, type Graph } from '../model/graph';
+import { dist } from '../curves/vec';
 import { snapTo } from '../snap/engine';
 import { suggestionsOf, type RuleEdge } from '../snap/rules';
 import type { SnapHit, Suggestion } from '../snap/types';
@@ -79,7 +80,7 @@ export interface SnapArgs {
 const placing = (hover: Hover | null) =>
   hover?.kind === 'preview' ||
   hover?.kind === 'candidate' ||
-  (hover?.kind === 'handle' && hover.handle.type === 'node');
+  (hover?.kind === 'handle' && ['node', 'rad'].includes(hover.handle.type));
 
 /** Whether the pointer places or moves a node now: in draw mode, or dragging a node. */
 function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | null {
@@ -90,7 +91,13 @@ function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | null {
 /** What a node or curve that is hovered already is as a snap suggestion, to show it like the others (^101). */
 function hoveredHit(base: Suggestion[], hover: Hover | null): SnapHit | null {
   if (hover?.kind === 'handle') {
-    const s = base.find((x) => x.kind === 'point' && x.node === hover.handle.id);
+    const h = hover.handle;
+    // A node, or a radius point: the snap point that is where the handle is (^296).
+    const s = base.find(
+      (x) =>
+        x.kind === 'point' &&
+        (h.type === 'node' ? x.node === h.id : x.rule === 'radius-point' && dist(x.at, h) < 1e-3),
+    );
     return s?.kind === 'point' ? { pt: s.at, heading: s.heading, by: [s] } : null;
   }
   if (hover?.kind !== 'candidate') return null;

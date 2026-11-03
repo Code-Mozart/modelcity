@@ -222,6 +222,6 @@ A node that is **placed** (draw mode, empty canvas) or **moved** (dragged, also 
 | LMB click on a radius point (draw or extend mode) | Splits or merges there, like a click on the curve; a drag moves the radius (^278) |
 | LMB click on the node inserted by a split (draw mode) | Keeps the node and goes back to draw mode (^276); Esc or a right click right after the split still gives the curve back (^237) |
 
-Pulling a snap suggestion of a node that is not pinned to 85% of its maximum distance shows the tip `Select the node and press S to pin its snap suggestions`, every time; not for 5 minutes after `S` was used (^294, ^110).
+`Esc` while a node or a control point is dragged, or a node is placed with its heading, cancels it (^295). Pulling a snap suggestion of a node that is not pinned to 85% of its maximum distance shows the tip `Select the node and press S to pin its snap suggestions`, every time; not for 5 minutes after `S` was used (^294, ^110).
 
 While a handle is dragged the hints are only about the drag (^286): what it does, `Ctrl` while snapping, `merge on release`. When the radius of several selected segments is dragged, segments parallel to it get the concentric radius (^282).
