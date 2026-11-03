@@ -11,7 +11,6 @@ import { armOf, autoHeadingFor, farEnd, linkTo, mergeEnd } from '../model/juncti
 import { dragGraph } from '../model/dragGraph';
 import {
   addNode,
-  edgeOfId,
   edgesAt,
   edgesIn,
   edgesOut,
@@ -23,7 +22,6 @@ import {
   sameGraph,
   turnedAround,
   withNode,
-  withRadius,
   type Graph,
 } from '../model/graph';
 
@@ -208,13 +206,7 @@ function snappedDrag(
   // A snapped heading is copied (^313); a node that snapped takes the heading of the place (^254).
   if (handle.type === 'node' || handle.type === 'head')
     return to.th == null ? dragged : withNode(dragged, handle.id, { th: to.th });
-  return handle.type === 'rad' ? autoOnNode(dragged, handle.id, to.node ?? null) : dragged;
-}
-
-/** A radius point snapped onto a node of its own segment: the radius is automatic, the largest that fits (^141). */
-function autoOnNode(g: Graph, id: number, node: number | null): Graph {
-  const e = edgeOfId(g, id);
-  return e && node !== null && (e.start === node || e.end === node) ? withRadius(g, id, null) : g;
+  return dragged;
 }
 
 /** Dragging while a node is placed sets its heading, from where it was placed (^40). */

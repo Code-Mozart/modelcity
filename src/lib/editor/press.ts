@@ -92,16 +92,10 @@ export function emptyPress(drawn: Drawn, info: PointerInfo, hit: RoadHit | null)
 }
 
 /**
- * The segment of the radius point that is dragged and all selected segments (both nodes selected),
- * if it is one of them: they all get its radius (^77).
+ * The radius of the dragged segment is given to all selected segments and its parallels (^77, ^302),
+ * who is parallel taken from the graph before the drag (^334).
  */
-function sharing(g: Graph, selection: number[], press: Press) {
-  if (press.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
-  return { own: press.id, all: sharedWith(g, selection, press.id) };
-}
-
-/** The radius of the dragged segment is given to all selected segments. */
 export function withSharedRadius(g: Graph, selection: number[], press: Press): Graph {
-  const s = sharing(g, selection, press);
-  return s ? shareConcentric(g, s.own, s.all) : g;
+  if (press.kind !== 'drag' || press.drag.handle.type !== 'rad') return g;
+  return shareConcentric(g, press.id, sharedWith(press.undo.graph, selection, press.id));
 }

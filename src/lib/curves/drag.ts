@@ -2,7 +2,7 @@ import { buildEdge, type Edge } from './edge';
 import type { Handle } from './handles';
 import { edgesOf, withNode, withRadius, type Path } from './path';
 import { pointOn, sweeps } from './piece';
-import { AUTO_SNAP, RMIN } from './radius';
+import { RMIN } from './radius';
 import { snapAngle } from '../snap/angles';
 import { angleOf, dist, dot, len, mul, sub, type Vec } from './vec';
 
@@ -45,7 +45,8 @@ export function radiusFromCursor(E: Edge & { kind: 'C' }, pt: Vec): number {
   return ((me + Math.sqrt(disc)) / c2) * Math.cos(h);
 }
 
-const toRequested = (R: number, Rmax: number) => (R >= AUTO_SNAP * Rmax ? null : R);
+/** A radius that equals the maximum (within a millimeter) is auto (^332). */
+const toRequested = (R: number, Rmax: number) => (R >= Rmax - 1e-3 ? null : R);
 
 function dragNode(path: Path, i: number, pt: Vec): Path {
   return withNode(path, i, { x: pt.x, y: pt.y });
