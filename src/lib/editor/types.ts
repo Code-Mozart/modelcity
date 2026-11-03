@@ -91,6 +91,10 @@ export type Press =
       then: 'split' | 'merge' | null;
       moved: boolean;
       target: HintTarget;
+      /** The angle the heading steps count from: where the node pointed when placed, or 0, north, for the first node of an arm (^315). */
+      angleFrom: number;
+      /** The first node of a new arm: its heading snaps to the compass directions, and a compass is shown (^316). */
+      compass: boolean;
     }
   | {
       kind: 'empty';

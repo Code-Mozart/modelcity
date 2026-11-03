@@ -14,15 +14,24 @@ import {
   type RoadHandle,
 } from './chains';
 import { previewOf, type Drawn } from './targets';
-import { placedHeading } from '../snap/heading';
+import { headingFrom, placedHeading } from '../snap/heading';
 import type { Hover, Placement, PointerInfo, Press } from './types';
 
 /** A node dropped within this world distance (meters) of another node or of a curve is merged into it, whatever the zoom (^248, ^283). */
 export const MERGE_WORLD_M = 0.1;
 
 /** Where a node goes when the pointer snapped: the place, with the heading it gets there (^254, ^301). */
-export const snappedTo = (hit: SnapHit | null, info: PointerInfo): Placement | null =>
-  hit && { pt: hit.pt, th: placedHeading(hit, info.alt), node: nodeAt(hit) };
+export function snappedTo(
+  hit: SnapHit | null,
+  info: PointerInfo,
+  press: Press | null,
+): Placement | null {
+  if (!hit) return null;
+  // A heading takes the heading of what it snapped to, the pointer stays where it is (^313).
+  if (turningNode(press) !== null)
+    return { pt: info.pt, th: headingFrom(hit, info.alt), node: null };
+  return { pt: hit.pt, th: placedHeading(hit, info.alt), node: nodeAt(hit) };
+}
 
 /** The node whose place the snap is (a snap point of a node, ^248). */
 const nodeAt = (hit: SnapHit): number | null => {
@@ -36,6 +45,12 @@ export function movedIds(press: Press | null): number[] {
     ? [press.id, ...press.group.map((g) => g.id)]
     : [];
 }
+
+/** The node whose heading is being set: its heading point is dragged, or it was just placed and is dragged (^313). */
+export const turningNode = (press: Press | null): number | null =>
+  press?.kind === 'place' || (press?.kind === 'drag' && press.drag.handle.type === 'head')
+    ? press.id
+    : null;
 
 /** The control points of a segment that snap like a position: the radius, the bend and the S-curve points (^249). */
 export const controlEdge = (press: Press | null): number | null =>
@@ -77,6 +92,9 @@ export function suggestionsOfGraph(g: Graph): Suggestion[] {
  * move, and the places they were at (^113).
  */
 export function snapBase(graph: Graph, press: Press | null): Suggestion[] {
+  // A heading snaps to everything but the node itself and its own segments (^313).
+  const turning = turningNode(press);
+  if (turning !== null) return suggestionsOfGraph(without(press!.undo.graph, [turning]));
   const moving = movedIds(press);
   // A control point of a segment snaps to everything but the segment itself, whose shape it changes (^249).
   const control = controlEdge(press);
@@ -120,7 +138,8 @@ const placing = (hover: Hover | null) =>
   (hover?.kind === 'handle' && ['node', 'rad'].includes(hover.handle.type));
 
 /** Whether the pointer places or moves a node now: in draw mode, or dragging a node. */
-function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | null {
+function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | 'turn' | null {
+  if (turningNode(press) !== null) return press!.moved ? 'turn' : null;
   if (press) return movedIds(press).length || controlEdge(press) !== null ? 'move' : null;
   return drawing && placing(hover) ? 'place' : null;
 }

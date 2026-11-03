@@ -7,7 +7,7 @@ import { fixture, type FixtureName } from './testing/paths';
 import { dist, fromAngle, toRad } from './vec';
 
 const NAMES: FixtureName[] = ['H', 'G', 'hook'];
-const noMods = { angleScale: null };
+const noMods = { angle: null };
 
 /** Pieces form one connected chain whose arcs end where they say they do. */
 function expectConnected(E: Edge, p: Path['nodes'][number], q: Path['nodes'][number]) {
@@ -97,7 +97,7 @@ describe('dragging handles', () => {
     const pt = { x: n.x + 10 * Math.cos(toRad(33)), y: n.y + 10 * Math.sin(toRad(33)) };
     const next = applyDrag(path, startDrag({ type: 'head', i: 0, x: 0, y: 0 }), pt, {
       ...noMods,
-      angleScale: 10,
+      angle: { scale: 10, from: 0 },
     });
     // 10 m * 10 px/m = 100 px: the 15 degree step applies
     expect(next.nodes[0]!.th).toBeCloseTo(toRad(30));

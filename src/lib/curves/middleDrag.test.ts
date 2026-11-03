@@ -5,7 +5,7 @@ import { edgesOf } from './path';
 import { fixture } from './testing/paths';
 
 describe('dragging the corners of an S-curve (^132, no shape tag)', () => {
-  const noMods = { angleScale: null };
+  const noMods = { angle: null };
   const setup = () => {
     const path = fixture('G');
     const edges = edgesOf(path);

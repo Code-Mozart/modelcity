@@ -11,9 +11,16 @@ export interface DragState {
   handle: Handle;
 }
 
+/** Headings snap to angle steps counted from `from` (^251, ^315): the heading before the drag, or 0 for the compass (^316). */
+export interface AngleSnap {
+  /** Pixels per meter: the step gets finer with the distance on the screen. */
+  scale: number;
+  from: number;
+}
+
 export interface DragModifiers {
-  /** Pixels per meter when headings snap to angles (^251), null when snapping is off. */
-  angleScale: number | null;
+  /** Null when snapping is off. */
+  angle: AngleSnap | null;
 }
 
 /** Closest the blue point may get to a node, meters. */
@@ -45,12 +52,11 @@ function dragNode(path: Path, i: number, pt: Vec): Path {
 }
 
 /** The heading of the node `i` turned towards `pt`, snapped to angles that get finer farther out (^251). */
-export function dragHeading(path: Path, i: number, pt: Vec, angleScale: number | null): Path {
-  const from = path.nodes[i]!;
-  const th = angleOf(sub(pt, from));
-  return withNode(path, i, {
-    th: angleScale === null ? th : snapAngle(th, dist(pt, from) * angleScale),
-  });
+export function dragHeading(path: Path, i: number, pt: Vec, angle: AngleSnap | null): Path {
+  const node = path.nodes[i]!;
+  const th = angleOf(sub(pt, node));
+  if (!angle) return withNode(path, i, { th });
+  return withNode(path, i, { th: angle.from + snapAngle(th - angle.from, dist(pt, node) * angle.scale) });
 }
 
 /** Dragging the blue point sets both headings so their lines meet at the pointer (^9). */
@@ -140,7 +146,7 @@ export function applyDrag(path: Path, drag: DragState, pt: Vec, mod: DragModifie
     case 'node':
       return dragNode(path, i, pt);
     case 'head':
-      return dragHeading(path, i, pt, mod.angleScale);
+      return dragHeading(path, i, pt, mod.angle);
     case 'ctrl':
       return dragCorner(path, i, pt);
     case 'mid1':

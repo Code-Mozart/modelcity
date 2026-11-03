@@ -257,7 +257,7 @@ export class Editor {
     this.begin(
       hit
         ? curvePress(this.snapshot(), hit)
-        : placePress(this.snapshot(), snappedTo(this.snapped, info) ?? placementAt(info.pt)),
+        : placePress(this.snapshot(), snappedTo(this.snapped, info, null) ?? placementAt(info.pt)),
     );
   }
 
@@ -285,8 +285,7 @@ export class Editor {
 
   pointerMove(info: PointerInfo) {
     this.lastInfo = info;
-    const moved =
-      this.press && moveOf(this.snapshot(), this.press, info, snappedTo(this.snapped, info));
+    const moved = this.press && moveOf(this.snapshot(), this.press, info, this.snapped);
     if (moved) Object.assign(this, moved);
   }
 

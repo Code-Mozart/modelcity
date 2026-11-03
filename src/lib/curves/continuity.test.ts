@@ -42,7 +42,7 @@ describe('a radius point follows the pointer smoothly (^140)', () => {
         x: handle.x + ((80 - handle.x) / d) * n * 0.05,
         y: handle.y + ((0 - handle.y) / d) * n * 0.05,
       };
-      const next = applyDrag(path, startDrag(handle), to, { angleScale: null });
+      const next = applyDrag(path, startDrag(handle), to, { angle: null });
       radii.push(next.radii[0] ?? NaN);
     }
     const steps = radii.slice(1).map((r, i) => Math.abs(r - radii[i]!));
@@ -76,7 +76,7 @@ describe('the radius is continuous near the largest radius too (^140)', () => {
     for (let n = 0; n <= 40; n++) {
       const f = n / 40;
       const to = { x: handle.x + (full.x - handle.x) * f, y: handle.y + (full.y - handle.y) * f };
-      const next = applyDrag(path, startDrag(handle), to, { angleScale: null });
+      const next = applyDrag(path, startDrag(handle), to, { angle: null });
       radii.push(next.radii[0] ?? E.Rmax);
     }
     const steps = radii.slice(1).map((r, i) => Math.abs(r - radii[i]!));

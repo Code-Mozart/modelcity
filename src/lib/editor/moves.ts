@@ -1,6 +1,8 @@
 import { dist } from '../curves/vec';
 import type { Graph } from '../model/graph';
+import type { SnapHit } from '../snap/types';
 import { dragStep, placeStep } from './ops';
+import { snappedTo } from './snapping';
 import { nodesInBand, withNodes, type Band } from './selection';
 import { DRAG_PX, type Placement, type PointerInfo, type Press, type Snapshot } from './types';
 
@@ -31,11 +33,12 @@ export function moveOf(
   snap: Snapshot,
   press: Press,
   info: PointerInfo,
-  to: Placement | null,
+  hit: SnapHit | null,
 ): Moved | null {
+  const to = snappedTo(hit, info, press);
   if (press.kind === 'drag') return dragMove(snap, press, info, to);
   if (press.kind === 'place') {
-    const graph = placeStep(snap.graph, press.id, info);
+    const graph = placeStep(snap.graph, press, info, to?.th ?? null);
     if (graph === snap.graph) return null;
     press.moved = true;
     return { graph };

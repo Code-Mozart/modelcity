@@ -1,4 +1,4 @@
-import { dragHeading } from '../curves/drag';
+import { dragHeading, type AngleSnap } from '../curves/drag';
 import { dist, type Vec } from '../curves/vec';
 import { mergeNodes } from '../model/merge';
 import type { Drop } from './drop';
@@ -41,7 +41,16 @@ export function curvePress(
   const then = act === 'split' || act === 'merge' ? act : null;
   return {
     drawn: r.drawn,
-    press: { kind: 'place', id: r.id, undo: d, then, moved: false, target },
+    press: {
+      kind: 'place',
+      id: r.id,
+      undo: d,
+      then,
+      moved: false,
+      target,
+      angleFrom: nodeOf(r.drawn.graph, r.id)?.th ?? 0,
+      compass: false,
+    },
   };
 }
 
@@ -49,7 +58,14 @@ export function curvePress(
 export function placePress(d: Drawn, at: Placement): { drawn: Drawn; press: Press } {
   const r = placeNode(d, at);
   const target = { kind: 'empty' } as const;
-  const press: Press = { kind: 'place', id: r.id, undo: d, then: null, moved: false, target };
+  // The first node of a new arm snaps to the compass directions, the others to steps from where they point (^315, ^316).
+  const compass = d.active === null;
+  const angleFrom = compass ? 0 : (nodeOf(r.drawn.graph, r.id)?.th ?? 0);
+  const press: Press = {
+    ...{ kind: 'place' as const, id: r.id, undo: d, then: null, moved: false, target },
+    angleFrom,
+    compass,
+  };
   return { drawn: r.drawn, press };
 }
 
@@ -164,7 +180,14 @@ export function dragStep(
   to: Placement | null = null,
 ): Graph {
   const handle = { ...press.drag.handle, road: press.road, id: press.id };
-  const next = withSharedRadius(snappedDrag(d.graph, handle, info, to), d.selection, press);
+  // The angle steps count from the heading before the drag (^315).
+  const from = nodeOf(press.undo.graph, press.id)?.th ?? 0;
+  const angle = info.ctrl ? null : { scale: info.scale, from };
+  const next = withSharedRadius(
+    snappedDrag(d.graph, handle, { angle, info }, to),
+    d.selection,
+    press,
+  );
   const node = nodeOf(next, press.id);
   const group = handle.type === 'node' && node ? press.group : [];
   if (!node || !group.length) return next;
@@ -172,11 +195,16 @@ export function dragStep(
 }
 
 /** The handle dragged to the pointer, or where it snapped: a node takes the heading of a touching point (^254), a radius point on a node of its segment sets the radius to auto (^141). */
-function snappedDrag(g: Graph, handle: RoadHandle, info: PointerInfo, to: Placement | null): Graph {
-  const mods = { angleScale: info.ctrl ? null : info.scale };
-  const dragged = dragGraph(g, handle, to?.pt ?? info.pt, mods);
+function snappedDrag(
+  g: Graph,
+  handle: RoadHandle,
+  how: { angle: AngleSnap | null; info: PointerInfo },
+  to: Placement | null,
+): Graph {
+  const dragged = dragGraph(g, handle, to?.pt ?? how.info.pt, { angle: how.angle });
   if (!to) return dragged;
-  if (handle.type === 'node')
+  // A snapped heading is copied (^313); a node that snapped takes the heading of the place (^254).
+  if (handle.type === 'node' || handle.type === 'head')
     return to.th == null ? dragged : withNode(dragged, handle.id, { th: to.th });
   return handle.type === 'rad' ? autoOnNode(dragged, handle.id, to.node ?? null) : dragged;
 }
@@ -188,12 +216,18 @@ function autoOnNode(g: Graph, id: number, node: number | null): Graph {
 }
 
 /** Dragging while a node is placed sets its heading, from where it was placed (^40). */
-export function placeStep(g: Graph, id: number, info: PointerInfo): Graph {
-  const n = nodeOf(g, id);
+export function placeStep(
+  g: Graph,
+  press: Extract<Press, { kind: 'place' }>,
+  info: PointerInfo,
+  copied: number | null,
+): Graph {
+  const n = nodeOf(g, press.id);
   if (!n || dist(info.pt, n) < 6 / info.scale) return g;
-  const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, info.ctrl ? null : info.scale)
-    .nodes[0]!.th;
-  return withNode(g, id, { th });
+  if (copied !== null) return withNode(g, press.id, { th: copied });
+  const angle = info.ctrl ? null : { scale: info.scale, from: press.angleFrom };
+  const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, angle).nodes[0]!.th;
+  return withNode(g, press.id, { th });
 }
 
 /**
