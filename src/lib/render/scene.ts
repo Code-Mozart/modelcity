@@ -8,7 +8,7 @@ import { ordered } from '../model/junction';
 import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
-import { drawCircles, drawCorners, drawGuides } from './guides';
+import { drawCircles, drawCorners, drawGuides, drawParallelLinks } from './guides';
 import { drawMeasures } from './measures';
 import { drawCompass, drawOffset, type Turning } from './compass';
 import {
@@ -67,6 +67,8 @@ export interface Scene {
   /** What the placed or moved node is pulled to (^101), and the nodes whose suggestions are pinned (^258). */
   snap: SnapHit | null;
   pinned: NodeRef[];
+  /** Short lines through the middles of parallel segments of the selected or hovered ones (^344). */
+  parallels: { p: Vec; q: Vec }[];
   /** The heading being set, with the arrow following the cursor, and the compass for the first node of an arm (^314, ^316). */
   turning: Turning | null;
   /** Where the nodes that are moved were, shown as snap points while they move (^113). */
@@ -283,6 +285,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   });
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
+  if (!scene.hideScaffold) drawParallelLinks(f, scene.parallels, pal);
   drawSnap(f, scene.snap, pal);
   for (const at of scene.previous)
     ring(f.ctx, toScreen(f, at), 7, { color: pal.turquoise, width: 1.5 });

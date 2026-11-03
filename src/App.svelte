@@ -48,6 +48,8 @@
     (e.press !== null && headingFrom(e.snapped, false) !== null);
   const drag = $derived.by(() => {
     const [press, graph] = [editor.press, editor.graph];
+    // Setting the heading of a node that was just placed is dragging a heading too (^286).
+    if (press?.kind === 'place' && press.moved) return { type: 'head' as const, merge: false };
     if (press?.kind !== 'drag' || !press.moved) return null;
     return { type: press.drag.handle.type, merge: dropOf(graph, press, editor.snapped) !== null };
   });

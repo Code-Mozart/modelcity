@@ -1,4 +1,4 @@
-next: ^344
+next: ^349
 
 # Hats
 
@@ -379,5 +379,10 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^339 | feature | done (milestone ^255, PR #31) | **Snap rule: extend line at -60° (user):** like ^325. |
 | ^340 | feature | done (milestone ^255, PR #31) | **Snap rule: extend line at -75° (user):** like ^325. |
 | ^341 | feature | done (milestone ^255, PR #31) | **The offset of a heading is labeled (user):** while the heading of an existing node (not the first node of an arm, ^316) is dragged, a label beside its arrow, to the left or right, says the offset from the heading it had (the angle steps are offsets, ^315). |
-| ^342 | feature | done (milestone ^255, PR #31) | **The measurements panel shows the selection (user):** only while at least one segment is selected; it also shows the bounding box of the selection, axis aligned with the compass directions, in meters or kilometers (`2.1 x 3.1 km`), and the number of selected nodes and segments. Assumed: the length and radius statistics are those of the selected segments. |
+| ^342 | feature | done (milestone ^255, PR #31) | **The measurements panel shows the selection (user):** only while at least one segment is selected; it also shows the bounding box of the selection, axis aligned with the compass directions, in meters or kilometers (`2.1 x 3.1 km`), and the number of selected nodes and segments. Assumed: the length and radius statistics are those of the selected segments. | **Revised (user):** the first line says `n nodes and m segments selected`; from top to bottom: the selection, the bounding box, the length, the radii.
 | ^343 | bug | done (milestone ^255, PR #31) | **Parallel segments among the selected lose their concentricity (user):** with three bends, two of them parallel, all nodes selected and the radius of the one without a parallel segment dragged, the two parallel ones got the same radius. They must keep their offset (^324). An e2e test reproduces it. |
+| ^344 | feature | done (milestone ^255, PR #31) | **A line through parallel segments (user):** when segments are parallel (^334) a short line is drawn through their shared bisector (for straight segments through their midpoints), for the selected and the hovered segments. |
+| ^345 | bug | done (milestone ^255, PR #31) | **No hint for `Ctrl` while the heading of a placed node is dragged (user):** "add node and set heading" showed none of the hints of dragging a heading: now `Ctrl: no snapping`, `Alt`, `Shift` show (^286). |
+| ^346 | bug | done (milestone ^255, PR #31) | **Building concentric worked only the same way (user):** a segment built beside another one that runs the opposite way did not get the concentric radius (^281): the radius is the distance to the center of the arc, whichever way it runs. |
+| ^347 | bug | done (milestone ^255, PR #31) | **The extend lines were shown on the node being drawn from (user, ^325):** the node under the pointer is a hovered handle and took another way than the snap; both take the exception now. |
+| ^348 | bug | done (milestone ^255, PR #31) | **More than two parallel segments (user):** lanes on top of each other (the radii 17, 20, 23 m): any number follow when one changes and keep their offsets (^302, ^324), also when dragging a radius point. |

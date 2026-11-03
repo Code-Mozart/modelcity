@@ -1,6 +1,8 @@
 <script lang="ts">
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
+  import { parallelLinks } from './editor/sharedRadius';
+  import { selectedSegments } from './editor/selection';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
@@ -38,6 +40,12 @@
     untrack(() => camera.setAnchors(anchors));
   });
 
+  /** The segments selected or hovered: the parallel segments to them are linked by a short line (^344). */
+  const linked = () => [
+    ...selectedSegments(editor.graph, editor.selection),
+    ...editor.hoverSegments.map((h) => editor.chains[h.road]!.edgeIds[h.i]!),
+  ];
+
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
     const drop = dropOf(editor.graph, editor.press, editor.snapped);
@@ -59,6 +67,7 @@
       previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
+      parallels: parallelLinks(editor.graph, editor.chains, linked()),
       turning: turningOf(editor.chains, editor.press),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };

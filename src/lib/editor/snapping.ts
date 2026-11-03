@@ -263,8 +263,8 @@ export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
   const what = snaps(a);
   if (!info || info.ctrl || !what) return null;
   const query = { pt: info.pt, scale: info.scale, pinned: a.pinned, reach: reachOf(a.press) };
-  if (what === 'place' && a.hover?.kind !== 'preview') return hoveredHit(base, a.hover, query);
-  const hit = snapTo(base, query);
+  const placed = what === 'place' && a.hover?.kind !== 'preview';
+  const hit = placed ? hoveredHit(base, a.hover, query) : snapTo(base, query);
   return hit && withoutExtendAtTip(hit, a);
 }
 

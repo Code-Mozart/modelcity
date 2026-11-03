@@ -31,4 +31,16 @@ describe('building between parallel nodes is concentric (^281)', () => {
     const shown = ed.hover?.kind === 'preview' ? ed.hover.radius : undefined;
     expect(shown).toBeCloseTo(17, 1);
   });
+
+  it('also when the new segment runs the opposite way', () => {
+    const ed = drawMode(bend());
+    const alt = (x: number, y: number) => ({ ...snapping(x, y), alt: true });
+    ed.pointerDown(alt(16.8, 20.3)); // beside the end node, `Alt`: the opposite heading
+    ed.pointerUp();
+    ed.pointerDown(alt(0.3, 3.2)); // beside the start node
+    ed.pointerUp();
+    const built = ed.graph.edges.at(-1)!;
+    expect(built.id).not.toBe(0);
+    expect(built.radius).toBeCloseTo(17, 1);
+  });
 });

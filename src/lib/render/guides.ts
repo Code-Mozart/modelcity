@@ -97,3 +97,11 @@ export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
     if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.orange, width: 2 });
   }
 }
+
+/** The short lines through the middles of parallel segments, a bit beyond the two (^344). */
+export function drawParallelLinks(f: Frame, links: { p: Vec; q: Vec }[], pal: Palette) {
+  for (const { p, q } of links) {
+    const [a, b] = extend(toScreen(f, p), toScreen(f, q), 10, 10);
+    segment(f.ctx, a, b, { color: pal.orange, width: 1.5 });
+  }
+}

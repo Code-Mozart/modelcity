@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addEdge, addNode, edgeOfId, emptyGraph, withRadius, type Graph } from '../model/graph';
 import { chainsOf } from './chains';
-import { shareConcentric, sharedWith } from './sharedRadius';
+import { parallelLinks, shareConcentric, sharedWith } from './sharedRadius';
 
 /** Two bends one lane width apart: from the left to the right, then down. */
 function lanes(shift = 3, inner: number | null = 17): Graph {
@@ -58,5 +58,46 @@ describe('parallel segments stay concentric unless the segment alone is selected
   });
   it('only its own two nodes selected: it changes alone', () => {
     expect(ids(sharedWith(g, [0, 1], 0))).toEqual([0]);
+  });
+});
+
+describe('more than two lanes on top of each other (^302)', () => {
+  /** Three bends one lane width apart: radii 20, 17 and 23. */
+  function threeLanes(): Graph {
+    let g = emptyGraph();
+    const add = (x: number, y: number, th: number) => {
+      const r = addNode(g, { x, y, th });
+      g = r.graph;
+      return r.id;
+    };
+    const [a, b] = [add(0, 0, 0), add(50, 30, Math.PI / 2)];
+    const [c, d] = [add(0, 3, 0), add(47, 30, Math.PI / 2)];
+    const [e, f] = [add(0, -3, 0), add(53, 30, Math.PI / 2)];
+    g = addEdge(g, a, b, 20);
+    g = addEdge(g, c, d, 17);
+    return addEdge(g, e, f, 23);
+  }
+
+  it('all lanes follow, whichever is dragged, and keep their offsets', () => {
+    for (const own of [0, 1, 2]) {
+      const g = threeLanes();
+      const was = g.edges.map((e) => e.radius!);
+      const next = withRadius(g, own, was[own]! + 7);
+      const shared = shareConcentric(next, own, sharedWith(g, [], own));
+      shared.edges.forEach((e, i) => expect(e.radius).toBeCloseTo(was[i]! + 7, 6));
+    }
+  });
+});
+
+describe('the link between parallel segments (^344)', () => {
+  it('a short line through their middles, on the bisector, one lane width long', () => {
+    const g = lanes();
+    const links = parallelLinks(g, chainsOf(g), [0]);
+    expect(links).toHaveLength(1);
+    expect(Math.hypot(links[0]!.p.x - links[0]!.q.x, links[0]!.p.y - links[0]!.q.y)).toBeCloseTo(
+      3,
+      1,
+    );
+    expect(parallelLinks(lanes(5, 14), chainsOf(lanes(5, 14)), [0])).toHaveLength(0);
   });
 });

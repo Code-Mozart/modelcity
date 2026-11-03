@@ -276,10 +276,10 @@ function dragHints({ type, merge }: { type: HandleType; merge: boolean }, s: Hin
     hint(mouse('lmb', true), DRAG_TEXT[type]),
     ...(merge ? [hint(mouse('lmb'), 'merge on release')] : []),
     hint(ESC, 'cancel'),
-    ...(s.snapping ? [key('Ctrl', 'no snapping')] : []),
+    ...(s.snapping || type === 'head' ? [key('Ctrl', 'no snapping')] : []),
     ...(s.touching ? [key('Alt', 'opposite heading')] : []),
     ...(type === 'head'
-      ? [key('Shift', 'aim at snap point'), key('Shift+Alt', 'aim away from snap point')]
+      ? [key('Shift', 'aim at snap suggestion'), key('Shift+Alt', 'aim away from snap suggestion')]
       : []),
   ];
 }

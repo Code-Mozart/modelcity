@@ -13,13 +13,14 @@
     const f = (m: number) => (km ? (m / 1000).toFixed(1) : m.toFixed(1));
     return `${f(width)} x ${f(height)} ${km ? 'km' : 'm'}`;
   }
+  const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
   const meters = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${m.toFixed(1)} m`);
 </script>
 
 <div class="panel" class:lifted aria-label="Measurements">
-  <div>Selected: {summary.nodes} nodes, {summary.segments} segments</div>
-  <div>Length: {meters(summary.length)}</div>
+  <div>{count(summary.nodes, 'node')} and {count(summary.segments, 'segment')} selected</div>
   <div>Box: {box(summary.box)}</div>
+  <div>Length: {meters(summary.length)}</div>
   {#if summary.radius}
     <div>
       Radius: min {meters(summary.radius.min)}, max {meters(summary.radius.max)}, average {meters(

@@ -42,4 +42,20 @@ describe('the extend lines (^325 to ^330)', () => {
     ed.pointerMove(snapping(40 + at.x, at.y));
     expect(ed.snapped?.by.some((s) => s.rule === 'extend+45')).toBe(true);
   });
+
+  it('are not shown while the pointer is on the node being drawn from', () => {
+    const ed = drawMode(
+      mapOf([
+        [
+          [0, 0],
+          [40, 0],
+        ],
+      ]),
+    );
+    ed.pointerDown(snapping(40, 0));
+    ed.pointerUp();
+    ed.pointerMove(snapping(40.2, 0.2));
+    expect(ed.snapped).not.toBeNull();
+    expect(ed.snapped?.by.some((s) => s.rule.startsWith('extend'))).toBe(false);
+  });
 });
