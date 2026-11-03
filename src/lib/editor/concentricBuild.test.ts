@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { addEdge, addNode, edgeOfId, emptyGraph } from '../model/graph';
+import { edgeOfId } from '../model/graph';
+import { graphOf } from '../testing/graphHelpers';
 import { drawMode, snapping } from '../testing/snapHelpers';
 
 // A quarter bend of radius 20 around (0, 20); a road is built next to it, inside (^281).
-const bend = () => {
-  let g = emptyGraph();
-  const a = addNode(g, { x: 0, y: 0, th: 0 });
-  const b = addNode(a.graph, { x: 20, y: 20, th: Math.PI / 2 });
-  g = addEdge(b.graph, a.id, b.id, 20);
-  return g;
-};
+const bend = () =>
+  graphOf(
+    [
+      [0, 0, 0],
+      [20, 20, Math.PI / 2],
+    ],
+    [[0, 1, 20]],
+  );
 
 describe('building between parallel nodes is concentric (^281)', () => {
   it('the new segment gets the radius of the curve it touches, less one lane width', () => {

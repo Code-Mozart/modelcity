@@ -1,9 +1,7 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import { dist, dot, fromAngle, mul, perp, sub, type Vec } from '../curves/vec';
 import { edgesAt, type GEdge, type GNode, type Graph } from '../model/graph';
-import type { Piece } from '../curves/types';
-import type { Chain } from './chains';
-import { sameCenters, touching } from './sharedRadius';
+import { parallel } from './parallel';
 
 const TOL_M = 1e-3;
 /** Cells of the grid that finds touching nodes: wider than a lane. */
@@ -88,20 +86,14 @@ function runsOf(tower: GNode[], joined: (a: GNode, b: GNode) => boolean): GNode[
  * The bars (^350, ^352): on each side of a tower, neighbouring nodes whose segments on that side
  * are parallel (^334) form a run; a run of two or more nodes gets one bar.
  */
-export function barsOf(g: Graph, chains: Chain[]): Bar[] {
-  const pieces = new Map<number, Piece[]>();
-  for (const c of chains) c.edges.forEach((r, i) => pieces.set(c.edgeIds[i]!, r.E.pieces));
-  const parallel = (a: GEdge, b: GEdge) =>
-    a.id !== b.id &&
-    touching(g, a, b) &&
-    sameCenters(pieces.get(a.id) ?? [], pieces.get(b.id) ?? []);
+export function barsOf(g: Graph): Bar[] {
   const bars: Bar[] = [];
   for (const tower of towersOf(g)) {
     const axis = fromAngle(tower[0]!.th);
     for (const s of [1, -1] as const) {
       const onSide = (n: GNode) => edgesAt(g, n.id).filter((e) => sideOf(n, e, axis) === s);
       const joined = (a: GNode, b: GNode) =>
-        onSide(a).some((ea) => onSide(b).some((eb) => parallel(ea, eb)));
+        onSide(a).some((ea) => onSide(b).some((eb) => parallel(g, ea, eb)));
       for (const r of runsOf(tower, joined)) {
         bars.push({ from: r[0]!, to: r.at(-1)!, side: mul(axis, s) });
       }

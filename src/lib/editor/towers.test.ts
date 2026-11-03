@@ -1,27 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { addEdge, addNode, emptyGraph, type Graph } from '../model/graph';
-import { chainsOf } from './chains';
+import type { Graph } from '../model/graph';
+import { graphOf, threeBends, twoBends } from '../testing/graphHelpers';
 import { barsOf, towersOf } from './towers';
 
-/** Nodes and the edges between them, by index. */
-function build(nodes: [number, number, number][], edges: [number, number, number | null][]): Graph {
-  let g = emptyGraph();
-  const ids = nodes.map(([x, y, th]) => {
-    const r = addNode(g, { x, y, th });
-    g = r.graph;
-    return r.id;
-  });
-  for (const [a, b, radius] of edges) g = addEdge(g, ids[a]!, ids[b]!, radius);
-  return g;
-}
-
-const bars = (g: Graph) => barsOf(g, chainsOf(g));
+const bars = (g: Graph) => barsOf(g);
 const span = (b: { from: { x: number; y: number }; to: { x: number; y: number } }) =>
   Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y);
 
 describe('towers (^352)', () => {
   it('nodes that touch one after the other are one tower, in order across the lanes', () => {
-    const g = build(
+    const g = graphOf(
       [
         [0, 6, 0],
         [0, 0, 0],
@@ -38,42 +26,9 @@ describe('towers (^352)', () => {
 
 const H = Math.PI / 2;
 
-/** Two concentric bends, 20 m and 17 m. */
-const twoBends = (inner = 17) =>
-  build(
-    [
-      [0, 0, 0],
-      [50, 30, H],
-      [0, 3, 0],
-      [47, 30, H],
-    ],
-    [
-      [0, 1, 20],
-      [2, 3, inner],
-    ],
-  );
-
-/** Three concentric bends: 23, 20 and 17 m. */
-const threeBends = () =>
-  build(
-    [
-      [0, -3, 0],
-      [50, 30, H],
-      [0, 0, 0],
-      [47, 30, H],
-      [0, 3, 0],
-      [44, 30, H],
-    ],
-    [
-      [0, 1, 23],
-      [2, 3, 20],
-      [4, 5, 17],
-    ],
-  );
-
 /** Two touching nodes at x = 0: parallel straight segments to their left, a straight one and a bend to their right. */
 const oneSideOnly = () =>
-  build(
+  graphOf(
     [
       [-40, 0, 0],
       [0, 0, 0],
@@ -108,6 +63,6 @@ describe('the bars of runs of parallel segments (^350)', () => {
   });
 
   it('no bar for touching nodes whose segments are not concentric (^334)', () => {
-    expect(bars(twoBends(10))).toHaveLength(0);
+    expect(bars(twoBends(3, 10))).toHaveLength(0);
   });
 });

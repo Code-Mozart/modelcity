@@ -184,3 +184,17 @@ export function hitOfHandle(chains: Chain[], h: RoadHandle): RoadHit | null {
     ? { ref, k: h.k ?? 0, at: pointOn(piece, h.t ?? 0.5), d: 0, road: h.road, edge: h.id }
     : null;
 }
+
+const curves = new WeakMap<Graph, Map<number, Edge>>();
+
+/** The curve of a segment as the curve code builds it, if the graph has it (^106). */
+export function curveOfEdge(g: Graph, edge: number): Edge | undefined {
+  let index = curves.get(g);
+  if (!index) {
+    index = new Map(
+      chainsOf(g).flatMap((c) => c.edges.map((r, i) => [c.edgeIds[i]!, r.E] as const)),
+    );
+    curves.set(g, index);
+  }
+  return index.get(edge);
+}

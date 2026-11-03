@@ -1,7 +1,7 @@
 <script lang="ts">
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
-  import { parallelLinks } from './editor/sharedRadius';
+  import { parallelLinks } from './editor/parallel';
   import { barsOf } from './editor/towers';
   import { selectedSegments } from './editor/selection';
   import { previousPlaces } from './editor/snapping';
@@ -42,7 +42,7 @@
   });
 
   /** The bars of the runs of parallel segments, derived from the graph (^350). */
-  const bars = $derived(barsOf(editor.graph, editor.chains));
+  const bars = $derived(barsOf(editor.graph));
 
   /** The segments selected or hovered: the parallel segments to them are linked by a short line (^344). */
   const linked = () => [
@@ -72,7 +72,7 @@
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
       bars: bars,
-      parallels: parallelLinks(editor.graph, editor.chains, linked()),
+      parallels: parallelLinks(editor.graph, linked()),
       turning: turningOf(editor.chains, editor.press),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };

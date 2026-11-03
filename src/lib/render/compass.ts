@@ -27,7 +27,7 @@ export function drawOffset(f: Frame, node: Vec & { th: number }, offset: number,
 }
 
 /** The bearing of a heading in degrees: 0 is north, counter-clockwise (^316). */
-export const bearingOf = (th: number): number =>
+const bearingOf = (th: number): number =>
   Math.round((((-(th * 180) / Math.PI - 90) % 360) + 360) % 360) % 360;
 
 /** A filled triangle from the center to the side of the needle: one half of the compass needle of the middle-button rotation. */

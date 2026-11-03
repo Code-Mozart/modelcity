@@ -1,6 +1,9 @@
 import type { Piece } from '../curves/types';
 import type { Vec } from '../curves/vec';
 
+/** The extend lines (^325 to ^330, ^337 to ^340): 15° to 75° from the heading in steps of 15°, to either side, one rule each. */
+export type ExtendRule = `extend${'+' | '-'}${15 | 30 | 45 | 60 | 75}`;
+
 /** Which rule made a snap suggestion (^265 to ^273, ^279, ^280): one hat each. */
 export type Rule =
   | 'node-normal' // ^265
@@ -15,16 +18,7 @@ export type Rule =
   | 'offset' // ^279
   | 'crossing' // ^280
   | 'previous' // ^113
-  | 'extend+45' // ^325
-  | 'extend+15' // ^326
-  | 'extend+30' // ^327
-  | 'extend-45' // ^328
-  | 'extend-15' // ^329
-  | 'extend-30' // ^330
-  | 'extend+60' // ^337
-  | 'extend+75' // ^338
-  | 'extend-60' // ^339
-  | 'extend-75' // ^340
+  | ExtendRule // ^325 to ^330, ^337 to ^340
   | 'own'; // ^336
 
 interface Base {

@@ -5,7 +5,7 @@ import { toRad } from '../curves/vec';
  * point it turns, the finer the step: 15°, then 5°, then 1° (precision grows with distance, ^251).
  * `fromPx` is the distance on the screen from which a step applies; assumed values, tuned by feel.
  */
-export const ANGLE_TIERS: readonly { fromPx: number; step: number }[] = [
+const ANGLE_TIERS: readonly { fromPx: number; step: number }[] = [
   { fromPx: 0, step: toRad(45) },
   { fromPx: 90, step: toRad(15) },
   { fromPx: 180, step: toRad(5) },

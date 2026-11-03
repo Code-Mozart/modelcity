@@ -5,8 +5,7 @@ import { branchOfEdge, branchOfNode, curveAction, nodeAction } from '../model/ju
 import { targetOf, type Drawn } from './targets';
 import type { ControlId } from '../hints/hints';
 import type { PointerInfo, Press } from './types';
-import { shareConcentric } from './sharedRadius';
-import { sharedWith } from './sharedRadius';
+import { shareConcentric, sharedWith } from './sharedRadius';
 import { pressNode } from './selection';
 
 type DragPress = Extract<Press, { kind: 'drag' }>;

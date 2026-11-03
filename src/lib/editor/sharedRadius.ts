@@ -1,77 +1,31 @@
-import { middleOf } from '../curves/measure';
-import { pointOn, sweeps } from '../curves/piece';
-import type { Piece } from '../curves/types';
-import { LANE_WIDTH_M } from '../curves/lane';
-import { dist, dot, fromAngle, type Vec } from '../curves/vec';
+import { sweeps } from '../curves/piece';
+import { dist, type Vec } from '../curves/vec';
 import type { PathNode } from '../curves/types';
 import { linkTo, type DrawEnd } from '../model/junction';
-import {
-  addNode,
-  edgeOfId,
-  nodeOf,
-  withRadius,
-  type GEdge,
-  type GNode,
-  type Graph,
-} from '../model/graph';
-import { chainsOf, type Chain } from './chains';
+import { addNode, edgeOfId, nodeOf, withRadius, type GEdge, type Graph } from '../model/graph';
+import { curveOfEdge } from './chains';
+import { parallel, touching } from './parallel';
 import { branchEdges, selectedSegments } from './selection';
 
 const TOL_M = 1e-3;
 
-/** Whether two headings are the same or exactly opposite (^100). */
-const alongOrAgainst = (a: GNode, b: GNode) =>
-  Math.abs(Math.abs(dot(fromAngle(a.th), fromAngle(b.th))) - 1) < 1e-9;
-
-/** Whether the ends of two segments are one lane width apart, pair by pair, in this order. */
-const apart = (a: [GNode, GNode], b: [GNode, GNode]) =>
-  a.every((n, i) => alongOrAgainst(n, b[i]!) && Math.abs(dist(n, b[i]!) - LANE_WIDTH_M) < TOL_M);
-
-/** Whether the nodes of two segments touch at both ends, in either order (^100, ^334 A and B). */
-export function touching(g: Graph, a: GEdge, b: GEdge): boolean {
-  const [as, ae, bs, be] = [a.start, a.end, b.start, b.end].map((id) => nodeOf(g, id));
-  if (!as || !ae || !bs || !be) return false;
-  return apart([as, ae], [bs, be]) || apart([as, ae], [be, bs]);
-}
-
-/** The centers of the arcs of a segment (a straight one has none). */
-function centersOf(g: Graph, edge: number): Vec[] {
-  const chain = chainsOf(g).find((ch) => ch.edgeIds.includes(edge));
-  const ref = chain?.edges[chain.edgeIds.indexOf(edge)];
-  return ref ? ref.E.pieces.filter(sweeps).map((p) => p.c) : [];
-}
-
-/** Whether the arcs of two segments share their centers, as many and each one (^334 C). */
-function concentric(g: Graph, a: number, b: number): boolean {
-  const [ca, cb] = [centersOf(g, a), centersOf(g, b)];
-  return ca.length === cb.length && ca.every((c) => cb.some((d) => dist(c, d) < TOL_M));
-}
-
-/** Whether two segments are parallel (^100, ^334): their nodes touch at both ends and their curves are concentric. */
-function parallel(g: Graph, a: GEdge, b: GEdge): boolean {
-  return touching(g, a, b) && concentric(g, a.id, b.id);
-}
-
 /** The center of the arc of a segment that is a bend (the only shape with one arc). */
-function arcOf(g: Graph, edge: number): { c: Vec } | null {
-  const chain = chainsOf(g).find((ch) => ch.edgeIds.includes(edge));
-  const ref = chain?.edges[chain.edgeIds.indexOf(edge)];
-  const arc = ref?.E.kind === 'C' ? ref.E.pieces.find(sweeps) : undefined;
-  return arc ? { c: arc.c } : null;
+function centerOf(g: Graph, edge: number): Vec | null {
+  const E = curveOfEdge(g, edge);
+  return (E?.kind === 'C' && E.pieces.find(sweeps)?.c) || null;
 }
 
 /** The largest radius a segment can have, null for a straight one (^332). */
 function maxOf(g: Graph, edge: number): number | null {
-  const chain = chainsOf(g).find((ch) => ch.edgeIds.includes(edge));
-  const ref = chain?.edges[chain.edgeIds.indexOf(edge)];
-  return ref && 'Rmax' in ref.E ? ref.E.Rmax : null;
+  const E = curveOfEdge(g, edge);
+  return E && 'Rmax' in E ? E.Rmax : null;
 }
 
 /**
  * A radius as it is stored after all transformations (^332): the maximum, within the tolerance, is
  * auto (null); a value above the maximum stays as it is (it is clamped when the curve is built).
  */
-export function storedRadius(g: Graph, edge: number, value: number): number | null {
+function storedRadius(g: Graph, edge: number, value: number): number | null {
   const max = maxOf(g, edge);
   return max !== null && Math.abs(value - max) < TOL_M ? null : value;
 }
@@ -113,17 +67,15 @@ export function concentricWithParallel(g: Graph, edge: number): Graph {
   const start = e && nodeOf(g, e.start);
   if (!e || !start) return g;
   for (const s of g.edges) {
-    const arc = s.id !== e.id && touching(g, s, e) ? arcOf(g, s.id) : null;
-    if (arc) return withRadius(g, e.id, dist(arc.c, start));
+    const center = s.id !== e.id && touching(g, s, e) ? centerOf(g, s.id) : null;
+    if (center) return withRadius(g, e.id, dist(center, start));
   }
   return g;
 }
 
 /** The radius a segment has now: the one of its first arc, null for a straight one. */
 function radiusOfEdge(g: Graph, edge: number): number | null {
-  const chain = chainsOf(g).find((ch) => ch.edgeIds.includes(edge));
-  const ref = chain?.edges[chain.edgeIds.indexOf(edge)];
-  return ref?.E.pieces.find(sweeps)?.r ?? null;
+  return curveOfEdge(g, edge)?.pieces.find(sweeps)?.r ?? null;
 }
 
 /** The segments together with all that are parallel to them, and to those in turn: any number of lanes on top of each other (^302). */
@@ -195,44 +147,4 @@ export function previewRadius(g: Graph, tip: number, node: PathNode, end: DrawEn
   const linked = linkTo(added.graph, tip, end, added.id);
   const e = linked.edges.find((x) => x.start === added.id || x.end === added.id);
   return e ? (edgeOfId(concentricWithParallel(linked, e.id), e.id)?.radius ?? null) : null;
-}
-
-/** A short line through the middles of two parallel segments, on their shared bisector (^344). */
-export interface ParallelLink {
-  p: Vec;
-  q: Vec;
-}
-
-/** Whether the arcs of two curves share their centers, each one (a straight one has none). */
-export function sameCenters(a: Piece[], b: Piece[]): boolean {
-  const [ca, cb] = [a.filter(sweeps), b.filter(sweeps)];
-  return ca.length === cb.length && ca.every((x) => cb.some((y) => dist(x.c, y.c) < TOL_M));
-}
-
-/** The middle of a bend is the middle of its arc, on the bisector; else the middle of the curve. */
-function middleOn(pieces: Piece[]) {
-  const arcs = pieces.filter(sweeps);
-  return arcs.length === 1 ? pointOn(arcs[0]!, 0.5) : middleOf(pieces);
-}
-
-/**
- * The links between the segments `ids` and the segments parallel to them (^100, ^334): through the
- * middle of each, which for bends is on the bisector, for straight segments the line through their
- * midpoints (^344).
- */
-export function parallelLinks(g: Graph, chains: Chain[], ids: number[]): ParallelLink[] {
-  const refs = chains.flatMap((c) => c.edges.map((ref, i) => ({ id: c.edgeIds[i]!, ref })));
-  const edge = new Map(g.edges.map((e) => [e.id, e]));
-  return refs.flatMap((a) =>
-    ids.includes(a.id)
-      ? refs
-          .filter((b) => b.id > a.id || !ids.includes(b.id))
-          .filter((b) => b.id !== a.id && touching(g, edge.get(a.id)!, edge.get(b.id)!))
-          .filter((b) => sameCenters(a.ref.E.pieces, b.ref.E.pieces))
-          .flatMap((b) => {
-            const [p, q] = [middleOn(a.ref.E.pieces), middleOn(b.ref.E.pieces)];
-            return p && q ? [{ p: { x: p.x, y: p.y }, q: { x: q.x, y: q.y } }] : [];
-          })
-      : [],
-  );
 }

@@ -80,27 +80,19 @@ export function nodeRules(n: RuleNode, width: number): Suggestion[] {
   ];
 }
 
-/** The extend lines (^325 to ^330): the angles from the heading, in degrees, one rule each. */
-const EXTEND_ANGLES: readonly { deg: number; rule: Rule }[] = [
-  { deg: 45, rule: 'extend+45' },
-  { deg: 15, rule: 'extend+15' },
-  { deg: 30, rule: 'extend+30' },
-  { deg: -45, rule: 'extend-45' },
-  { deg: -15, rule: 'extend-15' },
-  { deg: -30, rule: 'extend-30' },
-  { deg: 60, rule: 'extend+60' },
-  { deg: 75, rule: 'extend+75' },
-  { deg: -60, rule: 'extend-60' },
-  { deg: -75, rule: 'extend-75' },
-];
-
 /**
  * What the node a road is extended from makes besides its own lines, only in extend mode (^325 to
- * ^330): snap lines through it at 45°, 15° and 30° from its heading, and the same the other way.
+ * ^330, ^337 to ^340): snap lines through it at 15° to 75° from its heading, in steps of 15°, and
+ * the same the other way.
  */
 export function extendRules(n: RuleNode): Suggestion[] {
-  return EXTEND_ANGLES.map(({ deg, rule }) =>
-    line(n, fromAngle(n.th + (deg * Math.PI) / 180), { rule, from: [n.id] }),
+  return ([15, 30, 45, 60, 75] as const).flatMap((deg) =>
+    (['+', '-'] as const).map((sign) =>
+      line(n, fromAngle(n.th + ((sign === '+' ? deg : -deg) * Math.PI) / 180), {
+        rule: `extend${sign}${deg}`,
+        from: [n.id],
+      }),
+    ),
   );
 }
 

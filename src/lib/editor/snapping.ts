@@ -61,7 +61,7 @@ export const turningNode = (press: Press | null): number | null =>
     : null;
 
 /** The control points of a segment that snap like a position: the radius, the bend and the S-curve points (^249). */
-export const controlEdge = (press: Press | null): number | null =>
+const controlEdge = (press: Press | null): number | null =>
   press?.kind === 'drag' && ['rad', 'ctrl', 'mid1', 'mid2'].includes(press.drag.handle.type)
     ? press.id
     : null;
@@ -109,7 +109,7 @@ function sides(c: SnapCurve, locus: { p: Vec; d: Vec }): number[] {
  * curves that cross it. Everything else is not offered and not shown. Undefined for control points
  * that are not tied to a line.
  */
-export function reachOf(press: Press | null): Reach | undefined {
+function reachOf(press: Press | null): Reach | undefined {
   const locus = press && locusOf(press);
   if (!locus) return undefined;
   return {
