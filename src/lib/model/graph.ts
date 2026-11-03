@@ -126,7 +126,13 @@ export function insertNode(g: Graph, edge: number, at: PathNode): { graph: Graph
 function removeNode(g: Graph, id: number): Graph {
   const [inE, outE] = [edgesIn(g, id), edgesOut(g, id)];
   const rest = g.edges.filter((e) => e.start !== id && e.end !== id);
-  const join = inE.length === 1 && outE.length === 1 && inE[0]!.start !== id && outE[0]!.end !== id;
+  // A ring of two would join into a segment from its other node to itself: its edges go instead (^322).
+  const join =
+    inE.length === 1 &&
+    outE.length === 1 &&
+    inE[0]!.start !== id &&
+    outE[0]!.end !== id &&
+    inE[0]!.start !== outE[0]!.end;
   const joined: GEdge[] = join ? [{ ...inE[0]!, end: outE[0]!.end, radius: null }] : [];
   return { ...g, nodes: g.nodes.filter((n) => n.id !== id), edges: [...rest, ...joined] };
 }
