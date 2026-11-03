@@ -28,7 +28,7 @@ const apart = (a: [GNode, GNode], b: [GNode, GNode]) =>
   a.every((n, i) => alongOrAgainst(n, b[i]!) && Math.abs(dist(n, b[i]!) - LANE_WIDTH_M) < TOL_M);
 
 /** Whether the nodes of two segments touch at both ends, in either order (^100, ^334 A and B). */
-function touching(g: Graph, a: GEdge, b: GEdge): boolean {
+export function touching(g: Graph, a: GEdge, b: GEdge): boolean {
   const [as, ae, bs, be] = [a.start, a.end, b.start, b.end].map((id) => nodeOf(g, id));
   if (!as || !ae || !bs || !be) return false;
   return apart([as, ae], [bs, be]) || apart([as, ae], [be, bs]);
@@ -204,7 +204,7 @@ export interface ParallelLink {
 }
 
 /** Whether the arcs of two curves share their centers, each one (a straight one has none). */
-function sameCenters(a: Piece[], b: Piece[]): boolean {
+export function sameCenters(a: Piece[], b: Piece[]): boolean {
   const [ca, cb] = [a.filter(sweeps), b.filter(sweeps)];
   return ca.length === cb.length && ca.every((x) => cb.some((y) => dist(x.c, y.c) < TOL_M));
 }

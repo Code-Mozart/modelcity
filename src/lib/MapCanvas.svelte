@@ -2,6 +2,7 @@
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
   import { parallelLinks } from './editor/sharedRadius';
+  import { barsOf } from './editor/towers';
   import { selectedSegments } from './editor/selection';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
@@ -40,6 +41,9 @@
     untrack(() => camera.setAnchors(anchors));
   });
 
+  /** The bars of the runs of parallel segments, derived from the graph (^350). */
+  const bars = $derived(barsOf(editor.graph, editor.chains));
+
   /** The segments selected or hovered: the parallel segments to them are linked by a short line (^344). */
   const linked = () => [
     ...selectedSegments(editor.graph, editor.selection),
@@ -67,6 +71,7 @@
       previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
+      bars: bars,
       parallels: parallelLinks(editor.graph, editor.chains, linked()),
       turning: turningOf(editor.chains, editor.press),
     };

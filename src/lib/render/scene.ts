@@ -9,6 +9,7 @@ import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides, drawParallelLinks } from './guides';
+import { drawBars, type BarShape } from './bars';
 import { drawMeasures } from './measures';
 import { drawCompass, drawOffset, type Turning } from './compass';
 import {
@@ -67,6 +68,8 @@ export interface Scene {
   /** What the placed or moved node is pulled to (^101), and the nodes whose suggestions are pinned (^258). */
   snap: SnapHit | null;
   pinned: NodeRef[];
+  /** The bars beside the nodes of runs of parallel segments (^350). */
+  bars: BarShape[];
   /** Short lines through the middles of parallel segments of the selected or hovered ones (^344). */
   parallels: { p: Vec; q: Vec }[];
   /** The heading being set, with the arrow following the cursor, and the compass for the first node of an arm (^314, ^316). */
@@ -307,6 +310,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
       pal,
     );
   });
+  drawBars(f, scene.bars, NODE_DOT_PX, pal);
   // The outline of the hovered segment (or branch) is on top of everything (^99).
   drawOutlines(f, scene.roads, scene.outline, pal.blue);
 }
