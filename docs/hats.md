@@ -1,4 +1,4 @@
-next: ^349
+next: ^351
 
 # Hats
 
@@ -386,3 +386,5 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^346 | bug | done (milestone ^255, PR #31) | **Building concentric worked only the same way (user):** a segment built beside another one that runs the opposite way did not get the concentric radius (^281): the radius is the distance to the center of the arc, whichever way it runs. |
 | ^347 | bug | done (milestone ^255, PR #31) | **The extend lines were shown on the node being drawn from (user, ^325):** the node under the pointer is a hovered handle and took another way than the snap; both take the exception now. |
 | ^348 | bug | done (milestone ^255, PR #31) | **More than two parallel segments (user):** lanes on top of each other (the radii 17, 20, 23 m): any number follow when one changes and keep their offsets (^302, ^324), also when dragging a radius point. |
+| ^349 | image | reference (user) | **Sketch: bars at the nodes of parallel segments (user):** `docs/mocks/hat349.jpg`: three parallel lanes on the left, a pair on the right, a bend with lanes, and a merge. Short thick bars (the sketch marks them 1 to 10; the second 9 is a 10) cross between nodes that touch (^100, ^254): between the stacked lanes at their start nodes (1 to 4), at their end nodes (5, 6), along a bend (7, 8) and where lanes join (9, 10). See ^350. |
+| ^350 | feature | planned (user's idea; Claude's recommendation below; milestone to be decided, extends ^344) | **Bars between touching nodes (user, from ^349):** draw a short bar between nodes that touch, across the lane. **Claude's view (assumed):** a good addition, not a replacement of ^344: the bars at the nodes say *where* lanes are tied together (A and B of ^334) and could be part of the skeleton (always shown, cheap), while the line through the middles of the segments (^344) says that their curves are concentric (C) and stays a scaffold. Open: a bar also between touching nodes whose segments are not concentric (then dashed?), and how it looks for more than two lanes (one bar through all, as in the sketch at 1 to 4). |
