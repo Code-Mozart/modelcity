@@ -10,6 +10,7 @@ import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides } from './guides';
 import { drawMeasures } from './measures';
+import { drawCompass, reachPx, type Turning } from './compass';
 import {
   dot,
   ring,
@@ -66,6 +67,8 @@ export interface Scene {
   /** What the placed or moved node is pulled to (^101), and the nodes whose suggestions are pinned (^258). */
   snap: SnapHit | null;
   pinned: NodeRef[];
+  /** The heading being set, with the arrow following the cursor, and the compass for the first node of an arm (^314, ^316). */
+  turning: Turning | null;
   /** Where the nodes that are moved were, shown as snap points while they move (^113). */
   previous: Vec[];
   /** The curves a dragged node's segments would have if it were dropped now: dashed, like the curve of an extend (^284). */
@@ -83,11 +86,16 @@ const NODE_DOT_PX = 5.5;
 /** Selected nodes are blue and 150% larger (^70). */
 const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
 
-function drawArrow(f: Frame, node: { x: number; y: number; th: number }, color: string) {
+function drawArrow(
+  f: Frame,
+  node: { x: number; y: number; th: number },
+  color: string,
+  reach = ARROW_PX,
+) {
   const a = toScreen(f, node);
   const t = screenDir(f, fromAngle(node.th));
   // The control point sits on the stem, half way: the arrow reaches as far beyond it as it is before it (^126).
-  const tip = { x: a.x + t.x * 2 * ARROW_PX, y: a.y + t.y * 2 * ARROW_PX };
+  const tip = { x: a.x + t.x * 2 * reach, y: a.y + t.y * 2 * reach };
   segment(f.ctx, a, tip, { color, width: ARROW_STROKE_PX });
   barbs(f.ctx, tip, node.th + f.view.rot, { ...HEAD, color });
 }
@@ -97,13 +105,18 @@ interface NodeState {
   active: boolean[];
   selected: number[];
   pinned: number[];
+  /** The heading of one of its nodes is being set (^314). */
+  turning: Turning | null;
 }
 
 /** The node dots (skeleton) and, with the scaffold, the heading arrows. */
 function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
   const { active, selected } = state;
   road.path.nodes.forEach((n, i) => {
-    if (arrowShown(active, i)) drawArrow(f, n, pal.orange);
+    const turning = state.turning?.i === i ? state.turning : null;
+    if (turning || arrowShown(active, i))
+      drawArrow(f, n, pal.orange, reachPx(f, n, turning, ARROW_PX));
+    if (turning?.compass) drawCompass(f, n, pal);
     const picked = selected.includes(i);
     const color = picked ? pal.blue : state.pinned.includes(i) ? pal.turquoise : pal.ink;
     dot(f.ctx, toScreen(f, n), picked ? SELECTED_DOT_PX : NODE_DOT_PX, color);
@@ -198,9 +211,17 @@ const isFocused = (h: RoadHandle, focus: Focus | null) =>
     (v, n) => v === [focus.road, focus.type, focus.i, focus.k, focus.t][n],
   );
 
+/** The heading point that is dragged is at the cursor, and not drawn at all when the heading was copied (^314). */
+function drawTurningPoint(f: Frame, turning: Turning | null, h: RoadHandle, pal: Palette): boolean {
+  if (h.type !== 'head' || turning?.road !== h.road || turning.i !== h.i) return false;
+  if (turning.cursor) dot(f.ctx, toScreen(f, turning.cursor), SELECTED_DOT_PX, pal.orange);
+  return true;
+}
+
 function drawHandles(f: Frame, scene: Scene, active: boolean[][], pal: Palette) {
   for (const h of scene.handles) {
     if (h.type === 'node') continue;
+    if (drawTurningPoint(f, scene.turning, h, pal)) continue;
     const segs = active[h.road] ?? [];
     const shown = h.type === 'head' ? arrowShown(segs, h.i) : segs[h.i] === true;
     // The point that is hovered or dragged is as large as a selected node (^230).
@@ -281,6 +302,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
         active: active[i]!,
         selected: selectedIn(scene.selection, i),
         pinned: selectedIn(scene.pinned, i),
+        turning: scene.turning?.road === i ? scene.turning : null,
       },
       pal,
     );

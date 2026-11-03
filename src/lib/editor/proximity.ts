@@ -9,11 +9,14 @@ export interface Pointer {
   scale: number;
   /** Ctrl is held: snapping is off and the scaffolds are hidden (^101, ^287). */
   ctrl?: boolean;
+  /** Alt is held: the other heading (^301). */
+  alt?: boolean;
 }
 
 /** The pointer of the last position the editor has seen. */
-export const pointerOf = (info: { pt: Vec; scale: number; ctrl: boolean } | null): Pointer | null =>
-  info && { pt: info.pt, scale: info.scale, ctrl: info.ctrl };
+export const pointerOf = (
+  info: { pt: Vec; scale: number; ctrl: boolean; alt: boolean } | null,
+): Pointer | null => info && { pt: info.pt, scale: info.scale, ctrl: info.ctrl, alt: info.alt };
 
 /** Control points appear when the pointer is this close (screen pixels), see ^55. */
 export const HANDLE_NEAR_PX = 48;

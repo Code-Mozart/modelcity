@@ -56,7 +56,9 @@ export function dragHeading(path: Path, i: number, pt: Vec, angle: AngleSnap | n
   const node = path.nodes[i]!;
   const th = angleOf(sub(pt, node));
   if (!angle) return withNode(path, i, { th });
-  return withNode(path, i, { th: angle.from + snapAngle(th - angle.from, dist(pt, node) * angle.scale) });
+  return withNode(path, i, {
+    th: angle.from + snapAngle(th - angle.from, dist(pt, node) * angle.scale),
+  });
 }
 
 /** Dragging the blue point sets both headings so their lines meet at the pointer (^9). */
