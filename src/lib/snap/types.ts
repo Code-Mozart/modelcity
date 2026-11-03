@@ -21,6 +21,10 @@ export type Rule =
   | 'extend-45' // ^328
   | 'extend-15' // ^329
   | 'extend-30' // ^330
+  | 'extend+60' // ^337
+  | 'extend+75' // ^338
+  | 'extend-60' // ^339
+  | 'extend-75' // ^340
   | 'own'; // ^336
 
 interface Base {

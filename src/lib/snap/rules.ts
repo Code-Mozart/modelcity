@@ -88,6 +88,10 @@ const EXTEND_ANGLES: readonly { deg: number; rule: Rule }[] = [
   { deg: -45, rule: 'extend-45' },
   { deg: -15, rule: 'extend-15' },
   { deg: -30, rule: 'extend-30' },
+  { deg: 60, rule: 'extend+60' },
+  { deg: 75, rule: 'extend+75' },
+  { deg: -60, rule: 'extend-60' },
+  { deg: -75, rule: 'extend-75' },
 ];
 
 /**

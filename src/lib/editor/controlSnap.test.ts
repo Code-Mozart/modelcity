@@ -72,4 +72,18 @@ describe('a control point is offered only the points it can reach (^333)', () =>
     const by = ed.snapped?.by[0];
     expect(by?.kind === 'point' && Math.abs(by.at.y - 3) < 0.1).toBe(false); // not the point beside the node
   });
+
+  it('the middle radius point is not offered a point it cannot reach, not even where two lines cross', () => {
+    const ed = new Editor();
+    ed.load(withRadius(g(), 0, 30));
+    const h = chainHandles(ed.chains, 4).find(
+      (x) => x.type === 'rad' && x.t === 0.5 && x.id === 0,
+    )!;
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x - 4, h.y + 4));
+    ed.pointerMove(snapping(0.3, 0.3)); // beside the node, where its two lines cross
+    const [by, pt] = [ed.snapped?.by[0], ed.snapped?.pt];
+    expect(by?.kind).toBe('curve');
+    expect(Math.hypot(pt!.x, pt!.y)).toBeGreaterThan(0.1);
+  });
 });

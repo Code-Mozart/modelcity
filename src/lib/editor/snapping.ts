@@ -2,9 +2,9 @@ import { LANE_WIDTH_M } from '../curves/lane';
 import { pointOn, sweeps } from '../curves/piece';
 import { edgesAt, nodeOf, type Graph } from '../model/graph';
 import { cross, dist, sub, unitOr, type Vec } from '../curves/vec';
-import { curvesThrough, snapTo, type SnapQuery } from '../snap/engine';
+import { curvesThrough, snapTo, type Reach, type SnapQuery } from '../snap/engine';
 import { extendRules, nodeRules, suggestionsOf, type RuleEdge } from '../snap/rules';
-import type { SnapHit, Suggestion } from '../snap/types';
+import type { SnapCurve, SnapHit, Suggestion } from '../snap/types';
 import {
   chainHandles,
   chainsOf,
@@ -92,13 +92,33 @@ function locusOf(press: Press): { p: Vec; d: Vec } | null {
   return { p: middle ? r.arc.c : at, d: unitOr(d, { x: 1, y: 0 }) };
 }
 
-/** What a control point can reach (^333): snap points that are not on its line are not offered; lines and curves are. */
-function reachable(list: Suggestion[], press: Press): Suggestion[] {
-  const locus = locusOf(press);
-  if (!locus) return list;
-  const off = (s: Suggestion) =>
-    s.kind === 'point' && Math.abs(cross(sub(s.at, locus.p), locus.d)) > LOCUS_TOL_M;
-  return list.filter((s) => !off(s));
+/** Samples along a curve of a snap suggestion, to see whether it crosses a line. */
+const SAMPLES = 24;
+
+/** The signed distances of a suggestion's curve from the line `locus` runs along, at samples. */
+function sides(c: SnapCurve, locus: { p: Vec; d: Vec }): number[] {
+  return c.pieces.flatMap((piece) =>
+    Array.from({ length: SAMPLES + 1 }, (_, k) =>
+      cross(sub(pointOn(piece, k / SAMPLES), locus.p), locus.d),
+    ),
+  );
+}
+
+/**
+ * What a control point can reach (^333): places on the line it moves along, and the lines and
+ * curves that cross it. Everything else is not offered and not shown. Undefined for control points
+ * that are not tied to a line.
+ */
+export function reachOf(press: Press | null): Reach | undefined {
+  const locus = press && locusOf(press);
+  if (!locus) return undefined;
+  return {
+    point: (at) => Math.abs(cross(sub(at, locus.p), locus.d)) <= LOCUS_TOL_M,
+    curve: (c) => {
+      const s = sides(c, locus);
+      return Math.min(...s) <= LOCUS_TOL_M && Math.max(...s) >= -LOCUS_TOL_M;
+    },
+  };
 }
 
 /** The graph without some nodes and the edges at them: what the others offer while those move. */
@@ -145,7 +165,7 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
   const moving = movedIds(press);
   // A control point of a segment snaps to everything but the segment itself, whose shape it changes (^249).
   const control = controlEdge(press);
-  if (control !== null) return reachable(suggestionsOfGraph(withoutEdge(graph, control)), press!);
+  if (control !== null) return suggestionsOfGraph(withoutEdge(graph, control));
   if (!moving.length || !press || press.kind !== 'drag') return suggestionsOfGraph(graph);
   const before = press.undo.graph;
   const were = moving.flatMap((id) => nodeOf(before, id) ?? []);
@@ -242,11 +262,17 @@ export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
   const { info } = a;
   const what = snaps(a);
   if (!info || info.ctrl || !what) return null;
-  const query = { pt: info.pt, scale: info.scale, pinned: a.pinned };
+  const query = { pt: info.pt, scale: info.scale, pinned: a.pinned, reach: reachOf(a.press) };
   if (what === 'place' && a.hover?.kind !== 'preview') return hoveredHit(base, a.hover, query);
-  // Aiming (`Shift`) wants a point, not a line or a curve (^335).
-  const aiming = what === 'turn' && info.shift;
-  return snapTo(aiming ? base.filter((s) => s.kind === 'point') : base, query);
+  const hit = snapTo(base, query);
+  return hit && withoutExtendAtTip(hit, a);
+}
+
+/** Snapped to the node being drawn from itself, its extend lines are not shown (^325). */
+function withoutExtendAtTip(hit: SnapHit, a: SnapArgs): SnapHit {
+  const [first, tip] = [hit.by[0], a.drawing ? a.pinned.at(-1) : undefined];
+  if (first?.kind !== 'point' || first.node === undefined || first.node !== tip) return hit;
+  return { ...hit, by: hit.by.filter((s) => !s.rule.startsWith('extend')) };
 }
 
 /** What a hover is made of for the snapping: the editor state and the chains with the zoom. */

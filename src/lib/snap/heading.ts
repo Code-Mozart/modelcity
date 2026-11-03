@@ -47,6 +47,7 @@ export function placedHeading(hit: SnapHit | null, alt: boolean): number | null 
 function laneHeading(hit: SnapHit, s: Suggestion): number | null {
   if (s.kind === 'point')
     return s.rule === 'node-points' && s.node === undefined ? s.heading : null;
+  if (s.rule === 'own') return hit.heading;
   if (s.rule === 'offset')
     return hit.heading === null ? null : hit.heading + (s.side === -1 ? Math.PI : 0);
   return s.straight ? (s.heading ?? null) : null;

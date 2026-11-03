@@ -43,10 +43,7 @@ export function drawCompass(f: Frame, node: Vec & { th: number }, pal: Palette) 
   half(f, c, north, pal.red);
   half(f, c, { x: -north.x, y: -north.y }, pal.muted);
   dot(f.ctx, c, 1.5, pal.ink);
-  text(
-    f.ctx,
-    `${bearingOf(node.th)}°`,
-    { x: c.x, y: c.y + ICON_R + 16 },
-    { color: pal.ink, align: 'center' },
-  );
+  // Above the icon while the heading points down, below it while it points up, so the label is not under the arrow.
+  const y = head.y > 0 ? c.y - ICON_R - 8 : c.y + ICON_R + 16;
+  text(f.ctx, `${bearingOf(node.th)}°`, { x: c.x, y }, { color: pal.ink, align: 'center' });
 }
