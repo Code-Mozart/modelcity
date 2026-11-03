@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addEdge, addNode, edgeOfId, emptyGraph, type Graph } from '../model/graph';
 import { chainsOf } from './chains';
-import { shareConcentric } from './sharedRadius';
+import { shareConcentric, sharedWith } from './sharedRadius';
 
 /** Two bends one lane width apart: from the left to the right, then down. */
 function lanes(shift = 3): Graph {
@@ -43,5 +43,16 @@ describe('shared radius of parallel segments (^77, ^282)', () => {
     const auto = { ...base, edges: base.edges.map((e) => ({ ...e, radius: null })) };
     const g = shareConcentric(auto, 0, [0, 1]);
     expect(edgeOfId(g, 1)!.radius).toBeNull();
+  });
+});
+
+describe('parallel segments stay concentric unless the segment alone is selected (^302)', () => {
+  const g = lanes();
+  it('nothing selected, or one node of the other segment as well: both change', () => {
+    expect(sharedWith(g, [], 0)).toEqual([0, 1]);
+    expect(sharedWith(g, [0, 1, 2], 0)).toEqual([0, 1]);
+  });
+  it('only its own two nodes selected: it changes alone', () => {
+    expect(sharedWith(g, [0, 1], 0)).toEqual([0]);
   });
 });

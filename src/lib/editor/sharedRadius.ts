@@ -11,6 +11,7 @@ import {
   type Graph,
 } from '../model/graph';
 import { chainsOf } from './chains';
+import { selectedSegments } from './selection';
 
 const TOL_M = 1e-3;
 
@@ -68,4 +69,18 @@ export function concentricWithParallel(g: Graph, edge: number): Graph {
     if (arc) return withRadius(g, e.id, Math.abs(dot(sub(arc.c, start), perp(arc.u))));
   }
   return g;
+}
+
+/**
+ * The segments whose radius follows the dragged one (^77, ^302): the selected ones, and always the
+ * segments parallel to it (they stay concentric, ^282), unless only its own two nodes are selected:
+ * then the segment changes alone.
+ */
+export function sharedWith(g: Graph, selection: number[], own: number): number[] {
+  const e = edgeOfId(g, own);
+  if (!e) return [];
+  const alone = selection.length === 2 && selection.includes(e.start) && selection.includes(e.end);
+  if (alone) return [own];
+  const parallels = g.edges.filter((o) => o.id !== own && parallel(g, e, o)).map((o) => o.id);
+  return [...new Set([own, ...selectedSegments(g, selection), ...parallels])];
 }

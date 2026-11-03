@@ -6,7 +6,8 @@ import { targetOf, type Drawn } from './targets';
 import type { ControlId } from '../hints/hints';
 import type { PointerInfo, Press } from './types';
 import { shareConcentric } from './sharedRadius';
-import { pressNode, selectedSegments } from './selection';
+import { sharedWith } from './sharedRadius';
+import { pressNode } from './selection';
 
 type DragPress = Extract<Press, { kind: 'drag' }>;
 
@@ -96,8 +97,7 @@ export function emptyPress(drawn: Drawn, info: PointerInfo, hit: RoadHit | null)
  */
 function sharing(g: Graph, selection: number[], press: Press) {
   if (press.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
-  const all = selectedSegments(g, selection);
-  return all.includes(press.id) ? { own: press.id, all } : null;
+  return { own: press.id, all: sharedWith(g, selection, press.id) };
 }
 
 /** The radius of the dragged segment is given to all selected segments. */
