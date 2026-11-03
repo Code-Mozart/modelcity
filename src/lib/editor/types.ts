@@ -17,6 +17,8 @@ export interface PointerInfo {
   touch: boolean;
   shift: boolean;
   alt: boolean;
+  /** Ctrl turns snapping off while it is held (^101). */
+  ctrl: boolean;
 }
 
 /**
@@ -74,6 +76,8 @@ export type Press =
       use: ControlId | null;
       /** Alt on a heading control point: a click flips the arm (^234). */
       flip: boolean;
+      /** A radius point in draw mode: the place on the curve a click splits or merges at (^278). */
+      curve: RoadHit | null;
       undo: Snapshot;
       target: HintTarget;
     }

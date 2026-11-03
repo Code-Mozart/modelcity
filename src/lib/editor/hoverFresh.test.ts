@@ -45,6 +45,21 @@ const operations: [string, Operation][] = [
   ['enter draw mode', (ed) => ed.enterDrawMode()],
   ['finish road', (ed) => ed.finishRoad()],
   [
+    'snapping on',
+    (ed, _rnd, now) => {
+      ed.modifiers({ alt: now.alt, shift: now.shift, ctrl: false });
+      return { ...now, ctrl: false };
+    },
+  ],
+  [
+    'snapping off',
+    (ed, _rnd, now) => {
+      ed.modifiers({ alt: now.alt, shift: now.shift, ctrl: true });
+      return { ...now, ctrl: true };
+    },
+  ],
+  ['pin', (ed) => ed.key('s')],
+  [
     'Alt down',
     (ed, _rnd, now) => {
       ed.modifiers({ alt: true, shift: false });

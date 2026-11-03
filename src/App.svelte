@@ -11,9 +11,12 @@
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
   import { hintsFor, viewHints } from './lib/hints/hints';
+  import { PIN_TIP } from './lib/hints/pinTip';
+  import { REACH_WARN } from './lib/snap/engine';
   import { Usage } from './lib/hints/usage.svelte';
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
+  import { dropOf } from './lib/editor/drop';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
@@ -33,27 +36,48 @@
     const used = editor.used;
     untrack(() => used && usage.mark(used.id));
   });
+  // While a handle is dragged, the hints are about the drag only (^286); the graph is read so that it follows the drag.
+  const drag = $derived.by(() => {
+    const [press, graph] = [editor.press, editor.graph];
+    if (press?.kind !== 'drag' || !press.moved) return null;
+    return { type: press.drag.handle.type, merge: dropOf(graph, press, editor.snapped) !== null };
+  });
   // While the projects modal is up its controls replace all others (^168).
   const hints = $derived(
     session.modalOpen
       ? modalHints(session.row?.mode ?? 'list', session.over)
       : editor.viewing
         ? viewHints(usage.hidden)
-        : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, usage.hidden),
+        : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
+            hidden: usage.hidden,
+            pinned: editor.pins.list.length,
+            snapping: editor.snapped !== null,
+            rotating: camera.rotating,
+            drag,
+          }),
   );
   // The last steps and what was undone, for a few seconds after each one, and while a road is drawn (^107, ^109).
   const recent = new Recent();
   $effect(() => {
-    const event = editor.event;
+    const event = editor.timeline.event;
     untrack(() => recent.consume(event));
   });
   // Drawing a road keeps the panel up; when the road is finished the interval starts from then.
   $effect(() => {
     if (editor.active === null) untrack(() => recent.hideLater());
   });
+  // Pulling a snap suggestion of a node towards its maximum distance says how to pin it (^258, ^294); not while pinning is visited.
+  $effect(() => {
+    const far = (editor.snapped?.reach ?? 0) >= REACH_WARN;
+    untrack(() => far && !usage.hidden('pin') && toasts.show('info', PIN_TIP));
+  });
+  // Pinning is a control like the others: used, its tip is not shown for a while (^110).
+  $effect(() => {
+    if (editor.pins.list.length) untrack(() => usage.mark('pin'));
+  });
   const panelShown = $derived(recent.visible || editor.active !== null);
-  const panel = $derived(panelView(editor.history));
-  const historyRows = $derived(panelHints(editor.history, usage.hidden));
+  const panel = $derived(panelView(editor.timeline.history));
+  const historyRows = $derived(panelHints(editor.timeline.history, usage.hidden));
 
   onMount(() => void session.start());
 
@@ -85,28 +109,32 @@
   function noHistory(e: KeyboardEvent) {
     const mods = { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey, alt: e.altKey };
     const action = actionFor(keyOf(e), mods);
-    if ((action === 'undo' || action === 'undoBatch') && !editor.canUndo) {
+    if ((action === 'undo' || action === 'undoBatch') && !editor.timeline.canUndo) {
       toasts.show('info', 'nothing to undo');
-    } else if ((action === 'redo' || action === 'redoBatch') && !editor.canRedo) {
+    } else if ((action === 'redo' || action === 'redoBatch') && !editor.timeline.canRedo) {
       toasts.show('info', 'nothing to redo');
     }
   }
 
+  const modsOf = (e: KeyboardEvent) => ({
+    alt: e.altKey,
+    shift: e.shiftKey,
+    ctrl: e.ctrlKey || e.metaKey,
+  });
+
+  /** While the projects modal is up, Esc leaves the rename or the modal; the other keys are its own. */
+  function modalKey(e: KeyboardEvent) {
+    if (e.key !== 'Escape') return;
+    if (session.row) session.cancelRow();
+    else session.closeModal();
+  }
+
   function onKeyDown(e: KeyboardEvent) {
-    editor.modifiers({ alt: e.altKey, shift: e.shiftKey });
-    if (session.modalOpen) {
-      if (e.key === 'Escape' && session.row) session.cancelRow();
-      else if (e.key === 'Escape') session.closeModal();
-      return;
-    }
+    editor.modifiers(modsOf(e));
+    if (session.modalOpen) return modalKey(e);
     if (e.target instanceof HTMLInputElement) return;
     noHistory(e);
-    if (projectKey(e)) e.preventDefault();
-    else if (
-      camera.key(e.key) ||
-      editor.key(keyOf(e), { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey, alt: e.altKey })
-    )
-      e.preventDefault();
+    if (projectKey(e) || camera.key(e.key) || editor.key(keyOf(e), modsOf(e))) e.preventDefault();
   }
 </script>
 
@@ -114,9 +142,9 @@
   onkeydown={onKeyDown}
   onkeyup={(e) => {
     camera.keyUp(e.key);
-    editor.modifiers({ alt: e.altKey, shift: e.shiftKey });
+    editor.modifiers(modsOf(e));
   }}
-  onblur={() => editor.modifiers({ alt: false, shift: false })}
+  onblur={() => editor.modifiers({ alt: false, shift: false, ctrl: false })}
   onpagehide={() => void session.flush()}
 />
 

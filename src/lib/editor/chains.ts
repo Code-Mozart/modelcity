@@ -3,7 +3,7 @@ import { buildEdge } from '../curves/edge';
 import { handlesOf, type Handle } from '../curves/handles';
 import type { CurveHit, EdgeRef, Path } from '../curves/path';
 import { nearestOnEdges } from '../curves/path';
-import type { Sample } from '../curves/piece';
+import { pointOn, type Sample } from '../curves/piece';
 import type { PathNode } from '../curves/types';
 import { RMIN } from '../curves/radius';
 import { dist } from '../curves/vec';
@@ -174,4 +174,13 @@ export function chainSelection(chains: Chain[], ids: number[]): { road: number; 
   return chains.flatMap((c, road) =>
     c.nodeIds.flatMap((id, node) => (ids.includes(id) ? [{ road, node }] : [])),
   );
+}
+
+/** The point of a curve a radius point sits on, as a curve hit: what a click on the point splits or merges at (^278). */
+export function hitOfHandle(chains: Chain[], h: RoadHandle): RoadHit | null {
+  const ref = chains[h.road]?.edges[h.i];
+  const piece = ref?.E.pieces[h.k ?? 0];
+  return ref && piece
+    ? { ref, k: h.k ?? 0, at: pointOn(piece, h.t ?? 0.5), d: 0, road: h.road, edge: h.id }
+    : null;
 }

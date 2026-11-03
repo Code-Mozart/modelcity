@@ -25,6 +25,7 @@ const PALETTE_KEYS = [
   'blue',
   'red',
   'orange',
+  'turquoise',
   'red-ink',
   'orange-ink',
 ] as const;

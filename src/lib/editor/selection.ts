@@ -1,7 +1,7 @@
 import type { Vec } from '../curves/vec';
 import { edgesBetween, type Graph } from '../model/graph';
 import { branchOfEdge } from '../model/junction';
-import type { Hover } from './types';
+import type { Hover, Press } from './types';
 
 /** The selection box in screen pixels, axis-aligned with the viewport (^70). */
 export interface Band {
@@ -112,4 +112,10 @@ export function afterEmptyClick(
   if (!curve.length) return shift ? sel : sel.length ? [] : null;
   if (alt) return (shift ? afterBranchAdd : afterBranchClick)(sel, curve);
   return afterCurveClick(sel, curve, shift);
+}
+
+/** What a click without moving on a node does to the selection: toggles it, or leaves just it (^71, ^72). */
+export function afterHandleClick(sel: number[], press: Extract<Press, { kind: 'drag' }>): number[] {
+  if (press.click === 'toggle') return withoutNode(sel, press.id);
+  return press.click === 'collapse' && press.group.length ? [press.id] : sel;
 }

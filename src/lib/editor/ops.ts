@@ -1,5 +1,7 @@
 import { dragHeading } from '../curves/drag';
 import { dist, type Vec } from '../curves/vec';
+import { mergeNodes } from '../model/merge';
+import type { Drop } from './drop';
 import { withSharedRadius } from './press';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
@@ -15,6 +17,8 @@ import {
   moveNodes,
   nodeOf,
   removeNodes,
+  roundToMm,
+  sameGraph,
   turnedAround,
   withNode,
   type Graph,
@@ -24,7 +28,10 @@ import {
 export const placementAt = (pt: Vec): Placement => ({ pt, th: null });
 
 /** A press on a curve in draw mode: a node is inserted, and the road splits off it or merges into it (^23). */
-export function curvePress(d: Drawn, hit: RoadHit): { drawn: Drawn; press: Press } {
+export function curvePress(
+  d: Drawn,
+  hit: RoadHit,
+): { drawn: Drawn; press: Extract<Press, { kind: 'place' }> } {
   const target = targetOf(d, { kind: 'candidate', hit }, true);
   const r = insertAt(d, hit);
   const act = target.kind === 'curve' ? target.act : null;
@@ -165,4 +172,29 @@ export function placeStep(g: Graph, id: number, info: PointerInfo): Graph {
   if (!n || dist(info.pt, n) < 6 / info.scale) return g;
   const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, info.shift).nodes[0]!.th;
   return withNode(g, id, { th });
+}
+
+/**
+ * A node was dropped to merge (^248, ^268): into a node, or into a curve, where the curve is split
+ * by a node with the heading of the curve there, so the curve does not change. The dropped node
+ * goes; the road being drawn and the selection follow it.
+ */
+export function droppedNode(d: Drawn, id: number, drop: NonNullable<Drop>): Drawn {
+  const into =
+    drop.node !== undefined
+      ? { graph: d.graph, id: drop.node }
+      : insertNode(d.graph, drop.edge!, { ...drop.at, th: drop.th });
+  const to = (n: number | null) => (n === id ? into.id : n);
+  // A node left without a segment goes, like the end of a road that was merged into its own start (^285).
+  const graph = removeNodes(mergeNodes(into.graph, id, into.id), [], to(d.active));
+  const selection = [...new Set(d.selection.map((n) => to(n)!))];
+  return { ...d, graph, active: to(d.active), origin: to(d.origin), selection };
+}
+
+/**
+ * The graph when the road being drawn is finished: a node that was inserted by a split and not
+ * continued gives the curve back (^237); else a road with fewer than two nodes is cancelled.
+ */
+export function finishedGraph(g: Graph, split: { before: Graph; after: Graph } | null): Graph {
+  return split && sameGraph(g, roundToMm(split.after)) ? split.before : removeNodes(g, [], null);
 }

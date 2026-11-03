@@ -19,15 +19,15 @@ describe('Esc deselects all (^218)', () => {
     click(ed, 40, -20);
     ed.key('Escape');
     expect(ed.selection).toEqual([]);
-    expect(ed.history.past.at(-1)!.name).toBe('deselect all');
-    expect(ed.history.past.at(-1)!.batch).toBe(ed.history.past.at(-2)!.batch);
+    expect(ed.timeline.history.past.at(-1)!.name).toBe('deselect all');
+    expect(ed.timeline.history.past.at(-1)!.batch).toBe(ed.timeline.history.past.at(-2)!.batch);
   });
 
   it('with nothing selected it does nothing, and in draw mode it still finishes the road', () => {
     const ed = road();
-    const steps = ed.history.past.length;
+    const steps = ed.timeline.history.past.length;
     ed.key('Escape');
-    expect(ed.history.past).toHaveLength(steps);
+    expect(ed.timeline.history.past).toHaveLength(steps);
     const drawing = roadThenDrawMode();
     click(drawing, 200, 200);
     drawing.key('Escape');
@@ -42,7 +42,7 @@ describe('a right click on a segment removes it (^160)', () => {
     ed.rightClick(at(m.x, m.y));
     expect(ed.graph.edges).toHaveLength(1);
     expect(ed.graph.nodes).toHaveLength(2);
-    expect(ed.history.past.at(-1)!.name).toBe('remove segment');
+    expect(ed.timeline.history.past.at(-1)!.name).toBe('remove segment');
   });
 
   it('a segment in the middle of a road splits the road in two', () => {
@@ -143,7 +143,7 @@ describe('Alt and a right click remove the whole branch (^160)', () => {
     ed.rightClick(at(m.x, m.y, { alt: true }));
     expect(ed.graph.edges).toHaveLength(0);
     expect(ed.graph.nodes).toHaveLength(0);
-    expect(ed.history.past.at(-1)!.name).toBe('remove branch');
+    expect(ed.timeline.history.past.at(-1)!.name).toBe('remove branch');
   });
 
   it('a branch ends where another road meets it, and that road stays', () => {
@@ -188,7 +188,7 @@ describe('Alt and a click on a heading control point flips its arm (^234)', () =
     ]);
     turned(ed, th);
     expect(length(ed)).toBeCloseTo(long, 6);
-    expect(ed.history.past.at(-1)!.name).toBe('flip arm');
+    expect(ed.timeline.history.past.at(-1)!.name).toBe('flip arm');
     ed.key('z', { ctrl: true, shift: false });
     expect(ed.graph.edges.map((e) => [e.start, e.end])).toEqual([
       [0, 1],

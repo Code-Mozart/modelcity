@@ -20,7 +20,7 @@ const PROJECT_ROWS = ['P: projects'];
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
   hintsFor(drawing, target, selected)
     .map(show)
-    .filter((r) => !PROJECT_ROWS.includes(r) && r !== 'Tab: view mode');
+    .filter((r) => !PROJECT_ROWS.includes(r) && r !== 'Tab: view mode' && !r.startsWith('S: '));
 
 const hiddenIds =
   (...ids: string[]) =>
@@ -250,10 +250,10 @@ describe('the projects modal hints say what an input does right now (^181)', () 
   });
 });
 
-describe('learned controls are hidden (^110)', () => {
+describe('visited controls are hidden (^110)', () => {
   it('a control that was used has no hint, each on its own', () => {
     const all = rows(false, empty, 2);
-    const some = hintsFor(false, empty, 2, hiddenIds('pan', 'select-box')).map(show);
+    const some = hintsFor(false, empty, 2, { hidden: hiddenIds('pan', 'select-box') }).map(show);
     expect(all).toContain('RMB drag: pan');
     expect(some).not.toContain('RMB drag: pan');
     expect(some).not.toContain('LMB drag: select');
@@ -261,9 +261,9 @@ describe('learned controls are hidden (^110)', () => {
     expect(some).toContain('MMB drag: rotate');
   });
 
-  it('with the camera and select controls learned, drawing is the only mouse hint on a blank map', () => {
-    const learned = hiddenIds('pan', 'zoom', 'rotate', 'select-box', 'view');
-    expect(hintsFor(false, empty, 0, learned).map(show)).toEqual([
+  it('with the camera and select controls visited, drawing is the only mouse hint on a blank map', () => {
+    const visitedIds = hiddenIds('pan', 'zoom', 'rotate', 'select-box', 'view');
+    expect(hintsFor(false, empty, 0, { hidden: visitedIds }).map(show)).toEqual([
       'LMB: draw mode',
       ...PROJECT_ROWS,
     ]);
@@ -273,15 +273,19 @@ describe('learned controls are hidden (^110)', () => {
     const all = () => true;
     const rows = (h: ReturnType<typeof hintsFor>) =>
       h.map(show).filter((r) => !r.startsWith('Tab'));
-    expect(rows(hintsFor(true, empty, 0, all))).toEqual(rows(hintsFor(true, empty, 0)));
-    expect(hintsFor(false, node(false), 0, all).map(show)).toContain('LMB drag: move node');
+    expect(rows(hintsFor(true, empty, 0, { hidden: all }))).toEqual(rows(hintsFor(true, empty, 0)));
+    expect(hintsFor(false, node(false), 0, { hidden: all }).map(show)).toContain(
+      'LMB drag: move node',
+    );
   });
 });
 
 describe('Tab (^104)', () => {
-  it('is learned like the others, in view mode too (^104)', () => {
+  it('is visited like the others, in view mode too (^104)', () => {
     expect(hintsFor(false, empty).map(show)).toContain('Tab: view mode');
-    expect(hintsFor(false, empty, 0, hiddenIds('view')).map(show)).not.toContain('Tab: view mode');
+    expect(hintsFor(false, empty, 0, { hidden: hiddenIds('view') }).map(show)).not.toContain(
+      'Tab: view mode',
+    );
     expect(viewHints().map(show)).toEqual([
       'Tab: select mode',
       'RMB drag: pan',
@@ -291,10 +295,28 @@ describe('Tab (^104)', () => {
     ]);
   });
 
-  it('undo and redo can be learned, too', () => {
+  it('undo and redo can be visited, too', () => {
     const rowsOf = (...ids: string[]) =>
       historyHints({ undo: true, redo: true }, hiddenIds(...ids)).map(show);
     expect(rowsOf()).toHaveLength(2);
     expect(rowsOf('undo')).toEqual(['Ctrl+Y or Ctrl+Shift+Z: redo (Alt to redo batch)']);
+  });
+});
+
+describe('while a handle is dragged (^286)', () => {
+  const drag = (type: 'node' | 'head' | 'rad', merge = false) => ({ type, merge });
+
+  it('only what the drag does, what a key changes and whether it merges', () => {
+    const rows = (d: ReturnType<typeof drag>, snapping = false) =>
+      hintsFor(false, node(false), 1, { drag: d, snapping }).map(show);
+    expect(rows(drag('node'))).toEqual(['LMB drag: move node', 'Esc: cancel']);
+    expect(rows(drag('node', true), true)).toEqual([
+      'LMB drag: move node',
+      'LMB: merge on release',
+      'Esc: cancel',
+      'Ctrl: no snapping',
+    ]);
+    expect(rows(drag('head'))).toEqual(['LMB drag: turn heading', 'Esc: cancel']);
+    expect(rows(drag('rad'))).toEqual(['LMB drag: change radius', 'Esc: cancel']);
   });
 });

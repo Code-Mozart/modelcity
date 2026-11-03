@@ -16,13 +16,17 @@ import type { HintTarget } from '../hints/hints';
 /** The road being drawn and the end new nodes attach to (^65), with the selection. */
 export type Drawn = Snapshot;
 
+/** A click on a radius point in draw mode splits or merges there, as on the curve (^278). */
+const radiusAct = (drawn: Drawn, handle: RoadHandle, drawing: boolean) =>
+  drawing && handle.type === 'rad' ? curveAction(drawn) : null;
+
 function handleTarget(drawn: Drawn, handle: RoadHandle, drawing: boolean): HintTarget {
   const { selection, graph } = drawn;
   const node = handle.type === 'node';
   return {
     kind: 'handle',
     type: handle.type,
-    act: node && drawing ? nodeAction(drawn, handle.id) : null,
+    act: node && drawing ? nodeAction(drawn, handle.id) : radiusAct(drawn, handle, drawing),
     selected: (node || handle.type === 'head') && isSelected(selection, handle.id),
     lane: node && !drawing && allSelected(selection, branchOfNode(graph, handle.id)),
   };

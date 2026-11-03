@@ -109,9 +109,9 @@ describe('undo of splits and merges (^23, ^81)', () => {
     expect(ed.active).toBeNull();
     click(ed, 20, 80);
     click(ed, 40, 40);
-    const steps = ed.history.past.length;
+    const steps = ed.timeline.history.past.length;
     click(ed, 40, -20);
-    expect(ed.history.past).toHaveLength(steps + 1);
+    expect(ed.timeline.history.past).toHaveLength(steps + 1);
     ed.key('z', undo);
     expect(ed.graph.edges).toHaveLength(3);
     expect(ed.active).not.toBeNull();

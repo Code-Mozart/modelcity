@@ -5,7 +5,7 @@ import { ARROW_PX } from '../curves/handles';
 import type { EdgeRef, Path } from '../curves/path';
 import type { RoadHandle } from '../editor/chains';
 import { ordered } from '../model/junction';
-import { fromAngle } from '../curves/vec';
+import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides, drawRadiusLabels } from './guides';
@@ -24,6 +24,9 @@ import {
 import type { Band } from '../editor/selection';
 import type { Pointer } from '../editor/proximity';
 import { drawOutlines } from './outline';
+import { drawSnap } from './snapGuides';
+import type { SnapHit } from '../snap/types';
+import type { Piece } from '../curves/types';
 import { activeFlags, arrowShown, withSelectedTogether } from './scaffold';
 
 /** A node of a chain (the index in the chain), where it is drawn. */
@@ -59,6 +62,13 @@ export interface Scene {
   mergePreview: Extract<Hover, { kind: 'preview' }> | null;
   focus: Focus | null;
   pointer: Pointer | null;
+  /** What the placed or moved node is pulled to (^101), and the nodes whose suggestions are pinned (^258). */
+  snap: SnapHit | null;
+  pinned: NodeRef[];
+  /** Where the nodes that are moved were, shown as snap points while they move (^113). */
+  previous: Vec[];
+  /** The curves a dragged node's segments would have if it were dropped now: dashed, like the curve of an extend (^284). */
+  dropPreview: Piece[][];
 }
 
 const CURVE_PX = 2;
@@ -85,6 +95,7 @@ function drawArrow(f: Frame, node: { x: number; y: number; th: number }, color: 
 interface NodeState {
   active: boolean[];
   selected: number[];
+  pinned: number[];
 }
 
 /** The node dots (skeleton) and, with the scaffold, the heading arrows. */
@@ -93,7 +104,8 @@ function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
   road.path.nodes.forEach((n, i) => {
     if (arrowShown(active, i)) drawArrow(f, n, pal.orange);
     const picked = selected.includes(i);
-    dot(f.ctx, toScreen(f, n), picked ? SELECTED_DOT_PX : NODE_DOT_PX, picked ? pal.blue : pal.ink);
+    const color = picked ? pal.blue : state.pinned.includes(i) ? pal.turquoise : pal.ink;
+    dot(f.ctx, toScreen(f, n), picked ? SELECTED_DOT_PX : NODE_DOT_PX, color);
   });
 }
 
@@ -249,10 +261,25 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   });
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
+  drawSnap(f, scene.snap, pal);
+  for (const at of scene.previous)
+    ring(f.ctx, toScreen(f, at), 7, { color: pal.turquoise, width: 1.5 });
+  for (const pieces of scene.dropPreview) {
+    for (const piece of pieces) strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
+  }
   if (scene.mergePreview) drawPreview(f, scene.mergePreview, pal, true);
   if (scene.band) drawBand(f, scene.band, pal);
   scene.roads.forEach((road, i) => {
-    drawNodes(f, road, { active: active[i]!, selected: selectedIn(scene.selection, i) }, pal);
+    drawNodes(
+      f,
+      road,
+      {
+        active: active[i]!,
+        selected: selectedIn(scene.selection, i),
+        pinned: selectedIn(scene.pinned, i),
+      },
+      pal,
+    );
   });
   // The outline of the hovered segment (or branch) is on top of everything (^99).
   drawOutlines(f, scene.roads, scene.outline, pal.blue);

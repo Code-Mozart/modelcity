@@ -3,7 +3,7 @@ import { at, click, draw, lastBatchSize } from '../testing/editorHelpers';
 
 const batchUndo = { ctrl: true, shift: false, alt: true };
 const batchRedo = { ctrl: true, shift: true, alt: true };
-const names = (ed: ReturnType<typeof draw>) => ed.history.past.map((s) => s.name);
+const names = (ed: ReturnType<typeof draw>) => ed.timeline.history.past.map((s) => s.name);
 
 const road = () => {
   const ed = draw([
@@ -42,11 +42,11 @@ describe('names of steps (^216)', () => {
 describe('batches (^103, ^216)', () => {
   it('the steps of a drawing session are one batch, the next road another', () => {
     const ed = road();
-    expect(lastBatchSize(ed.history.past)).toBe(4);
+    expect(lastBatchSize(ed.timeline.history.past)).toBe(4);
     click(ed, 500, 500);
     click(ed, 100, 100);
     click(ed, 130, 100);
-    expect(lastBatchSize(ed.history.past)).toBe(2);
+    expect(lastBatchSize(ed.timeline.history.past)).toBe(2);
   });
 
   it('selection steps are a batch that ends with the first step of another kind', () => {
@@ -54,9 +54,9 @@ describe('batches (^103, ^216)', () => {
     click(ed, 0, 0);
     click(ed, 40, -20);
     click(ed, 80, 0);
-    expect(lastBatchSize(ed.history.past)).toBe(3);
+    expect(lastBatchSize(ed.timeline.history.past)).toBe(3);
     ed.key('Delete');
-    expect(lastBatchSize(ed.history.past)).toBe(1);
+    expect(lastBatchSize(ed.timeline.history.past)).toBe(1);
   });
 });
 
@@ -70,10 +70,10 @@ describe('undoing batches (^103, ^216)', () => {
     expect(ed.selection).toHaveLength(1);
     ed.key('z', batchUndo);
     expect(ed.selection).toEqual([]);
-    expect(lastBatchSize(ed.history.future)).toBe(3);
+    expect(lastBatchSize(ed.timeline.history.future)).toBe(3);
     ed.key('z', batchRedo);
     expect(ed.selection).toHaveLength(1);
-    expect(ed.history.past.map((s) => s.name).slice(-3)).toEqual([
+    expect(ed.timeline.history.past.map((s) => s.name).slice(-3)).toEqual([
       'select node',
       'select node',
       'select node',
@@ -83,11 +83,11 @@ describe('undoing batches (^103, ^216)', () => {
   it('every undo or redo announces itself, for the panel (^107)', () => {
     const ed = road();
     click(ed, 0, 0);
-    expect(ed.event?.kind).toBe('step');
+    expect(ed.timeline.event?.kind).toBe('step');
     ed.key('z', { ctrl: true, shift: false });
-    expect(ed.event).toMatchObject({ kind: 'undo', steps: [{ name: 'select node' }] });
+    expect(ed.timeline.event).toMatchObject({ kind: 'undo', steps: [{ name: 'select node' }] });
     ed.key('y', { ctrl: true, shift: false });
-    expect(ed.event?.kind).toBe('redo');
+    expect(ed.timeline.event?.kind).toBe('redo');
   });
 });
 
@@ -99,19 +99,19 @@ describe('a single step is a batch of one (^103)', () => {
     expect(ed.chains).toHaveLength(1);
     ed.key('z', batchUndo);
     expect(ed.chains).toHaveLength(1);
-    expect(ed.history.future).toHaveLength(1);
+    expect(ed.timeline.history.future).toHaveLength(1);
     ed.key('y', batchUndo);
-    expect(ed.history.future).toHaveLength(0);
+    expect(ed.timeline.history.future).toHaveLength(0);
   });
 });
 
 describe('a change that changes nothing is no step (^227)', () => {
   it('entering draw mode and finishing with no node placed', () => {
     const ed = road();
-    const steps = ed.history.past.length;
+    const steps = ed.timeline.history.past.length;
     click(ed, 500, 500);
     ed.key('Escape');
-    expect(ed.history.past).toHaveLength(steps);
+    expect(ed.timeline.history.past).toHaveLength(steps);
   });
 
   it('a drag that ends where it began is only a selection, and leaves the graph the object it was', () => {

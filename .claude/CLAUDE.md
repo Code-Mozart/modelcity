@@ -17,6 +17,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - Hats never collide, only ever increment, and are never reused.
 - Claude tracks them in `docs/hats.md`. That file must ALWAYS be up to date. Its first line states the next hat, e.g. `next: ^123`.
 - Use hats in commit messages where applicable.
+- Requirements the user mentions at random times become hats at once (first look whether one exists and extend it); they are sorted out lazily when their topic comes up (^246).
 - Status words in the registry: `decided` = the user decided it; `assumed` = Claude filled in a detail and the user has not confirmed it yet (never write "decided by Claude", and no "please confirm" either: `assumed` already says it).
 
 ## Git and branches
@@ -80,6 +81,8 @@ The user entrusts the details to Claude. Principles:
 - Design principle (^210): a message to the user has the icon of its kind in front (error: exclamation mark in a red circle; information: i in a blue circle; warning: exclamation mark in an orange triangle; success: check mark in a green circle), never color alone (`Notice.svelte`).
 - Design principle (^211): use the available screen space; UI is not small without a reason.
 - Design principle (^233): avoid accidental actions that discard the user's work: block them (with a message that says why) or ask first; when nothing would be lost, allow them.
+- Design principle (^251): precision grows with distance: the farther the pointer is from the point it controls, the finer the steps (angles, snapping), wherever that is feasible and sensible.
+- Design principle (^259): prefer an explicit control (a key, a click) to anything that needs the pointer to stay exactly on a thin target, to hover for a while, or in a nested menu that vanishes when the pointer leaves it by a pixel.
 - Say *operation* for something the user can do, not *action* (^180).
 - Two levels of gizmo (^60): the *skeleton* (curves and node dots, always shown) and the *scaffold* (all other gizmos of a segment, shown by need). A *segment* is the curve between two nodes.
 

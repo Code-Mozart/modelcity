@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { dropOf, dropPreview, roadsShown } from './editor/drop';
+  import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
   import type { Editor, PointerInfo } from './editor/editor.svelte';
@@ -37,8 +39,9 @@
 
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
+    const drop = dropOf(editor.graph, editor.press, editor.snapped);
     const scene = {
-      roads: editor.chains.map((c) => ({ path: c.path, edges: c.edges, width: c.width })),
+      roads: roadsShown(editor.chains, editor.graph, editor.press, drop),
       handles: editor.handles(camera.view.scale),
       selection: chainSelection(editor.chains, editor.selection),
       band: editor.band,
@@ -46,11 +49,15 @@
       viewing: editor.viewing,
       selectedSegments: editor.selectedSegments,
       outline: editor.hoverSegments,
-      hideScaffold: editor.movingGroup,
+      hideScaffold: editor.movingGroup || editor.pointer?.ctrl === true || drop !== null,
       hover: editor.hover,
       mergePreview: editor.mergePreview,
       focus: editor.focus,
       pointer: editor.pointer,
+      snap: editor.snapped,
+      previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
+      dropPreview: dropPreview(editor.graph, editor.press, drop),
+      pinned: chainSelection(editor.chains, editor.pins.list),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
@@ -62,7 +69,7 @@
   }
 
   /** Where the pointer last was on the canvas, and with what keys, to find it again when the view moves. */
-  let last: Pick<PointerInfo, 'screen' | 'touch' | 'shift' | 'alt'> | null = null;
+  let last: Pick<PointerInfo, 'screen' | 'touch' | 'shift' | 'alt' | 'ctrl'> | null = null;
 
   function infoAt(at: NonNullable<typeof last>): PointerInfo {
     return {
@@ -75,7 +82,13 @@
 
   function info(e: PointerEvent | MouseEvent): PointerInfo {
     const touch = 'pointerType' in e && e.pointerType === 'touch';
-    last = { screen: localPoint(e), touch, shift: e.shiftKey, alt: e.altKey };
+    last = {
+      screen: localPoint(e),
+      touch,
+      shift: e.shiftKey,
+      alt: e.altKey,
+      ctrl: e.ctrlKey || e.metaKey,
+    };
     return infoAt(last);
   }
 
@@ -155,7 +168,7 @@
   onpointermove={onPointerMove}
   onpointerup={onPointerUp}
   onpointercancel={onPointerUp}
-  onpointerleave={() => editor.pointerLeave()}
+  onpointerleave={() => editor.look(null)}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
   oncontextmenu={(e) => e.preventDefault()}
 ></canvas>

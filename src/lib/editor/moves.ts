@@ -1,4 +1,4 @@
-import { dist } from '../curves/vec';
+import { dist, type Vec } from '../curves/vec';
 import type { Graph } from '../model/graph';
 import { dragStep, placeStep } from './ops';
 import { nodesInBand, withNodes, type Band } from './selection';
@@ -16,11 +16,11 @@ export interface Moved {
  * selection box (shift keeps the selection and adds to it, ^70, ^72). Marks the press as moved.
  * Null while the pointer is still within the click distance, or when nothing changed.
  */
-export function moveOf(snap: Snapshot, press: Press, info: PointerInfo): Moved | null {
+export function moveOf(snap: Snapshot, press: Press, info: PointerInfo, at?: Vec): Moved | null {
   if (press.kind === 'drag') {
     if (!press.moved && dist(info.pt, press.start) <= DRAG_PX / info.scale) return null;
     press.moved = true;
-    return { graph: dragStep(snap, press, info) };
+    return { graph: dragStep(snap, press, at ? { ...info, pt: at } : info) };
   }
   if (press.kind === 'place') {
     const graph = placeStep(snap.graph, press.id, info);

@@ -3,7 +3,7 @@ import type { Press } from './types';
 
 /**
  * Which control a finished press used, if it was one of the select operations whose hint is hidden
- * once it is learned (^110): a click on a node or curve, Shift for adding, Alt for a branch, or the
+ * once it is visited (^110): a click on a node or curve, Shift for adding, Alt for a branch, or the
  * selection box. Moving, drawing and clicks on empty canvas are not.
  */
 export function controlUsed(press: Press): ControlId | null {
