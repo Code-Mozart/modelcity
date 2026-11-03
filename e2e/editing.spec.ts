@@ -36,7 +36,9 @@ async function moveGroup(app: App) {
   const before = await nodes(app);
   await app.box({ x: -20, y: -20 }, { x: 80, y: 60 }); // box select all three
   expect((await app.state()).selected).toBe(3);
+  await app.page.keyboard.down('Control'); // no snapping (^101): the group moves exactly by the drag
   await app.drag({ x: 40, y: 40 }, { x: 50, y: 50 });
+  await app.page.keyboard.up('Control');
   const after = await nodes(app);
   for (const n of after) {
     const was = before.find((b) => b.id === n.id)!;
