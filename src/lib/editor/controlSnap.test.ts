@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Editor } from './editor.svelte';
 import { mapOf, snapping } from '../testing/snapHelpers';
 import { chainHandles } from './chains';
+import { dropOf } from './drop';
 import { edgeOfId, withRadius } from '../model/graph';
 
 // A bend from (0,0) heading right to (40,20), and a separate road whose node offers a snap line at x = 20.
@@ -43,5 +44,17 @@ describe('the control points of a segment snap (^249)', () => {
     ed.pointerMove(snapping(0.5, 0.5));
     ed.pointerUp();
     expect(edgeOfId(ed.graph, 0)!.radius).toBeNull();
+  });
+});
+
+describe('dragging a radius point shows the segment as it is (^306)', () => {
+  it('nothing is merged, so nothing is hidden or dashed, even when a node has the segment id', () => {
+    const ed = new Editor();
+    ed.load(g());
+    const h = chainHandles(ed.chains, 4).find((x) => x.type === 'rad')!;
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x + 8, h.y + 8));
+    ed.pointerMove(snapping(h.x + 9, h.y + 9));
+    expect(dropOf(ed.graph, ed.press, ed.snapped)).toBeNull();
   });
 });

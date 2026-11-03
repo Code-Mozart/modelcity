@@ -213,7 +213,10 @@ function nodeHover(snap: SnapHit, w: SnapWorld): Hover | null {
 /** The place on a curve the pointer snapped to (the curve of a segment, or a radius point on it), as a candidate. */
 function curveHover(snap: SnapHit, w: SnapWorld): Hover | null {
   const by = snap.by[0];
-  const onCurve = by?.kind === 'curve' ? by.rule === 'curve' : by?.rule === 'radius-point';
+  const onCurve =
+    by?.kind === 'curve'
+      ? by.rule === 'curve'
+      : by?.rule === 'radius-point' || by?.rule === 'inflection-point';
   const hit = onCurve ? nearestOnChains(w.chains, snap.pt, MERGE_WORLD_M) : null;
   return hit && !nearNode(hit) ? { kind: 'candidate', hit } : null;
 }

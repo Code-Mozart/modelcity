@@ -32,7 +32,11 @@ function curveUnder(before: Graph, moving: number[], hit: SnapHit | null, at: Ve
 
 /** What a drag that ends now merges into, if anything. */
 export function dropOf(graph: Graph, press: Press | null, hit: SnapHit | null): Drop {
-  const node = press?.kind === 'drag' && press.moved ? nodeOf(graph, press.id) : undefined;
+  // Only a dragged node merges; the id of any other handle is a segment's (^306).
+  const node =
+    press?.kind === 'drag' && press.moved && press.drag.handle.type === 'node'
+      ? nodeOf(graph, press.id)
+      : undefined;
   if (press?.kind !== 'drag' || !node) return null;
   const moving = movedIds(press);
   return nodeUnder(graph, moving, hit, node) ?? curveUnder(press.undo.graph, moving, hit, node);
