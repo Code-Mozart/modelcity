@@ -89,3 +89,33 @@ describe('a group that is moved (^264)', () => {
     expect(nodeOf(ed.graph, 3)).toMatchObject({ x: 0, y: 80 });
   });
 });
+
+describe('what the moved node keeps (^113, ^300)', () => {
+  it('its old normal line: moving it sideways or further along its heading', () => {
+    const ed = new Editor();
+    ed.load(
+      mapOf([
+        [
+          [0, 0],
+          [40, 10],
+        ],
+      ]),
+    );
+    drag(ed, [40, 10], [41.5, 25]);
+    expect(nodeOf(ed.graph, 1)).toMatchObject({ x: 40, y: 25 });
+  });
+
+  it('its old heading line', () => {
+    const ed = new Editor();
+    ed.load(
+      mapOf([
+        [
+          [0, 0],
+          [40, 10],
+        ],
+      ]),
+    );
+    drag(ed, [40, 10], [60, 11.5]);
+    expect(nodeOf(ed.graph, 1)).toMatchObject({ x: 60, y: 10 });
+  });
+});

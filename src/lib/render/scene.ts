@@ -5,7 +5,7 @@ import { ARROW_PX } from '../curves/handles';
 import type { EdgeRef, Path } from '../curves/path';
 import type { RoadHandle } from '../editor/chains';
 import { ordered } from '../model/junction';
-import { fromAngle } from '../curves/vec';
+import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides, drawRadiusLabels } from './guides';
@@ -65,6 +65,8 @@ export interface Scene {
   /** What the placed or moved node is pulled to (^101), and the nodes whose suggestions are pinned (^258). */
   snap: SnapHit | null;
   pinned: NodeRef[];
+  /** Where the nodes that are moved were, shown as snap points while they move (^113). */
+  previous: Vec[];
   /** The curves a dragged node's segments would have if it were dropped now: dashed, like the curve of an extend (^284). */
   dropPreview: Piece[][];
 }
@@ -260,6 +262,8 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
   drawSnap(f, scene.snap, pal);
+  for (const at of scene.previous)
+    ring(f.ctx, toScreen(f, at), 7, { color: pal.turquoise, width: 1.5 });
   for (const pieces of scene.dropPreview) {
     for (const piece of pieces) strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
   }

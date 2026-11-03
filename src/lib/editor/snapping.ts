@@ -1,8 +1,9 @@
 import { LANE_WIDTH_M } from '../curves/lane';
+import type { Vec } from '../curves/vec';
 import { nodeOf, type Graph } from '../model/graph';
 import { dist } from '../curves/vec';
 import { curvesThrough, snapTo, type SnapQuery } from '../snap/engine';
-import { suggestionsOf, type RuleEdge } from '../snap/rules';
+import { nodeRules, suggestionsOf, type RuleEdge } from '../snap/rules';
 import type { SnapHit, Suggestion } from '../snap/types';
 import {
   chainHandles,
@@ -58,21 +59,26 @@ export function snapBase(graph: Graph, press: Press | null): Suggestion[] {
   const moving = movedIds(press);
   if (!moving.length || !press || press.kind !== 'drag') return suggestionsOfGraph(graph);
   const before = press.undo.graph;
-  const previous: Suggestion[] = moving.flatMap((id) => {
-    const n = nodeOf(before, id);
-    return n
-      ? [
-          {
-            kind: 'point' as const,
-            at: { x: n.x, y: n.y },
-            heading: n.th,
-            rule: 'previous' as const,
-            from: [],
-          },
-        ]
-      : [];
-  });
-  return [...suggestionsOfGraph(without(before, moving)), ...previous];
+  const were = moving.flatMap((id) => nodeOf(before, id) ?? []);
+  const places = were.map((n): Suggestion => ({
+    kind: 'point',
+    at: { x: n.x, y: n.y },
+    heading: n.th,
+    rule: 'previous',
+    from: [],
+  }));
+  // The node that is dragged keeps its snap lines: sideways, or further along its heading (^300).
+  const own = were.filter((n) => n.id === press.id).flatMap((n) => nodeRules(n, LANE_WIDTH_M));
+  const lines = own.filter((s) => s.kind === 'curve').map((s) => ({ ...s, from: [] }));
+  return [...suggestionsOfGraph(without(before, moving)), ...places, ...lines];
+}
+
+/** Where the moved nodes were, to show them while they move (^113). */
+export function previousPlaces(press: Press | null): Vec[] {
+  if (press?.kind !== 'drag' || !press.moved) return [];
+  return movedIds(press)
+    .flatMap((id) => nodeOf(press.undo.graph, id) ?? [])
+    .map((n) => ({ x: n.x, y: n.y }));
 }
 
 export interface SnapArgs {

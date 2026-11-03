@@ -1,5 +1,6 @@
 <script lang="ts">
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
+  import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
   import type { Editor, PointerInfo } from './editor/editor.svelte';
@@ -54,6 +55,7 @@
       focus: editor.focus,
       pointer: editor.pointer,
       snap: editor.snapped,
+      previous: previousPlaces(editor.press),
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
     };
