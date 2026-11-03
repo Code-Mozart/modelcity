@@ -8,7 +8,8 @@ import { ordered } from '../model/junction';
 import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
-import { drawCircles, drawCorners, drawGuides, drawLength, drawRadiusLabels } from './guides';
+import { drawCircles, drawCorners, drawGuides } from './guides';
+import { drawMeasures } from './measures';
 import {
   dot,
   ring,
@@ -118,9 +119,12 @@ function drawPreview(
 ) {
   if (hover.ref) {
     const [from, to] = ordered(hover.ref, hover.node, hover.end);
-    for (const piece of buildEdge(from, to, null).pieces) {
+    const E = buildEdge(from, to, null);
+    // Extend mode shows what a segment shows: its heading lines, dashed like the curve, and the measurements (^321, ^303).
+    drawGuides(f, { i: -1, p: from, q: to, E }, pal, [6, 6]);
+    for (const piece of E.pieces)
       strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
-    }
+    drawMeasures(f, { i: -1, p: from, q: to, E }, pal);
   }
   if (curveOnly) return;
   f.ctx.globalAlpha = 0.6;
@@ -183,8 +187,7 @@ function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawCorners(f, ref, pal);
-    drawLength(f, ref, pal);
-    drawRadiusLabels(f, ref, pal, rad?.i === ref.i ? { k: rad.k ?? 0, t: rad.t ?? 0.5 } : null);
+    drawMeasures(f, ref, pal, rad?.i === ref.i ? { k: rad.k ?? 0, t: rad.t ?? 0.5 } : null);
   });
 }
 

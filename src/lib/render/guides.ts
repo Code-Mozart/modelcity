@@ -1,18 +1,8 @@
-import type { Arc, Edge } from '../curves/types';
+import type { Edge } from '../curves/types';
 import type { EdgeRef } from '../curves/path';
-import { bendAngleDeg, lengthOf, middleOf } from '../curves/measure';
 import { sweeps } from '../curves/piece';
-import { add, fromAngle, mul, onCircle, sub, unitOr, type Vec } from '../curves/vec';
-import {
-  extend,
-  ring,
-  screenDir,
-  segment,
-  text,
-  toScreen,
-  type Frame,
-  type Palette,
-} from './paint';
+import { fromAngle, type Vec } from '../curves/vec';
+import { extend, ring, screenDir, segment, toScreen, type Frame, type Palette } from './paint';
 
 /** Construction geometry drawn behind the curve (^9): heading lines, circles, corner points. */
 const HEAD_REACH_PX = 28;
@@ -32,10 +22,16 @@ interface HeadEnd {
 }
 
 /** Heading line of one node: through its corner point if there is one, else a short stub. */
-function drawHeadingLine(f: Frame, node: Vec & { th: number }, end: HeadEnd, pal: Palette) {
+function drawHeadingLine(
+  f: Frame,
+  node: Vec & { th: number },
+  end: HeadEnd,
+  style: { pal: Palette; dash?: number[] },
+) {
+  const { pal, dash } = style;
   const { corner, sign } = end;
   const a = toScreen(f, node);
-  const stroke = { color: pal.orange, width: 1.6 };
+  const stroke = { color: pal.orange, width: 1.6, dash };
   if (corner) {
     const [from, to] = extend(a, toScreen(f, corner), 0, HEAD_REACH_PX);
     segment(f.ctx, from, to, stroke);
@@ -48,33 +44,34 @@ function drawHeadingLine(f: Frame, node: Vec & { th: number }, end: HeadEnd, pal
 function drawBendGuides(
   f: Frame,
   { p, q, E }: EdgeRef & { E: Extract<Edge, { kind: 'C' }> },
-  pal: Palette,
+  style: { pal: Palette; dash?: number[] },
 ) {
-  drawHeadingLine(f, p, { corner: E.C, sign: 1 }, pal);
-  drawHeadingLine(f, q, { corner: E.C, sign: 1 }, pal);
+  drawHeadingLine(f, p, { corner: E.C, sign: 1 }, style);
+  drawHeadingLine(f, q, { corner: E.C, sign: 1 }, style);
 }
 
 function drawTwoArcGuides(
   f: Frame,
   { p, q, E }: EdgeRef & { E: Extract<Edge, { kind: 'S' | 'H' }> },
-  pal: Palette,
+  style: { pal: Palette; dash?: number[] },
 ) {
-  drawHeadingLine(f, p, { corner: E.k1, sign: 1 }, pal);
-  drawHeadingLine(f, q, { corner: E.k2, sign: -1 }, pal);
+  drawHeadingLine(f, p, { corner: E.k1, sign: 1 }, style);
+  drawHeadingLine(f, q, { corner: E.k2, sign: -1 }, style);
   const [from, to] = extend(
     toScreen(f, E.axis.a),
     toScreen(f, E.axis.b),
     AXIS_REACH_PX,
     AXIS_REACH_PX,
   );
-  segment(f.ctx, from, to, { color: pal.orange, width: 1.6 });
+  segment(f.ctx, from, to, { color: style.pal.orange, width: 1.6, dash: style.dash });
 }
 
-export function drawGuides(f: Frame, ref: EdgeRef, pal: Palette) {
+/** The heading lines of a segment (^9); dashed for a preview (^321). */
+export function drawGuides(f: Frame, ref: EdgeRef, pal: Palette, dash?: number[]) {
   const { E } = ref;
   if (E.kind === 'line') return;
-  if (E.kind === 'C') drawBendGuides(f, { ...ref, E }, pal);
-  else drawTwoArcGuides(f, { ...ref, E }, pal);
+  if (E.kind === 'C') drawBendGuides(f, { ...ref, E }, { pal, dash });
+  else drawTwoArcGuides(f, { ...ref, E }, { pal, dash });
 }
 
 export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
@@ -99,41 +96,4 @@ export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   for (const k of [E.k1, E.k2]) {
     if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.orange, width: 2 });
   }
-}
-
-/** The place on an arc where its radius label hangs: just outside the circle, at parameter t. */
-function labelAt(f: Frame, piece: Arc, t: number): Vec {
-  // next to a radius point the label keeps clear of it, in the middle of the arc it hangs closer
-  const gap = t === 0.5 ? 22 : 34;
-  const a = piece.a0 + piece.da * t;
-  const at = toScreen(f, onCircle(piece.c, piece.r, a));
-  const c = toScreen(f, piece.c);
-  const out = unitOr(sub(at, c), { x: 0, y: 0 });
-  return add(at, mul(out, gap));
-}
-
-/**
- * Radius labels at the middle of each arc; while a radius handle is hovered or dragged (`rad`)
- * only the label of its arc is shown, next to that handle (^128).
- */
-export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette, rad: RadFocus | null) {
-  E.pieces.forEach((piece, k) => {
-    if (!sweeps(piece) || (rad && rad.k !== k)) return;
-    const at = labelAt(f, piece, rad?.t ?? 0.5);
-    const label = `${piece.r.toFixed(1)}m · ${bendAngleDeg(piece).toFixed(0)}°`;
-    text(f.ctx, label, at, { color: pal['orange-ink'], align: 'center' });
-  });
-}
-
-/** The length of a segment (on a bend the arc length) beside the middle of its curve (^303). */
-export function drawLength(f: Frame, { E }: EdgeRef, pal: Palette) {
-  const mid = middleOf(E.pieces);
-  if (!mid) return;
-  const [here, ahead] = [toScreen(f, mid), toScreen(f, add(mid, { x: mid.tx, y: mid.ty }))];
-  const t = unitOr(sub(ahead, here), { x: 1, y: 0 });
-  const at = add(here, mul({ x: t.y, y: -t.x }, 16));
-  text(f.ctx, `${lengthOf(E.pieces).toFixed(1)}m`, at, {
-    color: pal['orange-ink'],
-    align: 'center',
-  });
 }
