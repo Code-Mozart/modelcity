@@ -14,24 +14,15 @@ import {
   type RoadHandle,
 } from './chains';
 import { previewOf, type Drawn } from './targets';
+import { placedHeading } from '../snap/heading';
 import type { Hover, Placement, PointerInfo, Press } from './types';
 
 /** A node dropped within this world distance (meters) of another node or of a curve is merged into it, whatever the zoom (^248, ^283). */
 export const MERGE_WORLD_M = 0.1;
 
-/**
- * The heading a node gets where it snaps to a touching point (^254): the same as the touching node
- * or the opposite one, by the side (^253); `Alt` takes the other one (^301). Null elsewhere.
- */
-export function touchingHeading(hit: SnapHit | null, alt: boolean): number | null {
-  const s = hit?.by[0];
-  const touching = s?.kind === 'point' && s.rule === 'node-points' && s.node === undefined;
-  return touching && s.heading !== null ? s.heading + (alt ? Math.PI : 0) : null;
-}
-
 /** Where a node goes when the pointer snapped: the place, with the heading it gets there (^254, ^301). */
 export const snappedTo = (hit: SnapHit | null, info: PointerInfo): Placement | null =>
-  hit && { pt: hit.pt, th: touchingHeading(hit, info.alt), node: nodeAt(hit) };
+  hit && { pt: hit.pt, th: placedHeading(hit, info.alt), node: nodeAt(hit) };
 
 /** The node whose place the snap is (a snap point of a node, ^248). */
 const nodeAt = (hit: SnapHit): number | null => {
@@ -198,7 +189,7 @@ export function snapPreview(
   return (
     nodeHover(snap, w) ??
     curveHover(snap, w) ??
-    previewOf(w.drawn, { pt: snap.pt, th: touchingHeading(snap, w.alt) })
+    previewOf(w.drawn, { pt: snap.pt, th: placedHeading(snap, w.alt) })
   );
 }
 

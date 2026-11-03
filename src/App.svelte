@@ -17,7 +17,7 @@
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
   import { dropOf } from './lib/editor/drop';
-  import { touchingHeading } from './lib/editor/snapping';
+  import { placedHeading } from './lib/snap/heading';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
@@ -53,7 +53,7 @@
             hidden: usage.hidden,
             pinned: editor.pins.list.length,
             snapping: editor.snapped !== null,
-            touching: touchingHeading(editor.snapped, false) !== null,
+            touching: placedHeading(editor.snapped, false) !== null,
             rotating: camera.rotating,
             drag,
           }),

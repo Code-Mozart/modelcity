@@ -44,6 +44,10 @@ export interface SnapCurve extends Base {
   limited: boolean;
   /** The segment it belongs to (the curve and its offsets). */
   edge?: number;
+  /** An offset curve: on the right (+1, the lane runs the same way) or the left (-1, the opposite way, ^253). */
+  side?: 1 | -1;
+  /** The direction of the normal of a snap line: the heading a node placed on it gets (^318). */
+  heading?: number;
 }
 
 export type Suggestion = SnapPoint | SnapCurve;
