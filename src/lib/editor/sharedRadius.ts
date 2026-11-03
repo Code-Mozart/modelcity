@@ -1,7 +1,15 @@
 import { sweeps } from '../curves/piece';
 import { LANE_WIDTH_M } from '../curves/lane';
 import { dist, dot, fromAngle, perp, sub, type Vec } from '../curves/vec';
-import { edgeOfId, nodeOf, shareRadius, type GEdge, type GNode, type Graph } from '../model/graph';
+import {
+  edgeOfId,
+  nodeOf,
+  shareRadius,
+  withRadius,
+  type GEdge,
+  type GNode,
+  type Graph,
+} from '../model/graph';
 import { chainsOf } from './chains';
 
 const TOL_M = 1e-3;
@@ -45,4 +53,19 @@ export function shareConcentric(g: Graph, own: number, all: number[]): Graph {
       : e,
   );
   return { ...shared, edges };
+}
+
+/**
+ * A segment that was built between the nodes beside another segment's nodes (parallel, ^100) gets
+ * the radius that makes its curve concentric with that segment (^281, ^279).
+ */
+export function concentricWithParallel(g: Graph, edge: number): Graph {
+  const e = edgeOfId(g, edge);
+  const start = e && nodeOf(g, e.start);
+  if (!e || !start) return g;
+  for (const s of g.edges) {
+    const arc = s.id !== e.id && parallel(g, s, e) ? arcOf(g, s.id) : null;
+    if (arc) return withRadius(g, e.id, Math.abs(dot(sub(arc.c, start), perp(arc.u))));
+  }
+  return g;
 }

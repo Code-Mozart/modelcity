@@ -3,6 +3,7 @@ import { dist, type Vec } from '../curves/vec';
 import { mergeNodes } from '../model/merge';
 import type { Drop } from './drop';
 import { withSharedRadius } from './press';
+import { concentricWithParallel } from './sharedRadius';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
 import { nodeAtSample, type RoadHandle, type RoadHit } from './chains';
@@ -64,7 +65,9 @@ export function placeNode(d: Drawn, at: Placement): { drawn: Drawn; id: number }
   }
   const heading = autoHeadingFor(d.end);
   const r = addNode(d.graph, { x: at.pt.x, y: at.pt.y, th: at.th ?? heading(tip, at.pt) });
-  const graph = linkTo(r.graph, tip.id, d.end, r.id);
+  const linked = linkTo(r.graph, tip.id, d.end, r.id);
+  const built = linked.edges.find((e) => [e.start, e.end].includes(r.id));
+  const graph = built ? concentricWithParallel(linked, built.id) : linked;
   const end = d.end === 'first' ? 'start' : d.end;
   return { drawn: { ...d, graph, active: r.id, end, selection: [r.id] }, id: r.id };
 }
