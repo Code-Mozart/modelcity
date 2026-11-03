@@ -13,7 +13,7 @@ import {
   type Graph,
 } from '../model/graph';
 import { chainsOf } from './chains';
-import { selectedSegments } from './selection';
+import { branchEdges, selectedSegments } from './selection';
 
 const TOL_M = 1e-3;
 
@@ -77,29 +77,27 @@ export function storedRadius(g: Graph, edge: number, value: number): number | nu
 /** The radius of a segment, the value of auto being its maximum (^332). */
 const valueOf = (g: Graph, e: GEdge): number | null => e.radius ?? maxOf(g, e.id);
 
+/** One segment that follows the dragged radius: its radius is the dragged value plus `delta` (^324). */
+export interface Share {
+  id: number;
+  delta: number;
+}
+
 /**
- * Give the selected segments the radius of the dragged one (^77). Its value is given, also when it
- * is the maximum of that segment: a segment with a larger maximum gets that value, one with a
- * smaller maximum keeps it although it exceeds its limit (^332). Segments that are parallel to it
- * (^100) get the concentric radius instead (^282): their curve shares the center of the dragged
- * one, so lanes next to each other stay lanes.
+ * Give the segments of the plan the radius of the dragged one (^77): its value, also when it is
+ * the maximum of that segment, plus the offset that keeps parallel segments concentric (^282,
+ * ^324). A value above the maximum of a segment stays as it is, it is clamped when the curve is
+ * built (^332).
  */
-export function shareConcentric(
-  g: Graph,
-  own: number,
-  who: { all: number[]; parallels: number[] },
-): Graph {
-  const { all, parallels } = who;
+export function shareConcentric(g: Graph, own: number, plan: Share[]): Graph {
   const from = edgeOfId(g, own);
   const value = from ? valueOf(g, from) : null;
-  if (!from || value === null) return g;
-  const arc = arcOf(g, own);
-  const radiusOf = (b: GEdge) =>
-    arc && parallels.includes(b.id)
-      ? Math.abs(dot(sub(arc.c, nodeOf(g, b.start)!), perp(arc.u)))
-      : value;
+  if (value === null) return g;
+  const delta = new Map(plan.map((p) => [p.id, p.delta]));
   const edges = g.edges.map((e) =>
-    e.id !== own && all.includes(e.id) ? { ...e, radius: storedRadius(g, e.id, radiusOf(e)) } : e,
+    e.id !== own && delta.has(e.id)
+      ? { ...e, radius: storedRadius(g, e.id, value + delta.get(e.id)!) }
+      : e,
   );
   return { ...g, edges };
 }
@@ -119,23 +117,66 @@ export function concentricWithParallel(g: Graph, edge: number): Graph {
   return g;
 }
 
+/** The radius a segment has now: the one of its first arc, null for a straight one. */
+function radiusOfEdge(g: Graph, edge: number): number | null {
+  const chain = chainsOf(g).find((ch) => ch.edgeIds.includes(edge));
+  const ref = chain?.edges[chain.edgeIds.indexOf(edge)];
+  return ref?.E.pieces.find(sweeps)?.r ?? null;
+}
+
+/** The segments that are parallel to some segment of the set, taken together with it (^302). */
+function withParallels(g: Graph, ids: number[]): number[] {
+  const all = new Set(ids);
+  for (const id of ids) {
+    const e = edgeOfId(g, id);
+    for (const o of g.edges) if (e && parallel(g, e, o)) all.add(o.id);
+  }
+  return [...all];
+}
+
+/** Which of a group of parallel segments governs it (^324): the one on the branch of the dragged one, else the innermost. */
+function governing(g: Graph, group: number[], own: number): number {
+  if (group.includes(own)) return own;
+  const branch = branchEdges(g, own);
+  const onBranch = group.find((id) => branch.includes(id));
+  const inner = (id: number) => radiusOfEdge(g, id) ?? Infinity;
+  return onBranch ?? group.reduce((best, id) => (inner(id) < inner(best) ? id : best));
+}
+
 /**
- * The segments whose radius follows the dragged one (^77, ^302): the selected ones, and always the
- * segments parallel to it (they stay concentric, ^282), unless only its own two nodes are selected:
- * then the segment changes alone. Asked of the graph before the drag: the radius changes what is
- * parallel (^334).
+ * The segments whose radius follows the dragged one (^77, ^302, ^324): the selected ones, and
+ * always the segments parallel to them; unless only its own two nodes are selected: then it
+ * changes alone. Parallel segments are one group, the governing segment gets the dragged value and
+ * the others keep their offset to it (they stay concentric). Asked of the graph before the drag:
+ * the radius changes what is parallel (^334).
  */
-export function sharedWith(
-  g: Graph,
-  selection: number[],
-  own: number,
-): { all: number[]; parallels: number[] } {
+export function sharedWith(g: Graph, selection: number[], own: number): Share[] {
   const e = edgeOfId(g, own);
-  if (!e) return { all: [], parallels: [] };
+  if (!e) return [];
   const alone = selection.length === 2 && selection.includes(e.start) && selection.includes(e.end);
-  if (alone) return { all: [own], parallels: [] };
-  const parallels = g.edges.filter((o) => o.id !== own && parallel(g, e, o)).map((o) => o.id);
-  return { all: [...new Set([own, ...selectedSegments(g, selection), ...parallels])], parallels };
+  if (alone) return [{ id: own, delta: 0 }];
+  const ids = withParallels(g, [own, ...selectedSegments(g, selection)]);
+  const groups = parallelGroups(g, ids);
+  return groups.flatMap((group) => {
+    const master = governing(g, group, own);
+    const base = radiusOfEdge(g, master);
+    return group.map((id) => {
+      const r = radiusOfEdge(g, id);
+      return { id, delta: id === master || r === null || base === null ? 0 : r - base };
+    });
+  });
+}
+
+/** The ids split into groups of segments that are parallel to each other. */
+function parallelGroups(g: Graph, ids: number[]): number[][] {
+  const groups: number[][] = [];
+  for (const id of ids) {
+    const e = edgeOfId(g, id)!;
+    const into = groups.find((grp) => grp.some((o) => parallel(g, e, edgeOfId(g, o)!)));
+    if (into) into.push(id);
+    else groups.push([id]);
+  }
+  return groups;
 }
 
 /** The radius the segment gets that a click would build from the node being drawn from (^331): the same as what is built. */
