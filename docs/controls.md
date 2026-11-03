@@ -229,3 +229,7 @@ While a handle is dragged the hints are only about the drag (^286): what it does
 ### Headings from touching points (^254, ^253, ^301)
 
 When a node is placed or moved onto a point that touches another node (beside it, one lane width away, on its normal), it takes a heading from the side: on the right of the other node the same one, on the left the opposite one (right-hand traffic). `Alt` takes the other one. The control hint `Alt: opposite heading` shows while the pointer is snapped to such a point.
+
+### Control points snap (^249, ^141) and measurements (^303)
+
+The radius point, the bend point and the S-curve points snap like a node position: to the snap points, lines and curves of everything except their own segment (`Ctrl` turns it off, the control hint says so while dragging). A radius point snapped onto one of the nodes of its segment sets the radius to *auto* (the largest that fits). A segment built between nodes that are beside the nodes of another segment (parallel) gets the radius that makes it concentric with it (^281). Where a segment's scaffold is shown, its length (the arc length on bends) is next to the middle of its curve, and the radius label shows the bend angle as well (`93.7m · 53°`).

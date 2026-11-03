@@ -185,12 +185,13 @@ test('the outline follows Alt without moving the mouse, and a pan or a zoom unde
   await page.keyboard.up('Alt');
   expect(await segments()).toBe(1);
 
-  // A right drag pans the view: the pointer ends over empty canvas, though it never "moved" for the editor.
   const p = await page.evaluate(() => window.__modelcity!.toPage({ x: 15, y: 0 }));
+  // A right drag pans the view and the pointer goes with it: it stays over what it was over (^277).
+  await page.mouse.wheel(0, -3000);
   await page.mouse.down({ button: 'right' });
   await page.mouse.move(p.x, p.y + 150, { steps: 6 });
   await page.mouse.up({ button: 'right' });
-  expect(await hover()).toBeNull();
+  expect(await hover()).not.toBeNull();
 });
 
 test('nothing to undo or redo is said once, and the undo hint is not alone in the panel (^241, ^242)', async ({

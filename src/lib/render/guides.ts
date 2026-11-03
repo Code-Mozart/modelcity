@@ -1,5 +1,6 @@
 import type { Arc, Edge } from '../curves/types';
 import type { EdgeRef } from '../curves/path';
+import { bendAngleDeg, lengthOf, middleOf } from '../curves/measure';
 import { sweeps } from '../curves/piece';
 import { add, fromAngle, mul, onCircle, sub, unitOr, type Vec } from '../curves/vec';
 import {
@@ -119,6 +120,20 @@ export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette, rad: Ra
   E.pieces.forEach((piece, k) => {
     if (!sweeps(piece) || (rad && rad.k !== k)) return;
     const at = labelAt(f, piece, rad?.t ?? 0.5);
-    text(f.ctx, `${piece.r.toFixed(1)}m`, at, { color: pal['orange-ink'], align: 'center' });
+    const label = `${piece.r.toFixed(1)}m · ${bendAngleDeg(piece).toFixed(0)}°`;
+    text(f.ctx, label, at, { color: pal['orange-ink'], align: 'center' });
+  });
+}
+
+/** The length of a segment (on a bend the arc length) beside the middle of its curve (^303). */
+export function drawLength(f: Frame, { E }: EdgeRef, pal: Palette) {
+  const mid = middleOf(E.pieces);
+  if (!mid) return;
+  const [here, ahead] = [toScreen(f, mid), toScreen(f, add(mid, { x: mid.tx, y: mid.ty }))];
+  const t = unitOr(sub(ahead, here), { x: 1, y: 0 });
+  const at = add(here, mul({ x: t.y, y: -t.x }, 16));
+  text(f.ctx, `${lengthOf(E.pieces).toFixed(1)}m`, at, {
+    color: pal['orange-ink'],
+    align: 'center',
   });
 }

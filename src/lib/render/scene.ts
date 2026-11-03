@@ -8,7 +8,7 @@ import { ordered } from '../model/junction';
 import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
-import { drawCircles, drawCorners, drawGuides, drawRadiusLabels } from './guides';
+import { drawCircles, drawCorners, drawGuides, drawLength, drawRadiusLabels } from './guides';
 import {
   dot,
   ring,
@@ -183,6 +183,7 @@ function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawCorners(f, ref, pal);
+    drawLength(f, ref, pal);
     drawRadiusLabels(f, ref, pal, rad?.i === ref.i ? { k: rad.k ?? 0, t: rad.t ?? 0.5 } : null);
   });
 }
