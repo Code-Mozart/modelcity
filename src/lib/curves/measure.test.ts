@@ -31,6 +31,19 @@ describe('the summary of all segments (^323)', () => {
     expect(s.radius).toMatchObject({ min: 20, max: 90, median: 40 });
     expect(s.radius!.avg).toBeCloseTo(50);
   });
+  it('has the count of segments and nodes and the box along the compass directions (^342)', () => {
+    const line = buildEdge({ x: 0, y: 0, th: 0 }, { x: 30, y: 0, th: 0 }, null).pieces;
+    const s = summaryOf(
+      [
+        line,
+        buildEdge({ x: 30, y: 0, th: Math.PI / 2 }, { x: 30, y: 40, th: Math.PI / 2 }, null).pieces,
+      ],
+      3,
+    );
+    expect(s).toMatchObject({ nodes: 3, segments: 2 });
+    expect(s.box.width).toBeCloseTo(30);
+    expect(s.box.height).toBeCloseTo(40);
+  });
   it('has no radii without bends', () => {
     expect(summaryOf([]).radius).toBeNull();
   });

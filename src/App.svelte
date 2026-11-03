@@ -8,6 +8,7 @@
   import HistoryPanel from './lib/hud/HistoryPanel.svelte';
   import MeasurementsPanel from './lib/hud/MeasurementsPanel.svelte';
   import { summaryOf } from './lib/curves/measure';
+  import { selectedSegments } from './lib/editor/selection';
   import { panelHints, panelView } from './lib/hud/panel';
   import { Recent } from './lib/hud/recent.svelte';
   import { Toasts } from './lib/ui/toasts.svelte';
@@ -95,7 +96,14 @@
     const copied = editor.press !== null && headingFrom(editor.snapped, false) !== null;
     if (copied) untrack(() => usage.mark('copy-heading'));
   });
-  const summary = $derived(summaryOf(editor.edges.flatMap((c) => c.map((e) => e.E.pieces))));
+  // The measurements of the selected segments, shown while one is selected (^342).
+  const summary = $derived.by(() => {
+    const ids = selectedSegments(editor.graph, editor.selection);
+    const pieces = editor.chains.flatMap((c) =>
+      c.edges.filter((_, i) => ids.includes(c.edgeIds[i]!)).map((e) => e.E.pieces),
+    );
+    return summaryOf(pieces, editor.selection.length);
+  });
   const panelShown = $derived(recent.visible || editor.active !== null);
   const panel = $derived(panelView(editor.timeline.history));
   const historyRows = $derived(panelHints(editor.timeline.history, usage.hidden));
@@ -177,7 +185,7 @@
     <ToastList {toasts} />
     {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}
   </div>
-  {#if summary.length > 0}<MeasurementsPanel {summary} lifted={camera.scaleBarVisible} />{/if}
+  {#if summary.segments > 0}<MeasurementsPanel {summary} lifted={camera.scaleBarVisible} />{/if}
   <Compass {camera} />
   <ProjectsModal {session} />
 </main>

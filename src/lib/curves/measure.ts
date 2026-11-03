@@ -24,22 +24,46 @@ export function middleOf(pieces: Piece[]): (Vec & { tx: number; ty: number }) | 
   return null;
 }
 
-/** What the measurements panel shows (^323): the total length of all segments and statistics of the bend radii (null without bends). */
+/** What the measurements panel shows (^323, ^342): of the selection, the length, the bounding box, the counts and statistics of the bend radii. */
 export interface Summary {
   length: number;
+  /** The axis aligned box of the curves, along the compass directions: east-west and north-south extent, meters. */
+  box: { width: number; height: number };
+  nodes: number;
+  segments: number;
   radius: { min: number; max: number; avg: number; median: number } | null;
 }
 
-/** The measurements of all segments, from their pieces (^323). */
-export function summaryOf(segments: Piece[][]): Summary {
+/** The points of a piece that bound it: its ends, and where an arc is farthest east, south, west and north. */
+function extremes(p: Piece): Vec[] {
+  if (p.type === 'line') return [p.P, p.Q];
+  const mid = (k: number) => {
+    const a = (k * Math.PI) / 2;
+    const rel =
+      ((((a - p.a0) / Math.sign(p.da || 1)) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    return rel <= Math.abs(p.da)
+      ? [{ x: p.c.x + p.r * Math.cos(a), y: p.c.y + p.r * Math.sin(a) }]
+      : [];
+  };
+  return [p.P, p.Q, ...[0, 1, 2, 3].flatMap(mid)];
+}
+
+/** The measurements of the selected segments, from their pieces, and the number of selected nodes (^323, ^342). */
+export function summaryOf(segments: Piece[][], nodes = 0): Summary {
   const radii = segments
     .flat()
     .flatMap((p) => (p.type === 'arc' && Math.abs(p.da) > 1e-3 ? [p.r] : []))
     .sort((a, b) => a - b);
   const mid = Math.floor(radii.length / 2);
   const median = radii.length % 2 ? radii[mid]! : ((radii[mid - 1] ?? 0) + (radii[mid] ?? 0)) / 2;
+  const pts = segments.flat().flatMap(extremes);
+  const [xs, ys] = [pts.map((p) => p.x), pts.map((p) => p.y)];
+  const span = (v: number[]) => (v.length ? Math.max(...v) - Math.min(...v) : 0);
   return {
     length: segments.reduce((s, pieces) => s + lengthOf(pieces), 0),
+    box: { width: span(xs), height: span(ys) },
+    nodes,
+    segments: segments.length,
     radius: radii.length
       ? {
           min: radii[0]!,

@@ -7,11 +7,19 @@
    */
   let { summary, lifted }: { summary: Summary; lifted: boolean } = $props();
 
+  /** The box in meters, or in kilometers when it is large: `2.1 x 3.1 km` (^342). */
+  function box({ width, height }: Summary['box']): string {
+    const km = Math.max(width, height) >= 1000;
+    const f = (m: number) => (km ? (m / 1000).toFixed(1) : m.toFixed(1));
+    return `${f(width)} x ${f(height)} ${km ? 'km' : 'm'}`;
+  }
   const meters = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${m.toFixed(1)} m`);
 </script>
 
 <div class="panel" class:lifted aria-label="Measurements">
-  <div>Roads: {meters(summary.length)}</div>
+  <div>Selected: {summary.nodes} nodes, {summary.segments} segments</div>
+  <div>Length: {meters(summary.length)}</div>
+  <div>Box: {box(summary.box)}</div>
   {#if summary.radius}
     <div>
       Radius: min {meters(summary.radius.min)}, max {meters(summary.radius.max)}, average {meters(

@@ -21,8 +21,10 @@ async function deleteNode(app: App) {
 async function extendTo(app: App, pt: { x: number; y: number }) {
   await app.click({ x: 0, y: 30 }); // empty canvas: enters draw mode
   expect((await app.state()).mode).toBe('draw');
+  await app.page.keyboard.down('Control'); // no snapping (^101): the node goes where it is clicked
   await app.click({ x: 60, y: 0 });
   await app.click(pt);
+  await app.page.keyboard.up('Control');
   await app.page.keyboard.press('Escape');
   expect(await nodes(app)).toHaveLength(3);
 }
