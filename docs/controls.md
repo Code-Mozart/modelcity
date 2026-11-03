@@ -30,7 +30,7 @@ The left button always creates or edits; there are no tools (^44). What happens 
 
 Details:
 
-- Shift while dragging a heading (editing a handle, or placing a node) snaps it to 15° steps (^11).
+- Dragging a heading (editing a handle, or placing a node) snaps it to angles (^251): multiples of 45°, farther from the node 15°, then 5°, then 1° (the farther the pointer, the finer). `Ctrl` turns it off. The old `Shift` 15° snap is removed.
 - Dragging a radius point to within 0.5% of the largest radius that fits makes the radius auto again: a deliberate snap, on any kind of segment, and the only way back to auto (the double-click was removed, ^143); with the snapping system it is to become a snap to the limiting node (^141).
 - A heading drag of a shared node turns all its copies (^92). Experiment (no shape tag): every curve is derived from the positions, headings and radii alone; the S-curve's middle line is always the derived one and cannot be moved.
 - The cursor shows what a click would do: a hand over a control point, a crosshair in draw mode, a plus-like copy cursor over a curve in draw mode (click inserts, splits or merges), a pointer over a curve in select mode (click selects), else the default arrow.
@@ -225,3 +225,7 @@ A node that is **placed** (draw mode, empty canvas) or **moved** (dragged, also 
 `Esc` while a node or a control point is dragged, or a node is placed with its heading, cancels it (^295). Pulling a snap suggestion of a node that is not pinned to 85% of its maximum distance shows the tip `Select the node and press S to pin its snap suggestions`, every time; not for 5 minutes after `S` was used (^294, ^110).
 
 While a handle is dragged the hints are only about the drag (^286): what it does, `Ctrl` while snapping, `merge on release`. When the radius of several selected segments is dragged, segments parallel to it get the concentric radius (^282).
+
+### Headings from touching points (^254, ^253, ^301)
+
+When a node is placed or moved onto a point that touches another node (beside it, one lane width away, on its normal), it takes a heading from the side: on the right of the other node the same one, on the left the opposite one (right-hand traffic). `Alt` takes the other one. The control hint `Alt: opposite heading` shows while the pointer is snapped to such a point.

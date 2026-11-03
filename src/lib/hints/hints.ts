@@ -250,13 +250,18 @@ export interface HintState {
   drag?: { type: HandleType; merge: boolean } | null;
   pinned?: number;
   snapping?: boolean;
+  /** The pointer snapped to a touching point, whose heading `Alt` inverts (^254, ^301). */
+  touching?: boolean;
   /** The middle button is held: the compass uses `S` and the other letters. */
   rotating?: boolean;
 }
 
 /** Ctrl while the editor snaps, and the pin; neither can be visited, so they are never hidden (^101, ^258). */
 function snapHints(selected: number, s: HintState): Hint[] {
-  const ctrl = s.snapping ? [hint({ kind: 'key', label: 'Ctrl' }, 'no snapping')] : [];
+  const ctrl = [
+    ...(s.snapping ? [hint({ kind: 'key', label: 'Ctrl' }, 'no snapping')] : []),
+    ...(s.touching ? [hint({ kind: 'key', label: 'Alt' }, 'opposite heading')] : []),
+  ];
   const key = { kind: 'key', label: 'S' } as const;
   if (s.rotating) return ctrl;
   if (selected > 0) return [...ctrl, hint(key, 'pin snap suggestions')];
@@ -271,6 +276,7 @@ function dragHints({ type, merge }: { type: HandleType; merge: boolean }, s: Hin
     ...(merge ? [hint(mouse('lmb'), 'merge on release')] : []),
     hint(ESC, 'cancel'),
     ...(s.snapping ? [key('Ctrl', 'no snapping')] : []),
+    ...(s.touching ? [key('Alt', 'opposite heading')] : []),
   ];
 }
 

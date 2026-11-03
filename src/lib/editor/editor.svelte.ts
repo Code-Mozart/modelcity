@@ -8,9 +8,10 @@ import {
   placePress,
   flipArmFrom,
   splitAt,
+  placementAt,
 } from './ops';
 import { dropOf } from './drop';
-import { snapBase, snapFor, snapPreview } from './snapping';
+import { snapBase, snapFor, snapPreview, snappedTo } from './snapping';
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
@@ -110,6 +111,7 @@ export class Editor {
   );
   hover = $derived<Hover | null>(
     snapPreview(this.hoverRaw, this.snapped, () => ({
+      alt: this.lastInfo?.alt ?? false,
       drawn: this.snapshot(),
       chains: this.chains,
       scale: this.lastInfo?.scale ?? 1,
@@ -255,7 +257,7 @@ export class Editor {
     this.begin(
       hit
         ? curvePress(this.snapshot(), hit)
-        : placePress(this.snapshot(), this.snapped ? { ...info, pt: this.snapped.pt } : info),
+        : placePress(this.snapshot(), snappedTo(this.snapped, info) ?? placementAt(info.pt)),
     );
   }
 
@@ -283,7 +285,8 @@ export class Editor {
 
   pointerMove(info: PointerInfo) {
     this.lastInfo = info;
-    const moved = this.press && moveOf(this.snapshot(), this.press, info, this.snapped?.pt);
+    const moved =
+      this.press && moveOf(this.snapshot(), this.press, info, snappedTo(this.snapped, info));
     if (moved) Object.assign(this, moved);
   }
 

@@ -68,7 +68,8 @@ export function nodeRules(n: RuleNode, width: number): Suggestion[] {
     line(n, dir, 'node-heading', [n.id]),
     point(n, 'node-points', [n.id], { heading, node: n.id }),
     point(add(n, side), 'node-points', [n.id], { heading }),
-    point(sub(n, side), 'node-points', [n.id], { heading }),
+    // Right-hand traffic (^253): on the right the lane runs the same way, on the left the opposite way.
+    point(sub(n, side), 'node-points', [n.id], { heading: heading + Math.PI }),
   ];
 }
 

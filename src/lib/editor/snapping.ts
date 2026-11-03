@@ -13,12 +13,25 @@ import {
   type Chain,
   type RoadHandle,
 } from './chains';
-import { placementAt } from './ops';
 import { previewOf, type Drawn } from './targets';
-import type { Hover, PointerInfo, Press } from './types';
+import type { Hover, Placement, PointerInfo, Press } from './types';
 
 /** A node dropped within this world distance (meters) of another node or of a curve is merged into it, whatever the zoom (^248, ^283). */
 export const MERGE_WORLD_M = 0.1;
+
+/**
+ * The heading a node gets where it snaps to a touching point (^254): the same as the touching node
+ * or the opposite one, by the side (^253); `Alt` takes the other one (^301). Null elsewhere.
+ */
+export function touchingHeading(hit: SnapHit | null, alt: boolean): number | null {
+  const s = hit?.by[0];
+  const touching = s?.kind === 'point' && s.rule === 'node-points' && s.node === undefined;
+  return touching && s.heading !== null ? s.heading + (alt ? Math.PI : 0) : null;
+}
+
+/** Where a node goes when the pointer snapped: the place, with the heading it gets there (^254, ^301). */
+export const snappedTo = (hit: SnapHit | null, info: PointerInfo): Placement | null =>
+  hit && { pt: hit.pt, th: touchingHeading(hit, info.alt) };
 
 /** The nodes that move with a press: the dragged one and its group (^264). */
 export function movedIds(press: Press | null): number[] {
@@ -143,6 +156,8 @@ export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
 
 /** What a hover is made of for the snapping: the editor state and the chains with the zoom. */
 export interface SnapWorld {
+  /** `Alt` is held: the other heading of a touching point (^301). */
+  alt: boolean;
   drawn: Drawn;
   chains: Chain[];
   scale: number;
@@ -160,7 +175,11 @@ export function snapPreview(
 ): Hover | null {
   if (hover?.kind !== 'preview' || !snap) return hover;
   const w = world();
-  return nodeHover(snap, w) ?? curveHover(snap, w) ?? previewOf(w.drawn, placementAt(snap.pt));
+  return (
+    nodeHover(snap, w) ??
+    curveHover(snap, w) ??
+    previewOf(w.drawn, { pt: snap.pt, th: touchingHeading(snap, w.alt) })
+  );
 }
 
 /** The node the pointer snapped to, as a hovered handle. */

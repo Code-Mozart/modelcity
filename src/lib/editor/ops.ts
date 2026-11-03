@@ -43,8 +43,8 @@ export function curvePress(
 }
 
 /** A press on empty canvas in draw mode: a node is placed (^40). */
-export function placePress(d: Drawn, info: PointerInfo): { drawn: Drawn; press: Press } {
-  const r = placeNode(d, placementAt(info.pt));
+export function placePress(d: Drawn, at: Placement): { drawn: Drawn; press: Press } {
+  const r = placeNode(d, at);
   const target = { kind: 'empty' } as const;
   const press: Press = { kind: 'place', id: r.id, undo: d, then: null, moved: false, target };
   return { drawn: r.drawn, press };
@@ -156,10 +156,16 @@ export function dragStep(
   d: Drawn,
   press: Extract<Press, { kind: 'drag' }>,
   info: PointerInfo,
+  th: number | null = null,
 ): Graph {
   const handle = { ...press.drag.handle, road: press.road, id: press.id };
-  const dragged = dragGraph(d.graph, handle, info.pt, { snap: info.shift });
-  const next = withSharedRadius(dragged, d.selection, press);
+  const dragged = dragGraph(d.graph, handle, info.pt, {
+    angleScale: info.ctrl ? null : info.scale,
+  });
+  // A node that snapped to a touching point takes its heading (^254).
+  const turned =
+    th !== null && handle.type === 'node' ? withNode(dragged, press.id, { th }) : dragged;
+  const next = withSharedRadius(turned, d.selection, press);
   const to = nodeOf(next, press.id);
   const group = handle.type === 'node' && to ? press.group : [];
   if (!to || !group.length) return next;
@@ -170,7 +176,8 @@ export function dragStep(
 export function placeStep(g: Graph, id: number, info: PointerInfo): Graph {
   const n = nodeOf(g, id);
   if (!n || dist(info.pt, n) < 6 / info.scale) return g;
-  const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, info.shift).nodes[0]!.th;
+  const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, info.ctrl ? null : info.scale)
+    .nodes[0]!.th;
   return withNode(g, id, { th });
 }
 

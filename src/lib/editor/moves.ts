@@ -1,8 +1,8 @@
-import { dist, type Vec } from '../curves/vec';
+import { dist } from '../curves/vec';
 import type { Graph } from '../model/graph';
 import { dragStep, placeStep } from './ops';
 import { nodesInBand, withNodes, type Band } from './selection';
-import { DRAG_PX, type PointerInfo, type Press, type Snapshot } from './types';
+import { DRAG_PX, type Placement, type PointerInfo, type Press, type Snapshot } from './types';
 
 /** What a pointer move changes while the left button is down (^40, ^70, ^133). */
 export interface Moved {
@@ -11,17 +11,29 @@ export interface Moved {
   selection?: number[];
 }
 
+function dragMove(
+  snap: Snapshot,
+  press: Extract<Press, { kind: 'drag' }>,
+  info: PointerInfo,
+  to: Placement | null,
+): Moved | null {
+  if (!press.moved && dist(info.pt, press.start) <= DRAG_PX / info.scale) return null;
+  press.moved = true;
+  return { graph: dragStep(snap, press, to ? { ...info, pt: to.pt } : info, to?.th ?? null) };
+}
+
 /**
  * A press moves: dragging a handle, setting the heading of a node being placed, or spanning the
  * selection box (shift keeps the selection and adds to it, ^70, ^72). Marks the press as moved.
  * Null while the pointer is still within the click distance, or when nothing changed.
  */
-export function moveOf(snap: Snapshot, press: Press, info: PointerInfo, at?: Vec): Moved | null {
-  if (press.kind === 'drag') {
-    if (!press.moved && dist(info.pt, press.start) <= DRAG_PX / info.scale) return null;
-    press.moved = true;
-    return { graph: dragStep(snap, press, at ? { ...info, pt: at } : info) };
-  }
+export function moveOf(
+  snap: Snapshot,
+  press: Press,
+  info: PointerInfo,
+  to: Placement | null,
+): Moved | null {
+  if (press.kind === 'drag') return dragMove(snap, press, info, to);
   if (press.kind === 'place') {
     const graph = placeStep(snap.graph, press.id, info);
     if (graph === snap.graph) return null;
