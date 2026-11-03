@@ -1,9 +1,9 @@
 import { LANE_WIDTH_M } from '../curves/lane';
-import type { Vec } from '../curves/vec';
-import { nodeOf, type Graph } from '../model/graph';
-import { dist } from '../curves/vec';
+import { pointOn, sweeps } from '../curves/piece';
+import { edgesAt, nodeOf, type Graph } from '../model/graph';
+import { cross, dist, sub, unitOr, type Vec } from '../curves/vec';
 import { curvesThrough, snapTo, type SnapQuery } from '../snap/engine';
-import { nodeRules, suggestionsOf, type RuleEdge } from '../snap/rules';
+import { extendRules, nodeRules, suggestionsOf, type RuleEdge } from '../snap/rules';
 import type { SnapHit, Suggestion } from '../snap/types';
 import {
   chainHandles,
@@ -16,6 +16,9 @@ import {
 import { previewOf, type Drawn } from './targets';
 import { headingFrom, placedHeading } from '../snap/heading';
 import type { Hover, Placement, PointerInfo, Press } from './types';
+
+/** How far a snap point may be from the line of a control point and still be reached, meters. */
+const LOCUS_TOL_M = 0.05;
 
 /** A node dropped within this world distance (meters) of another node or of a curve is merged into it, whatever the zoom (^248, ^283). */
 export const MERGE_WORLD_M = 0.1;
@@ -31,6 +34,10 @@ export function snappedTo(
   if (turningNode(press) !== null) return { pt: info.pt, th: headingFrom(hit, info.alt) };
   return { pt: hit.pt, th: placedHeading(hit, info.alt), line: onLine(hit) };
 }
+
+/** Where a click places a node: where the pointer snapped, else at the pointer with the automatic heading. */
+export const placedAt = (hit: SnapHit | null, info: PointerInfo): Placement =>
+  snappedTo(hit, info, null) ?? { pt: info.pt, th: null };
 
 /** Whether the snap is a snap line, not the curve of a segment or its offset (^319). */
 const onLine = (hit: SnapHit): boolean => {
@@ -62,6 +69,36 @@ const withoutEdge = (g: Graph, id: number): Graph => ({
   edges: g.edges.filter((e) => e.id !== id),
 });
 
+/** The arc and the place on it of the radius point that is dragged (^333). */
+function radiusPointOf(press: Press) {
+  if (press.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
+  const { i, k = 0, t = 0.5 } = press.drag.handle;
+  const arc = chainsOf(press.undo.graph)[press.road]?.edges[i]?.E.pieces[k];
+  return arc && sweeps(arc) ? { arc, t } : null;
+}
+
+/**
+ * The line a radius point moves along: the heading line at an end of its arc, the bisector in the
+ * middle (^333). Null for the other control points, which are not tied to a line.
+ */
+function locusOf(press: Press): { p: Vec; d: Vec } | null {
+  const r = radiusPointOf(press);
+  if (!r) return null;
+  const at = pointOn(r.arc, r.t);
+  const middle = r.t === 0.5;
+  const d = middle ? sub(at, r.arc.c) : { x: at.tx, y: at.ty };
+  return { p: middle ? r.arc.c : at, d: unitOr(d, { x: 1, y: 0 }) };
+}
+
+/** What a control point can reach (^333): snap points that are not on its line are not offered; lines and curves are. */
+function reachable(list: Suggestion[], press: Press): Suggestion[] {
+  const locus = locusOf(press);
+  if (!locus) return list;
+  const off = (s: Suggestion) =>
+    s.kind === 'point' && Math.abs(cross(sub(s.at, locus.p), locus.d)) > LOCUS_TOL_M;
+  return list.filter((s) => !off(s));
+}
+
 /** The graph without some nodes and the edges at them: what the others offer while those move. */
 export function without(g: Graph, ids: number[]): Graph {
   if (!ids.length) return g;
@@ -90,14 +127,23 @@ export function suggestionsOfGraph(g: Graph): Suggestion[] {
  * What a placed or moved node can snap to (^101): the suggestions of everything but the nodes that
  * move, and the places they were at (^113).
  */
-export function snapBase(graph: Graph, press: Press | null): Suggestion[] {
+export function snapBase(
+  graph: Graph,
+  press: Press | null,
+  extendFrom: number | null,
+): Suggestion[] {
+  const from = extendFrom === null ? undefined : nodeOf(graph, extendFrom);
+  return [...baseOf(graph, press), ...(from ? extendRules(from) : [])];
+}
+
+function baseOf(graph: Graph, press: Press | null): Suggestion[] {
   // A heading snaps to everything but the node itself and its own segments (^313).
   const turning = turningNode(press);
   if (turning !== null) return suggestionsOfGraph(without(press!.undo.graph, [turning]));
   const moving = movedIds(press);
   // A control point of a segment snaps to everything but the segment itself, whose shape it changes (^249).
   const control = controlEdge(press);
-  if (control !== null) return suggestionsOfGraph(withoutEdge(graph, control));
+  if (control !== null) return reachable(suggestionsOfGraph(withoutEdge(graph, control)), press!);
   if (!moving.length || !press || press.kind !== 'drag') return suggestionsOfGraph(graph);
   const before = press.undo.graph;
   const were = moving.flatMap((id) => nodeOf(before, id) ?? []);
@@ -111,7 +157,23 @@ export function snapBase(graph: Graph, press: Press | null): Suggestion[] {
   // The node that is dragged keeps its snap lines: sideways, or further along its heading (^300).
   const own = were.filter((n) => n.id === press.id).flatMap((n) => nodeRules(n, LANE_WIDTH_M));
   const lines = own.filter((s) => s.kind === 'curve').map((s) => ({ ...s, from: [] }));
-  return [...suggestionsOfGraph(without(before, moving)), ...places, ...lines];
+  return [
+    ...suggestionsOfGraph(without(before, moving)),
+    ...places,
+    ...lines,
+    ...ownCurves(before, press.id),
+  ];
+}
+
+/**
+ * The curves of the segments of the dragged node as they were (^336): it can be moved a bit along
+ * them. They are not the curve of a segment to merge into, and they snap the heading too.
+ */
+function ownCurves(before: Graph, id: number): Suggestion[] {
+  const mine = new Set(edgesAt(before, id).map((e) => e.id));
+  return suggestionsOfGraph(before)
+    .filter((s) => s.kind === 'curve' && s.rule === 'curve' && mine.has(s.edge ?? -1))
+    .map((s) => ({ ...s, rule: 'own' as const, edge: undefined, from: [] }));
 }
 
 /** Where the moved nodes were, to show them while they move (^113). */

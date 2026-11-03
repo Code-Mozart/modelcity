@@ -1,7 +1,17 @@
 import { sweeps } from '../curves/piece';
 import { LANE_WIDTH_M } from '../curves/lane';
 import { dist, dot, fromAngle, perp, sub, type Vec } from '../curves/vec';
-import { edgeOfId, nodeOf, withRadius, type GEdge, type GNode, type Graph } from '../model/graph';
+import type { PathNode } from '../curves/types';
+import { linkTo, type DrawEnd } from '../model/junction';
+import {
+  addNode,
+  edgeOfId,
+  nodeOf,
+  withRadius,
+  type GEdge,
+  type GNode,
+  type Graph,
+} from '../model/graph';
 import { chainsOf } from './chains';
 import { selectedSegments } from './selection';
 
@@ -126,4 +136,12 @@ export function sharedWith(
   if (alone) return { all: [own], parallels: [] };
   const parallels = g.edges.filter((o) => o.id !== own && parallel(g, e, o)).map((o) => o.id);
   return { all: [...new Set([own, ...selectedSegments(g, selection), ...parallels])], parallels };
+}
+
+/** The radius the segment gets that a click would build from the node being drawn from (^331): the same as what is built. */
+export function previewRadius(g: Graph, tip: number, node: PathNode, end: DrawEnd): number | null {
+  const added = addNode(g, node);
+  const linked = linkTo(added.graph, tip, end, added.id);
+  const e = linked.edges.find((x) => x.start === added.id || x.end === added.id);
+  return e ? (edgeOfId(concentricWithParallel(linked, e.id), e.id)?.radius ?? null) : null;
 }

@@ -58,3 +58,18 @@ describe('dragging a radius point shows the segment as it is (^306)', () => {
     expect(dropOf(ed.graph, ed.press, ed.snapped)).toBeNull();
   });
 });
+
+describe('a control point is offered only the points it can reach (^333)', () => {
+  it('the end radius point moves along a heading line: not the points beside a node', () => {
+    const ed = new Editor();
+    ed.load(withRadius(g(), 0, 30));
+    const h = chainHandles(ed.chains, 4)
+      .filter((x) => x.type === 'rad' && x.t !== 0.5)
+      .sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0]!;
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x + 8, h.y + 8));
+    ed.pointerMove(snapping(0.3, 3.2)); // beside the node at the origin
+    const by = ed.snapped?.by[0];
+    expect(by?.kind === 'point' && Math.abs(by.at.y - 3) < 0.1).toBe(false); // not the point beside the node
+  });
+});

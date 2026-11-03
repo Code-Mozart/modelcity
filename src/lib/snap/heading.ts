@@ -19,13 +19,17 @@ function awayFrom(c: SnapCurve, pt: Vec): number | null {
  */
 export function headingFrom(hit: SnapHit | null, alt: boolean): number | null {
   const s = hit?.by[0];
-  if (!hit || !s) return null;
-  let th: number | null;
-  if (s.kind === 'point') th = s.heading;
-  else if (s.rule === 'curve' || s.rule === 'offset') {
-    th = hit.heading === null ? null : hit.heading + (s.side === -1 ? Math.PI : 0);
-  } else th = awayFrom(s, hit.pt);
+  const th = hit && s ? rawHeading(hit, s) : null;
   return th === null ? null : flip(th, alt);
+}
+
+const isSegmentCurve = (s: SnapCurve) => ['curve', 'offset', 'own'].includes(s.rule);
+
+/** The heading of a snap before `Alt`: see `headingFrom`. */
+function rawHeading(hit: SnapHit, s: Suggestion): number | null {
+  if (s.kind === 'point') return s.heading;
+  if (!isSegmentCurve(s)) return awayFrom(s, hit.pt);
+  return hit.heading === null ? null : hit.heading + (s.side === -1 ? Math.PI : 0);
 }
 
 /**

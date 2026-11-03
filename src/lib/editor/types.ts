@@ -28,7 +28,14 @@ export interface PointerInfo {
 export type Hover =
   | { kind: 'handle'; handle: RoadHandle }
   | { kind: 'candidate'; hit: RoadHit }
-  | { kind: 'preview'; node: PathNode; ref: PathNode | null; end: DrawEnd };
+  | {
+      kind: 'preview';
+      node: PathNode;
+      ref: PathNode | null;
+      end: DrawEnd;
+      /** The radius the new segment gets, what it is built with (^331); null is auto. */
+      radius?: number | null;
+    };
 
 /** Where a node would be placed: the pointer, or beside another lane with its heading (^22). */
 export interface Placement {

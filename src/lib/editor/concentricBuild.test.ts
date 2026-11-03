@@ -22,4 +22,13 @@ describe('building between parallel nodes is concentric (^281)', () => {
     expect(built.id).not.toBe(0);
     expect(edgeOfId(ed.graph, built.id)!.radius).toBeCloseTo(17, 1);
   });
+
+  it('the preview is the segment that is built (^331)', () => {
+    const ed = drawMode(bend());
+    ed.pointerDown(snapping(0.3, 3.2));
+    ed.pointerUp();
+    ed.pointerMove(snapping(16.8, 20.3));
+    const shown = ed.hover?.kind === 'preview' ? ed.hover.radius : undefined;
+    expect(shown).toBeCloseTo(17, 1);
+  });
 });

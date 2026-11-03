@@ -14,7 +14,14 @@ export type Rule =
   | 'inflection-lines' // ^273
   | 'offset' // ^279
   | 'crossing' // ^280
-  | 'previous'; // ^113
+  | 'previous' // ^113
+  | 'extend+45' // ^325
+  | 'extend+15' // ^326
+  | 'extend+30' // ^327
+  | 'extend-45' // ^328
+  | 'extend-15' // ^329
+  | 'extend-30' // ^330
+  | 'own'; // ^336
 
 interface Base {
   rule: Rule;

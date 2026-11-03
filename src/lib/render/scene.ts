@@ -10,7 +10,7 @@ import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides } from './guides';
 import { drawMeasures } from './measures';
-import { drawCompass, reachPx, type Turning } from './compass';
+import { drawCompass, type Turning } from './compass';
 import {
   dot,
   ring,
@@ -86,16 +86,11 @@ const NODE_DOT_PX = 5.5;
 /** Selected nodes are blue and 150% larger (^70). */
 const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
 
-function drawArrow(
-  f: Frame,
-  node: { x: number; y: number; th: number },
-  color: string,
-  reach = ARROW_PX,
-) {
+function drawArrow(f: Frame, node: { x: number; y: number; th: number }, color: string) {
   const a = toScreen(f, node);
   const t = screenDir(f, fromAngle(node.th));
   // The control point sits on the stem, half way: the arrow reaches as far beyond it as it is before it (^126).
-  const tip = { x: a.x + t.x * 2 * reach, y: a.y + t.y * 2 * reach };
+  const tip = { x: a.x + t.x * 2 * ARROW_PX, y: a.y + t.y * 2 * ARROW_PX };
   segment(f.ctx, a, tip, { color, width: ARROW_STROKE_PX });
   barbs(f.ctx, tip, node.th + f.view.rot, { ...HEAD, color });
 }
@@ -114,8 +109,7 @@ function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
   const { active, selected } = state;
   road.path.nodes.forEach((n, i) => {
     const turning = state.turning?.i === i ? state.turning : null;
-    if (turning || arrowShown(active, i))
-      drawArrow(f, n, pal.orange, reachPx(f, n, turning, ARROW_PX));
+    if (turning || arrowShown(active, i)) drawArrow(f, n, pal.orange);
     if (turning?.compass) drawCompass(f, n, pal);
     const picked = selected.includes(i);
     const color = picked ? pal.blue : state.pinned.includes(i) ? pal.turquoise : pal.ink;
@@ -132,7 +126,7 @@ function drawPreview(
 ) {
   if (hover.ref) {
     const [from, to] = ordered(hover.ref, hover.node, hover.end);
-    const E = buildEdge(from, to, null);
+    const E = buildEdge(from, to, hover.radius ?? null);
     // Extend mode shows what a segment shows: its heading lines, dashed like the curve, and the measurements (^321, ^303).
     drawGuides(f, { i: -1, p: from, q: to, E }, pal, [6, 6]);
     for (const piece of E.pieces)
@@ -211,17 +205,9 @@ const isFocused = (h: RoadHandle, focus: Focus | null) =>
     (v, n) => v === [focus.road, focus.type, focus.i, focus.k, focus.t][n],
   );
 
-/** The heading point that is dragged is at the cursor, and not drawn at all when the heading was copied (^314). */
-function drawTurningPoint(f: Frame, turning: Turning | null, h: RoadHandle, pal: Palette): boolean {
-  if (h.type !== 'head' || turning?.road !== h.road || turning.i !== h.i) return false;
-  if (turning.cursor) dot(f.ctx, toScreen(f, turning.cursor), SELECTED_DOT_PX, pal.orange);
-  return true;
-}
-
 function drawHandles(f: Frame, scene: Scene, active: boolean[][], pal: Palette) {
   for (const h of scene.handles) {
     if (h.type === 'node') continue;
-    if (drawTurningPoint(f, scene.turning, h, pal)) continue;
     const segs = active[h.road] ?? [];
     const shown = h.type === 'head' ? arrowShown(segs, h.i) : segs[h.i] === true;
     // The point that is hovered or dragged is as large as a selected node (^230).
