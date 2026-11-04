@@ -1,4 +1,4 @@
-next: ^498
+next: ^497
 
 # Hats
 
@@ -503,8 +503,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^486 | operation | done (^70, ^72, ^75; found in the audit ^371) | **Select node (operation):** a click on a node makes it the whole selection (in select mode); with `Shift` it is added or removed. User-facing name `select node`; the history step is `select node` or `select N nodes`. Control: ^490. Tested: unit `editor/selection.test`. |
 | ^487 | operation | done (^128, ^131, ^244; found in the audit ^371) | **Select branch (operation):** `Alt` + click selects the branch of a node or curve (the nodes between two nodes where roads split, merge or end), or deselects it if it is wholly selected. User-facing name `select branch`. Control: ^491. Tested: unit `editor/branchSelect.test`, `editor/controls.test`. |
 
-| ^492 | operation | done (^69, ^70; found in the audit ^371) | **Select by box (operation):** a drag on empty canvas spans a selection box (axis-aligned with the viewport); the nodes inside are selected live and replace the selection (with `Shift` they are added). User-facing name `select by box`; its history step is named by the nodes it selected (`select 3 nodes`). Controls: ^496 (nothing selected, the user said it exists), the `Shift` variant is in the checklist. Tested: unit `editor/selection.test` (a drag on empty canvas selects the nodes inside), `editor/controls.test`. |
-| ^493 | operation | done (^65; found in the audit ^371) | **Extend road (operation):** in draw mode a click on the only end node of a road, or on a node without a segment, makes it the node being extended: the road is drawn on from it (extend mode). User-facing name `extend`; its history step is `extend road` for a leaf. Controls: ^497. Tested: unit `editor/extend.test` (a click on the last node extends the road, ^65). |
+| ^492 | operation | done (^69, ^70; found in the audit ^371) | **Select by box (operation):** a drag on empty canvas spans a selection box (axis-aligned with the viewport); the nodes inside are selected live and replace the selection (with `Shift` they are added). User-facing name `select by box`; its history step is named by the nodes it selected (`select 3 nodes`). Controls: ^495 (nothing selected, the user said it exists), the `Shift` variant is in the checklist. Tested: unit `editor/selection.test` (a drag on empty canvas selects the nodes inside), `editor/controls.test`. |
+| ^493 | operation | done (^65; found in the audit ^371) | **Extend road (operation):** in draw mode a click on the only end node of a road, or on a node without a segment, makes it the node being extended: the road is drawn on from it (extend mode). User-facing name `extend`; its history step is `extend road` for a leaf. Controls: ^496. Tested: unit `editor/extend.test` (a click on the last node extends the road, ^65). |
 | ^494 | bug | open (roadmap, no milestone; user's step 35, found in the audit ^371; checked with a unit scratch test) | **A click on a node without a segment says `split` (user):** in draw mode a click on a lone node (one that has no segment, such as the one saved after a reload, ^484) is hinted `split` and its history step is `split road` (the unit scratch test shows the target act `split`), although nothing is split: the road is extended from that node (operation ^493). It should say `extend`. No test found for a node without a segment. |
 
 ## Rented ranges
@@ -523,4 +523,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^465–^467 | docs/controls.md | controls of the first node placed with its heading, pointer on its heading control point |
 | ^477–^478 | docs/controls.md | controls placing the next node, extend mode with only the first node, pointer on empty canvas |
 | ^488–^491 | docs/controls.md | controls of select mode with the pointer on a node |
-| ^496–^497 | docs/controls.md | controls: box select, extend a node without a segment |
+| ^495–^496 | docs/controls.md | controls: box select, extend a node without a segment |

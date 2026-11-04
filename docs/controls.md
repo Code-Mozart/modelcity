@@ -70,8 +70,8 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^489 | select mode, pointer on a node | `RMB` click | delete node (operation ^434); not pressed yet | `RMB`: delete node | n/a | | unit `editor/controls.test`, `editor/rightClickSelected.test` |
 | ^490 | select mode, pointer on a node | `LMB` click | select node (operation ^486), `select instead` with a selection; not pressed yet | `LMB`: select | n/a | hidden once visited (^110) | unit `editor/selection.test` |
 | ^491 | select mode, pointer on a node | `Alt` + `LMB` click | select branch (operation ^487); not pressed yet | `Alt`+`LMB`: select branch (or deselect branch) | n/a | hidden once visited (^110); with `Alt` held the hovered branch gets its outline (^99) | unit `editor/branchSelect.test`, `editor/hoverFresh.test` |
-| ^496 | select mode, empty canvas, nothing selected | `LMB` drag | select by box (operation ^492); not pressed yet | `LMB` drag: select (hidden once visited, ^110) | n/a | the nodes inside are selected live | unit `editor/selection.test`, `editor/controls.test` |
-| ^497 | draw mode, nothing drawn, pointer on a node without a segment | `LMB` click | extend road (operation ^493): the node becomes the node being drawn from; extend mode | `LMB`: split, should be `extend` (bug ^494) | n/a | the history step is `split road` (bug ^494) | gap: no test for a node without a segment |
+| ^495 | select mode, empty canvas, nothing selected | `LMB` drag | select by box (operation ^492); not pressed yet | `LMB` drag: select (hidden once visited, ^110) | n/a | the nodes inside are selected live | unit `editor/selection.test`, `editor/controls.test` |
+| ^496 | draw mode, nothing drawn, pointer on a node without a segment | `LMB` click | extend road (operation ^493): the node becomes the node being drawn from; extend mode | `LMB`: split, should be `extend` (bug ^494) | n/a | the history step is `split road` (bug ^494) | gap: no test for a node without a segment |
 
 ## Still to walk (checklist, no hats yet)
 
@@ -325,7 +325,7 @@ Step 34. Hints: `LMB` drag: move node (^488), `RMB`: delete node (^489), `LMB`: 
 
 ### extend mode, a segment exists, the pointer on its end node (E6)
 
-Step 35, from (R2): `LMB` on empty canvas enters draw mode (control ^393), `LMB` on the lone node extends it (control ^497, hint `split` and step `split road`, bug ^494), the pointer is moved along the +60° extend line (^337) and `LMB` places the second node at about 30 m (control ^477, operation ^475). Extend mode (outline, icons). Hints: `Tab`: view mode (a new session, not visited), `LMB` or `Esc`: finish (control ^412, the pointer is on the node being drawn from), `LMB` drag: move node (^413), `RMB`: delete node (^414), `Ctrl` and `Shift` (while snapping, ^415, ^416), `S`: pin snap suggestions (bug ^419; ^417), `P`: projects. History panel: the undo hint (visited controls come back, a new session shows it at once) and one batch of two steps: `split road` (the click on the lone node; the user read it as `split node`, to check) and `place node`.
+Step 35, from (R2): `LMB` on empty canvas enters draw mode (control ^393), `LMB` on the lone node extends it (control ^496, hint `split` and step `split road`, bug ^494), the pointer is moved along the +60° extend line (^337) and `LMB` places the second node at about 30 m (control ^477, operation ^475). Extend mode (outline, icons). Hints: `Tab`: view mode (a new session, not visited), `LMB` or `Esc`: finish (control ^412, the pointer is on the node being drawn from), `LMB` drag: move node (^413), `RMB`: delete node (^414), `Ctrl` and `Shift` (while snapping, ^415, ^416), `S`: pin snap suggestions (bug ^419; ^417), `P`: projects. History panel: the undo hint (visited controls come back, a new session shows it at once) and one batch of two steps: `split road` (the click on the lone node; the user read it as `split node`, to check) and `place node`.
 
 | Item | What it is | Hats | Tested |
 |------|------------|------|--------|
@@ -433,6 +433,6 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 32 | (E4) | `Ctrl` released | no effect until the pointer moves, then the snap is back |
 | 33 | (E4) | reload the page | (R) select mode, the lone node north, no history (^485, ^484) |
 | 34 | (R) | the pointer on the lone node | (R2) hover ring and the hints of a node in select mode (^488 to ^491) |
-| 35 | (R2) | `LMB` on empty canvas, `LMB` on the lone node, the pointer moved along the +60° extend line, `LMB` at about 30 m | (D) draw mode, then (E5) extend mode on the lone node (controls ^393, ^497), then (E6) extend mode with a segment (control ^477) |
+| 35 | (R2) | `LMB` on empty canvas, `LMB` on the lone node, the pointer moved along the +60° extend line, `LMB` at about 30 m | (D) draw mode, then (E5) extend mode on the lone node (controls ^393, ^496), then (E6) extend mode with a segment (control ^477) |
 
 `(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(E6)** (extend mode, a segment exists, the pointer on its end node). Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
