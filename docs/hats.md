@@ -1,4 +1,4 @@
-next: ^498
+next: ^501
 
 # Hats
 
@@ -509,6 +509,10 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 
 | ^497 | chore | planned (roadmap, own PR after the audit ^371; user's question, Claude recommends this form) | **E2E scenarios from the audit (user's idea):** one Playwright test per state of `docs/controls.md` (reached through the test hook, asserting the hints, toasts, history panel, mode, outline, cursor, graph, selection and snap state that the tables record), plus one short linear test of the first-time user path (steps 1 to about 20, with a fake clock for the 3 s toasts and the 5 minute hint visits). Known bugs are asserted as the correct behavior and marked `test.fail` with their hat in the title, so a fix flips the test. Drawn items stay a gap (^479) unless the test hook exposes them. |
 
+| ^498 | feature | planned (roadmap, no milestone; user, found in the audit ^371) | **The offset label of a heading is orange (user):** the label `45°` beside the arrow tip while the heading of a node that is not the first of an arm is dragged (^341) is white (the ink color); it should be orange, like the arrow. Same rule as ^470 (a label has the color of the line it measures). |
+| ^499 | feature | done (found in the audit ^371; the rule is in the old controls reference) | **While a button is held the control hints stay those of where it was pressed (feature):** after `LMB` is pressed on empty canvas in extend mode, the hints stay `add node`, `add node and set heading`, `finish` although the node is already placed and the pointer is on it; when the pointer moves, the hints are those of the drag (^286). Tested: unit `hints/dragHints.test` (the drag hints); the held rows: to check. |
+| ^500 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: the offset label of a heading:** `turningOf` (the offset from the heading before the drag, `editor/turning.ts`, ^341) and its drawing (`drawOffset` in `render/compass.ts`, which also writes a sign: `+45°`, `-45°`) have no test. |
+
 ## Rented ranges
 
 A range of hats whose rows are written in another file instead of here (^392). This file stays the one place that mints hats: a range is reserved here first, the file holds one row per hat of its range (each row starts with `| ^N |`), none missing, none outside the range, and `next:` counts the range. Checked by `src/lib/hats.test.ts`.
@@ -523,6 +527,6 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^456–^456 | docs/controls.md | control: `Ctrl+Y` with something to redo |
 | ^461–^462 | docs/controls.md | controls while the heading of a node being placed is dragged |
 | ^465–^467 | docs/controls.md | controls of the first node placed with its heading, pointer on its heading control point |
-| ^477–^478 | docs/controls.md | controls placing the next node, extend mode with only the first node, pointer on empty canvas |
+| ^477–^478 | docs/controls.md | controls placing the next node, extend mode, pointer on empty canvas |
 | ^488–^491 | docs/controls.md | controls of select mode with the pointer on a node |
 | ^495–^496 | docs/controls.md | controls: box select, extend a node without a segment |

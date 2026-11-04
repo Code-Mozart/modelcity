@@ -64,8 +64,8 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^465 | extend mode, only the first node placed, pointer on its heading control point | `LMB` drag | turn heading (operation ^468); not pressed yet | `LMB` drag: turn heading | n/a | the heading snaps (^251, ^315); the hover ring (^469) | unit `editor/editor.test` (dragging the heading), `editor/branching.test`, `editor/headingSnap.test` |
 | ^466 | extend mode, pointer on a heading control point | `Alt` + `LMB` click | flip arm (^234); not pressed yet | `Alt`+`LMB`: flip arm | n/a | a click, not a drag | unit `editor/controls.test`; e2e `editing.spec` |
 | ^467 | extend mode, only the first node placed, pointer not on the start node | `Esc` or `RMB` click | cancel first node (operation ^437); not pressed yet | `Esc or RMB`: finish, should be `cancel` (bug ^438) | n/a | undoable, like ^436 | unit `editor/undoRedo.test`, `editor/editor.test` (a right click on empty space finishes the road, finishing with one node cancels it) |
-| ^477 | extend mode, only the first node placed, pointer on empty canvas | `LMB` click | place next node (operation ^475); walked in step 35 | `LMB`: add node (to become `place node`, ^421) | n/a | the node snaps (^101); `Shift` keeps only the position (^416) | unit `editor/extend.test`, `editor/editor.test`, `editor/snapping.test` |
-| ^478 | extend mode, only the first node placed, pointer on empty canvas | `LMB` drag | place next node and set heading (operation ^476); not pressed yet | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | the heading snaps (^251) | unit `editor/editor.test`, `editor/touching.test` |
+| ^477 | extend mode, pointer on empty canvas | `LMB` click | place next node (operation ^475); walked in steps 35 and 36 (press) | `LMB`: add node (to become `place node`, ^421) | n/a | the node snaps (^101); `Shift` keeps only the position (^416) | unit `editor/extend.test`, `editor/editor.test`, `editor/snapping.test` |
+| ^478 | extend mode, pointer on empty canvas | `LMB` drag | place next node and set heading (operation ^476); walked in steps 36 and 37 (not released yet) | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | the heading snaps (^251) | unit `editor/editor.test`, `editor/touching.test` |
 | ^488 | select mode, pointer on a node | `LMB` drag | move node (operation ^433); not pressed yet | `LMB` drag: move node | n/a | snapping (`Ctrl` turns it off); the nodes selected move together | unit `editor/editor.test`, `editor/branching.test`, `editor/snapping.test`; e2e `smoke.spec`, `editing.spec` |
 | ^489 | select mode, pointer on a node | `RMB` click | delete node (operation ^434); not pressed yet | `RMB`: delete node | n/a | | unit `editor/controls.test`, `editor/rightClickSelected.test` |
 | ^490 | select mode, pointer on a node | `LMB` click | select node (operation ^486), `select instead` with a selection; not pressed yet | `LMB`: select | n/a | hidden once visited (^110) | unit `editor/selection.test` |
@@ -343,6 +343,20 @@ Step 35, from (R2): `LMB` on empty canvas enters draw mode (control ^393), `LMB`
 | `LMB` or `Esc` | finish road (^412) | no |
 | `LMB` drag on the node, `RMB` | move node, delete node | no |
 
+### extend mode, the button held after placing a node (E7)
+
+Step 36, from (E6): the pointer is moved to the right along the +60° line to a segment length of 34.0 m, `LMB` is pressed and held in place (the first half of control ^477 or ^478). The node is placed at the press: the generated geometry (^90) now reaches the new segment, and the new node is drawn like a selected one (the node being drawn from, bug ^419). Hints, which stay those of where the button was pressed (^499): `LMB`: add node (^477), `LMB` drag: add node and set heading (^478), `Esc` or `RMB`: finish (right here: a segment exists, so it finishes, ^432; the `cancel` of ^438 is only for a road with one node), `S`: pin snap suggestions (bug ^419), `P`: projects. To confirm: the user wrote that *all* scaffold gizmos, snap suggestions or preview are drawn; the sentence reads as if it may mean that none is. Tested: unit `editor/extend.test`, `editor/editor.test`; the held hints: to check (^499).
+
+### extend mode, the heading of the node just placed is dragged (E8)
+
+Step 37, from (E7): the pointer is moved a bit further to the right with the button held (control ^478, operation ^476 in progress). Hints (only about the drag, ^286): `LMB` drag: turn heading, `Esc`: cancel (control ^461), `Ctrl`: no snapping (control ^462). Canvas: the new segment has become a gentle S-curve (the heading no longer matches the single arc, ^6, ^172); an orange heading arrow; a label `45°` left of the arrow tip. The label is the offset of the heading from where it pointed when the node was placed, counter-clockwise (`turningOf`, `drawOffset`, ^341; the code writes a sign, `+45°`), not the compass of the first node (^316); the steps are 45°, 15°, 5°, 1° by distance from the node, relative to that heading (^315, ^457 to ^460). No other gizmo shows. The label is white and should be orange (^498). Tested: unit `editor/editor.test` (dragging the heading of later nodes, ^40), `curves/curves.test` (the S-curve), `hints/dragHints.test`; the label: gap ^500.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| release `LMB` | the node keeps that heading; the segment is an S-curve | no |
+| `Esc`, `Ctrl` held | cancel (^461), no snapping (^462) | no |
+| the other inputs | as in (P) | no |
+
 ### view mode (empty map)
 
 Screen: no outline; two icons (the eye now ringed, the pointer white); hints `RMB drag` pan, wheel zoom, `MMB drag` rotate, `P` projects (there is no `Tab` hint: the control counts as visited because it was just used, ^110, which is a bug, ^384); the default cursor. Hats: ^104, ^119, ^110.
@@ -434,5 +448,7 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 33 | (E4) | reload the page | (R) select mode, the lone node north, no history (^485, ^484) |
 | 34 | (R) | the pointer on the lone node | (R2) hover ring and the hints of a node in select mode (^488 to ^491) |
 | 35 | (R2) | `LMB` on empty canvas, `LMB` on the lone node, the pointer moved along the +60° extend line, `LMB` at about 30 m | (D) draw mode, then (E5) extend mode on the lone node (controls ^393, ^496), then (E6) extend mode with a segment (control ^477) |
+| 36 | (E6) | the pointer moved right along the +60° line to a segment of 34.0 m, `LMB` pressed and held | (E7) the second node is placed, the hints stay those of the press (^499) |
+| 37 | (E7) | the pointer moved a bit further right, the button still held | (E8) dragging the heading of the new node: hints of the drag, an S-curve, the label `45°` (^341, ^498) |
 
-`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(E6)** (extend mode, a segment exists, the pointer on its end node). Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
+`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(E8)** (the button is held, the heading of the second node is dragged). Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
