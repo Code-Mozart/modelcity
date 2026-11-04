@@ -20,7 +20,9 @@ async function firstArm(app: App) {
 async function changeRadius(app: App) {
   expect((await app.edges())[1]!.radius).toBeNull();
   const handle = await app.radiusHandle(1);
+  await app.page.keyboard.down('Control'); // no snapping (^101, ^249): the radius point goes where it is dragged
   await app.drag(handle, { x: handle.x + 2, y: handle.y - 2 });
+  await app.page.keyboard.up('Control');
   expect((await app.edges())[1]!.radius).not.toBeNull();
 }
 

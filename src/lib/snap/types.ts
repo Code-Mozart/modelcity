@@ -1,6 +1,9 @@
 import type { Piece } from '../curves/types';
 import type { Vec } from '../curves/vec';
 
+/** The extend lines (^325 to ^330, ^337 to ^340): 15° to 75° from the heading in steps of 15°, to either side, one rule each. */
+export type ExtendRule = `extend${'+' | '-'}${15 | 30 | 45 | 60 | 75}`;
+
 /** Which rule made a snap suggestion (^265 to ^273, ^279, ^280): one hat each. */
 export type Rule =
   | 'node-normal' // ^265
@@ -14,7 +17,9 @@ export type Rule =
   | 'inflection-lines' // ^273
   | 'offset' // ^279
   | 'crossing' // ^280
-  | 'previous'; // ^113
+  | 'previous' // ^113
+  | ExtendRule // ^325 to ^330, ^337 to ^340
+  | 'own'; // ^336
 
 interface Base {
   rule: Rule;
@@ -44,6 +49,10 @@ export interface SnapCurve extends Base {
   limited: boolean;
   /** The segment it belongs to (the curve and its offsets). */
   edge?: number;
+  /** An offset curve: on the right (+1, the lane runs the same way) or the left (-1, the opposite way, ^253). */
+  side?: 1 | -1;
+  /** The direction of the normal of a snap line: the heading a node placed on it gets (^318). */
+  heading?: number;
 }
 
 export type Suggestion = SnapPoint | SnapCurve;

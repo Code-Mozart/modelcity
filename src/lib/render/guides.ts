@@ -1,17 +1,8 @@
-import type { Arc, Edge } from '../curves/types';
+import type { Edge } from '../curves/types';
 import type { EdgeRef } from '../curves/path';
 import { sweeps } from '../curves/piece';
-import { add, fromAngle, mul, onCircle, sub, unitOr, type Vec } from '../curves/vec';
-import {
-  extend,
-  ring,
-  screenDir,
-  segment,
-  text,
-  toScreen,
-  type Frame,
-  type Palette,
-} from './paint';
+import { fromAngle, type Vec } from '../curves/vec';
+import { extend, ring, screenDir, segment, toScreen, type Frame, type Palette } from './paint';
 
 /** Construction geometry drawn behind the curve (^9): heading lines, circles, corner points. */
 const HEAD_REACH_PX = 28;
@@ -31,10 +22,16 @@ interface HeadEnd {
 }
 
 /** Heading line of one node: through its corner point if there is one, else a short stub. */
-function drawHeadingLine(f: Frame, node: Vec & { th: number }, end: HeadEnd, pal: Palette) {
+function drawHeadingLine(
+  f: Frame,
+  node: Vec & { th: number },
+  end: HeadEnd,
+  style: { pal: Palette; dash?: number[] },
+) {
+  const { pal, dash } = style;
   const { corner, sign } = end;
   const a = toScreen(f, node);
-  const stroke = { color: pal.orange, width: 1.6 };
+  const stroke = { color: pal.orange, width: 1.6, dash };
   if (corner) {
     const [from, to] = extend(a, toScreen(f, corner), 0, HEAD_REACH_PX);
     segment(f.ctx, from, to, stroke);
@@ -47,33 +44,34 @@ function drawHeadingLine(f: Frame, node: Vec & { th: number }, end: HeadEnd, pal
 function drawBendGuides(
   f: Frame,
   { p, q, E }: EdgeRef & { E: Extract<Edge, { kind: 'C' }> },
-  pal: Palette,
+  style: { pal: Palette; dash?: number[] },
 ) {
-  drawHeadingLine(f, p, { corner: E.C, sign: 1 }, pal);
-  drawHeadingLine(f, q, { corner: E.C, sign: 1 }, pal);
+  drawHeadingLine(f, p, { corner: E.C, sign: 1 }, style);
+  drawHeadingLine(f, q, { corner: E.C, sign: 1 }, style);
 }
 
 function drawTwoArcGuides(
   f: Frame,
   { p, q, E }: EdgeRef & { E: Extract<Edge, { kind: 'S' | 'H' }> },
-  pal: Palette,
+  style: { pal: Palette; dash?: number[] },
 ) {
-  drawHeadingLine(f, p, { corner: E.k1, sign: 1 }, pal);
-  drawHeadingLine(f, q, { corner: E.k2, sign: -1 }, pal);
+  drawHeadingLine(f, p, { corner: E.k1, sign: 1 }, style);
+  drawHeadingLine(f, q, { corner: E.k2, sign: -1 }, style);
   const [from, to] = extend(
     toScreen(f, E.axis.a),
     toScreen(f, E.axis.b),
     AXIS_REACH_PX,
     AXIS_REACH_PX,
   );
-  segment(f.ctx, from, to, { color: pal.orange, width: 1.6 });
+  segment(f.ctx, from, to, { color: style.pal.orange, width: 1.6, dash: style.dash });
 }
 
-export function drawGuides(f: Frame, ref: EdgeRef, pal: Palette) {
+/** The heading lines of a segment (^9); dashed for a preview (^321). */
+export function drawGuides(f: Frame, ref: EdgeRef, pal: Palette, dash?: number[]) {
   const { E } = ref;
   if (E.kind === 'line') return;
-  if (E.kind === 'C') drawBendGuides(f, { ...ref, E }, pal);
-  else drawTwoArcGuides(f, { ...ref, E }, pal);
+  if (E.kind === 'C') drawBendGuides(f, { ...ref, E }, { pal, dash });
+  else drawTwoArcGuides(f, { ...ref, E }, { pal, dash });
 }
 
 export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
@@ -100,25 +98,19 @@ export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   }
 }
 
-/** The place on an arc where its radius label hangs: just outside the circle, at parameter t. */
-function labelAt(f: Frame, piece: Arc, t: number): Vec {
-  // next to a radius point the label keeps clear of it, in the middle of the arc it hangs closer
-  const gap = t === 0.5 ? 22 : 34;
-  const a = piece.a0 + piece.da * t;
-  const at = toScreen(f, onCircle(piece.c, piece.r, a));
-  const c = toScreen(f, piece.c);
-  const out = unitOr(sub(at, c), { x: 0, y: 0 });
-  return add(at, mul(out, gap));
+/** The dashed orange line through the interlocked control points of parallel segments, with the other control points on it as rings (^344, ^361). */
+export function drawTowerLine(f: Frame, tower: TowerShape, pal: Palette) {
+  segment(f.ctx, toScreen(f, tower.p), toScreen(f, tower.q), {
+    color: pal.orange,
+    width: 2,
+    dash: [6, 5],
+  });
+  for (const at of tower.others) ring(f.ctx, toScreen(f, at), 6.5, { color: pal.orange, width: 2 });
 }
 
-/**
- * Radius labels at the middle of each arc; while a radius handle is hovered or dragged (`rad`)
- * only the label of its arc is shown, next to that handle (^128).
- */
-export function drawRadiusLabels(f: Frame, { E }: EdgeRef, pal: Palette, rad: RadFocus | null) {
-  E.pieces.forEach((piece, k) => {
-    if (!sweeps(piece) || (rad && rad.k !== k)) return;
-    const at = labelAt(f, piece, rad?.t ?? 0.5);
-    text(f.ctx, `${piece.r.toFixed(1)}m`, at, { color: pal['orange-ink'], align: 'center' });
-  });
+/** The line and the other control points on it (^361). */
+export interface TowerShape {
+  p: Vec;
+  q: Vec;
+  others: Vec[];
 }

@@ -30,7 +30,8 @@ The left button always creates or edits; there are no tools (^44). What happens 
 
 Details:
 
-- Shift while dragging a heading (editing a handle, or placing a node) snaps it to 15° steps (^11).
+- Dragging a heading (editing a handle, or placing a node) snaps it to angles (^251, ^315): in steps of 45° from the heading it had, farther from the node 15°, then 5°, then 1° (the farther the pointer, the finer). The first node of a new arm snaps to the compass directions instead, and the heading in degrees (0 is north, counter-clockwise) is written beside the node with the compass icon of the middle button (^316). `Ctrl` turns it off. The old `Shift` 15° snap is removed.
+- The heading also snaps to snap suggestions (^313): to a snap point's heading, a snap line's direction away from its base, a segment's direction (the opposite on its left). It copies the heading, not the position. `Alt` inverts the copied heading. `Shift` aims the heading at what it snapped to (a snap point, or the place on a snap line or curve), `Shift`+`Alt` away from it (^335); the control hints say so while a heading is dragged. The control point stays on the arrow (^314). A node placed on a snap line without dragging gets the direction of the line's normal (^318); dragging its heading there copies nothing, and a toast says to snap to something to copy a heading (^319).
 - Dragging a radius point to within 0.5% of the largest radius that fits makes the radius auto again: a deliberate snap, on any kind of segment, and the only way back to auto (the double-click was removed, ^143); with the snapping system it is to become a snap to the limiting node (^141).
 - A heading drag of a shared node turns all its copies (^92). Experiment (no shape tag): every curve is derived from the positions, headings and radii alone; the S-curve's middle line is always the derived one and cannot be moved.
 - The cursor shows what a click would do: a hand over a control point, a crosshair in draw mode, a plus-like copy cursor over a curve in draw mode (click inserts, splits or merges), a pointer over a curve in select mode (click selects), else the default arrow.
@@ -225,3 +226,27 @@ A node that is **placed** (draw mode, empty canvas) or **moved** (dragged, also 
 `Esc` while a node or a control point is dragged, or a node is placed with its heading, cancels it (^295). Pulling a snap suggestion of a node that is not pinned to 85% of its maximum distance shows the tip `Select the node and press S to pin its snap suggestions`, every time; not for 5 minutes after `S` was used (^294, ^110).
 
 While a handle is dragged the hints are only about the drag (^286): what it does, `Ctrl` while snapping, `merge on release`. When the radius of several selected segments is dragged, segments parallel to it get the concentric radius (^282).
+
+### Headings from touching points (^254, ^253, ^301)
+
+When a node is placed or moved onto a point that touches another node (beside it, one lane width away, on its normal), it takes a heading from the side: on the right of the other node the same one, on the left the opposite one (right-hand traffic). `Alt` takes the other one. The control hint `Alt: opposite heading` shows while the pointer is snapped to such a point.
+
+### Control points snap (^249, ^141) and measurements (^303)
+
+The radius point, the bend point and the S-curve points snap like a node position: to the snap points, lines and curves of everything except their own segment (`Ctrl` turns it off, the control hint says so while dragging). A radius point snapped onto one of the nodes of its segment sets the radius to *auto* (the largest that fits). A segment built between nodes that are beside the nodes of another segment (parallel) gets the radius that makes it concentric with it (^281). Where a segment's scaffold is shown, its length (the arc length on bends) is next to the middle of its curve, and the radius label shows the bend angle as well (`93.7m · 53°`).
+
+### Measurements panel (^323, ^342)
+
+Bottom left, above the scale bar while it shows, only while at least one segment is selected. For the selected segments, from top to bottom: `n nodes and m segments selected`, the bounding box along the compass directions (`2.1 x 3.1 km`; whole meters below a kilometer), the total length (whole meters below a kilometer) and the `Curve radius`: one value for a single segment or when all four statistics are equal, else minimum, maximum, average and median. While a radius control point is hovered or dragged, a dashed orange line goes through the control points of the segments that are interlocked with it (parallel, ^334, ^302), from the outermost to the innermost; for an end radius point across the end radius points of the others at that end, also of segments that run the other way (^344, ^360); the control points of the others on the line are drawn as orange rings (^361). A control point that is dragged is also a snap point at its old place (^356). More than two lanes on top of each other follow each other (^348). While the heading of an existing node is dragged, a label beside its arrow says the offset from where it pointed (counter-clockwise positive, ^341). The radii of parallel segments (touching nodes at both ends and concentric, ^334) stay concentric when one changes, also when the others are not selected, unless only the two nodes of the changed segment are selected (^302); parallel segments among the selected keep their offset when another segment is dragged (^324, ^343).
+
+### The bars of parallel segments (^350)
+
+Beside the nodes of a *run* (^353) of parallel segments (^334) one *run bar* (a quarter of the diameter of a node circle thick) lies over the node circles on that side, its outer edge on the line that touches them, from the first to the last node of the run; on both sides of a tower (^352) if the segments are parallel on both. It is part of the skeleton: always shown, not in view mode, and drawn below the nodes so that selected nodes stay blue.
+
+### Snapping the position only (^358)
+
+On *add node* (`LMB` click) in draw and extend mode, `Shift` keeps the snap of the position but not of the heading: the node is placed at the snap with its automatic heading, not the heading of the lane, offset curve or snap line it snapped to. The hint `Shift: snap only the position` shows while a click would place a node at a snap and is never hidden. It is not available on *add node and set heading* (`LMB` drag). (For the heading point of an existing node `Shift` aims, ^335.)
+
+### Extend mode shows no scaffold (^362)
+
+While a road is extended from a node, the scaffold gizmos of the existing segments are hidden (only the skeleton shows). The preview of the segment being built keeps its dashed heading lines and measurements.

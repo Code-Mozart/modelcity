@@ -6,17 +6,22 @@
   import { Editor } from './lib/editor/editor.svelte';
   import Hints from './lib/hints/Hints.svelte';
   import HistoryPanel from './lib/hud/HistoryPanel.svelte';
+  import MeasurementsPanel from './lib/hud/MeasurementsPanel.svelte';
+  import { summaryOf } from './lib/curves/measure';
+  import { selectedSegments } from './lib/editor/selection';
   import { panelHints, panelView } from './lib/hud/panel';
   import { Recent } from './lib/hud/recent.svelte';
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
   import { hintsFor, viewHints } from './lib/hints/hints';
   import { PIN_TIP } from './lib/hints/pinTip';
+  import { HEADING_TIP } from './lib/hints/headingTip';
   import { REACH_WARN } from './lib/snap/engine';
   import { Usage } from './lib/hints/usage.svelte';
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
   import { dropOf } from './lib/editor/drop';
+  import { headingFrom, placedHeading } from './lib/snap/heading';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
@@ -37,8 +42,15 @@
     untrack(() => used && usage.mark(used.id));
   });
   // While a handle is dragged, the hints are about the drag only (^286); the graph is read so that it follows the drag.
+  /** The snap gives a heading that `Alt` inverts: a lane or a normal for a placed node, or the copied heading (^301, ^313). */
+  const invertible = (e: Editor) =>
+    placedHeading(e.snapped, false) !== null ||
+    (e.press !== null && headingFrom(e.snapped, false) !== null);
   const drag = $derived.by(() => {
     const [press, graph] = [editor.press, editor.graph];
+    // Setting the heading of a node that was just placed is dragging a heading too (^286).
+    if (press?.kind === 'place' && press.moved)
+      return { type: 'head' as const, merge: false, place: true };
     if (press?.kind !== 'drag' || !press.moved) return null;
     return { type: press.drag.handle.type, merge: dropOf(graph, press, editor.snapped) !== null };
   });
@@ -52,6 +64,8 @@
             hidden: usage.hidden,
             pinned: editor.pins.list.length,
             snapping: editor.snapped !== null,
+            touching: invertible(editor),
+            placing: editor.drawing,
             rotating: camera.rotating,
             drag,
           }),
@@ -74,6 +88,25 @@
   // Pinning is a control like the others: used, its tip is not shown for a while (^110).
   $effect(() => {
     if (editor.pins.list.length) untrack(() => usage.mark('pin'));
+  });
+  // A node placed on a snap line copies no heading when its heading is dragged: say how to copy one (^319); copying visits it (^110).
+  const lineTip = $derived(
+    editor.press?.kind === 'place' && editor.press.moved && editor.press.onLine,
+  );
+  $effect(() => {
+    if (lineTip) untrack(() => !usage.hidden('copy-heading') && toasts.show('info', HEADING_TIP));
+  });
+  $effect(() => {
+    const copied = editor.press !== null && headingFrom(editor.snapped, false) !== null;
+    if (copied) untrack(() => usage.mark('copy-heading'));
+  });
+  // The measurements of the selected segments, shown while one is selected (^342).
+  const summary = $derived.by(() => {
+    const ids = selectedSegments(editor.graph, editor.selection);
+    const pieces = editor.chains.flatMap((c) =>
+      c.edges.filter((_, i) => ids.includes(c.edgeIds[i]!)).map((e) => e.E.pieces),
+    );
+    return summaryOf(pieces, editor.selection.length);
   });
   const panelShown = $derived(recent.visible || editor.active !== null);
   const panel = $derived(panelView(editor.timeline.history));
@@ -156,6 +189,7 @@
     <ToastList {toasts} />
     {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}
   </div>
+  {#if summary.segments > 0}<MeasurementsPanel {summary} lifted={camera.scaleBarVisible} />{/if}
   <Compass {camera} />
   <ProjectsModal {session} />
 </main>

@@ -1,5 +1,9 @@
 <script lang="ts">
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
+  import { turningOf } from './editor/turning';
+  import { scaffoldHidden } from './editor/phase';
+  import { focusTower } from './editor/parallel';
+  import { barsOf } from './editor/towers';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
@@ -37,6 +41,9 @@
     untrack(() => camera.setAnchors(anchors));
   });
 
+  /** The bars of the runs of parallel segments, derived from the graph (^350). */
+  const bars = $derived(barsOf(editor.graph));
+
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
     const drop = dropOf(editor.graph, editor.press, editor.snapped);
@@ -49,7 +56,12 @@
       viewing: editor.viewing,
       selectedSegments: editor.selectedSegments,
       outline: editor.hoverSegments,
-      hideScaffold: editor.movingGroup || editor.pointer?.ctrl === true || drop !== null,
+      hideScaffold: scaffoldHidden({
+        phase: editor.phase,
+        movingGroup: editor.movingGroup,
+        ctrl: editor.pointer?.ctrl === true,
+        dropping: drop !== null,
+      }),
       hover: editor.hover,
       mergePreview: editor.mergePreview,
       focus: editor.focus,
@@ -58,6 +70,9 @@
       previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
+      bars: bars,
+      tower: focusTower(editor.graph, editor.chains, editor.focus),
+      turning: turningOf(editor.chains, editor.press),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
@@ -130,10 +145,12 @@
   function onPointerMove(e: PointerEvent) {
     const at = localPoint(e);
     camera.cursor = at;
+    // Also while the view moves, so that the preview follows the pointer over the map (^277).
+    const pointer = info(e);
     if (e.pointerType === 'touch' && camera.touchMove(e.pointerId, at)) return;
     if (camera.rotating) camera.moveRotate(at);
     else if (camera.panning) camera.movePan(at);
-    else editor.pointerMove(info(e));
+    else editor.pointerMove(pointer);
   }
 
   function onPointerUp(e: PointerEvent) {

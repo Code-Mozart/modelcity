@@ -28,12 +28,23 @@ export interface PointerInfo {
 export type Hover =
   | { kind: 'handle'; handle: RoadHandle }
   | { kind: 'candidate'; hit: RoadHit }
-  | { kind: 'preview'; node: PathNode; ref: PathNode | null; end: DrawEnd };
+  | {
+      kind: 'preview';
+      node: PathNode;
+      ref: PathNode | null;
+      end: DrawEnd;
+      /** The radius the new segment gets, what it is built with (^331); null is auto. */
+      radius?: number | null;
+    };
 
 /** Where a node would be placed: the pointer, or beside another lane with its heading (^22). */
 export interface Placement {
   pt: Vec;
   th: number | null;
+  /** The pointer snapped to a snap line (not a curve of a segment): a heading dragged there copies nothing (^319). */
+  line?: boolean;
+  /** `Shift`: the heading aims at this snap point, or away from it (^335). */
+  aim?: { at: Vec; away: boolean };
 }
 
 /** Pointer travel (screen pixels) that turns a press into a drag. */
@@ -89,6 +100,12 @@ export type Press =
       then: 'split' | 'merge' | null;
       moved: boolean;
       target: HintTarget;
+      /** The angle the heading steps count from: where the node pointed when placed, or 0, north, for the first node of an arm (^315). */
+      angleFrom: number;
+      /** The first node of a new arm: its heading snaps to the compass directions, and a compass is shown (^316). */
+      compass: boolean;
+      /** The node was placed on a snap line (^319). */
+      onLine: boolean;
     }
   | {
       kind: 'empty';

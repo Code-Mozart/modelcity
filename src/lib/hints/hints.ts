@@ -27,7 +27,8 @@ export type ControlId =
   | 'undo'
   | 'redo'
   | 'view'
-  | 'pin';
+  | 'pin'
+  | 'copy-heading';
 
 /** A control hint: the inputs (alternatives) and what they do, e.g. [Esc] or [RMB]: finish. */
 export interface Hint {
@@ -247,16 +248,26 @@ export const viewHints = (hidden: Hidden = () => false): Hint[] => [
 export interface HintState {
   hidden?: Hidden;
   /** A handle is being dragged: what it is and whether letting go merges it (^286). */
-  drag?: { type: HandleType; merge: boolean } | null;
+  drag?: { type: HandleType; merge: boolean; place?: boolean } | null;
   pinned?: number;
   snapping?: boolean;
+  /** The pointer snapped to a touching point, whose heading `Alt` inverts (^254, ^301). */
+  touching?: boolean;
+  /** A node would be placed at the snap by a click: `Shift` keeps only the position (^358). */
+  placing?: boolean;
   /** The middle button is held: the compass uses `S` and the other letters. */
   rotating?: boolean;
 }
 
 /** Ctrl while the editor snaps, and the pin; neither can be visited, so they are never hidden (^101, ^258). */
 function snapHints(selected: number, s: HintState): Hint[] {
-  const ctrl = s.snapping ? [hint({ kind: 'key', label: 'Ctrl' }, 'no snapping')] : [];
+  const ctrl = [
+    ...(s.snapping ? [hint({ kind: 'key', label: 'Ctrl' }, 'no snapping')] : []),
+    ...(s.snapping && s.placing
+      ? [hint({ kind: 'key', label: 'Shift' }, 'snap only the position')]
+      : []),
+    ...(s.touching ? [hint({ kind: 'key', label: 'Alt' }, 'opposite heading')] : []),
+  ];
   const key = { kind: 'key', label: 'S' } as const;
   if (s.rotating) return ctrl;
   if (selected > 0) return [...ctrl, hint(key, 'pin snap suggestions')];
@@ -264,13 +275,21 @@ function snapHints(selected: number, s: HintState): Hint[] {
 }
 
 /** While a handle is dragged only what matters now: what the drag does, what a key changes, and whether it merges (^286). */
-function dragHints({ type, merge }: { type: HandleType; merge: boolean }, s: HintState): Hint[] {
+function dragHints(
+  { type, merge, place }: { type: HandleType; merge: boolean; place?: boolean },
+  s: HintState,
+): Hint[] {
   const key = (label: string, text: string) => hint({ kind: 'key', label }, text);
   return [
     hint(mouse('lmb', true), DRAG_TEXT[type]),
     ...(merge ? [hint(mouse('lmb'), 'merge on release')] : []),
     hint(ESC, 'cancel'),
-    ...(s.snapping ? [key('Ctrl', 'no snapping')] : []),
+    ...(s.snapping || type === 'head' ? [key('Ctrl', 'no snapping')] : []),
+    ...(s.touching ? [key('Alt', 'opposite heading')] : []),
+    // Aiming (^335) is for the heading of an existing node; not while one that was just placed is set (^358).
+    ...(type === 'head' && !place
+      ? [key('Shift', 'aim at snap suggestion'), key('Shift+Alt', 'aim away from snap suggestion')]
+      : []),
   ];
 }
 

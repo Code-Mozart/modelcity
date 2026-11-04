@@ -1,11 +1,12 @@
-import { dragHeading } from '../curves/drag';
+import { dragHeading, type AngleSnap } from '../curves/drag';
 import { dist, type Vec } from '../curves/vec';
 import { mergeNodes } from '../model/merge';
 import type { Drop } from './drop';
 import { withSharedRadius } from './press';
+import { concentricWithParallel } from './sharedRadius';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
-import { nodeAtSample, type RoadHit } from './chains';
+import { nodeAtSample, type RoadHandle, type RoadHit } from './chains';
 import { armOf, autoHeadingFor, farEnd, linkTo, mergeEnd } from '../model/junction';
 import { dragGraph } from '../model/dragGraph';
 import {
@@ -38,15 +39,33 @@ export function curvePress(
   const then = act === 'split' || act === 'merge' ? act : null;
   return {
     drawn: r.drawn,
-    press: { kind: 'place', id: r.id, undo: d, then, moved: false, target },
+    press: {
+      kind: 'place',
+      id: r.id,
+      undo: d,
+      then,
+      moved: false,
+      target,
+      angleFrom: nodeOf(r.drawn.graph, r.id)?.th ?? 0,
+      compass: false,
+      onLine: false,
+    },
   };
 }
 
 /** A press on empty canvas in draw mode: a node is placed (^40). */
-export function placePress(d: Drawn, info: PointerInfo): { drawn: Drawn; press: Press } {
-  const r = placeNode(d, placementAt(info.pt));
+export function placePress(d: Drawn, at: Placement): { drawn: Drawn; press: Press } {
+  const r = placeNode(d, at);
   const target = { kind: 'empty' } as const;
-  const press: Press = { kind: 'place', id: r.id, undo: d, then: null, moved: false, target };
+  // The first node of a new arm snaps to the compass directions, the others to steps from where they point (^315, ^316).
+  const compass = d.active === null;
+  const angleFrom = compass ? 0 : (nodeOf(r.drawn.graph, r.id)?.th ?? 0);
+  const press: Press = {
+    ...{ kind: 'place' as const, id: r.id, undo: d, then: null, moved: false, target },
+    angleFrom,
+    compass,
+    onLine: at.line === true,
+  };
   return { drawn: r.drawn, press };
 }
 
@@ -62,7 +81,9 @@ export function placeNode(d: Drawn, at: Placement): { drawn: Drawn; id: number }
   }
   const heading = autoHeadingFor(d.end);
   const r = addNode(d.graph, { x: at.pt.x, y: at.pt.y, th: at.th ?? heading(tip, at.pt) });
-  const graph = linkTo(r.graph, tip.id, d.end, r.id);
+  const linked = linkTo(r.graph, tip.id, d.end, r.id);
+  const built = linked.edges.find((e) => [e.start, e.end].includes(r.id));
+  const graph = built ? concentricWithParallel(linked, built.id) : linked;
   const end = d.end === 'first' ? 'start' : d.end;
   return { drawn: { ...d, graph, active: r.id, end, selection: [r.id] }, id: r.id };
 }
@@ -156,22 +177,61 @@ export function dragStep(
   d: Drawn,
   press: Extract<Press, { kind: 'drag' }>,
   info: PointerInfo,
+  to: Placement | null = null,
 ): Graph {
   const handle = { ...press.drag.handle, road: press.road, id: press.id };
-  const dragged = dragGraph(d.graph, handle, info.pt, { snap: info.shift });
-  const next = withSharedRadius(dragged, d.selection, press);
-  const to = nodeOf(next, press.id);
-  const group = handle.type === 'node' && to ? press.group : [];
-  if (!to || !group.length) return next;
-  return moveNodes(next, group, { x: to.x - press.origin.x, y: to.y - press.origin.y });
+  // The angle steps count from the heading before the drag (^315).
+  const from = nodeOf(press.undo.graph, press.id)?.th ?? 0;
+  const angle = info.ctrl ? null : { scale: info.scale, from };
+  const next = withSharedRadius(
+    snappedDrag(d.graph, handle, { angle, info }, to),
+    d.selection,
+    press,
+  );
+  const node = nodeOf(next, press.id);
+  const group = handle.type === 'node' && node ? press.group : [];
+  if (!node || !group.length) return next;
+  return moveNodes(next, group, { x: node.x - press.origin.x, y: node.y - press.origin.y });
+}
+
+/** The handle dragged to the pointer, or where it snapped: a node takes the heading of a touching point (^254), a radius point on a node of its segment sets the radius to auto (^141). */
+function snappedDrag(
+  g: Graph,
+  handle: RoadHandle,
+  how: { angle: AngleSnap | null; info: PointerInfo },
+  to: Placement | null,
+): Graph {
+  const dragged = dragGraph(g, handle, to?.pt ?? how.info.pt, { angle: how.angle });
+  if (!to) return dragged;
+  // A snapped heading is copied (^313); a node that snapped takes the heading of the place (^254).
+  if (handle.type === 'node' || handle.type === 'head') {
+    const th = headingOf(nodeOf(dragged, handle.id), to);
+    return th === null ? dragged : withNode(dragged, handle.id, { th });
+  }
+  return dragged;
+}
+
+/** The heading a snap gives a node: copied, or aimed at a snap point, or away from it (^313, ^335). Null if none. */
+function headingOf(n: { x: number; y: number } | undefined, to: Placement | null): number | null {
+  if (!to?.aim || !n) return to?.th ?? null;
+  if (dist(to.aim.at, n) < 1e-6) return null;
+  return Math.atan2(to.aim.at.y - n.y, to.aim.at.x - n.x) + (to.aim.away ? Math.PI : 0);
 }
 
 /** Dragging while a node is placed sets its heading, from where it was placed (^40). */
-export function placeStep(g: Graph, id: number, info: PointerInfo): Graph {
-  const n = nodeOf(g, id);
+export function placeStep(
+  g: Graph,
+  press: Extract<Press, { kind: 'place' }>,
+  info: PointerInfo,
+  to: Placement | null,
+): Graph {
+  const n = nodeOf(g, press.id);
   if (!n || dist(info.pt, n) < 6 / info.scale) return g;
-  const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, info.shift).nodes[0]!.th;
-  return withNode(g, id, { th });
+  const copied = headingOf(n, to);
+  if (copied !== null) return withNode(g, press.id, { th: copied });
+  const angle = info.ctrl ? null : { scale: info.scale, from: press.angleFrom };
+  const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, angle).nodes[0]!.th;
+  return withNode(g, press.id, { th });
 }
 
 /**

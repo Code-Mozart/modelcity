@@ -43,8 +43,14 @@ const point = (at: Vec, rule: Rule, from: number[], extra: Partial<SnapPoint> = 
 });
 
 /** A snap line: through `at`, along `dir`, with no forward or backward (^263). */
-function line(at: Vec, dir: Vec, rule: Rule, from: number[]): SnapCurve {
+function line(
+  at: Vec,
+  dir: Vec,
+  made: { rule: Rule; from: number[]; heading?: number },
+): SnapCurve {
+  const { rule, from, heading } = made;
   return {
+    ...(heading === undefined ? {} : { heading }),
     kind: 'curve',
     pieces: [infiniteLine(at, dir)],
     straight: true,
@@ -64,16 +70,34 @@ export function nodeRules(n: RuleNode, width: number): Suggestion[] {
   const side = mul(perp(dir), width);
   const heading = n.th;
   return [
-    line(n, perp(dir), 'node-normal', [n.id]),
-    line(n, dir, 'node-heading', [n.id]),
+    line(n, perp(dir), { rule: 'node-normal', from: [n.id], heading }),
+    // No heading: a road drawn on along the heading keeps its automatic one, not a sideways one (^318).
+    line(n, dir, { rule: 'node-heading', from: [n.id] }),
     point(n, 'node-points', [n.id], { heading, node: n.id }),
     point(add(n, side), 'node-points', [n.id], { heading }),
-    point(sub(n, side), 'node-points', [n.id], { heading }),
+    // Right-hand traffic (^253): on the right the lane runs the same way, on the left the opposite way.
+    point(sub(n, side), 'node-points', [n.id], { heading: heading + Math.PI }),
   ];
 }
 
+/**
+ * What the node a road is extended from makes besides its own lines, only in extend mode (^325 to
+ * ^330, ^337 to ^340): snap lines through it at 15° to 75° from its heading, in steps of 15°, and
+ * the same the other way.
+ */
+export function extendRules(n: RuleNode): Suggestion[] {
+  return ([15, 30, 45, 60, 75] as const).flatMap((deg) =>
+    (['+', '-'] as const).map((sign) =>
+      line(n, fromAngle(n.th + ((sign === '+' ? deg : -deg) * Math.PI) / 180), {
+        rule: `extend${sign}${deg}`,
+        from: [n.id],
+      }),
+    ),
+  );
+}
+
 /** The part of a curve that belongs to one segment (^268, ^279). */
-function curveOf(e: RuleEdge, pieces: Piece[], rule: Rule): SnapCurve {
+function curveOf(e: RuleEdge, pieces: Piece[], rule: Rule, side?: 1 | -1): SnapCurve {
   const straight = pieces.every((p) => p.type === 'line');
   const mid = pointOn(pieces[Math.floor(pieces.length / 2)]!, 0.5);
   return {
@@ -85,6 +109,7 @@ function curveOf(e: RuleEdge, pieces: Piece[], rule: Rule): SnapCurve {
     rule,
     from: [e.start, e.end],
     edge: e.id,
+    ...(side === undefined ? {} : { side }),
   };
 }
 
@@ -103,9 +128,12 @@ function offsetPiece(p: Piece, d: number): Piece | null {
 /** The curve of a segment (^268) and its two offsets, one lane width to each side (^279). */
 function curveRules(e: RuleEdge): Suggestion[] {
   const pieces = e.ref.E.pieces;
-  const sides = [e.width, -e.width].map((d) => pieces.map((p) => offsetPiece(p, d)));
-  const offsets = sides.filter((s): s is Piece[] => s.every((p) => p !== null));
-  return [curveOf(e, pieces, 'curve'), ...offsets.map((o) => curveOf(e, o, 'offset'))];
+  // On the screen (y down) a positive offset is on the right-hand side of the direction of travel (^253).
+  const offsets = ([1, -1] as const).flatMap((side) => {
+    const moved = pieces.map((p) => offsetPiece(p, side * e.width));
+    return moved.every((p) => p !== null) ? [curveOf(e, moved as Piece[], 'offset', side)] : [];
+  });
+  return [curveOf(e, pieces, 'curve'), ...offsets];
 }
 
 /** The radius points of an arc, and the lines along the normal at its ticks (^270, ^271). */
@@ -116,7 +144,10 @@ function arcRules(e: RuleEdge, arc: Arc): Suggestion[] {
     const s = at(t);
     return point(s, 'radius-point', from, { heading: angleOf({ x: s.tx, y: s.ty }) });
   });
-  const ticks = [0, 1].map((t) => line(at(t), sub(at(t), arc.c), 'tick', from));
+  const ticks = [0, 1].map((t) => {
+    const s = at(t);
+    return line(s, sub(s, arc.c), { rule: 'tick', from, heading: angleOf({ x: s.tx, y: s.ty }) });
+  });
   return [...points, ...ticks];
 }
 
@@ -125,7 +156,10 @@ function bendRules(e: RuleEdge, E: BendEdge, arc: Arc): Suggestion[] {
   const from = [e.start, e.end];
   const bisector = unitOr(sub(E.C, arc.c), { x: 1, y: 0 });
   const middle = add(arc.c, mul(bisector, arc.r));
-  return [line(middle, bisector, 'bend', from), line(middle, perp(bisector), 'bend', from)];
+  return [
+    line(middle, bisector, { rule: 'bend', from }),
+    line(middle, perp(bisector), { rule: 'bend', from }),
+  ];
 }
 
 /** The direction of the curve at the inflection point of an S-curve or a hook. */
@@ -144,8 +178,8 @@ function inflectionRules(e: RuleEdge, E: TwoArcEdge): Suggestion[] {
   const heading = angleOf(t);
   return [
     point(E.J, 'inflection-point', from, { heading }),
-    line(E.J, t, 'inflection-lines', from),
-    line(E.J, perp(t), 'inflection-lines', from),
+    line(E.J, t, { rule: 'inflection-lines', from, heading: heading + Math.PI / 2 }),
+    line(E.J, perp(t), { rule: 'inflection-lines', from, heading }),
   ];
 }
 

@@ -2,22 +2,29 @@ import { buildEdge, type Edge } from './edge';
 import type { Handle } from './handles';
 import { edgesOf, withNode, withRadius, type Path } from './path';
 import { pointOn, sweeps } from './piece';
-import { AUTO_SNAP, RMIN } from './radius';
-import { angleOf, dist, dot, len, mul, sub, toRad, type Vec } from './vec';
+import { RMIN } from './radius';
+import { snapAngle } from '../snap/angles';
+import { angleOf, dist, dot, len, mul, sub, type Vec } from './vec';
 
 /** Drag state captured when a handle is grabbed. */
 export interface DragState {
   handle: Handle;
 }
 
+/** Headings snap to angle steps counted from `from` (^251, ^315): the heading before the drag, or 0 for the compass (^316). */
+export interface AngleSnap {
+  /** Pixels per meter: the step gets finer with the distance on the screen. */
+  scale: number;
+  from: number;
+}
+
 export interface DragModifiers {
-  /** Snap headings to 15 degrees (^11). */
-  snap: boolean;
+  /** Null when snapping is off. */
+  angle: AngleSnap | null;
 }
 
 /** Closest the blue point may get to a node, meters. */
 const CTRL_MIN_DIST = 0.7;
-const SNAP_STEP = toRad(15);
 const RADIUS_SEARCH_STEPS = 160;
 /** Refinement steps after the coarse search of a radius. */
 const RADIUS_REFINE_STEPS = 40;
@@ -38,16 +45,21 @@ export function radiusFromCursor(E: Edge & { kind: 'C' }, pt: Vec): number {
   return ((me + Math.sqrt(disc)) / c2) * Math.cos(h);
 }
 
-const toRequested = (R: number, Rmax: number) => (R >= AUTO_SNAP * Rmax ? null : R);
+/** A radius that equals the maximum (within a millimeter) is auto (^332). */
+const toRequested = (R: number, Rmax: number) => (R >= Rmax - 1e-3 ? null : R);
 
 function dragNode(path: Path, i: number, pt: Vec): Path {
   return withNode(path, i, { x: pt.x, y: pt.y });
 }
 
-export function dragHeading(path: Path, i: number, pt: Vec, snap: boolean): Path {
-  let th = angleOf(sub(pt, path.nodes[i]!));
-  if (snap) th = Math.round(th / SNAP_STEP) * SNAP_STEP;
-  return withNode(path, i, { th });
+/** The heading of the node `i` turned towards `pt`, snapped to angles that get finer farther out (^251). */
+export function dragHeading(path: Path, i: number, pt: Vec, angle: AngleSnap | null): Path {
+  const node = path.nodes[i]!;
+  const th = angleOf(sub(pt, node));
+  if (!angle) return withNode(path, i, { th });
+  return withNode(path, i, {
+    th: angle.from + snapAngle(th - angle.from, dist(pt, node) * angle.scale),
+  });
 }
 
 /** Dragging the blue point sets both headings so their lines meet at the pointer (^9). */
@@ -137,7 +149,7 @@ export function applyDrag(path: Path, drag: DragState, pt: Vec, mod: DragModifie
     case 'node':
       return dragNode(path, i, pt);
     case 'head':
-      return dragHeading(path, i, pt, mod.snap);
+      return dragHeading(path, i, pt, mod.angle);
     case 'ctrl':
       return dragCorner(path, i, pt);
     case 'mid1':

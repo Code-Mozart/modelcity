@@ -1,0 +1,103 @@
+import { describe, expect, it } from 'vitest';
+import { Editor } from './editor.svelte';
+import { mapOf, snapping } from '../testing/snapHelpers';
+import { chainHandles } from './chains';
+import { dropOf } from './drop';
+import { edgeOfId, withRadius } from '../model/graph';
+
+// A bend from (0,0) heading right to (40,20), and a separate road whose node offers a snap line at x = 20.
+const g = () => {
+  const m = mapOf([
+    [
+      [0, 0],
+      [40, 20],
+    ],
+    [
+      [20, -60],
+      [20, -50],
+    ],
+  ]);
+  return { ...m, nodes: m.nodes.map((n) => (n.id === 1 ? { ...n, th: Math.PI / 2 } : n)) };
+};
+
+describe('the control points of a segment snap (^249)', () => {
+  it('the radius point is pulled onto a snap line', () => {
+    const ed = new Editor();
+    ed.load(g());
+    const rad = chainHandles(ed.chains, 4).find((h) => h.type === 'rad')!;
+    ed.selection = [0, 1];
+    ed.pointerDown(snapping(rad.x, rad.y));
+    ed.pointerMove(snapping(rad.x - 8, rad.y - 8));
+    ed.pointerMove(snapping(19, -10));
+    expect(ed.snapped).not.toBeNull();
+    expect(ed.snapped?.by.length).toBeGreaterThan(0);
+  });
+
+  it('a radius point snapped onto a node of its segment sets the radius to auto (^141)', () => {
+    const ed = new Editor();
+    ed.load(withRadius(g(), 0, 30));
+    const rads = chainHandles(ed.chains, 4).filter((h) => h.type === 'rad');
+    const h = rads.sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0]!;
+    expect(edgeOfId(ed.graph, 0)!.radius).toBe(30);
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x + 8, h.y + 8));
+    ed.pointerMove(snapping(0.5, 0.5));
+    ed.pointerUp();
+    expect(edgeOfId(ed.graph, 0)!.radius).toBeNull();
+  });
+});
+
+describe('dragging a radius point shows the segment as it is (^306)', () => {
+  it('nothing is merged, so nothing is hidden or dashed, even when a node has the segment id', () => {
+    const ed = new Editor();
+    ed.load(g());
+    const h = chainHandles(ed.chains, 4).find((x) => x.type === 'rad')!;
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x + 8, h.y + 8));
+    ed.pointerMove(snapping(h.x + 9, h.y + 9));
+    expect(dropOf(ed.graph, ed.press, ed.snapped)).toBeNull();
+  });
+});
+
+describe('a control point is offered only the points it can reach (^333)', () => {
+  it('the end radius point moves along a heading line: not the points beside a node', () => {
+    const ed = new Editor();
+    ed.load(withRadius(g(), 0, 30));
+    const h = chainHandles(ed.chains, 4)
+      .filter((x) => x.type === 'rad' && x.t !== 0.5)
+      .sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0]!;
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x + 8, h.y + 8));
+    ed.pointerMove(snapping(0.3, 3.2)); // beside the node at the origin
+    const by = ed.snapped?.by[0];
+    expect(by?.kind === 'point' && Math.abs(by.at.y - 3) < 0.1).toBe(false); // not the point beside the node
+  });
+
+  it('the middle radius point is not offered a point it cannot reach, not even where two lines cross', () => {
+    const ed = new Editor();
+    ed.load(withRadius(g(), 0, 30));
+    const h = chainHandles(ed.chains, 4).find(
+      (x) => x.type === 'rad' && x.t === 0.5 && x.id === 0,
+    )!;
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x - 4, h.y + 4));
+    ed.pointerMove(snapping(0.3, 0.3)); // beside the node, where its two lines cross
+    const [by, pt] = [ed.snapped?.by[0], ed.snapped?.pt];
+    expect(by?.kind).toBe('curve');
+    expect(Math.hypot(pt!.x, pt!.y)).toBeGreaterThan(0.1);
+  });
+
+  it('the place where a control point was is a snap point while it is dragged (^356)', () => {
+    const ed = new Editor();
+    ed.load(withRadius(g(), 0, 30));
+    const h = chainHandles(ed.chains, 4).find(
+      (x) => x.type === 'rad' && x.t === 0.5 && x.id === 0,
+    )!;
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x - 6, h.y + 6));
+    ed.pointerMove(snapping(h.x + 0.4, h.y + 0.1));
+    const by = ed.snapped?.by[0];
+    expect(by?.kind === 'point' && by.rule).toBe('previous');
+    expect(ed.snapped?.pt).toMatchObject({ x: expect.closeTo(h.x, 6), y: expect.closeTo(h.y, 6) });
+  });
+});

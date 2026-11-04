@@ -12,6 +12,14 @@ export interface SnapQuery {
   scale: number;
   /** Nodes whose suggestions are offered at any distance (^258). */
   pinned: readonly number[];
+  /** What the thing that is moved can reach: only these suggestions are offered, and only these places (^333). */
+  reach?: Reach;
+}
+
+/** What a control point can reach, for example the line it moves along (^333). */
+export interface Reach {
+  curve(c: SnapCurve): boolean;
+  point(at: Vec): boolean;
 }
 
 /** Reaching this share of the maximum distance, the tip about pinning shows (^294). */
@@ -75,15 +83,18 @@ export function snapTo(list: Suggestion[], q: SnapQuery): SnapHit | null {
   return hit && { ...hit, reach: reachOf(hit.by, q) };
 }
 
+const reaches = (s: Suggestion, reach?: Reach): boolean =>
+  !reach || (s.kind === 'point' ? reach.point(s.at) : reach.curve(s));
+
 function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
-  const here = list.filter((s) => offered(s, q));
+  const here = list.filter((s) => offered(s, q) && reaches(s, q.reach));
   const near = nearCurves(
     here.filter((s): s is SnapCurve => s.kind === 'curve'),
     q,
   );
   const crossed = crossingPoints(near);
   const points = [...here.filter((s): s is SnapPoint => s.kind === 'point'), ...crossed]
-    .filter((s) => nearPoint(s, q))
+    .filter((s) => nearPoint(s, q) && (q.reach?.point(s.at) ?? true))
     .sort((a, b) => byPoint(a, b, q.pt));
   const best = points[0];
   if (best) {

@@ -1,3 +1,4 @@
+import { previewRadius } from './sharedRadius';
 import type { PathNode } from '../curves/types';
 import { nodeAtSample, type RoadHandle, type RoadHit } from './chains';
 import { edgeOfId, nodeOf } from '../model/graph';
@@ -87,5 +88,7 @@ export function mergePreview(
 export function previewOf({ graph, active, end }: Drawn, at: Placement): Hover {
   const ref = (active === null ? undefined : nodeOf(graph, active)) ?? null;
   const th = at.th ?? (ref ? autoHeadingFor(end)(ref, at.pt) : 0);
-  return { kind: 'preview', ref, end, node: { x: at.pt.x, y: at.pt.y, th } };
+  const node = { x: at.pt.x, y: at.pt.y, th };
+  const radius = ref && active !== null ? previewRadius(graph, active, node, end) : null;
+  return { kind: 'preview', ref, end, node, radius };
 }

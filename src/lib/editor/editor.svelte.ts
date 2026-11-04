@@ -10,7 +10,7 @@ import {
   splitAt,
 } from './ops';
 import { dropOf } from './drop';
-import { snapBase, snapFor, snapPreview } from './snapping';
+import { placedAt, snapBase, snapFor, snapPreview } from './snapping';
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
@@ -97,7 +97,13 @@ export class Editor {
   drawing = $derived(this.mode === 'draw');
   private hoverRaw = $derived<Hover | null>(this.hoverNow());
   readonly pins = new Pins((id) => nodeOf(this.graph, id) !== undefined);
-  private base = $derived(snapBase(this.press ? this.press.undo.graph : this.graph, this.press));
+  private base = $derived(
+    snapBase(
+      this.press ? this.press.undo.graph : this.graph,
+      this.press,
+      this.drawing ? this.active : null,
+    ),
+  );
   /** What the pointer is pulled to while it places or moves a node (^101): derived like the hover. */
   snapped = $derived(
     snapFor(this.base, {
@@ -110,9 +116,9 @@ export class Editor {
   );
   hover = $derived<Hover | null>(
     snapPreview(this.hoverRaw, this.snapped, () => ({
+      info: this.lastInfo,
       drawn: this.snapshot(),
       chains: this.chains,
-      scale: this.lastInfo?.scale ?? 1,
     })),
   );
   /** The three modes (^120): extend mode is draw mode while a node is being extended. */
@@ -210,6 +216,7 @@ export class Editor {
   private leaveDrawing(toSelect: boolean) {
     [this.mode, this.viewing] = [toSelect ? 'select' : 'draw', false];
     [this.active, this.origin, this.end, this.selection] = [null, null, 'end', []];
+    this.splitUndo = null;
   }
 
   /** Esc: cancel a drag (^295); else finish the road being drawn, or with none deselect all (^218). */
@@ -237,7 +244,6 @@ export class Editor {
     // A split on a curve that was finished at once gives the curve back (an inserted node would stay), unless the click was on the inserted node (^276).
     this.graph = finishedGraph(this.graph, keep ? null : this.splitUndo);
     this.leaveDrawing(toSelect || this.active === null);
-    this.splitUndo = null;
     this.commit(before, 'finish road');
   }
 
@@ -252,11 +258,8 @@ export class Editor {
       this.press = emptyPress(this.snapshot(), info, hit);
       return;
     }
-    this.begin(
-      hit
-        ? curvePress(this.snapshot(), hit)
-        : placePress(this.snapshot(), this.snapped ? { ...info, pt: this.snapped.pt } : info),
-    );
+    const place = () => placePress(this.snapshot(), placedAt(this.snapped, info));
+    this.begin(hit ? curvePress(this.snapshot(), hit) : place());
   }
 
   private grab(handle: RoadHandle, info: PointerInfo) {
@@ -283,14 +286,13 @@ export class Editor {
 
   pointerMove(info: PointerInfo) {
     this.lastInfo = info;
-    const moved = this.press && moveOf(this.snapshot(), this.press, info, this.snapped?.pt);
+    const moved = this.press && moveOf(this.snapshot(), this.press, info, this.snapped);
     if (moved) Object.assign(this, moved);
   }
 
   /** Alt or Shift went down or up: what is under the pointer can look different, such as the hovered branch (^99), though the pointer did not move. */
   modifiers({ alt, shift, ctrl }: { alt: boolean; shift: boolean; ctrl?: boolean }) {
-    if (!this.lastInfo) return;
-    this.lastInfo = { ...this.lastInfo, alt, shift, ctrl: ctrl ?? this.lastInfo.ctrl };
+    this.lastInfo &&= { ...this.lastInfo, alt, shift, ctrl: ctrl ?? this.lastInfo.ctrl };
   }
 
   private hoverNow(): Hover | null {

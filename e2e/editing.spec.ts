@@ -21,8 +21,10 @@ async function deleteNode(app: App) {
 async function extendTo(app: App, pt: { x: number; y: number }) {
   await app.click({ x: 0, y: 30 }); // empty canvas: enters draw mode
   expect((await app.state()).mode).toBe('draw');
+  await app.page.keyboard.down('Control'); // no snapping (^101): the node goes where it is clicked
   await app.click({ x: 60, y: 0 });
   await app.click(pt);
+  await app.page.keyboard.up('Control');
   await app.page.keyboard.press('Escape');
   expect(await nodes(app)).toHaveLength(3);
 }
@@ -185,12 +187,13 @@ test('the outline follows Alt without moving the mouse, and a pan or a zoom unde
   await page.keyboard.up('Alt');
   expect(await segments()).toBe(1);
 
-  // A right drag pans the view: the pointer ends over empty canvas, though it never "moved" for the editor.
   const p = await page.evaluate(() => window.__modelcity!.toPage({ x: 15, y: 0 }));
+  // A right drag pans the view and the pointer goes with it: it stays over what it was over (^277).
+  await page.mouse.wheel(0, -3000);
   await page.mouse.down({ button: 'right' });
   await page.mouse.move(p.x, p.y + 150, { steps: 6 });
   await page.mouse.up({ button: 'right' });
-  expect(await hover()).toBeNull();
+  expect(await hover()).not.toBeNull();
 });
 
 test('nothing to undo or redo is said once, and the undo hint is not alone in the panel (^241, ^242)', async ({

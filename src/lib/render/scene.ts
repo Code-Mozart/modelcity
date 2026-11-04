@@ -8,7 +8,10 @@ import { ordered } from '../model/junction';
 import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
-import { drawCircles, drawCorners, drawGuides, drawRadiusLabels } from './guides';
+import { drawCircles, drawCorners, drawGuides, drawTowerLine, type TowerShape } from './guides';
+import { drawBars, type BarShape } from './bars';
+import { drawMeasures } from './measures';
+import { drawCompass, drawOffset, type Turning } from './compass';
 import {
   dot,
   ring,
@@ -65,6 +68,12 @@ export interface Scene {
   /** What the placed or moved node is pulled to (^101), and the nodes whose suggestions are pinned (^258). */
   snap: SnapHit | null;
   pinned: NodeRef[];
+  /** The bars beside the nodes of runs of parallel segments (^350). */
+  bars: BarShape[];
+  /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
+  tower: TowerShape | null;
+  /** The heading being set, with the arrow following the cursor, and the compass for the first node of an arm (^314, ^316). */
+  turning: Turning | null;
   /** Where the nodes that are moved were, shown as snap points while they move (^113). */
   previous: Vec[];
   /** The curves a dragged node's segments would have if it were dropped now: dashed, like the curve of an extend (^284). */
@@ -96,13 +105,28 @@ interface NodeState {
   active: boolean[];
   selected: number[];
   pinned: number[];
+  /** The heading of one of its nodes is being set (^314). */
+  turning: Turning | null;
+}
+
+/** What says how far the heading of a node is turned: its degrees with the compass, or the offset (^316, ^341). */
+function drawTurning(
+  f: Frame,
+  n: { x: number; y: number; th: number },
+  turning: Turning,
+  pal: Palette,
+) {
+  if (turning.compass) drawCompass(f, n, pal);
+  else if (turning.offset !== null) drawOffset(f, n, turning.offset, pal);
 }
 
 /** The node dots (skeleton) and, with the scaffold, the heading arrows. */
 function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
   const { active, selected } = state;
   road.path.nodes.forEach((n, i) => {
-    if (arrowShown(active, i)) drawArrow(f, n, pal.orange);
+    const turning = state.turning?.i === i ? state.turning : null;
+    if (turning || arrowShown(active, i)) drawArrow(f, n, pal.orange);
+    if (turning) drawTurning(f, n, turning, pal);
     const picked = selected.includes(i);
     const color = picked ? pal.blue : state.pinned.includes(i) ? pal.turquoise : pal.ink;
     dot(f.ctx, toScreen(f, n), picked ? SELECTED_DOT_PX : NODE_DOT_PX, color);
@@ -118,9 +142,12 @@ function drawPreview(
 ) {
   if (hover.ref) {
     const [from, to] = ordered(hover.ref, hover.node, hover.end);
-    for (const piece of buildEdge(from, to, null).pieces) {
+    const E = buildEdge(from, to, hover.radius ?? null);
+    // Extend mode shows what a segment shows: its heading lines, dashed like the curve, and the measurements (^321, ^303).
+    drawGuides(f, { i: -1, p: from, q: to, E }, pal, [6, 6]);
+    for (const piece of E.pieces)
       strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
-    }
+    drawMeasures(f, { i: -1, p: from, q: to, E }, pal);
   }
   if (curveOnly) return;
   f.ctx.globalAlpha = 0.6;
@@ -183,7 +210,7 @@ function drawRoad(f: Frame, road: RoadScene, shown: RoadShown, pal: Palette) {
   road.edges.forEach((ref, k) => {
     if (!active[k]) return;
     drawCorners(f, ref, pal);
-    drawRadiusLabels(f, ref, pal, rad?.i === ref.i ? { k: rad.k ?? 0, t: rad.t ?? 0.5 } : null);
+    drawMeasures(f, ref, pal, rad?.i === ref.i ? { k: rad.k ?? 0, t: rad.t ?? 0.5 } : null);
   });
 }
 
@@ -261,6 +288,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   });
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
+  if (scene.tower) drawTowerLine(f, scene.tower, pal);
   drawSnap(f, scene.snap, pal);
   for (const at of scene.previous)
     ring(f.ctx, toScreen(f, at), 7, { color: pal.turquoise, width: 1.5 });
@@ -269,6 +297,8 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   }
   if (scene.mergePreview) drawPreview(f, scene.mergePreview, pal, true);
   if (scene.band) drawBand(f, scene.band, pal);
+  // The bars of the runs are below the nodes, so that selected nodes stay blue (^350).
+  drawBars(f, scene.bars, NODE_DOT_PX, pal);
   scene.roads.forEach((road, i) => {
     drawNodes(
       f,
@@ -277,6 +307,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
         active: active[i]!,
         selected: selectedIn(scene.selection, i),
         pinned: selectedIn(scene.pinned, i),
+        turning: scene.turning?.road === i ? scene.turning : null,
       },
       pal,
     );

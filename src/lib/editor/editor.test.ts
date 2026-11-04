@@ -99,11 +99,17 @@ describe('dragging the heading of later nodes (^40)', () => {
     expect(ed.edges[0]![0]!.E.kind).toBe('S');
   });
 
-  it('snaps the heading to 15 degrees with shift', () => {
+  it('snaps the heading to angles, finer the farther the pointer is, and Ctrl switches it off (^251)', () => {
     const ed = drawMode();
     ed.pointerDown(at(0, 0));
-    ed.pointerMove(at(10 * Math.cos(toRad(33)), 10 * Math.sin(toRad(33)), { shift: true }));
+    const toward = (m: number, ctrl: boolean) =>
+      at(m * Math.cos(toRad(33)), m * Math.sin(toRad(33)), { ctrl });
+    ed.pointerMove(toward(5, false)); // 20 px: 45 degrees
+    expect(last(ed).th).toBeCloseTo(toRad(45));
+    ed.pointerMove(toward(25, false)); // 100 px: 15 degrees
     expect(last(ed).th).toBeCloseTo(toRad(30));
+    ed.pointerMove(toward(25, true));
+    expect(last(ed).th).toBeCloseTo(toRad(33));
   });
 });
 
