@@ -27,17 +27,26 @@
 
 ## Controls
 
-Contexts are named by their mode and map state; a context is a *state* of the audit walk (below). The hint column says what the hint panel shows in that context.
+Each row is one control (^392): an input, or alternative inputs that do the same, in one context. The Hat column starts with the control's own hat. Rows for states not walked yet follow as the audit goes on.
 
-| Hat | Context | Control | Operation | Hint | Visitable | Special behavior | Tests |
-|-----|---------|---------|-----------|------|-----------|------------------|-------|
-| ^104, ^110 | first load, or select mode after a visit (empty map) | `Tab` | Enter view mode | `Tab`: view mode, hidden for a while after the control was used (feature ^110), so after one round trip to view mode and back it is missing | n/a (a key) | the hint comes back when the visit times out | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
-| ^104 | view mode | `Tab` | Back to select mode | should be `Tab`: select mode, but it is hidden after entering (bug ^384) | n/a | hidden for a while after use (^110) | e2e `modes.spec` |
-| ^168, ^223 | first load, view mode (and every mode, nothing being typed) | `Ctrl+O` | Opens the projects modal and, in the same step, the file window of *Import file…*; overrides the browser's own `Ctrl+O` | none (exemption: not yet decided, ^371) | n/a | the file window is the browser's own (`<input type=file accept=".json,application/json">`, hidden, clicked by code) | e2e `projects.spec` |
-| ^222 | first load, view mode | `P` | Opens the projects modal (without the file window) | `P`: projects, always shown | n/a (a key) | ignored while a text field has the focus | e2e `projects.spec` |
-| ^226, ^185, ^232 | any mode, nothing saved yet | `Ctrl+S` | Nothing is saved; two info toasts: `nothing to save yet`, `modelcity saves automatically` | none (exemption: not yet decided, ^371) | n/a | toasts (^210) disappear after 3 s, an identical toast is not shown twice | unit `project/load.test`; e2e: gap ^379 |
-| ^242, ^81 | any mode, nothing to undo | `Ctrl+Z`, `Alt+Ctrl+Z` | Nothing; info toast `nothing to undo` | none | n/a | toast, 3 s | e2e `editing.spec` (plain); `Alt`: gap ^380 |
-| ^242, ^81 | any mode, nothing to redo | `Ctrl+Y`, `Ctrl+Shift+Z`, `Alt` variants | Nothing; info toast `nothing to redo` | none | n/a | toast, 3 s | e2e `editing.spec` (plain); `Alt`: gap ^380 |
+| Hat | Context | Control | Operation or feature | Hint | Visitable | Special behavior | Tests |
+|-----|---------|---------|----------------------|------|-----------|------------------|-------|
+| ^393 | select mode, empty canvas, nothing selected | `LMB` click | enter draw mode (feature ^54; not an operation) | `LMB`: draw mode | n/a | | e2e `modes.spec` |
+| ^394 | select mode | `Tab` | go to view mode (^104) | `Tab`: view mode, hidden for a while after the control was used (^110) | n/a | after a round trip the hint is missing until the visit times out | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
+| ^395 | view mode | `Tab` | back to select mode (^104) | should be `Tab`: select mode, hidden by bug ^384 | n/a | | e2e `modes.spec` |
+| ^396 | any mode, no modal, nothing to save | `Ctrl+S` | two info toasts (^226, ^185, ^232) | none (exemption not yet decided) | n/a | toasts 3 s, identical toast not shown twice | unit `project/load.test`; e2e: gap ^379 |
+| ^397 | any mode, no modal, nothing to undo | `Ctrl+Z` | info toast `nothing to undo` (^242, ^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
+| ^398 | any mode, no modal, nothing to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | info toast `nothing to redo` (^242, ^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
+| ^399 | any mode, no modal | `Ctrl+O` | open the projects modal and the file window (^168, ^223) | none (exemption not yet decided) | n/a | overrides the browser's `Ctrl+O`; the file window is the browser's own | e2e `projects.spec` |
+| ^400 | any mode, no modal, no text field focused | `P` | open the projects modal (^222) | `P`: projects, always shown | n/a | | e2e `projects.spec` |
+| ^401 | projects modal | `Esc` | close the modal (^168) | `Esc`: close (merged with `LMB` over the X) | n/a | | e2e `projects.spec` |
+| ^402 | projects modal, pointer outside the dialog | `LMB` click | close the modal (^168, ^233: not while a rename is unfinished) | none (exemption: the backdrop is not a target) | no | | e2e `projects.spec` |
+| ^403 | projects modal, pointer on the X | `LMB` click | close the modal | `Esc or LMB`: close | yes (hover) | | e2e `projects.spec` |
+| ^404 | projects modal, pointer on `Import file…` | `LMB` click | open the file window (^164) | `LMB`: import | yes (hover) | | e2e `projects.spec` |
+| ^405 | projects modal, pointer on `Export JSON` | `LMB` click | export the project (^163, ^226); to explore | `LMB`: export JSON | yes (hover) | | e2e `projects.spec` |
+| ^406 | projects modal, pointer on `New project` | `LMB` click | make a blank project (^171); to explore | `LMB`: new project | yes (hover) | | e2e `projects.spec` |
+| ^407 | projects modal, pointer on the search field, not focused | `LMB` click | focus the search (^178); the feature *Search* is walked later | `LMB`: search (only while not focused) | yes (hover) | the field is focused when the modal opens | e2e `projects.spec` |
+| ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (^54) | `Esc or RMB`: finish | n/a | | unit `editor/modes.test` (assumed; to check) |
 
 ## Walk-through (depth first)
 
