@@ -1,4 +1,4 @@
-next: ^385
+next: ^386
 
 # Hats
 
@@ -422,3 +422,4 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^382 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: touch controls:** one finger is `LMB`, two fingers move the camera (^14, ^30). No test, and no hint for touch; how a touch device enters and leaves view mode is open (^104). |
 | ^383 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: the scale bar and the compass:** when they show (^34, ^33) is only covered indirectly by the camera unit tests; no e2e test. |
 | ^384 | bug | open (roadmap, no milestone; user, found in the audit ^371) | **The `Tab` hint is missing in view mode:** after `Tab` has entered view mode the hint `Tab: select mode` is not shown, although `Tab` is the only way out. Cause: `Tab` is one control (`view`, ^110) for both directions; using it to enter marks it as visited, and `tabHints` in `hints/hints.ts` hides a visited control for a while, also in view mode, where it is the way out. The hint is hidden exactly when it is needed. Options: the way out is never hidden (like the controls that cannot be visited, ^101, ^258), or the two directions are two controls with separate visit states. |
+| ^385 | bug | open (roadmap, no milestone; user, found in the audit ^371) | **"No project matches." with no project at all:** the projects modal of a fresh browser (nothing stored yet) lists nothing and says `No project matches.`, as if something had been searched (`none` text of `FilterList`, `ProjectsModal.svelte`). With an empty search and an empty list it should say that there is no project yet (and ^171 *New project* is below). Same for every list (^178) that can be empty: the text depends on whether there is a query. |

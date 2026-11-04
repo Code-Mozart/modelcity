@@ -30,6 +30,8 @@ Contexts are named by their mode and map state; a context is a *state* of the au
 |-----|---------|---------|-----------|------|-----------|------------------|-------|
 | ^104 | first load (select mode, empty map) | `Tab` | Enter view mode | `Tab`: view mode | n/a (a key) | the hint is hidden for a while after use (^110) | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
 | ^104 | view mode | `Tab` | Back to select mode | should be `Tab`: select mode, but it is hidden after entering (bug ^384) | n/a | hidden for a while after use (^110) | e2e `modes.spec` |
+| ^168, ^223 | first load, view mode (and every mode, nothing being typed) | `Ctrl+O` | Opens the projects modal and, in the same step, the file window of *Import file…*; overrides the browser's own `Ctrl+O` | none (exemption: not yet decided, ^371) | n/a | the file window is the browser's own (`<input type=file accept=".json,application/json">`, hidden, clicked by code) | e2e `projects.spec` |
+| ^222 | first load, view mode | `P` | Opens the projects modal (without the file window) | `P`: projects, always shown | n/a (a key) | ignored while a text field has the focus | e2e `projects.spec` |
 | ^226, ^185, ^232 | any mode, nothing saved yet | `Ctrl+S` | Nothing is saved; two info toasts: `nothing to save yet`, `modelcity saves automatically` | none (exemption: not yet decided, ^371) | n/a | toasts (^210) disappear after 3 s, an identical toast is not shown twice | unit `project/load.test`; e2e: gap ^379 |
 | ^242, ^81 | any mode, nothing to undo | `Ctrl+Z`, `Alt+Ctrl+Z` | Nothing; info toast `nothing to undo` | none | n/a | toast, 3 s | e2e `editing.spec` (plain); `Alt`: gap ^380 |
 | ^242, ^81 | any mode, nothing to redo | `Ctrl+Y`, `Ctrl+Shift+Z`, `Alt` variants | Nothing; info toast `nothing to redo` | none | n/a | toast, 3 s | e2e `editing.spec` (plain); `Alt`: gap ^380 |
@@ -38,7 +40,7 @@ Contexts are named by their mode and map state; a context is a *state* of the au
 
 The audit is a depth-first walk through the app, by hand, one input at a time. A *state* is named by what the user sees, never given an id (hats are the only ids). For each state: the transitions explored and those still to explore. A transition that stays in the same state is listed as "same state".
 
-Stack (where we are): first load > **view mode**
+Stack (where we are): first load > view mode > **file window over the projects modal**
 
 ### first load (select mode, empty map)
 
@@ -50,8 +52,8 @@ Screen: blank canvas; a blue outline around the window; four mode icons (eye, po
 | `Ctrl+Z`, `Alt+Ctrl+Z` | same state, toast | yes |
 | `Ctrl+Y`, `Ctrl+Shift+Z`, `Alt` variants | same state, toast | yes |
 | `Tab` | view mode | yes |
-| `Ctrl+O` | projects modal with the file window | no |
-| `P` | projects modal | no |
+| `Ctrl+O` | projects modal with the file window open | yes (same in both states) |
+| `P` | projects modal, no file window: the state after *Cancel* of the file window | yes, with that state |
 | `LMB` click | draw mode | no |
 | `LMB` drag | box select (nothing to select) | no |
 | `RMB` drag | pan | no |
@@ -69,8 +71,42 @@ Screen: no outline; two icons (the eye now ringed, the pointer white); hints `RM
 | `Ctrl+S` | same state, two toasts | yes |
 | `Ctrl+Z`, `Alt+Ctrl+Z` | same state, toast | yes |
 | `Ctrl+Y`, `Ctrl+Shift+Z`, `Alt` variants | same state, toast | yes |
-| `Ctrl+O` | projects modal with the file window | no |
+| `Ctrl+O` | projects modal with the file window open | yes |
 | `Tab` | select mode (first load) | no |
-| `P` | projects modal | no |
+| `P` | projects modal, no file window: the state after *Cancel* of the file window | yes, with that state |
 | `RMB` drag, wheel, `Ctrl` + wheel, `MMB` drag | camera | no |
 | `LMB`, `LMB` drag | probably nothing (view mode edits nothing) | no |
+
+### file window over the projects modal (the browser's file picker, opened by `Ctrl+O` or *Import file…*)
+
+Screen (Brave on Arch Linux): the browser's own window, set to Custom Files; the filter is `.json` (`accept=".json,application/json"`, `ProjectsModal.svelte`). It is not ours, so it has no hints and no tests of its own. Behind it the projects modal (below). Hats: ^223, ^164.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| Cancel | projects modal (list state below) | no |
+| Open file | import: the file is read, checked and migrated; on success a new project opens and the modal closes, otherwise an error shows (^164, ^192 to ^209) | no |
+
+### projects modal (no file window)
+
+Screen: the modal sits over everything with a veil of 60% of the background color (`.backdrop`, z-index 1); the mode icons are *grayed out only because they lie under that veil* (no code grays them on purpose); the control hints panel (z-index 2) stays above and is replaced by the modal's own controls (`modalHints`, ^168). Layout and sizes: ^211. From left to right, top to bottom: the title `Projects`; an X (close); the search field (focused when the modal opens, so the list can be searched by typing, ^178); the list (an empty one says `No project matches.`, bug ^385); the cards `Import file…`, `Export JSON`, `New project`. `New project` has a blue border because no project is open (`current`, ^171). Hints: `Esc` close always; over the search field and not focused `LMB` search; over a button `LMB` import, export JSON or new project; over the X `LMB` close.
+
+While the modal is up only `Esc` is handled by the app (`modalKey` in `App.svelte`); every other key is left to the browser (so `Ctrl+S` may open the browser's save dialog: to check).
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `Esc` | closes the modal, back to the state before | no |
+| click outside the modal | closes it (`requestClose`, ^233: not while a rename is unfinished) | no |
+| click the X | closes it | no |
+| click the search field or type | the *Search* feature (below) | no |
+| `Import file…` | the file window (same state as above) | yes (same state) |
+| `Export JSON` | downloads the project as a file; toast (^163, ^226) | no |
+| `New project` | blank project, closes the modal (^171) | no |
+| `Ctrl+S`, `Tab`, `P`, `Ctrl+Z`, ... | to check what the browser does | no |
+
+## Reusable features
+
+A feature that appears in several states is audited once here and linked from the states that use it.
+
+### Search (`FilterList`, `src/lib/ui/fuzzy.ts`, hat ^178)
+
+Every list has a search field and the search is fuzzy: the characters of the query in order, ranked by how well they match. Transitions: to be walked as its own state when we get to it (typing, `Esc`, empty result text, focus rules, the hint `LMB search`).
