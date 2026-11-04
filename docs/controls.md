@@ -34,9 +34,9 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^393 | select mode, empty canvas, nothing selected | `LMB` click | enter draw mode (feature ^423; not an operation) | `LMB`: draw mode | n/a | | e2e `modes.spec` |
 | ^394 | select mode | `Tab` | go to view mode (feature ^425) | `Tab`: view mode, hidden for a while after the control was used (^110) | n/a | after a round trip the hint is missing until the visit times out | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
 | ^395 | view mode | `Tab` | back to select mode (feature ^422) | should be `Tab`: select mode, hidden by bug ^384 | n/a | | e2e `modes.spec` |
-| ^396 | any mode, no modal, nothing to save | `Ctrl+S` | save project (operation ^428): nothing to save, two info toasts (^185, ^232) | none (exemption not yet decided) | n/a | toasts 3 s, identical toast not shown twice | unit `project/load.test`; e2e: gap ^379 |
-| ^397 | any mode, no modal, nothing to undo | `Ctrl+Z` | info toast `nothing to undo` (^242, ^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
-| ^398 | any mode, no modal, nothing to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | info toast `nothing to redo` (^242, ^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
+| ^396 | any mode, no modal, nothing to save | `Ctrl+S` | save project (operation ^428): nothing to save, toasts ^441 and ^442 (^232) | none (exemption not yet decided) | n/a | toasts 3 s, identical toast not shown twice | unit `project/load.test`; e2e: gap ^379 |
+| ^397 | any mode, no modal, nothing to undo | `Ctrl+Z` | toast ^443 `nothing to undo` (^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
+| ^398 | any mode, no modal, nothing to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | toast ^444 `nothing to redo` (^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
 | ^399 | any mode, no modal | `Ctrl+O` | open the projects modal (feature ^426) and the file window of import project (operation ^430) | none (exemption not yet decided) | n/a | overrides the browser's `Ctrl+O`; the file window is the browser's own | e2e `projects.spec` |
 | ^400 | any mode, no modal, no text field focused | `P` | open the projects modal (feature ^426) | `P`: projects, always shown | n/a | | e2e `projects.spec` |
 | ^401 | projects modal | `Esc` | close the modal (feature ^426) | `Esc`: close (merged with `LMB` over the X) | n/a | | e2e `projects.spec` |
@@ -47,7 +47,7 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^406 | projects modal, pointer on `New project` | `LMB` click | new project (operation ^431); to explore | `LMB`: new project | yes (hover) | | e2e `projects.spec` |
 | ^407 | projects modal, pointer on the search field, not focused | `LMB` click | focus the search (feature ^427, walked later) | `LMB`: search (only while not focused) | yes (hover) | the field is focused when the modal opens | e2e `projects.spec` |
 | ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (features ^423, ^422) | `Esc or RMB`: finish | n/a | | unit `editor/modes.test` (assumed; to check) |
-| ^410 | draw mode, nothing drawn yet, empty canvas | `LMB` click | place first node (operation ^409); enters extend mode (feature ^424) | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; the project question is ^386 | unit `editor/extend.test`, `modes.test`; e2e `modes.spec` |
+| ^410 | draw mode, nothing drawn yet, empty canvas | `LMB` click | place first node (operation ^409); enters extend mode (feature ^424) | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; a project may be made at once, which is fine (^386 withdrawn, ^449) | unit `editor/extend.test`, `modes.test`; e2e `modes.spec` |
 | ^411 | draw mode, nothing drawn yet, empty canvas | `LMB` drag | place first node and set its heading (op ^420); enters extend mode; to explore | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | a drag under 6 px keeps the automatic heading | unit `editor/controls.test`; e2e `smoke.spec` |
 | ^412 | extend mode, a segment exists, pointer on the start node | `LMB` click or `Esc` | finish road (operation ^432); to explore | `LMB or Esc`: finish | n/a | with only one node: to explore | e2e `smoke.spec`, `editing.spec` |
 | ^413 | extend mode, pointer on a node | `LMB` drag | move node (operation ^433); to explore | `LMB` drag: move node | n/a | snapping, `Ctrl` | unit `editor/snapping.test`; e2e `snapping.spec` |
@@ -56,6 +56,7 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^416 | draw or extend mode, the pointer snaps, a click would place a node | `Shift` held | the node keeps only the snap position, not its heading (^358); to explore | `Shift`: snap only the position, shown only then | no | not on a drag-place | unit `editor/headingSnap.test` |
 | ^417 | any mode, at least one node selected (also, by bug ^419, the start node in extend mode) | `S` | pin the snap suggestions of the selected nodes (^258); to explore | `S`: pin snap suggestions | no (never hidden, ^258) | with nothing selected and something pinned: `S` unpins | e2e `snapping.spec` |
 | ^436 | extend mode, only the first node placed, pointer on it | `LMB` click or `Esc` | cancel first node (operation ^437): the node is taken away, back to draw mode (feature ^423) | `LMB or Esc`: finish, should be `cancel` (bug ^438) | n/a | undoable: undo brings the node back at its place; `Esc` is the alternative input, not pressed yet | unit `editor` tests (to check); e2e: gap |
+| ^450 | any mode, no modal, a project is open (it has data) | `Ctrl+S` | save project (operation ^428) at once: toast ^440 `saved`, then toast ^442 `modelcity saves automatically` (^232) | none (exemption not yet decided) | n/a | the background: ^165 (the browser's database), ^166 autosave, ^445 (400 ms), ^446 (5 s), ^447, ^448 | unit `project/load.test`; e2e `projects.spec` |
 
 ## Walk-through (depth first)
 
@@ -143,7 +144,7 @@ Reached by `LMB` in draw mode (nothing drawn). The node is selected, the road ha
 
 ### draw mode, nothing drawn, after a cancelled first node
 
-Like *draw mode (nothing drawn yet)* (cursor, preview with a semi-transparent preview node and the orange arrow pointing right, the same hints), but the history now holds a batch of two steps, `place node` and `finish road`, with a shared right border in the panel, and the undo hint (`Ctrl+Z`) shows below the panel (^107, ^108, ^109, ^439). The map is empty again; whether a project was made meanwhile is ^386. Hats: ^437, ^439, ^435. Not yet explored here: `Ctrl+Z`, `Alt+Ctrl+Z`, `Ctrl+Y` (they have something to undo now), `Ctrl+S`, the camera, `P`.
+Like *draw mode (nothing drawn yet)* (cursor, preview with a semi-transparent preview node and the orange arrow pointing right, the same hints), but the history now holds a batch of two steps, `place node` and `finish road`, with a shared right border in the panel, and the undo hint (`Ctrl+Z`) shows below the panel (^107, ^108, ^109, ^439). The map is empty again; whether a project was made meanwhile is ^386. Hats: ^437, ^439, ^435. `Ctrl+S` is explored here (control ^450). Not yet explored here: `Ctrl+Z`, `Alt+Ctrl+Z`, `Ctrl+Y` (they have something to undo now), the camera, `P`.
 
 ### view mode (empty map)
 
@@ -218,5 +219,6 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 15 | (A) | `LMB` click on empty canvas | (D) draw mode, nothing drawn yet |
 | 16 | (D) | `LMB` click on empty canvas | (E) extend mode, one node placed (operation `place first node`, ^409) |
 | 17 | (E) | `LMB` click on the placed node | (D2) draw mode, nothing drawn, with a batch of two steps in the history (operation `cancel first node`, ^437) |
+| 18 | (D2) | `Ctrl+S` (some seconds later) | the same state; toasts `saved` and `modelcity saves automatically` (^440, ^442) appear at once and go after 3 s; the history panel went away after about 3 s (^107); the project is saved (operation ^428, control ^450) |
 
 `(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node. Now: **(D2)**. Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
