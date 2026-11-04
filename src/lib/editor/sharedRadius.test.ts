@@ -64,11 +64,15 @@ describe('more than two lanes on top of each other (^302)', () => {
 });
 
 describe('the line through interlocked control points (^344)', () => {
-  it('through the middle radius points of the lanes, reaching to the edge of the road', () => {
-    const line = controlTower(lanes(), 0, 1, 0.5);
-    expect(line).not.toBeNull();
-    // the points are one lane width apart, the line reaches half a lane width beyond both
-    expect(Math.hypot(line!.p.x - line!.q.x, line!.p.y - line!.q.y)).toBeCloseTo(6, 1);
+  const length = (l: { p: { x: number; y: number }; q: { x: number; y: number } } | null) =>
+    Math.hypot(l!.p.x - l!.q.x, l!.p.y - l!.q.y);
+
+  it('through the middle radius points: from the outermost to the innermost, one lane width', () => {
+    expect(length(controlTower(lanes(), 0, 1, 0.5))).toBeCloseTo(3, 1);
+  });
+
+  it('through the end radius points, across the lanes on that side (a vertical or horizontal line)', () => {
+    for (const t of [0, 1]) expect(length(controlTower(threeBends(), 0, 1, t))).toBeCloseTo(6, 1);
   });
 
   it('none without a parallel segment', () => {

@@ -98,7 +98,7 @@ export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   }
 }
 
-/** The dashed yellow line through the interlocked control points of parallel segments, to the edge of the road (^344). */
+/** The dashed orange line through the interlocked control points of parallel segments, from the outermost to the innermost (^344). */
 export function drawTowerLine(f: Frame, { p, q }: { p: Vec; q: Vec }, pal: Palette) {
-  segment(f.ctx, toScreen(f, p), toScreen(f, q), { color: pal.yellow, width: 2, dash: [6, 5] });
+  segment(f.ctx, toScreen(f, p), toScreen(f, q), { color: pal.orange, width: 2, dash: [6, 5] });
 }

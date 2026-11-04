@@ -1,7 +1,7 @@
 import { pointOn, sweeps } from '../curves/piece';
 import type { Piece } from '../curves/types';
 import { LANE_WIDTH_M } from '../curves/lane';
-import { add, dist, dot, fromAngle, mul, sub, unitOr, type Vec } from '../curves/vec';
+import { dist, dot, fromAngle, type Vec } from '../curves/vec';
 import { edgeOfId, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
 
@@ -47,30 +47,33 @@ export function withParallels(g: Graph, ids: number[]): number[] {
   return [...all];
 }
 
-/** How far the line through the control points reaches beyond the outermost one: to the edge of the road (^344). */
-const REACH_M = LANE_WIDTH_M / 2;
-
 /** A line from one end to the other of a tower of control points (^344). */
 export interface TowerLine {
   p: Vec;
   q: Vec;
 }
 
+/** The two points that are farthest apart: the ends of a row of points on a line. */
+function ends(points: Vec[]): [Vec, Vec] {
+  let best: [Vec, Vec] = [points[0]!, points[0]!];
+  for (const a of points) for (const b of points) if (dist(a, b) > dist(...best)) best = [a, b];
+  return best;
+}
+
 /**
- * The line through the control points of the radius points of a segment and the segments that are
- * interlocked with it (parallel, ^302), at the same place of their arcs: the *tower* of the control
- * point (^344). On a bend it is on the bisector, for the end points on the normal. It reaches to
- * the edge of the road on both sides. Null if no segment is parallel to it.
+ * The line through the radius points of a segment and the segments that are interlocked with it
+ * (parallel, ^302), at the same place of their arcs: the *tower* of the control point (^344). On a
+ * bend the middle points are on the bisector, the end points (where the arc meets the straight
+ * pieces) on the normal across the lanes. It runs from the outermost to the innermost point. Null if
+ * no segment is parallel to it.
  */
 export function controlTower(g: Graph, edge: number, k: number, t: number): TowerLine | null {
   const ids = withParallels(g, [edge]);
   const at = ids.flatMap((id) => {
     const piece = curveOfEdge(g, id)?.pieces[k];
-    return piece && sweeps(piece) ? [pointOn(piece, t)] : [];
+    return piece && sweeps(piece) ? [{ x: pointOn(piece, t).x, y: pointOn(piece, t).y }] : [];
   });
   if (ids.length < 2 || at.length !== ids.length) return null;
-  const sorted = [...at].sort((a, b) => a.x - b.x || a.y - b.y);
-  const [first, last] = [sorted[0]!, sorted.at(-1)!];
-  const d = unitOr(sub(last, first), { x: 1, y: 0 });
-  return { p: sub(first, mul(d, REACH_M)), q: add(last, mul(d, REACH_M)) };
+  const [p, q] = ends(at);
+  return { p, q };
 }
