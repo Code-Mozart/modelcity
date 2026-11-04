@@ -1,4 +1,4 @@
-next: ^451
+next: ^453
 
 # Hats
 
@@ -464,9 +464,12 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^444 | feature | done (found in the audit ^371) | **Toast `nothing to redo` (feature):** an info toast when `Ctrl+Y` or `Ctrl+Shift+Z` (also with `Alt`) finds nothing to redo (`App.svelte`, `noHistory`). Origin: ^242. |
 | ^445 | feature | done (found in the audit ^371) | **Autosave waits 400 ms after the last change (feature):** a change to the map starts a timer of 400 ms (`AUTOSAVE_MS`); a further change restarts it (a debounce), then the project is saved (^166, ^165). The number is `assumed`. Origin: ^183. |
 | ^446 | feature | done (found in the audit ^371) | **Autosave waits at most 5 s (feature):** while changes keep coming, the oldest unsaved change waits at most 5 s (`AUTOSAVE_MAX_WAIT_MS`) before the project is saved, so a long edit is kept on the way (a throttle, ^445). The number is `assumed`. Origin: ^183. |
-| ^447 | feature | done (found in the audit ^371) | **Save when the page is hidden (feature):** when the page is hidden or closed (`pagehide`) the project is flushed to the browser; the write is asynchronous and can be lost if the tab dies at once. Origin: ^183. |
+| ^447 | feature | done (found in the audit ^371) | **Save when the page is left (feature):** when the page is left (the tab is closed, the page is reloaded or navigated away; the `pagehide` event, `App.svelte`) the project is flushed to the browser (`session.flush()`). Not on a tab switch, a minimized window or lost focus (^452). The write is asynchronous and the browser may stop the page before it ends, so it is best effort; the debounce (^445, ^446) keeps the loss to the last fraction of a second. Origin: ^183. |
 | ^448 | feature | done (found in the audit ^371) | **The camera is saved once it rests (1 s) (feature):** a camera that moved and rests for 1 s (`CAMERA_SAVE_MS`) is saved with the project without changing its date (^236). The number is `assumed`. |
 | ^449 | feature | planned (found in the audit ^371) | **The undo history is persisted (feature):** planned (roadmap, no milestone; user, found in the audit ^371): the history of a project is stored with it and is there again after opening it (today it is not stored, `docs/data-model.md`: derived state is not stored). It changes the stored model: it needs the user's agreement, a version bump and a migration (^173). It also makes saving a project after a cancelled first node meaningful (^386). |
+
+| ^451 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: closing the page saves:** only `session.flush()` is unit-tested (`project/session.test.ts`); nothing tests that the `pagehide` event calls it (^447). |
+| ^452 | feature | planned (roadmap, no milestone; user: it should save when the tab is closed, if possible; Claude: also when the page becomes hidden) | **Also save when the page becomes hidden (Claude, extends ^447):** flush on `visibilitychange` to `hidden` (tab switch, minimized window, a backgrounded phone browser), where `pagehide` is not reliable, and test it with ^451. |
 
 ## Rented ranges
 
