@@ -1,4 +1,4 @@
-next: ^379
+next: ^384
 
 # Hats
 
@@ -416,3 +416,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^376 | feature | planned (user's idea, found in the audit ^371; today an undocumented control) | **`Ctrl` + wheel zooms faster, with a hint (user):** today `Ctrl` + wheel is a stronger zoom (the pinch boost, `PINCH_BOOST` in `MapCanvas.svelte`, because a pinch on a touchpad arrives as a wheel event with `Ctrl` held) and has no hint and no hat. Idea: while the zoom hint (^110) is visited (hidden) it is replaced by a hint for `Ctrl` + wheel; when the visit of the zoom hint times out, the visit of the `Ctrl` + wheel hint resets with it, so that it is unvisited again. |
 | ^377 | feature | done (found in the audit ^371; no hat before, the user named it; dark mode came with ^13, contrast ^32) | **Dark and light mode follow the browser (user):** the app asks the browser (`prefers-color-scheme`, `src/app.css`) and uses the dark or the light colors. Tested only for the contrast of the color pairs (`contrast.test.ts`); nothing tests that the app follows the browser, or the switch while it runs. |
 | ^378 | bug | open (found in the audit ^371) | **The mode icons' tooltips never show:** ^119 says the mode names stay as tooltips (`title` on each icon in `ModeFrame.svelte`), but the frame has `pointer-events: none` (and `aria-hidden`), so the pointer never reaches it and no tooltip appears. Decide: remove the dead `title`, or make the icons hoverable (then they are controls and need hints and rules, see ^259). |
+| ^379 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: `Ctrl+S` with nothing to save has no e2e test:** the two toasts `nothing to save yet` and `modelcity saves automatically` (^226) are only checked in `project/load.test.ts`; the e2e only covers `Ctrl+S` with a road. |
+| ^380 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: the `Alt` variants of nothing to undo and nothing to redo:** `Alt+Ctrl+Z`, `Alt+Ctrl+Y` and `Alt+Ctrl+Shift+Z` (^242, ^103) are named in the hat but no test presses them. |
+| ^381 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: the mouse cursor:** which cursor shows in which mode and over what (the default arrow in select mode, a crosshair in draw mode, a hand over a handle, `grabbing` while panning, none while rotating) is documented (^48) but no test checks it. |
+| ^382 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: touch controls:** one finger is `LMB`, two fingers move the camera (^14, ^30). No test, and no hint for touch; how a touch device enters and leaves view mode is open (^104). |
+| ^383 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: the scale bar and the compass:** when they show (^34, ^33) is only covered indirectly by the camera unit tests; no e2e test. |
