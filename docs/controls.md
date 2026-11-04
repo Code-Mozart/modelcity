@@ -116,3 +116,27 @@ A feature that appears in several states is audited once here and linked from th
 ### Search (`FilterList`, `src/lib/ui/fuzzy.ts`, hat ^178)
 
 Every list has a search field and the search is fuzzy: the characters of the query in order, ranked by how well they match. Transitions: to be walked as its own state when we get to it (typing, `Esc`, empty result text, focus rules, the hint `LMB search`).
+
+## Journey (the user actions in order, from a new browser window on a new machine)
+
+The record of what the audit has pressed, in sequence. `(S)` first-load state, `(V)` view mode, `(M)` projects modal over the state before, `(A)` select mode after a visit of view mode.
+
+| # | State | Input | Result |
+|---|-------|-------|--------|
+| 1 | (S) | `Ctrl+S` | two info toasts |
+| 2 | (S) | `Ctrl+Z` (`Alt` ignored) | toast `nothing to undo` |
+| 3 | (S) | `Ctrl+Y` or `Ctrl+Shift+Z` (`Alt` ignored) | toast `nothing to redo` |
+| 4 | (S) | `Tab` | (V) |
+| 4a to 4c | (V) | `Ctrl+S`, `Ctrl+Z`, `Ctrl+Y` | the same toasts |
+| 5 | (V) | `Ctrl+O` | file window over (M) |
+| 6 | (M) | Cancel in the file window | (M), search focused |
+| 7 | (M) | hover each element | the hints of the modal, one merged row over the X |
+| 8 | (M) | `LMB` in the modal outside the search field, then hover the search field | `LMB: search` shows only while the field is not focused |
+| 9 | (M) | `Esc` | (V) |
+| 10 | (V) | `P` | (M), no file window |
+| 11 | (M) | `LMB` outside the modal | (V) |
+| 12 | (V) | `P` | (M) |
+| 13 | (M) | `LMB` on the X | (V) |
+| 14 | (V) | `Tab` | (A): the `Tab` hint is gone (^110) |
+
+Now: **(A)**. Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
