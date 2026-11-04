@@ -1,4 +1,4 @@
-next: ^436
+next: ^440
 
 # Hats
 
@@ -453,6 +453,10 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 
 | ^435 | decision | decided (user: one name shared by the hint and the history); assumed (details: the internal name is separate, several operations may share a name, steps may add detail) | **One user-facing name per operation (user, audit ^371):** the control hint and the history step of an operation use the same name, no aliases (`place node`). The operation hat has its own unique internal name (`place first node`, ^409); several operations may share one user-facing name when context tells them apart; a history step may add detail after it (`select 3 nodes`, `move 3 nodes`). Known mismatches, not fixed in the audit: `add node` vs `place node` (^421), `finish` (hint, ^142) vs `finish road` (history step); to be decided by the user which side changes. |
 
+| ^437 | operation | done (found in the audit ^371; `finish road` in the code, ^216, ^239) | **Cancel first node (operation, user):** with only the first node placed (no segment yet), a click on it or `Esc` takes it away again and goes back to draw mode; nothing is placed. It is a step of its own in the history, so that undo brings the node back at the exact place. The control hint should say `cancel` (today `finish`); the history step is today called `finish road`, and the node is removed because a lone node is no road (^322). Control: ^436. Origin: ^239, ^120. |
+| ^438 | bug | open (roadmap, no milestone; user, found in the audit ^371; the audit only documents it) | **Cancelling the first node says `finish` and `finish road` (user):** the hint over the start node of a road with one node reads `LMB or Esc: finish` and the history step reads `finish road`; both should say `cancel` (operation `cancel first node`, ^437), because nothing is finished and the node is removed. By ^181 a hint says what the input does now. Follows ^435 (one name for the hint and the step). |
+| ^439 | decision | assumed (user's model, Claude agrees; details assumed) | **Operations and batches (user, audit ^371):** an *operation* is atomic: one control use gives one history step, however many nodes it touches. A *batch* is not an operation; it is a run of consecutive steps that undo and redo together: the steps of one drawing session (from the first node until the road is finished or cancelled), or a run of selection steps (^103, ^108, ^216; `kind` and `continues` in `history.ts`). A batch has no hat and no control; its title comes from its steps. The sub-steps of a batch are operations with hats of their own (`place first node` then `cancel first node` is a batch of two). A step that only undoes another (cancel) is still recorded, so that undo can bring the node back. |
+
 ## Rented ranges
 
 A range of hats whose rows are written in another file instead of here (^392). This file stays the one place that mints hats: a range is reserved here first, the file holds one row per hat of its range (each row starts with `| ^N |`), none missing, none outside the range, and `next:` counts the range. Checked by `src/lib/hats.test.ts`.
@@ -461,3 +465,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 |-------|------|------|
 | ^393–^408 | docs/controls.md | controls (type `control`): one input, or its alternatives, in one context |
 | ^410–^417 | docs/controls.md | controls, second batch (extend mode, first node placed) |
+| ^436–^436 | docs/controls.md | control: cancel the first node |

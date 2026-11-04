@@ -49,12 +49,13 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (features ^423, ^422) | `Esc or RMB`: finish | n/a | | unit `editor/modes.test` (assumed; to check) |
 | ^410 | draw mode, nothing drawn yet, empty canvas | `LMB` click | place first node (operation ^409); enters extend mode (feature ^424) | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; the project question is ^386 | unit `editor/extend.test`, `modes.test`; e2e `modes.spec` |
 | ^411 | draw mode, nothing drawn yet, empty canvas | `LMB` drag | place first node and set its heading (op ^420); enters extend mode; to explore | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | a drag under 6 px keeps the automatic heading | unit `editor/controls.test`; e2e `smoke.spec` |
-| ^412 | extend mode, pointer on the node being drawn from | `LMB` click or `Esc` | finish road (operation ^432); to explore | `LMB or Esc`: finish | n/a | with only one node: to explore | e2e `smoke.spec`, `editing.spec` |
+| ^412 | extend mode, a segment exists, pointer on the start node | `LMB` click or `Esc` | finish road (operation ^432); to explore | `LMB or Esc`: finish | n/a | with only one node: to explore | e2e `smoke.spec`, `editing.spec` |
 | ^413 | extend mode, pointer on a node | `LMB` drag | move node (operation ^433); to explore | `LMB` drag: move node | n/a | snapping, `Ctrl` | unit `editor/snapping.test`; e2e `snapping.spec` |
 | ^414 | extend mode, pointer on a node | `RMB` click | delete node (operation ^434); to explore | `RMB`: delete node | n/a | | unit `editor/removal` tests (to check) |
 | ^415 | draw or extend mode, the pointer snaps | `Ctrl` held | no snapping (^101) | `Ctrl`: no snapping, shown only while snapping | no (never hidden) | not learnable, ^110 | e2e `snapping.spec` |
 | ^416 | draw or extend mode, the pointer snaps, a click would place a node | `Shift` held | the node keeps only the snap position, not its heading (^358); to explore | `Shift`: snap only the position, shown only then | no | not on a drag-place | unit `editor/headingSnap.test` |
 | ^417 | any mode, at least one node selected (also, by bug ^419, the start node in extend mode) | `S` | pin the snap suggestions of the selected nodes (^258); to explore | `S`: pin snap suggestions | no (never hidden, ^258) | with nothing selected and something pinned: `S` unpins | e2e `snapping.spec` |
+| ^436 | extend mode, only the first node placed, pointer on it | `LMB` click or `Esc` | cancel first node (operation ^437): the node is taken away, back to draw mode (feature ^423) | `LMB or Esc`: finish, should be `cancel` (bug ^438) | n/a | undoable: undo brings the node back at its place; `Esc` is the alternative input, not pressed yet | unit `editor` tests (to check); e2e: gap |
 
 ## Walk-through (depth first)
 
@@ -130,7 +131,8 @@ Reached by `LMB` in draw mode (nothing drawn). The node is selected, the road ha
 | move the pointer away | the dashed preview of the next node and segment appears | no |
 | `LMB` click on empty canvas | place node 2 (the first segment) | no |
 | `LMB` drag on empty canvas | place node 2 with a heading | no |
-| `LMB` click on the node, `Esc` | finish the road (with one node: to see what happens) | no |
+| `LMB` click on the node | with one node only: cancel first node: draw mode again, nothing placed; history: batch `place node`, `finish road` (should be `cancel`, ^438) | yes (state below) |
+| `Esc` | the same as the `LMB` click (alternative input of the same control ^436) | not pressed yet |
 | `LMB` drag on the node | move node | no |
 | `RMB` click on the node | delete node | no |
 | `Ctrl`, `Shift` held; `S` | no snapping; position only; pin | no |
@@ -138,6 +140,10 @@ Reached by `LMB` in draw mode (nothing drawn). The node is selected, the road ha
 | `P`, `Ctrl+O` | projects modal | has to be explored again (data exists) |
 | `Ctrl+S`, `Ctrl+Z`, `Ctrl+Y` | to explore again: there is a step and maybe data to save | no |
 | `RMB` drag, wheel, `MMB` drag | camera | not yet |
+
+### draw mode, nothing drawn, after a cancelled first node
+
+Like *draw mode (nothing drawn yet)* (cursor, preview with a semi-transparent preview node and the orange arrow pointing right, the same hints), but the history now holds a batch of two steps, `place node` and `finish road`, with a shared right border in the panel, and the undo hint (`Ctrl+Z`) shows below the panel (^107, ^108, ^109, ^439). The map is empty again; whether a project was made meanwhile is ^386. Hats: ^437, ^439, ^435. Not yet explored here: `Ctrl+Z`, `Alt+Ctrl+Z`, `Ctrl+Y` (they have something to undo now), `Ctrl+S`, the camera, `P`.
 
 ### view mode (empty map)
 
@@ -210,6 +216,7 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 13 | (M) | `LMB` on the X | (V) |
 | 14 | (V) | `Tab` | (A): the `Tab` hint is gone (^110) |
 | 15 | (A) | `LMB` click on empty canvas | (D) draw mode, nothing drawn yet |
-| 16 | (D) | `LMB` click on empty canvas | (E) extend mode, one node placed (operation `place node`, ^409) |
+| 16 | (D) | `LMB` click on empty canvas | (E) extend mode, one node placed (operation `place first node`, ^409) |
+| 17 | (E) | `LMB` click on the placed node | (D2) draw mode, nothing drawn, with a batch of two steps in the history (operation `cancel first node`, ^437) |
 
-`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed. Now: **(E)**. Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
+`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node. Now: **(D2)**. Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
