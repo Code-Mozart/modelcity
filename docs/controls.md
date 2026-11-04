@@ -47,6 +47,14 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^406 | projects modal, pointer on `New project` | `LMB` click | make a blank project (^171); to explore | `LMB`: new project | yes (hover) | | e2e `projects.spec` |
 | ^407 | projects modal, pointer on the search field, not focused | `LMB` click | focus the search (^178); the feature *Search* is walked later | `LMB`: search (only while not focused) | yes (hover) | the field is focused when the modal opens | e2e `projects.spec` |
 | ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (^54) | `Esc or RMB`: finish | n/a | | unit `editor/modes.test` (assumed; to check) |
+| ^410 | draw mode, nothing drawn yet, empty canvas | `LMB` click | place node (op ^409); enters extend mode | `LMB`: add node | n/a | the node placed is selected; the project question is ^386 | unit `editor/extend.test`, `modes.test`; e2e `modes.spec` |
+| ^411 | draw mode, nothing drawn yet, empty canvas | `LMB` drag | place node and set its heading (op ^409); enters extend mode; to explore | `LMB` drag: add node and set heading | n/a | a drag under 6 px keeps the automatic heading | unit `editor/controls.test`; e2e `smoke.spec` |
+| ^412 | extend mode, pointer on the node being drawn from | `LMB` click or `Esc` | finish the road (name `finish road`, ^239, ^142); to explore | `LMB or Esc`: finish | n/a | with only one node: to explore | e2e `smoke.spec`, `editing.spec` |
+| ^413 | extend mode, pointer on a node | `LMB` drag | move node (operation, name `move node`); to explore | `LMB` drag: move node | n/a | snapping, `Ctrl` | unit `editor/snapping.test`; e2e `snapping.spec` |
+| ^414 | extend mode, pointer on a node | `RMB` click | delete node (operation); to explore | `RMB`: delete node | n/a | | unit `editor/removal` tests (to check) |
+| ^415 | draw or extend mode, the pointer snaps | `Ctrl` held | no snapping (^101) | `Ctrl`: no snapping, shown only while snapping | no (never hidden) | not learnable, ^110 | e2e `snapping.spec` |
+| ^416 | draw or extend mode, the pointer snaps, a click would place a node | `Shift` held | the node keeps only the snap position, not its heading (^358); to explore | `Shift`: snap only the position, shown only then | no | not on a drag-place | unit `editor/headingSnap.test` |
+| ^417 | any mode, at least one node selected (also the node just placed) | `S` | pin the snap suggestions of the selected nodes (^258); to explore | `S`: pin snap suggestions | no (never hidden, ^258) | with nothing selected and something pinned: `S` unpins | e2e `snapping.spec` |
 
 ## Walk-through (depth first)
 
@@ -86,7 +94,7 @@ Features here: *enter draw mode* (from select mode, ^54) and *leave draw mode* (
 
 | Input | Result | Explored |
 |-------|--------|----------|
-| `LMB` click | node 1 is placed; extend mode | no |
+| `LMB` click | node 1 is placed; extend mode (below) | yes |
 | `LMB` drag | node 1 with the dragged heading; extend mode | no |
 | `Esc`, `RMB` click | back to select mode | no |
 | `Tab` | view mode | same as everywhere: explored |
@@ -95,6 +103,41 @@ Features here: *enter draw mode* (from select mode, ^54) and *leave draw mode* (
 | `Ctrl+Z` | has to be explored again after each operation | not yet |
 | `Ctrl+Y`, `Ctrl+Shift+Z` | has to be explored again after an operation was undone | not yet |
 | `RMB` drag, wheel, `Ctrl` + wheel, `MMB` drag | camera, without hints (^389) | not yet |
+
+### extend mode, one node placed (the pointer still on it)
+
+Reached by `LMB` in draw mode (nothing drawn). The node is selected, the road has no segment. What the user sees, each item with where it comes from (visual details such as sizes and colors only as far as they are features):
+
+| Item | What it is | Hats, code | Tested |
+|------|------------|------------|--------|
+| orange outline | extend mode's outline | ^119, ^120 (`hud/modes.ts`) | e2e `modes.spec` |
+| four icons, the extend icon orange and ringed | the current mode | ^119, ^120 | unit `hud/modes.test` |
+| hints `LMB or Esc`: finish; `LMB` drag: move node; `RMB`: delete node | what the pointer over a node does (the node being drawn from: finishing); controls ^412, ^413, ^414 | ^49, ^142, ^239 (`handleHints`) | unit `hints/hints.test` |
+| hints `Ctrl`: no snapping; `Shift`: snap only the position | the pointer snaps (it lies on the snap lines of the node); ^415, ^416 | ^101, ^358 (`snapHints`) | unit `hints/hints.test`, `headingSnap.test` |
+| hint `S`: pin snap suggestions | **not a bug by the rules**: the node just placed is selected, and the control shows *while nodes are selected* in every mode (^258, `editor.pins.set(selection)`, no mode check); control ^417. Whether it should show in extend mode is a design question: it is useful there (the lines of the node you extend from stay offered) | ^258, ^294 | e2e `snapping.spec` |
+| hint `P`: projects; no `Tab` hint, no camera hints | ^400; `Tab` visited (^110); camera missing (bug ^389) | | |
+| history panel: `place node` with a right border | the step of operation ^409, a pending batch (the drawing session is one batch until the road is finished) | ^107, ^108, ^216 (`stepNames.ts`) | e2e `editing.spec` |
+| undo hint `Ctrl+Z: undo`, `(Alt to undo batch)` in gray | the undo hint in the panel; the Alt note shows always (roadmap ^418) | ^81, ^103, ^109 | unit `hints/hints.test` |
+| a turquoise line from bottom to top, one from left to right, both through the node | the snap lines of the node: its normal and its heading (`nodeRules`: `node-normal`, `node-heading`). The extend lines at 15° to 75° are left out at the node itself (`withoutExtendAtTip`) | ^101, ^265 to ^267, ^325 to ^340 | unit `snap/snap.test`, `editor/snapping.test`; e2e `snapping.spec` |
+| solid blue circle | the node dot: blue and larger because it is selected | ^70 (`scene.ts`, `SELECTED_DOT_PX`) | unit render tests (to check) |
+| blue ring around it, with a small gap | the hover ring: the pointer is on the node; hover is derived from the pointer position | ^238 (`hover` in `editor.svelte.ts`) | unit `editor/hoverFresh.test`; e2e `editing.spec` |
+| orange arrow pointing right | the heading arrow of the node (twice as long as to the control point); its heading is automatic (^54). Stronger than the preview's arrow (assumed: the preview is drawn fainter; to check) | ^9, ^126 (`drawArrow`) | none found |
+| solid orange circle half way on the arrow | the heading control point on the stem (about 75% of the dot's size, not measured) | ^9, ^126 | e2e `smoke.spec` (drag) |
+| cursor: a hand | the pointer is over a control point (a `grab` cursor over a handle) | ^48 | gap ^381 |
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| move the pointer away | the dashed preview of the next node and segment appears | no |
+| `LMB` click on empty canvas | place node 2 (the first segment) | no |
+| `LMB` drag on empty canvas | place node 2 with a heading | no |
+| `LMB` click on the node, `Esc` | finish the road (with one node: to see what happens) | no |
+| `LMB` drag on the node | move node | no |
+| `RMB` click on the node | delete node | no |
+| `Ctrl`, `Shift` held; `S` | no snapping; position only; pin | no |
+| `Tab` | view mode (a road being drawn is finished) | no |
+| `P`, `Ctrl+O` | projects modal | has to be explored again (data exists) |
+| `Ctrl+S`, `Ctrl+Z`, `Ctrl+Y` | to explore again: there is a step and maybe data to save | no |
+| `RMB` drag, wheel, `MMB` drag | camera | not yet |
 
 ### view mode (empty map)
 
@@ -167,5 +210,6 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 13 | (M) | `LMB` on the X | (V) |
 | 14 | (V) | `Tab` | (A): the `Tab` hint is gone (^110) |
 | 15 | (A) | `LMB` click on empty canvas | (D) draw mode, nothing drawn yet |
+| 16 | (D) | `LMB` click on empty canvas | (E) extend mode, one node placed (operation `place node`, ^409) |
 
-`(D)` draw mode, nothing drawn yet. Now: **(D)**. Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
+`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed. Now: **(E)**. Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.

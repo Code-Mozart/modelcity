@@ -1,4 +1,4 @@
-next: ^409
+next: ^419
 
 # Hats
 
@@ -430,6 +430,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^390 | feature | planned (roadmap, no milestone; user, asked in the audit ^371) | **The selection is persisted (user):** the selection of a project is stored with it and is there again when the project is opened (today it is only editor state and is lost on reload, and not in the stored model). It changes the stored model (`docs/data-model.md`), so it needs the user's agreement, a version bump and a migration (^173), and the question whether selecting then counts as a *write* (an operation, ^391). |
 | ^391 | decision | decided (user; revised: the camera and switching the open project count) | **What an operation is (user, audit ^371):** something the user *deliberately does* that changes the map, the stored project or what is open, or writes an output: editing the map, undo and redo, selecting (also an undo step already, ^103), pan, zoom and rotate (the camera is stored with the project, ^236), exporting, saving, importing, creating, renaming, deleting and switching a project. **Not operations:** changing the mode (select, draw, extend, view), opening or closing a modal, hovering. The same input can be one in one context and not in another: `Esc` finishes a road (an operation) or leaves draw mode with nothing drawn (not). Every operation is a feature. Refines the glossary (^180). |
 | ^392 | decision | decided (user; the audit's rule 4, extends ^371) | **A hat for each operation and for each control (user):** every operation has a hat for just itself (a feature and an operation are the same hat, no duplicate on purpose); every control has its own hat as well, because an operation can have several controls (and one control several operations, by context). Existing hats are reused where they already describe exactly that one thing; a hat that describes several (for example ^54: enter draw mode, leave it, the first node) stays as the decision, and each one gets its own hat that points to it. |
+| ^409 | operation | done (^40, ^54, ^47; named `place node` in the history, `add node` in the hints) | **Place node (operation):** a node is placed where the pointer is, with the automatic heading (right for the first node of a road, otherwise ^253); a drag also sets its heading. In draw mode it starts a road (and enters extend mode); in extend mode it adds the next node. Name = the name of its history step (`stepNames.ts`, ^216); the hints say `add node`. Its controls: ^410 and the next ones in `docs/controls.md`. |
+| ^418 | feature | planned (roadmap, no milestone; user, found in the audit ^371) | **The `Alt` note on the undo hint only when it applies (user):** the hint `Ctrl+Z: undo (Alt to undo batch)` says `(Alt to undo batch)` (in gray) always; show it only when the last undoable step is part of a batch of more than one step, and the same for redo (^103, ^109). |
 
 ## Rented ranges
 
@@ -438,3 +440,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | Range | File | What |
 |-------|------|------|
 | ^393–^408 | docs/controls.md | controls (type `control`): one input, or its alternatives, in one context |
+| ^410–^417 | docs/controls.md | controls, second batch (extend mode, first node placed) |
