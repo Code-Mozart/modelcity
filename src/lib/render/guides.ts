@@ -98,10 +98,7 @@ export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   }
 }
 
-/** The short lines through the middles of parallel segments, a bit beyond the two (^344). */
-export function drawParallelLinks(f: Frame, links: { p: Vec; q: Vec }[], pal: Palette) {
-  for (const { p, q } of links) {
-    const [a, b] = extend(toScreen(f, p), toScreen(f, q), 10, 10);
-    segment(f.ctx, a, b, { color: pal.orange, width: 1.5 });
-  }
+/** The dashed yellow line through the interlocked control points of parallel segments, to the edge of the road (^344). */
+export function drawTowerLine(f: Frame, { p, q }: { p: Vec; q: Vec }, pal: Palette) {
+  segment(f.ctx, toScreen(f, p), toScreen(f, q), { color: pal.yellow, width: 2, dash: [6, 5] });
 }

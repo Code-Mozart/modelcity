@@ -248,7 +248,7 @@ export const viewHints = (hidden: Hidden = () => false): Hint[] => [
 export interface HintState {
   hidden?: Hidden;
   /** A handle is being dragged: what it is and whether letting go merges it (^286). */
-  drag?: { type: HandleType; merge: boolean } | null;
+  drag?: { type: HandleType; merge: boolean; place?: boolean } | null;
   pinned?: number;
   snapping?: boolean;
   /** The pointer snapped to a touching point, whose heading `Alt` inverts (^254, ^301). */
@@ -270,7 +270,10 @@ function snapHints(selected: number, s: HintState): Hint[] {
 }
 
 /** While a handle is dragged only what matters now: what the drag does, what a key changes, and whether it merges (^286). */
-function dragHints({ type, merge }: { type: HandleType; merge: boolean }, s: HintState): Hint[] {
+function dragHints(
+  { type, merge, place }: { type: HandleType; merge: boolean; place?: boolean },
+  s: HintState,
+): Hint[] {
   const key = (label: string, text: string) => hint({ kind: 'key', label }, text);
   return [
     hint(mouse('lmb', true), DRAG_TEXT[type]),
@@ -278,7 +281,9 @@ function dragHints({ type, merge }: { type: HandleType; merge: boolean }, s: Hin
     hint(ESC, 'cancel'),
     ...(s.snapping || type === 'head' ? [key('Ctrl', 'no snapping')] : []),
     ...(s.touching ? [key('Alt', 'opposite heading')] : []),
-    ...(type === 'head'
+    // Setting the heading of a node just placed: `Shift` snaps only the position (^358, unvisitable); of an existing node: aim (^335).
+    ...(place ? [key('Shift', 'snap only the position')] : []),
+    ...(type === 'head' && !place
       ? [key('Shift', 'aim at snap suggestion'), key('Shift+Alt', 'aim away from snap suggestion')]
       : []),
   ];

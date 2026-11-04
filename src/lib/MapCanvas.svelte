@@ -1,9 +1,8 @@
 <script lang="ts">
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
-  import { parallelLinks } from './editor/parallel';
+  import { controlTower } from './editor/parallel';
   import { barsOf } from './editor/towers';
-  import { selectedSegments } from './editor/selection';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
@@ -44,11 +43,12 @@
   /** The bars of the runs of parallel segments, derived from the graph (^350). */
   const bars = $derived(barsOf(editor.graph));
 
-  /** The segments selected or hovered: the parallel segments to them are linked by a short line (^344). */
-  const linked = () => [
-    ...selectedSegments(editor.graph, editor.selection),
-    ...editor.hoverSegments.map((h) => editor.chains[h.road]!.edgeIds[h.i]!),
-  ];
+  /** The line through the control points that are interlocked with the one that is hovered or dragged (^344). */
+  const tower = () => {
+    const f = editor.focus;
+    const edge = f?.type === 'rad' ? editor.chains[f.road]?.edgeIds[f.i] : undefined;
+    return edge === undefined ? null : controlTower(editor.graph, edge, f!.k ?? 0, f!.t ?? 0.5);
+  };
 
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
@@ -72,7 +72,7 @@
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
       bars: bars,
-      parallels: parallelLinks(editor.graph, linked()),
+      tower: tower(),
       turning: turningOf(editor.chains, editor.press),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };

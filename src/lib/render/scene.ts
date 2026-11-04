@@ -8,7 +8,7 @@ import { ordered } from '../model/junction';
 import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
-import { drawCircles, drawCorners, drawGuides, drawParallelLinks } from './guides';
+import { drawCircles, drawCorners, drawGuides, drawTowerLine } from './guides';
 import { drawBars, type BarShape } from './bars';
 import { drawMeasures } from './measures';
 import { drawCompass, drawOffset, type Turning } from './compass';
@@ -70,8 +70,8 @@ export interface Scene {
   pinned: NodeRef[];
   /** The bars beside the nodes of runs of parallel segments (^350). */
   bars: BarShape[];
-  /** Short lines through the middles of parallel segments of the selected or hovered ones (^344). */
-  parallels: { p: Vec; q: Vec }[];
+  /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
+  tower: { p: Vec; q: Vec } | null;
   /** The heading being set, with the arrow following the cursor, and the compass for the first node of an arm (^314, ^316). */
   turning: Turning | null;
   /** Where the nodes that are moved were, shown as snap points while they move (^113). */
@@ -288,7 +288,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   });
   drawHandles(f, scene, active, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
-  if (!scene.hideScaffold) drawParallelLinks(f, scene.parallels, pal);
+  if (scene.tower) drawTowerLine(f, scene.tower, pal);
   drawSnap(f, scene.snap, pal);
   for (const at of scene.previous)
     ring(f.ctx, toScreen(f, at), 7, { color: pal.turquoise, width: 1.5 });

@@ -229,7 +229,7 @@ export function placeStep(
   if (!n || dist(info.pt, n) < 6 / info.scale) return g;
   const copied = headingOf(n, to);
   if (copied !== null) return withNode(g, press.id, { th: copied });
-  const angle = info.ctrl ? null : { scale: info.scale, from: press.angleFrom };
+  const angle = info.ctrl || info.shift ? null : { scale: info.scale, from: press.angleFrom };
   const th = dragHeading({ nodes: [n], radii: [] }, 0, info.pt, angle).nodes[0]!.th;
   return withNode(g, press.id, { th });
 }

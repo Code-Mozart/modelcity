@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { edgeOfId, withRadius, type Graph } from '../model/graph';
 import { threeBends, twoBends } from '../testing/graphHelpers';
 import { chainsOf } from './chains';
-import { parallelLinks } from './parallel';
+import { controlTower } from './parallel';
 import { shareConcentric, sharedWith } from './sharedRadius';
 
 const lanes = twoBends;
@@ -63,15 +63,15 @@ describe('more than two lanes on top of each other (^302)', () => {
   });
 });
 
-describe('the link between parallel segments (^344)', () => {
-  it('a short line through their middles, on the bisector, one lane width long', () => {
-    const g = lanes();
-    const links = parallelLinks(g, [0]);
-    expect(links).toHaveLength(1);
-    expect(Math.hypot(links[0]!.p.x - links[0]!.q.x, links[0]!.p.y - links[0]!.q.y)).toBeCloseTo(
-      3,
-      1,
-    );
-    expect(parallelLinks(lanes(5, 14), [0])).toHaveLength(0);
+describe('the line through interlocked control points (^344)', () => {
+  it('through the middle radius points of the lanes, reaching to the edge of the road', () => {
+    const line = controlTower(lanes(), 0, 1, 0.5);
+    expect(line).not.toBeNull();
+    // the points are one lane width apart, the line reaches half a lane width beyond both
+    expect(Math.hypot(line!.p.x - line!.q.x, line!.p.y - line!.q.y)).toBeCloseTo(6, 1);
+  });
+
+  it('none without a parallel segment', () => {
+    expect(controlTower(lanes(5, 14), 0, 1, 0.5)).toBeNull();
   });
 });

@@ -165,7 +165,8 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
   const moving = movedIds(press);
   // A control point of a segment snaps to everything but the segment itself, whose shape it changes (^249).
   const control = controlEdge(press);
-  if (control !== null) return suggestionsOfGraph(withoutEdge(graph, control));
+  if (control !== null)
+    return [...suggestionsOfGraph(withoutEdge(graph, control)), ...ownPlace(press!)];
   if (!moving.length || !press || press.kind !== 'drag') return suggestionsOfGraph(graph);
   const before = press.undo.graph;
   const were = moving.flatMap((id) => nodeOf(before, id) ?? []);
@@ -198,9 +199,17 @@ function ownCurves(before: Graph, id: number): Suggestion[] {
     .map((s) => ({ ...s, rule: 'own' as const, edge: undefined, from: [] }));
 }
 
+/** Where the control point that is dragged was: a snap point, like the nodes that are moved (^113, ^356). */
+function ownPlace(press: Press): Suggestion[] {
+  if (press.kind !== 'drag') return [];
+  const { x, y } = press.drag.handle;
+  return [{ kind: 'point', at: { x, y }, heading: null, rule: 'previous', from: [] }];
+}
+
 /** Where the moved nodes were, to show them while they move (^113). */
 export function previousPlaces(press: Press | null): Vec[] {
   if (press?.kind !== 'drag' || !press.moved) return [];
+  if (controlEdge(press) !== null) return [{ x: press.drag.handle.x, y: press.drag.handle.y }];
   return movedIds(press)
     .flatMap((id) => nodeOf(press.undo.graph, id) ?? [])
     .map((n) => ({ x: n.x, y: n.y }));
@@ -221,8 +230,13 @@ const placing = (hover: Hover | null) =>
   (hover?.kind === 'handle' && ['node', 'rad'].includes(hover.handle.type));
 
 /** Whether the pointer places or moves a node now: in draw mode, or dragging a node. */
-function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | 'turn' | null {
-  if (turningNode(press) !== null) return press!.moved ? 'turn' : null;
+/** Whether the heading of a node that was moved or placed snaps now: not while `Shift` leaves it free on a placed node (^358). */
+function turns(press: Press, info: PointerInfo | null): boolean {
+  return press.kind === 'place' ? !info?.shift : true;
+}
+
+function snaps({ press, hover, drawing, info }: SnapArgs): 'place' | 'move' | 'turn' | null {
+  if (turningNode(press) !== null) return press!.moved && turns(press!, info) ? 'turn' : null;
   if (press) return movedIds(press).length || controlEdge(press) !== null ? 'move' : null;
   return drawing && placing(hover) ? 'place' : null;
 }

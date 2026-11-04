@@ -86,4 +86,18 @@ describe('a control point is offered only the points it can reach (^333)', () =>
     expect(by?.kind).toBe('curve');
     expect(Math.hypot(pt!.x, pt!.y)).toBeGreaterThan(0.1);
   });
+
+  it('the place where a control point was is a snap point while it is dragged (^356)', () => {
+    const ed = new Editor();
+    ed.load(withRadius(g(), 0, 30));
+    const h = chainHandles(ed.chains, 4).find(
+      (x) => x.type === 'rad' && x.t === 0.5 && x.id === 0,
+    )!;
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x - 6, h.y + 6));
+    ed.pointerMove(snapping(h.x + 0.4, h.y + 0.1));
+    const by = ed.snapped?.by[0];
+    expect(by?.kind === 'point' && by.rule).toBe('previous');
+    expect(ed.snapped?.pt).toMatchObject({ x: expect.closeTo(h.x, 6), y: expect.closeTo(h.y, 6) });
+  });
 });

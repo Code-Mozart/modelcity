@@ -61,3 +61,32 @@ describe('dragging a heading snaps (^251, ^313, ^315)', () => {
     expect(turn(load(), [0.5, -59.5], { shift: true, alt: true })).toBeCloseTo(Math.PI / 2);
   });
 });
+
+describe('Shift while the heading of a placed node is dragged: only the position snaps (^358)', () => {
+  it('the node stays on its snap, the heading is free', () => {
+    const place = (shift: boolean) => {
+      const ed = new Editor();
+      ed.load(
+        mapOf([
+          [
+            [0, 0],
+            [40, 0],
+          ],
+        ]),
+      );
+      ed.enterDrawMode();
+      ed.pointerDown(snapping(1, -30)); // snaps onto the normal line of the node at the origin
+      const toward = (m: number) => ({
+        ...snapping(m * Math.cos(toRad(33)), -30 + m * Math.sin(toRad(33))),
+        shift,
+      });
+      ed.pointerMove(toward(25));
+      const n = ed.graph.nodes.at(-1)!;
+      return { x: n.x, y: n.y, th: norm(n.th) };
+    };
+    expect(place(false).th).toBeCloseTo(toRad(30));
+    const free = place(true);
+    expect(free.th).toBeCloseTo(toRad(33));
+    expect(free).toMatchObject({ x: 0, y: -30 });
+  });
+});

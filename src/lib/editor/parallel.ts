@@ -1,9 +1,8 @@
-import { middleOf } from '../curves/measure';
 import { pointOn, sweeps } from '../curves/piece';
 import type { Piece } from '../curves/types';
 import { LANE_WIDTH_M } from '../curves/lane';
-import { dist, dot, fromAngle, type Vec } from '../curves/vec';
-import { nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
+import { add, dist, dot, fromAngle, mul, sub, unitOr, type Vec } from '../curves/vec';
+import { edgeOfId, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
 
 const TOL_M = 1e-3;
@@ -35,34 +34,43 @@ export function parallel(g: Graph, a: GEdge, b: GEdge): boolean {
   return touching(g, a, b) && !!ea && !!eb && sameCenters(ea.pieces, eb.pieces);
 }
 
-/** A short line through the middles of two parallel segments, on their shared bisector (^344). */
-export interface ParallelLink {
+/** The segments together with all that are parallel to them, and to those in turn: any number of lanes on top of each other (^302). */
+export function withParallels(g: Graph, ids: number[]): number[] {
+  const all = new Set(ids);
+  const queue = [...ids];
+  for (let id = queue.pop(); id !== undefined; id = queue.pop()) {
+    const e = edgeOfId(g, id);
+    const more = g.edges.filter((o) => e && !all.has(o.id) && parallel(g, e, o));
+    more.forEach((o) => all.add(o.id));
+    queue.push(...more.map((o) => o.id));
+  }
+  return [...all];
+}
+
+/** How far the line through the control points reaches beyond the outermost one: to the edge of the road (^344). */
+const REACH_M = LANE_WIDTH_M / 2;
+
+/** A line from one end to the other of a tower of control points (^344). */
+export interface TowerLine {
   p: Vec;
   q: Vec;
 }
 
-/** The middle of a bend is the middle of its arc, on the bisector; else the middle of the curve. */
-function middleOn(pieces: Piece[]) {
-  const arcs = pieces.filter(sweeps);
-  return arcs.length === 1 ? pointOn(arcs[0]!, 0.5) : middleOf(pieces);
-}
-
 /**
- * The links between the segments `ids` and the segments parallel to them (^100, ^334): through the
- * middle of each, which for bends is on the bisector, for straight segments the line through their
- * midpoints (^344).
+ * The line through the control points of the radius points of a segment and the segments that are
+ * interlocked with it (parallel, ^302), at the same place of their arcs: the *tower* of the control
+ * point (^344). On a bend it is on the bisector, for the end points on the normal. It reaches to
+ * the edge of the road on both sides. Null if no segment is parallel to it.
  */
-export function parallelLinks(g: Graph, ids: number[]): ParallelLink[] {
-  return g.edges.flatMap((a) =>
-    ids.includes(a.id)
-      ? g.edges
-          .filter((b) => b.id !== a.id && (b.id > a.id || !ids.includes(b.id)) && parallel(g, a, b))
-          .flatMap((b) => {
-            const [p, q] = [curveOfEdge(g, a.id), curveOfEdge(g, b.id)].map(
-              (E) => E && middleOn(E.pieces),
-            );
-            return p && q ? [{ p: { x: p.x, y: p.y }, q: { x: q.x, y: q.y } }] : [];
-          })
-      : [],
-  );
+export function controlTower(g: Graph, edge: number, k: number, t: number): TowerLine | null {
+  const ids = withParallels(g, [edge]);
+  const at = ids.flatMap((id) => {
+    const piece = curveOfEdge(g, id)?.pieces[k];
+    return piece && sweeps(piece) ? [pointOn(piece, t)] : [];
+  });
+  if (ids.length < 2 || at.length !== ids.length) return null;
+  const sorted = [...at].sort((a, b) => a.x - b.x || a.y - b.y);
+  const [first, last] = [sorted[0]!, sorted.at(-1)!];
+  const d = unitOr(sub(last, first), { x: 1, y: 0 });
+  return { p: sub(first, mul(d, REACH_M)), q: add(last, mul(d, REACH_M)) };
 }

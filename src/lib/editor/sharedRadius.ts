@@ -4,7 +4,7 @@ import type { PathNode } from '../curves/types';
 import { linkTo, type DrawEnd } from '../model/junction';
 import { addNode, edgeOfId, nodeOf, withRadius, type GEdge, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
-import { parallel, touching } from './parallel';
+import { parallel, touching, withParallels } from './parallel';
 import { branchEdges, selectedSegments } from './selection';
 
 const TOL_M = 1e-3;
@@ -76,19 +76,6 @@ export function concentricWithParallel(g: Graph, edge: number): Graph {
 /** The radius a segment has now: the one of its first arc, null for a straight one. */
 function radiusOfEdge(g: Graph, edge: number): number | null {
   return curveOfEdge(g, edge)?.pieces.find(sweeps)?.r ?? null;
-}
-
-/** The segments together with all that are parallel to them, and to those in turn: any number of lanes on top of each other (^302). */
-function withParallels(g: Graph, ids: number[]): number[] {
-  const all = new Set(ids);
-  const queue = [...ids];
-  for (let id = queue.pop(); id !== undefined; id = queue.pop()) {
-    const e = edgeOfId(g, id);
-    const more = g.edges.filter((o) => e && !all.has(o.id) && parallel(g, e, o));
-    more.forEach((o) => all.add(o.id));
-    queue.push(...more.map((o) => o.id));
-  }
-  return [...all];
 }
 
 /** Which of a group of parallel segments governs it (^324): the one on the branch of the dragged one, else the innermost. */

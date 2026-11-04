@@ -1,20 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { modalHints } from '../project/modalHints';
-import { hintsFor, historyHints, viewHints, type Hint, type HintTarget } from './hints';
+import { node, show } from '../testing/hintHelpers';
+import { hintsFor, historyHints, viewHints, type HintTarget } from './hints';
 
 /** A readable form of a hint: "LMB drag: pan". */
-const show = (h: Hint) =>
-  `${h.inputs
-    .map((i) =>
-      i.kind === 'key'
-        ? i.label
-        : i.kind === 'keys'
-          ? i.labels.join('+')
-          : i.kind === 'wheel'
-            ? 'Wheel'
-            : `${i.alt ? 'Alt+' : ''}${i.shift ? 'Shift+' : ''}${i.button.toUpperCase()}${i.drag ? ' drag' : ''}`,
-    )
-    .join(' or ')}: ${h.text}${h.note ? ` (${h.note.key} ${h.note.text})` : ''}`;
 const PROJECT_ROWS = ['P: projects'];
 /** The hints of the mode and target, without the Tab and project controls that are always shown (^104, ^168). */
 const rows = (drawing: boolean, target: HintTarget, selected = 0) =>
@@ -28,11 +17,6 @@ const hiddenIds =
     ids.includes(id);
 
 const empty: HintTarget = { kind: 'empty' };
-const node = (last: boolean, leaf = last): HintTarget => ({
-  kind: 'handle',
-  type: 'node',
-  act: last ? 'finish' : leaf ? 'extend' : null,
-});
 
 describe('control hints (^49)', () => {
   it('draw mode on empty canvas: add a node, with a heading, or finish', () => {
@@ -300,34 +284,5 @@ describe('Tab (^104)', () => {
       historyHints({ undo: true, redo: true }, hiddenIds(...ids)).map(show);
     expect(rowsOf()).toHaveLength(2);
     expect(rowsOf('undo')).toEqual(['Ctrl+Y or Ctrl+Shift+Z: redo (Alt to redo batch)']);
-  });
-});
-
-describe('while a handle is dragged (^286)', () => {
-  const drag = (type: 'node' | 'head' | 'rad', merge = false) => ({ type, merge });
-
-  it('only what the drag does, what a key changes and whether it merges', () => {
-    const rows = (d: ReturnType<typeof drag>, snapping = false) =>
-      hintsFor(false, node(false), 1, { drag: d, snapping }).map(show);
-    expect(rows(drag('node'))).toEqual(['LMB drag: move node', 'Esc: cancel']);
-    expect(rows(drag('node', true), true)).toEqual([
-      'LMB drag: move node',
-      'LMB: merge on release',
-      'Esc: cancel',
-      'Ctrl: no snapping',
-    ]);
-    expect(
-      hintsFor(false, node(false), 1, { drag: drag('node'), snapping: true, touching: true }).map(
-        show,
-      ),
-    ).toEqual(['LMB drag: move node', 'Esc: cancel', 'Ctrl: no snapping', 'Alt: opposite heading']);
-    expect(rows(drag('head'))).toEqual([
-      'LMB drag: turn heading',
-      'Esc: cancel',
-      'Ctrl: no snapping',
-      'Shift: aim at snap suggestion',
-      'Shift+Alt: aim away from snap suggestion',
-    ]);
-    expect(rows(drag('rad'))).toEqual(['LMB drag: change radius', 'Esc: cancel']);
   });
 });
