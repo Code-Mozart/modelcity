@@ -30,7 +30,7 @@ Contexts are named by their mode and map state; a context is a *state* of the au
 
 | Hat | Context | Control | Operation | Hint | Visitable | Special behavior | Tests |
 |-----|---------|---------|-----------|------|-----------|------------------|-------|
-| ^104 | first load (select mode, empty map) | `Tab` | Enter view mode | `Tab`: view mode | n/a (a key) | the hint is hidden for a while after use (^110) | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
+| ^104, ^110 | first load, or select mode after a visit (empty map) | `Tab` | Enter view mode | `Tab`: view mode, hidden for a while after the control was used (feature ^110), so after one round trip to view mode and back it is missing | n/a (a key) | the hint comes back when the visit times out | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
 | ^104 | view mode | `Tab` | Back to select mode | should be `Tab`: select mode, but it is hidden after entering (bug ^384) | n/a | hidden for a while after use (^110) | e2e `modes.spec` |
 | ^168, ^223 | first load, view mode (and every mode, nothing being typed) | `Ctrl+O` | Opens the projects modal and, in the same step, the file window of *Import file…*; overrides the browser's own `Ctrl+O` | none (exemption: not yet decided, ^371) | n/a | the file window is the browser's own (`<input type=file accept=".json,application/json">`, hidden, clicked by code) | e2e `projects.spec` |
 | ^222 | first load, view mode | `P` | Opens the projects modal (without the file window) | `P`: projects, always shown | n/a (a key) | ignored while a text field has the focus | e2e `projects.spec` |
@@ -64,6 +64,10 @@ Screen: blank canvas; a blue outline around the window; four mode icons (eye, po
 | `MMB` drag | rotate with the compass | no |
 | touch | one finger `LMB`, two fingers the camera (^382) | no |
 
+### select mode after a visit of view mode (empty map)
+
+The same as first load, except that the `Tab` hint is hidden: `Tab` was used (twice), and a control that was used lately has its hint hidden for a while (^110). This is the designed behavior, like the camera controls after their first use; the hint comes back when the visit times out. It is the same mechanism as the bug ^384, where it hides the way out of view mode. Everything else, and all transitions, are those of *first load*. Tested in general by unit `hints/usage.test`; for `Tab` itself: gap, to be checked against e2e `editing.spec` ("a used control loses its hint").
+
 ### view mode (empty map)
 
 Screen: no outline; two icons (the eye now ringed, the pointer white); hints `RMB drag` pan, wheel zoom, `MMB drag` rotate, `P` projects (there is no `Tab` hint: the control counts as visited because it was just used, ^110, which is a bug, ^384); the default cursor. Hats: ^104, ^119, ^110.
@@ -74,7 +78,7 @@ Screen: no outline; two icons (the eye now ringed, the pointer white); hints `RM
 | `Ctrl+Z`, `Alt+Ctrl+Z` | same state, toast | yes |
 | `Ctrl+Y`, `Ctrl+Shift+Z`, `Alt` variants | same state, toast | yes |
 | `Ctrl+O` | projects modal with the file window open | yes |
-| `Tab` | select mode (first load) | no |
+| `Tab` | select mode, but not the first-load state: the `Tab` hint (view mode) is gone, because the control was visited (^110, below) | yes |
 | `P` | projects modal, no file window: the state after *Cancel* of the file window | yes, with that state |
 | `RMB` drag, wheel, `Ctrl` + wheel, `MMB` drag | camera | no |
 | `LMB`, `LMB` drag | probably nothing (view mode edits nothing) | no |
