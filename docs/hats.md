@@ -1,4 +1,4 @@
-next: ^501
+next: ^742
 
 # Hats
 
@@ -530,3 +530,5 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^477–^478 | docs/controls.md | controls placing the next node, extend mode, pointer on empty canvas |
 | ^488–^491 | docs/controls.md | controls of select mode with the pointer on a node |
 | ^495–^496 | docs/controls.md | controls: box select, extend a node without a segment |
+| ^501–^683 | docs/features.md | features and operations found by the sweep of the code (type `feature` or `operation`) |
+| ^684–^741 | docs/controls.md | controls found by the sweep of the code, not walked yet |

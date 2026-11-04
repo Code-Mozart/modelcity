@@ -73,84 +73,70 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^495 | select mode, empty canvas, nothing selected | `LMB` drag | select by box (operation ^492); not pressed yet | `LMB` drag: select (hidden once visited, ^110) | n/a | the nodes inside are selected live | unit `editor/selection.test`, `editor/controls.test` |
 | ^496 | draw mode, nothing drawn, pointer on a node without a segment | `LMB` click | extend road (operation ^493): the node becomes the node being drawn from; extend mode | `LMB`: split, should be `extend` (bug ^494) | n/a | the history step is `split road` (bug ^494) | gap: no test for a node without a segment |
 
-## Still to walk (checklist, no hats yet)
+## Controls found in the code, not walked yet (^684–^741)
 
-What the code and the old reference say exists and has not been walked with the user. It is a list so that nothing is forgotten, not documentation: every item gets its hats, its hint, whether it is visitable, its special behavior and its tests only when the walk reaches it, because the real findings of this audit came from the walk and not from reading the code. The list is by context and input; what it does is the name of the operation or feature (a number is an existing hat).
+Found by the sweep of the code (the hints, the key and pointer dispatch, the modal): one row per control (^392), each with its own hat and the operation or feature it triggers (`docs/features.md`). *Hint* is what the code says; it has not been checked on screen. The controls that the walk has already reached have their hats above. Tests: candidates by title and module, as in `docs/features.md`.
 
-| Walked | Context | Control | Does |
-|--------|---------|---------|------|
-| [ ] | select mode, empty canvas, something selected | `LMB` click | deselect all |
-| [ ] | select mode, empty canvas | `LMB` drag | select by box |
-| [ ] | select mode, empty canvas, something selected | `Shift` + `LMB` drag | add to selection |
-| [ ] | select mode, something selected | `Esc` | deselect all |
-| [ ] | any mode, something selected | `Del` or `Backspace` | ^434 |
-| [ ] | select mode, pointer on a node | `LMB` click | select node |
-| [ ] | select mode, pointer on a node, something selected | `Shift` + `LMB` click | add to selection, deselect |
-| [ ] | select mode, pointer on a node | `Alt` + `LMB` click | select branch |
-| [ ] | select mode, pointer on a node, something selected | `Alt` + `Shift` + `LMB` click | select branch, deselect |
-| [ ] | select mode, pointer on a curve | `LMB` click | select segment |
-| [ ] | select mode, pointer on a curve, something selected | `Shift` + `LMB` click | add to selection, deselect |
-| [ ] | select mode, pointer on a curve | `Alt` + `LMB` click | select branch |
-| [ ] | select mode, pointer on a node | `LMB` drag | ^433 |
-| [ ] | select mode, pointer on a selected node, several selected | `LMB` drag | ^433 |
-| [ ] | select mode, pointer on a node | `Alt` + `LMB` drag | move branch |
-| [ ] | any mode, pointer on a heading control point | `LMB` drag | turn heading |
-| [ ] | any mode, pointer on a bend point | `LMB` drag | bend curve |
-| [ ] | any mode, pointer on a radius point | `LMB` drag | change radius |
-| [ ] | any mode, pointer on a corner point of an S-curve | `LMB` drag | turn heading |
-| [ ] | any mode, pointer on a radius point, a segment whose two nodes are selected | `LMB` drag | change radius |
-| [ ] | select mode, pointer on a node | `RMB` click | ^434 |
-| [ ] | any mode, several nodes selected, pointer on one of them or on a segment between them | `RMB` click | ^434 |
-| [ ] | any mode, pointer on a heading control point | `Alt` + `LMB` click | ^234 |
-| [ ] | a handle is dragged or a node is placed with its heading | `Esc` | ^295 |
-| [ ] | a handle is dragged, the pointer snaps | `Ctrl` held | ^101 |
-| [ ] | the heading of an existing node is dragged, it snapped to something | `Shift` held | ^335 |
-| [ ] | the heading of an existing node is dragged, it snapped to something | `Shift` + `Alt` held | ^335 |
-| [ ] | a handle is dragged, the pointer snapped to a touching point or a heading | `Alt` held | ^301 |
-| [ ] | a node is dragged onto another node, released | `LMB` release | merge nodes by drop |
-| [ ] | a node is dragged onto a curve, released | `LMB` release | join node into a curve by drop |
-| [ ] | a radius point is dragged onto a node of its segment | `LMB` release | ^141 |
-| [ ] | draw mode, nothing drawn, pointer on the only end node of a road | `LMB` click | extend road |
-| [ ] | draw mode, nothing drawn, pointer on another node | `LMB` click | split road |
-| [ ] | draw mode, nothing drawn, pointer on a curve | `LMB` click | split road, insert node |
-| [ ] | draw mode, nothing drawn, pointer on a curve | `LMB` drag | insert node |
-| [ ] | draw mode, nothing drawn, pointer on a curve | `RMB` click | remove segment |
-| [ ] | draw mode, nothing drawn, pointer on a curve | `Alt` + `RMB` click | remove branch |
-| [ ] | draw mode, pointer on a radius point | `LMB` click | split road, merge road |
-| [ ] | draw mode, right after a split, pointer on the inserted node | `LMB` click | ^276 |
-| [ ] | draw mode, right after a split on a curve, nothing placed after it | `Esc` or `RMB` click | ^237 |
-| [ ] | extend mode, a segment exists, empty canvas | `LMB` click | place next node |
-| [ ] | extend mode, empty canvas | `LMB` drag | place next node and set heading |
-| [ ] | extend mode, pointer on a node of another road | `LMB` click | merge road |
-| [ ] | extend mode, pointer on a curve (also of the road itself) | `LMB` click | merge road |
-| [ ] | extend mode, pointer on the node the road started at | `LMB` click | close road |
-| [ ] | extend mode, pointer on a curve | `LMB` drag | insert node |
-| [ ] | extend mode, pointer on a curve | `RMB` click | remove segment |
-| [ ] | extend mode, pointer on a curve | `Alt` + `RMB` click | remove branch |
-| [ ] | extend mode, a segment exists, empty canvas | `RMB` click or `Esc` | ^432 |
-| [ ] | any mode, nothing selected, something pinned | `S` | ^258 |
-| [ ] | any mode, no modal | `RMB` drag | pan |
-| [ ] | any mode, no modal | wheel | zoom |
-| [ ] | any mode, no modal | `Ctrl` + wheel (a pinch on a touchpad) | zoom |
-| [ ] | any mode, no modal | `MMB` drag left or right | rotate |
-| [ ] | any mode, no modal | `MMB` drag up or down | zoom |
-| [ ] | the middle button is held (rotating) | `Esc` | ^31 |
-| [ ] | the middle button is held (rotating) | `N`, `E`, `S`, `W` | rotate to a compass direction |
-| [ ] | the middle button is held (rotating), pointer on a compass key cap | `LMB` click | rotate to a compass direction |
-| [ ] | touch, one finger | touch | ^40 |
-| [ ] | touch, a second finger comes down | touch | ^40 |
-| [ ] | touch, two fingers | twist, pinch, move | pan, zoom, rotate |
-| [ ] | projects modal, pointer on a project card | `LMB` click | open project |
-| [ ] | projects modal, pointer on the pen of a card | `LMB` click | rename project |
-| [ ] | projects modal, a name is being typed | `Enter` or `LMB` on the check | rename project |
-| [ ] | projects modal, a name is being typed | `Esc` or `LMB` on the cross | ^233 |
-| [ ] | projects modal, pointer on the bin of a card | `LMB` click | delete project |
-| [ ] | projects modal, a delete is being asked | `LMB` on the check | delete project |
-| [ ] | projects modal, a delete is being asked | `Esc` or `LMB` on the cross | ^233 |
-| [ ] | projects modal, the search field has the focus | typing | ^427 |
-| [ ] | projects modal, a rename is unfinished | `LMB` outside the dialog, `Esc`, `P` | ^233 |
-
-Features without a control of their own, still to be walked from the screen: the skeleton and the scaffold (^60, ^66, ^133), the road surface (^90), the run bars (^350), the measurements panel (^342), the snap guides (^101), the compass and the heading label (^33, ^316), the scale bar (^34), the camera limits (^37), the hover outline of segments and branches (^99), the toasts (`exported`, `imported`, the rename warning, the pin tip, the heading tip), the import and load errors (^192 to ^209), touch (^382).
+| Hat | Context | Control | Does (operation or feature) | Hint in the code | Tests |
+|-----|---------|---------|----------------------------|------------------|-------|
+| ^684 | select mode, empty canvas, something selected | `LMB` click | deselect all (^557) | `LMB`: deselect all (^75) | unit `editor/editor.test` (strong), `editor/extend.test` (strong), `editor/modes.test` (strong) |
+| ^685 | select mode, empty canvas, something selected | `Shift` + `LMB` drag | add to selection (^682) | `Shift`+`LMB` drag: add to selection | unit `editor/selection.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
+| ^686 | select mode, something selected | `Esc` | deselect all (^557) | `Esc`: deselect all (^218) | unit `editor/branchSelect.test` (weak), `editor/controls.test` (weak), `editor/editor.test` (weak) |
+| ^687 | any mode, something selected | `Del` or `Backspace` | ^434 | `Del`: delete selected | unit `editor/controls.test` (weak), `editor/editor.test` (weak), `editor/modes.test` (weak) |
+| ^688 | select mode, pointer on a node, something selected | `Shift` + `LMB` click | add to selection (^682); deselect (^683) | `Shift`+`LMB`: select or deselect | unit `editor/controls.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
+| ^689 | select mode, pointer on a node, something selected | `Alt` + `Shift` + `LMB` click | select branch (^487); deselect (^683) | `Alt`+`Shift`+`LMB`: add branch to selection (or deselect branch) | unit `editor/branchSelect.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
+| ^690 | select mode, pointer on a curve | `LMB` click | select segment (^555) | `LMB`: select segment | unit `editor/editor.test` (strong), `editor/controls.test` (strong), `editor/extend.test` (strong) |
+| ^691 | select mode, pointer on a curve, something selected | `Shift` + `LMB` click | add to selection (^682); deselect (^683) | `Shift`+`LMB`: add segment to selection, or deselect segment | unit `editor/editor.test` (strong), `editor/controls.test` (strong), `editor/extend.test` (strong) |
+| ^692 | select mode, pointer on a curve | `Alt` + `LMB` click | select branch (^487) | `Alt`+`LMB`: select branch (or deselect branch) | unit `editor/editor.test` (strong), `editor/extend.test` (strong), `editor/modes.test` (strong) |
+| ^693 | select mode, pointer on a selected node, several selected | `LMB` drag | ^433 | `LMB` drag: move node (the group moves) | unit `editor/branching.test` (strong), `editor/controls.test` (strong), `editor/editor.test` (strong) |
+| ^694 | select mode, pointer on a node | `Alt` + `LMB` drag | move branch (^681) | none (exemption not yet decided) | unit `editor/branching.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
+| ^695 | any mode, pointer on a bend point | `LMB` drag | bend curve (^534) | `LMB` drag: bend curve | unit `editor/branching.test` (strong), `curves/continuity.test` (weak), `editor/editor.test` (weak) |
+| ^696 | any mode, pointer on a radius point | `LMB` drag | change radius (^535) | `LMB` drag: change radius | unit `curves/continuity.test` (weak), `editor/branching.test` (weak), `editor/controlSnap.test` (weak) |
+| ^697 | any mode, pointer on a corner point of an S-curve | `LMB` drag | turn heading (^468) | `LMB` drag: turn heading | unit `editor/branching.test` (strong), `editor/inflection.test` (strong), `curves/continuity.test` (weak) |
+| ^698 | any mode, pointer on a radius point, a segment whose two nodes are selected | `LMB` drag | change radius (^535) | `LMB` drag: change radius (all selected segments) | unit `editor/selection.test` (strong), `editor/controlSnap.test` (strong), `editor/controls.test` (strong) |
+| ^699 | any mode, several nodes selected, pointer on one of them or on a segment between them | `RMB` click | ^434 | `RMB`: delete selected (^290) | unit `editor/rightClickSelected.test` (strong), `editor/controls.test` (strong), `editor/editor.test` (strong) |
+| ^700 | the heading of an existing node is dragged, it snapped to something | `Shift` held | ^335 | `Shift`: aim at snap suggestion | unit `editor/modes.test` (strong), `editor/headingSnap.test` (weak), `editor/branching.test` (weak) |
+| ^701 | the heading of an existing node is dragged, it snapped to something | `Shift` + `Alt` held | ^335 | `Shift+Alt`: aim away from snap suggestion | unit `editor/headingSnap.test` (strong), `editor/modes.test` (strong), `editor/branching.test` (weak) |
+| ^702 | a handle is dragged, the pointer snapped to a touching point or a heading | `Alt` held | ^301 | `Alt`: opposite heading | unit `editor/touching.test` (weak), `editor/branching.test` (weak), `editor/controlSnap.test` (weak) |
+| ^703 | a node is dragged onto another node, released | `LMB` release | merge nodes by drop (^248) | `LMB`: merge on release (while dragging) | unit `editor/merging.test` (strong), `editor/ownCurve.test` (strong), `editor/dropMerge.test` (strong) |
+| ^704 | a node is dragged onto a curve, released | `LMB` release | join node into a curve by drop (^680) | none (the dashed result shows, ^284) | unit `editor/ownCurve.test` (strong), `editor/branching.test` (weak), `editor/cancelDrag.test` (weak) |
+| ^705 | a radius point is dragged onto a node of its segment | `LMB` release | ^141 | none | unit `editor/controlSnap.test` (strong), `curves/radiusHandles.test` (strong), `editor/ownCurve.test` (strong) |
+| ^706 | draw mode, nothing drawn, pointer on another node | `LMB` click | split road (^549) | `LMB`: split | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/controls.test` (strong) |
+| ^707 | draw mode, nothing drawn, pointer on a curve | `LMB` click | split road (^549); insert node (^10) | `LMB`: split | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/controls.test` (strong) |
+| ^708 | draw mode, nothing drawn, pointer on a curve | `LMB` drag | insert node (^10) | `LMB` drag: insert and set heading | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/controls.test` (strong) |
+| ^709 | draw mode, nothing drawn, pointer on a curve | `RMB` click | remove segment (^551) | `RMB`: remove segment | unit `editor/branching.test` (strong), `editor/controls.test` (strong), `editor/editor.test` (strong) |
+| ^710 | draw mode, nothing drawn, pointer on a curve | `Alt` + `RMB` click | remove branch (^552) | `Alt`+`RMB`: remove branch | unit `editor/branching.test` (strong), `editor/controls.test` (strong), `editor/editor.test` (strong) |
+| ^711 | draw mode, pointer on a radius point | `LMB` click | split road (^549); merge road (^550) | none (as on the curve) | unit `editor/extend.test` (strong), `editor/modes.test` (strong), `editor/branching.test` (strong) |
+| ^712 | draw mode, right after a split, pointer on the inserted node | `LMB` click | ^276 | none | unit `editor/radiusClick.test` (strong), `editor/modes.test` (strong), `editor/extend.test` (strong) |
+| ^713 | draw mode, right after a split on a curve, nothing placed after it | `Esc` or `RMB` click | ^237 | `Esc or RMB`: finish | unit `editor/controls.test` (strong), `editor/radiusClick.test` (strong); e2e `editing.spec` (strong) |
+| ^714 | extend mode, pointer on a node of another road | `LMB` click | merge road (^550) | `LMB`: merge | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/editor.test` (strong) |
+| ^715 | extend mode, pointer on a curve (also of the road itself) | `LMB` click | merge road (^550) | `LMB`: merge | unit `editor/branching.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
+| ^716 | extend mode, pointer on the node the road started at | `LMB` click | close road (^162) | `LMB`: close | unit `editor/extend.test` (strong), `editor/branching.test` (strong), `editor/editor.test` (strong) |
+| ^717 | extend mode, pointer on a curve | `LMB` drag | insert node (^10) | `LMB` drag: insert and set heading | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/ownCurve.test` (strong) |
+| ^718 | extend mode, pointer on a curve | `RMB` click | remove segment (^551) | `RMB`: remove segment | unit `editor/editor.test` (strong), `editor/branching.test` (weak), `editor/concentricBuild.test` (weak) |
+| ^719 | extend mode, pointer on a curve | `Alt` + `RMB` click | remove branch (^552) | `Alt`+`RMB`: remove branch | unit `editor/controls.test` (strong), `editor/editor.test` (strong), `editor/branchSelect.test` (weak) |
+| ^720 | extend mode, a segment exists, empty canvas | `RMB` click or `Esc` | ^432 | `Esc or RMB`: finish | unit `editor/selection.test` (strong), `hints/hints.test` (weak), `editor/controls.test` (weak) |
+| ^721 | any mode, nothing selected, something pinned | `S` | ^258 | `S`: unpin all snap suggestions | unit `editor/pins.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
+| ^722 | any mode, no modal | `RMB` drag | pan (^501) | `RMB` drag: pan (hidden after use, ^110; missing in draw mode, ^389) | unit `editor/extend.test` (weak), `editor/modes.test` (weak) |
+| ^723 | any mode, no modal | wheel | zoom (^502) | wheel: zoom (hidden after use; missing in draw mode, ^389) | none found |
+| ^724 | any mode, no modal | `Ctrl` + wheel (a pinch on a touchpad) | zoom (^502) | none (^376) | unit `editor/phase.test` (weak) |
+| ^725 | any mode, no modal | `MMB` drag left or right | rotate (^503) | `MMB` drag: rotate (hidden after use; missing in draw mode, ^389) | unit `editor/extend.test` (weak), `editor/modes.test` (weak), `editor/radiusClick.test` (weak) |
+| ^726 | any mode, no modal | `MMB` drag up or down | zoom (^502) | none (the compass shows it while dragging) | unit `editor/extend.test` (strong), `camera/camera.test` (weak), `editor/modes.test` (weak) |
+| ^727 | the middle button is held (rotating) | `Esc` | ^31 | none (the compass shows the keys) | none found |
+| ^728 | the middle button is held (rotating) | `N`, `E`, `S`, `W` | rotate to a direction (^504) | the compass key caps | none found |
+| ^729 | the middle button is held (rotating), pointer on a compass key cap | `LMB` click | rotate to a direction (^504) | the compass key caps | unit `camera/cameraEngine.test` (weak), `editor/extend.test` (weak), `editor/modes.test` (weak) |
+| ^730 | touch, one finger | touch | ^40 | none (^382) | unit `editor/editor.test` (weak) |
+| ^731 | touch, a second finger comes down | touch | ^40 | none (^382) | unit `editor/editor.test` (strong), `editor/extend.test` (weak), `editor/modes.test` (weak) |
+| ^732 | touch, two fingers | twist, pinch, move | pan (^501); zoom (^502); rotate (^503) | none (^382) | none found |
+| ^733 | projects modal, pointer on a project card | `LMB` click | open project (^648) | `LMB`: open | unit `project/session.test` (weak), `project/load.test` (weak); e2e `projects.spec` (weak) |
+| ^734 | projects modal, pointer on the pen of a card | `LMB` click | rename project (^649) | `LMB`: rename (opens a text field) | unit `project/session.test` (weak); e2e `projects.spec` (weak) |
+| ^735 | projects modal, a name is being typed | `Enter` or `LMB` on the check | rename project (^649) | `Enter`/`LMB`: rename | unit `hints/hints.test` (weak) |
+| ^736 | projects modal, a name is being typed | `Esc` or `LMB` on the cross | ^233 | `Esc or LMB`: cancel | unit `hints/hints.test` (weak) |
+| ^737 | projects modal, pointer on the bin of a card | `LMB` click | delete project (^650) | `LMB`: delete (asks first, ^233) | unit `project/session.test` (weak); e2e `projects.spec` (weak) |
+| ^738 | projects modal, a delete is being asked | `LMB` on the check | delete project (^650) | `LMB`: delete | unit `hints/hints.test` (weak) |
+| ^739 | projects modal, a delete is being asked | `Esc` or `LMB` on the cross | ^233 | `Esc or LMB`: cancel | unit `hints/hints.test` (weak); e2e `projects.spec` (weak) |
+| ^740 | projects modal, the search field has the focus | typing | ^427 | none (the field is the control) | none found |
+| ^741 | projects modal, a rename is unfinished | `LMB` outside the dialog, `Esc`, `P` | ^233 | warning toast `Finish or cancel the rename first.` | none found |
 
 ## Walk-through (depth first)
 

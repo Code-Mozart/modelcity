@@ -49,13 +49,14 @@ describe('hat registry (docs/hats.md)', () => {
     }
   });
 
-  it('every hat named in docs/controls.md exists (^371)', () => {
-    const controls = read('docs/controls.md');
-    const used = [...controls.matchAll(/\^(\d+)/g)].map((m) => Number(m[1]));
-    const missing = used.filter((id) => !ids.includes(id));
-    expect(
-      missing,
-      `docs/controls.md names hats that are not in docs/hats.md: ${missing.join(', ')}`,
-    ).toEqual([]);
+  it('every hat named in the rented files exists (^371)', () => {
+    for (const file of new Set(rented.map((r) => r.file))) {
+      const used = [...read(file).matchAll(/\^(\d+)/g)].map((m) => Number(m[1]));
+      const missing = used.filter((id) => !ids.includes(id));
+      expect(
+        missing,
+        `${file} names hats that are not in docs/hats.md: ${missing.join(', ')}`,
+      ).toEqual([]);
+    }
   });
 });
