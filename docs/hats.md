@@ -1,4 +1,4 @@
-next: ^453
+next: ^455
 
 # Hats
 
@@ -471,6 +471,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^451 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: closing the page saves:** only `session.flush()` is unit-tested (`project/session.test.ts`); nothing tests that the `pagehide` event calls it (^447). |
 | ^452 | feature | planned (roadmap, no milestone; user: it should save when the tab is closed, if possible; Claude: also when the page becomes hidden) | **Also save when the page becomes hidden (Claude, extends ^447):** flush on `visibilitychange` to `hidden` (tab switch, minimized window, a backgrounded phone browser), where `pagehide` is not reliable, and test it with ^451. |
 
+| ^453 | operation | done (^81, ^88, ^103; found in the audit ^371) | **Undo (operation):** the last step of the history is taken back and goes grayed out in the history panel, where it can be redone (^107, ^109); with `Alt` the whole batch is undone (^103). Undoing a step that cancelled the first node brings the node back at its place with its heading. User-facing name: `undo`. Controls: ^454 (a step to undo), ^397 (nothing to undo, toast ^443). Origin: ^81, ^103. |
+
 ## Rented ranges
 
 A range of hats whose rows are written in another file instead of here (^392). This file stays the one place that mints hats: a range is reserved here first, the file holds one row per hat of its range (each row starts with `| ^N |`), none missing, none outside the range, and `next:` counts the range. Checked by `src/lib/hats.test.ts`.
@@ -481,3 +483,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^410–^417 | docs/controls.md | controls, second batch (extend mode, first node placed) |
 | ^436–^436 | docs/controls.md | control: cancel the first node |
 | ^450–^450 | docs/controls.md | control: `Ctrl+S` with a project that has data |
+| ^454–^454 | docs/controls.md | control: `Ctrl+Z` with something to undo |
