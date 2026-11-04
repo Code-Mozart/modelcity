@@ -80,6 +80,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Orphaned node** | A node without any segment. It must never exist (a node needs a segment, except the node being drawn from); the validator will report it | decided (user, new term) | ^322, ^169 |
 | **Tower** | A group of nodes where each one touches the next (one lane width apart, same or opposite heading, ^254). The bars that show parallel segments are drawn per tower and side | assumed (user's proposal) | ^352, ^350 |
 | **Run** | On one side of a tower, a group of neighbouring nodes whose segments on that side are parallel. It is drawn as one *run bar* over the circles of the nodes, below them (not the scale bar) | assumed (user asked for a term) | ^353, ^350 |
+| **Active node** | With several nodes or control points affected at once (a tower, a selection, multi-extend), the one the user actually clicks or drags. Snapping, hints and measurements follow it, the others follow it (replaces "manipulated node") | assumed (user asked for a term) | ^369, ^357 |
 | **Roadmap** | The one prioritised list of wanted work, fuzzy beyond the next items; the "Roadmap" section of `docs/hats.md`. Replaces "todo-list" and "backlog" | decided | ^146 |
 | **Roadmap item** | A `feature`, `bug` or `chore` (refactor, docs, tooling) on the roadmap | decided | ^146 |
 | **Milestone** | One PR that tackles one or more roadmap items, with a written scope (in/out); a roadmap item can be unassigned until it is planned | decided | ^146 |
