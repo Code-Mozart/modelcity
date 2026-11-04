@@ -42,7 +42,7 @@ Contexts are named by their mode and map state; a context is a *state* of the au
 
 The audit is a depth-first walk through the app, by hand, one input at a time. A *state* is named by what the user sees, never given an id (hats are the only ids). For each state: the transitions explored and those still to explore. A transition that stays in the same state is listed as "same state".
 
-Stack (where we are): first load > view mode > **file window over the projects modal**
+Stack (where we are): first load > view mode > **projects modal** (the file window is closed by Cancel; its second transition, Open file, is left for later)
 
 ### first load (select mode, empty map)
 
@@ -85,12 +85,12 @@ Screen (Brave on Arch Linux): the browser's own window, set to Custom Files; the
 
 | Input | Result | Explored |
 |-------|--------|----------|
-| Cancel | projects modal (list state below) | no |
+| Cancel | projects modal (state below); nothing changed; the search field is focused (^178) | yes |
 | Open file | import: the file is read, checked and migrated; on success a new project opens and the modal closes, otherwise an error shows (^164, ^192 to ^209) | no |
 
 ### projects modal (no file window)
 
-Screen: the modal sits over everything with a veil of 60% of the background color (`.backdrop`, z-index 1); the mode icons are *grayed out only because they lie under that veil* (no code grays them on purpose); the control hints panel (z-index 2) stays above and is replaced by the modal's own controls (`modalHints`, ^168). Layout and sizes: ^211. From left to right, top to bottom: the title `Projects`; an X (close); the search field (focused when the modal opens, so the list can be searched by typing, ^178); the list (an empty one says `No project matches.`, bug ^385); the cards `Import file…`, `Export JSON`, `New project`. `New project` has a blue border because no project is open (`current`, ^171). Hints: `Esc` close always; over the search field and not focused `LMB` search; over a button `LMB` import, export JSON or new project; over the X one merged row `Esc or LMB`: close (rows with the same text become one row, keys before the mouse, `merged` in `modalHints.ts`; tested in e2e `projects.spec`, "one row for inputs that do the same").
+Screen: the modal sits over everything with a veil of 60% of the background color (`.backdrop`, z-index 1); the mode icons are *grayed out only because they lie under that veil* (no code grays them on purpose); the control hints panel (z-index 2) stays above and is replaced by the modal's own controls (`modalHints`, ^168). Layout and sizes: ^211. From left to right, top to bottom: the title `Projects`; an X (close); the search field (focused when the modal opens, also after the file window was cancelled, so the list can be searched by typing, ^178); the list (an empty one says `No project matches.`, bug ^385); the cards `Import file…`, `Export JSON`, `New project`. `New project` has a blue border because no project is open (`current`, ^171). Hints: `Esc` close always; over the search field and not focused `LMB` search; over a button `LMB` import, export JSON or new project; over the X one merged row `Esc or LMB`: close (rows with the same text become one row, keys before the mouse, `merged` in `modalHints.ts`; tested in e2e `projects.spec`, "one row for inputs that do the same").
 
 While the modal is up only `Esc` is handled by the app (`modalKey` in `App.svelte`); every other key is left to the browser (so `Ctrl+S` may open the browser's save dialog: to check).
 
