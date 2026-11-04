@@ -42,7 +42,7 @@ Contexts are named by their mode and map state; a context is a *state* of the au
 
 The audit is a depth-first walk through the app, by hand, one input at a time. A *state* is named by what the user sees, never given an id (hats are the only ids). For each state: the transitions explored and those still to explore. A transition that stays in the same state is listed as "same state".
 
-Stack (where we are): first load > view mode > **projects modal** (the file window is closed by Cancel; its second transition, Open file, is left for later)
+Stack (where we are, kept up to date at the end of the Journey): first load > view mode > **projects modal** (the file window is closed by Cancel; its second transition, Open file, is left for later)
 
 ### first load (select mode, empty map)
 
@@ -55,18 +55,34 @@ Screen: blank canvas; a blue outline around the window; four mode icons (eye, po
 | `Ctrl+Y`, `Ctrl+Shift+Z`, `Alt` variants | same state, toast | yes |
 | `Tab` | view mode | yes |
 | `Ctrl+O` | projects modal with the file window open | yes (same in both states) |
-| `P` | projects modal, no file window: the state after *Cancel* of the file window | yes, with that state |
-| `LMB` click | draw mode | no |
-| `LMB` drag | box select (nothing to select) | no |
-| `RMB` drag | pan | no |
-| wheel | zoom | no |
-| `Ctrl` + wheel | faster zoom (^376) | no |
-| `MMB` drag | rotate with the compass | no |
+| `P` | projects modal, no file window: the state after *Cancel* of the file window | has to be explored again once a project exists (after the first road) |
+| `LMB` click | draw mode (nothing drawn yet) | yes |
+| `LMB` drag | box select (nothing to select) | not yet: explore after nodes exist, with selection |
+| `RMB` drag | pan | not yet: explore after nodes exist |
+| wheel | zoom | not yet: explore after nodes exist |
+| `Ctrl` + wheel | faster zoom (^376) | not yet: explore with the camera |
+| `MMB` drag | rotate with the compass | not yet: explore with the camera |
 | touch | one finger `LMB`, two fingers the camera (^382) | no |
 
 ### select mode after a visit of view mode (empty map)
 
-The same as first load, except that the `Tab` hint is hidden: `Tab` was used (twice), and a control that was used lately has its hint hidden for a while (^110). This is the designed behavior, like the camera controls after their first use; the hint comes back when the visit times out. It is the same mechanism as the bug ^384, where it hides the way out of view mode. Everything else, and all transitions, are those of *first load*. Tested in general by unit `hints/usage.test`; for `Tab` itself: gap, to be checked against e2e `editing.spec` ("a used control loses its hint").
+The same as first load, except that the `Tab` hint is hidden: `Tab` was used (twice), and a control that was used lately has its hint hidden for a while (^110). This is the designed behavior, like the camera controls after their first use; the hint comes back when the visit times out. It is the same mechanism as the bug ^384, where it hides the way out of view mode. Transitions (this state is reached by the journey, so it is explored from here on): `LMB` click is explored (draw mode, below); `LMB` drag (box select), the camera controls and `P` are not explored: after the first node the camera and selection will be explored in a state where they do something, and `P` has to be explored again (a project exists then). The global keys (`Ctrl+S`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+O`, `Tab`) are as in first load. Tested in general by unit `hints/usage.test`; for `Tab` itself: gap, to be checked against e2e `editing.spec` ("a used control loses its hint").
+
+### draw mode (nothing drawn yet; entered by `LMB` on empty canvas in select mode)
+
+Screen: the outline and the mode icons in the draw mode's color (the pen is the current mode); the cursor is a crosshair; a preview of the node a click would add follows the pointer, an arrow pointing right (the automatic heading of the first node, ^54). Hints: `LMB`: add node; `LMB` drag: add node and set heading; `Esc` or `RMB`: finish; `P`: projects. The `Tab` hint is hidden (visited, ^110). **No camera hints** although the camera works here (bug ^389). Hats: ^54, ^48, ^47, ^23, ^40, ^110.
+
+Operations here: *enter draw mode* (from select mode, ^54), *leave draw mode* (`Esc` or `RMB`, also before a node, ^54), *add the first node of a road* (`LMB`, heading automatic), *add the first node and set its heading* (`LMB` drag, ^40).
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `LMB` click | node 1 is placed; extend mode | no |
+| `LMB` drag | node 1 with the dragged heading; extend mode | no |
+| `Esc`, `RMB` click | back to select mode | no |
+| `Tab` | view mode | same as everywhere: explored |
+| `P`, `Ctrl+O` | projects modal (over draw mode) | has to be explored again once a project exists |
+| `Ctrl+S`, `Ctrl+Z`, `Ctrl+Y` (global keys) | the same toasts | yes, by equivalence (one handler for every mode) |
+| `RMB` drag, wheel, `Ctrl` + wheel, `MMB` drag | camera, without hints (^389) | not yet |
 
 ### view mode (empty map)
 
@@ -138,5 +154,6 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 12 | (V) | `P` | (M) |
 | 13 | (M) | `LMB` on the X | (V) |
 | 14 | (V) | `Tab` | (A): the `Tab` hint is gone (^110) |
+| 15 | (A) | `LMB` click on empty canvas | (D) draw mode, nothing drawn yet |
 
-Now: **(A)**. Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
+`(D)` draw mode, nothing drawn yet. Now: **(D)**. Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
