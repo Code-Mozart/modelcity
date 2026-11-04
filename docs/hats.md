@@ -1,4 +1,4 @@
-next: ^497
+next: ^498
 
 # Hats
 
@@ -506,6 +506,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^492 | operation | done (^69, ^70; found in the audit ^371) | **Select by box (operation):** a drag on empty canvas spans a selection box (axis-aligned with the viewport); the nodes inside are selected live and replace the selection (with `Shift` they are added). User-facing name `select by box`; its history step is named by the nodes it selected (`select 3 nodes`). Controls: ^495 (nothing selected, the user said it exists), the `Shift` variant is in the checklist. Tested: unit `editor/selection.test` (a drag on empty canvas selects the nodes inside), `editor/controls.test`. |
 | ^493 | operation | done (^65; found in the audit ^371) | **Extend road (operation):** in draw mode a click on the only end node of a road, or on a node without a segment, makes it the node being extended: the road is drawn on from it (extend mode). User-facing name `extend`; its history step is `extend road` for a leaf. Controls: ^496. Tested: unit `editor/extend.test` (a click on the last node extends the road, ^65). |
 | ^494 | bug | open (roadmap, no milestone; user's step 35, found in the audit ^371; checked with a unit scratch test) | **A click on a node without a segment says `split` (user):** in draw mode a click on a lone node (one that has no segment, such as the one saved after a reload, ^484) is hinted `split` and its history step is `split road` (the unit scratch test shows the target act `split`), although nothing is split: the road is extended from that node (operation ^493). It should say `extend`. No test found for a node without a segment. |
+
+| ^497 | chore | planned (roadmap, own PR after the audit ^371; user's question, Claude recommends this form) | **E2E scenarios from the audit (user's idea):** one Playwright test per state of `docs/controls.md` (reached through the test hook, asserting the hints, toasts, history panel, mode, outline, cursor, graph, selection and snap state that the tables record), plus one short linear test of the first-time user path (steps 1 to about 20, with a fake clock for the 3 s toasts and the 5 minute hint visits). Known bugs are asserted as the correct behavior and marked `test.fail` with their hat in the title, so a fix flips the test. Drawn items stay a gap (^479) unless the test hook exposes them. |
 
 ## Rented ranges
 
