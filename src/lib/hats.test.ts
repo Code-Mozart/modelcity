@@ -11,6 +11,9 @@ const rented = [...registry.matchAll(/^\| \^(\d+)–\^(\d+) \| (\S+) \|/gm)].map
   to: Number(m[2]),
   file: m[3]!,
 }));
+/** Every number of a rented range. */
+const span = (r: { from: number; to: number }) =>
+  Array.from({ length: r.to - r.from + 1 }, (_, i) => r.from + i);
 const defined = (file: string) =>
   [...read(file).matchAll(/^\| \^(\d+) \|/gm)].map((m) => Number(m[1]));
 const ids = [
@@ -37,9 +40,7 @@ describe('hat registry (docs/hats.md)', () => {
 
   it('rented ranges are whole: each file defines every hat of its ranges once, none outside them (^392)', () => {
     for (const file of new Set(rented.map((r) => r.file))) {
-      const all = rented
-        .filter((r) => r.file === file)
-        .flatMap((r) => Array.from({ length: r.to - r.from + 1 }, (_, i) => r.from + i));
+      const all = rented.filter((r) => r.file === file).flatMap(span);
       const own = defined(file).sort((a, b) => a - b);
       expect(
         own,
