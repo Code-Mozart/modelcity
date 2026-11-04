@@ -21,4 +21,14 @@ describe('hat registry (docs/hats.md)', () => {
     const sorted = [...ids].sort((a, b) => a - b);
     expect(sorted).toEqual(sorted.map((_, i) => i + 1));
   });
+
+  it('is the only place hats are defined: every hat in docs/controls.md exists (^371)', () => {
+    const controls = readFileSync(new URL('../../docs/controls.md', import.meta.url), 'utf8');
+    const used = [...controls.matchAll(/\^(\d+)/g)].map((m) => Number(m[1]));
+    const missing = used.filter((id) => !ids.includes(id));
+    expect(
+      missing,
+      `docs/controls.md names hats that are not in docs/hats.md: ${missing.join(', ')}`,
+    ).toEqual([]);
+  });
 });
