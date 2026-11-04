@@ -1,4 +1,4 @@
-next: ^470
+next: ^480
 
 # Hats
 
@@ -485,6 +485,15 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^468 | operation | done (^9, ^132, ^216; found in the audit ^371) | **Turn heading (operation):** the heading of a node is turned by dragging its heading control point (the orange circle on the arrow's stem) or an S-curve corner; the copies of a shared node turn with it; the angle snap applies (^251), as a compass for the first node of an arm (^315). User-facing name `turn heading` (^435), also the name of its history step. Controls: ^465 here; more in the checklist. |
 | ^469 | feature | done (found in the audit ^371) | **The hover ring around a control point (feature):** a blue ring (with a small gap) shows around the control point under the pointer, a hand cursor with it; derived from the pointer, ^238. Tested: unit `editor/hoverFresh.test`; e2e `editing.spec`. |
 
+| ^470 | feature | planned (roadmap, no milestone; user, found in the audit ^371) | **A measurement label has the color of its line (user):** the length label of the preview segment is orange while the dashed curve is white; it should have the color of the line it measures. Applies to the labels of ^303, ^321, ^342. |
+| ^471 | question | open (roadmap, no milestone; user's observation, found in the audit ^371) | **The snap line is drawn over the preview (user):** a turquoise snap line hides the dashed white curve and the stem of the orange arrow below it (the tip peeks out on both sides) and cuts through the semi-transparent preview dot under the pointer. Should the preview lie over the snap lines, or is it fine because the line is what the node snaps to? |
+| ^472 | bug | open (roadmap, no milestone; user, found in the audit ^371; the cause is not found yet) | **`Ctrl` held on its own does not take the snap away until the pointer moves (user):** with the pointer on a snap line, holding `Ctrl` changes nothing; only after the pointer is moved a little the turquoise line and the hints `Ctrl: no snapping` and `Shift: snap only the position` go; releasing it changes nothing until the pointer moves, then the snap is back. The editor model updates at once (a unit check: with the pointer unmoved `snapped` is empty while `Ctrl` is held and is back when it is released, `modifiers` in `editor.svelte.ts`), so the cause is in the view or the event layer. `Alt` and `Shift` follow without a move (^238). |
+| ^473 | bug | open (roadmap, no milestone; user's observation, found in the audit ^371) | **The `Shift` hint shows although `Shift` changes nothing here (user):** `Shift: snap only the position` (^358) is shown whenever the pointer snaps and a click would place a node, also on an extend line (^337), which carries no heading, so there is nothing for `Shift` to drop. By ^181 a hint says what an input does now. |
+| ^474 | feature | planned (roadmap, no milestone; user, found in the audit ^371) | **Shorter hint: `snap only position` (user):** the hint `Shift: snap only the position` (^358) becomes `snap only position`. |
+| ^475 | operation | done (^40, ^46; found in the audit ^371) | **Place next node (operation):** a node is added at the end of the road being drawn; its heading is chosen so that the new segment is one circular arc (the automatic one), or the one of a snap (^318). User-facing name `place node` (hint `add node`, ^421; history step `place node`). Origin: ^40, ^46. Controls: ^477. |
+| ^476 | operation | done (^40, ^46; found in the audit ^371) | **Place next node and set heading (operation):** like ^475, a drag sets the heading (^251, ^315). User-facing name `place node and set heading`. Controls: ^478. |
+| ^479 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: what the preview draws:** the dashed white curve, the dashed orange heading lines, the labels (the length, the bend angle and the radius, ^303, ^321) and the order of the snap line and the preview (^471) are not tested; only the numbers are (`curves/measure.test`, `hud/measureText.test`). |
+
 ## Rented ranges
 
 A range of hats whose rows are written in another file instead of here (^392). This file stays the one place that mints hats: a range is reserved here first, the file holds one row per hat of its range (each row starts with `| ^N |`), none missing, none outside the range, and `next:` counts the range. Checked by `src/lib/hats.test.ts`.
@@ -499,3 +508,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^456–^456 | docs/controls.md | control: `Ctrl+Y` with something to redo |
 | ^461–^462 | docs/controls.md | controls while the heading of a node being placed is dragged |
 | ^465–^467 | docs/controls.md | controls of the first node placed with its heading, pointer on its heading control point |
+| ^477–^478 | docs/controls.md | controls placing the next node, extend mode with only the first node, pointer on empty canvas |
