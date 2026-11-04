@@ -5,9 +5,9 @@
 ## Definitions
 
 - **Feature:** anything the app can do or show (a mode, a snap, a rendering, a measurement, an operation). Has a hat of type `feature`, or `operation` (see `docs/hats.md`; features and operations are listed there, not here).
-- **Operation** (^180, ^391): something the user does that *writes*, or should write later: changes the map, exports, saves, imports, creates, renames or deletes a project; selecting counts once the selection is persisted (^390). Switching which project is open does not. Every operation is a feature; not every feature is an operation (a snap rule, a gizmo, a label is not).
+- **Operation** (^180, ^391): something the user deliberately does that changes the map, the stored project or what is open, or writes an output (edit the map, undo, select, pan, zoom, rotate, export, save, import, create, rename, delete, switch a project). Not a mode change, not opening a modal, not hovering. Every operation is a feature; not every feature is an operation (a snap rule, a gizmo, a label is not).
 - **Hats (^392):** every operation and every control has a hat for just itself. A hat that describes several things stays as the decision, and each thing gets its own hat that points to it.
-- **Control:** one input (key, button or gesture, with its modifiers) that does something *in a given context*. Controls are contextual by design (^45), so every row names its **context**: the mode (view, select, draw, extend), what is under the pointer, and the state of the app (selection, drag, being drawn, touch).
+- **Control** (README glossary): a user input (key or mouse, with modifiers) in a context. Controls are contextual by design (^45), so every row names its **context**: the mode (view, select, draw, extend), what is under the pointer, and the state of the app (selection, drag, being drawn, touch). The same input in two contexts is two controls.
 - **Hat:** reused if the feature, control or operation already has one (^371 rule 1); registered first if not.
 
 **Not audited in detail (user):** layout and colors. The audit records what exists, what it does and what it is tied to; where things sit, how big they are and which color they have is described only where it is the point of a feature (for example the blue border of the current card), and otherwise left to the design hats (^32, ^211).
@@ -73,7 +73,7 @@ The same as first load, except that the `Tab` hint is hidden: `Tab` was used (tw
 
 Screen: the outline and the mode icons in the draw mode's color (the pen is the current mode); the cursor is a crosshair; a preview of the node a click would add follows the pointer, an arrow pointing right (the automatic heading of the first node, ^54). Hints: `LMB`: add node; `LMB` drag: add node and set heading; `Esc` or `RMB`: finish; `P`: projects. The `Tab` hint is hidden (visited, ^110). **No camera hints** although the camera works here (bug ^389). Hats: ^54, ^48, ^47, ^23, ^40, ^110.
 
-Operations here: *enter draw mode* (from select mode, ^54), *leave draw mode* (`Esc` or `RMB`, also before a node, ^54), *add the first node of a road* (`LMB`, heading automatic), *add the first node and set its heading* (`LMB` drag, ^40).
+Features here: *enter draw mode* (from select mode, ^54) and *leave draw mode* (`Esc` or `RMB`, also before a node, ^54): both are mode changes, so **not operations** (^391). Operations: *add the first node of a road* (`LMB`, heading automatic) and *add the first node and set its heading* (`LMB` drag, ^40).
 
 | Input | Result | Explored |
 |-------|--------|----------|
