@@ -31,27 +31,27 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 
 | Hat | Context | Control | Operation or feature | Hint | Visitable | Special behavior | Tests |
 |-----|---------|---------|----------------------|------|-----------|------------------|-------|
-| ^393 | select mode, empty canvas, nothing selected | `LMB` click | enter draw mode (feature ^54; not an operation) | `LMB`: draw mode | n/a | | e2e `modes.spec` |
-| ^394 | select mode | `Tab` | go to view mode (^104) | `Tab`: view mode, hidden for a while after the control was used (^110) | n/a | after a round trip the hint is missing until the visit times out | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
-| ^395 | view mode | `Tab` | back to select mode (^104) | should be `Tab`: select mode, hidden by bug ^384 | n/a | | e2e `modes.spec` |
-| ^396 | any mode, no modal, nothing to save | `Ctrl+S` | two info toasts (^226, ^185, ^232) | none (exemption not yet decided) | n/a | toasts 3 s, identical toast not shown twice | unit `project/load.test`; e2e: gap ^379 |
+| ^393 | select mode, empty canvas, nothing selected | `LMB` click | enter draw mode (feature ^423; not an operation) | `LMB`: draw mode | n/a | | e2e `modes.spec` |
+| ^394 | select mode | `Tab` | go to view mode (feature ^425) | `Tab`: view mode, hidden for a while after the control was used (^110) | n/a | after a round trip the hint is missing until the visit times out | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
+| ^395 | view mode | `Tab` | back to select mode (feature ^422) | should be `Tab`: select mode, hidden by bug ^384 | n/a | | e2e `modes.spec` |
+| ^396 | any mode, no modal, nothing to save | `Ctrl+S` | save project (operation ^428): nothing to save, two info toasts (^185, ^232) | none (exemption not yet decided) | n/a | toasts 3 s, identical toast not shown twice | unit `project/load.test`; e2e: gap ^379 |
 | ^397 | any mode, no modal, nothing to undo | `Ctrl+Z` | info toast `nothing to undo` (^242, ^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
 | ^398 | any mode, no modal, nothing to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | info toast `nothing to redo` (^242, ^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
-| ^399 | any mode, no modal | `Ctrl+O` | open the projects modal and the file window (^168, ^223) | none (exemption not yet decided) | n/a | overrides the browser's `Ctrl+O`; the file window is the browser's own | e2e `projects.spec` |
-| ^400 | any mode, no modal, no text field focused | `P` | open the projects modal (^222) | `P`: projects, always shown | n/a | | e2e `projects.spec` |
-| ^401 | projects modal | `Esc` | close the modal (^168) | `Esc`: close (merged with `LMB` over the X) | n/a | | e2e `projects.spec` |
-| ^402 | projects modal, pointer outside the dialog | `LMB` click | close the modal (^168, ^233: not while a rename is unfinished) | none (exemption: the backdrop is not a target) | no | | e2e `projects.spec` |
-| ^403 | projects modal, pointer on the X | `LMB` click | close the modal | `Esc or LMB`: close | yes (hover) | | e2e `projects.spec` |
-| ^404 | projects modal, pointer on `Import file…` | `LMB` click | open the file window (^164) | `LMB`: import | yes (hover) | | e2e `projects.spec` |
-| ^405 | projects modal, pointer on `Export JSON` | `LMB` click | export the project (^163, ^226); to explore | `LMB`: export JSON | yes (hover) | | e2e `projects.spec` |
-| ^406 | projects modal, pointer on `New project` | `LMB` click | make a blank project (^171); to explore | `LMB`: new project | yes (hover) | | e2e `projects.spec` |
-| ^407 | projects modal, pointer on the search field, not focused | `LMB` click | focus the search (^178); the feature *Search* is walked later | `LMB`: search (only while not focused) | yes (hover) | the field is focused when the modal opens | e2e `projects.spec` |
-| ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (^54) | `Esc or RMB`: finish | n/a | | unit `editor/modes.test` (assumed; to check) |
-| ^410 | draw mode, nothing drawn yet, empty canvas | `LMB` click | place first node (op ^409); enters extend mode | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; the project question is ^386 | unit `editor/extend.test`, `modes.test`; e2e `modes.spec` |
+| ^399 | any mode, no modal | `Ctrl+O` | open the projects modal (feature ^426) and the file window of import project (operation ^430) | none (exemption not yet decided) | n/a | overrides the browser's `Ctrl+O`; the file window is the browser's own | e2e `projects.spec` |
+| ^400 | any mode, no modal, no text field focused | `P` | open the projects modal (feature ^426) | `P`: projects, always shown | n/a | | e2e `projects.spec` |
+| ^401 | projects modal | `Esc` | close the modal (feature ^426) | `Esc`: close (merged with `LMB` over the X) | n/a | | e2e `projects.spec` |
+| ^402 | projects modal, pointer outside the dialog | `LMB` click | close the modal (feature ^426; ^233: not while a rename is unfinished) | none (exemption: the backdrop is not a target) | no | | e2e `projects.spec` |
+| ^403 | projects modal, pointer on the X | `LMB` click | close the modal (feature ^426) | `Esc or LMB`: close | yes (hover) | | e2e `projects.spec` |
+| ^404 | projects modal, pointer on `Import file…` | `LMB` click | import project (operation ^430): open the file window | `LMB`: import | yes (hover) | | e2e `projects.spec` |
+| ^405 | projects modal, pointer on `Export JSON` | `LMB` click | export project (operation ^429); to explore | `LMB`: export JSON | yes (hover) | | e2e `projects.spec` |
+| ^406 | projects modal, pointer on `New project` | `LMB` click | new project (operation ^431); to explore | `LMB`: new project | yes (hover) | | e2e `projects.spec` |
+| ^407 | projects modal, pointer on the search field, not focused | `LMB` click | focus the search (feature ^427, walked later) | `LMB`: search (only while not focused) | yes (hover) | the field is focused when the modal opens | e2e `projects.spec` |
+| ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (features ^423, ^422) | `Esc or RMB`: finish | n/a | | unit `editor/modes.test` (assumed; to check) |
+| ^410 | draw mode, nothing drawn yet, empty canvas | `LMB` click | place first node (operation ^409); enters extend mode (feature ^424) | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; the project question is ^386 | unit `editor/extend.test`, `modes.test`; e2e `modes.spec` |
 | ^411 | draw mode, nothing drawn yet, empty canvas | `LMB` drag | place first node and set its heading (op ^420); enters extend mode; to explore | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | a drag under 6 px keeps the automatic heading | unit `editor/controls.test`; e2e `smoke.spec` |
-| ^412 | extend mode, pointer on the node being drawn from | `LMB` click or `Esc` | finish the road (name `finish road`, ^239, ^142); to explore | `LMB or Esc`: finish | n/a | with only one node: to explore | e2e `smoke.spec`, `editing.spec` |
-| ^413 | extend mode, pointer on a node | `LMB` drag | move node (operation, name `move node`); to explore | `LMB` drag: move node | n/a | snapping, `Ctrl` | unit `editor/snapping.test`; e2e `snapping.spec` |
-| ^414 | extend mode, pointer on a node | `RMB` click | delete node (operation); to explore | `RMB`: delete node | n/a | | unit `editor/removal` tests (to check) |
+| ^412 | extend mode, pointer on the node being drawn from | `LMB` click or `Esc` | finish road (operation ^432); to explore | `LMB or Esc`: finish | n/a | with only one node: to explore | e2e `smoke.spec`, `editing.spec` |
+| ^413 | extend mode, pointer on a node | `LMB` drag | move node (operation ^433); to explore | `LMB` drag: move node | n/a | snapping, `Ctrl` | unit `editor/snapping.test`; e2e `snapping.spec` |
+| ^414 | extend mode, pointer on a node | `RMB` click | delete node (operation ^434); to explore | `RMB`: delete node | n/a | | unit `editor/removal` tests (to check) |
 | ^415 | draw or extend mode, the pointer snaps | `Ctrl` held | no snapping (^101) | `Ctrl`: no snapping, shown only while snapping | no (never hidden) | not learnable, ^110 | e2e `snapping.spec` |
 | ^416 | draw or extend mode, the pointer snaps, a click would place a node | `Shift` held | the node keeps only the snap position, not its heading (^358); to explore | `Shift`: snap only the position, shown only then | no | not on a drag-place | unit `editor/headingSnap.test` |
 | ^417 | any mode, at least one node selected (also, by bug ^419, the start node in extend mode) | `S` | pin the snap suggestions of the selected nodes (^258); to explore | `S`: pin snap suggestions | no (never hidden, ^258) | with nothing selected and something pinned: `S` unpins | e2e `snapping.spec` |

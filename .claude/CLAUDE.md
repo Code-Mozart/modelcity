@@ -18,7 +18,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - Claude tracks them in `docs/hats.md`. That file must ALWAYS be up to date. Its first line states the next hat, e.g. `next: ^123`.
 - Use hats in commit messages where applicable.
 - Requirements the user mentions at random times become hats at once (first look whether one exists and extend it); they are sorted out lazily when their topic comes up (^246).
-- Status words in the registry: `decided` = the user decided it; `assumed` = Claude filled in a detail and the user has not confirmed it yet (never write "decided by Claude", and no "please confirm" either: `assumed` already says it).
+- Status words in the registry: `decided` = the user decided it; `assumed` = Claude filled in a detail and the user has not confirmed it yet (never write "decided by Claude", and no "please confirm" either: `assumed` already says it); `maintained in ^N` = the hat was split up or taken over: its text stays as history and all future updates go into the hat(s) named, which name it as their origin.
 
 ## Git and branches
 - `main` always holds a runnable version. Only the user merges into `main` (PRs auto-merge once the user approves). Never push to `main`.
