@@ -5,7 +5,8 @@
 ## Definitions
 
 - **Feature:** anything the app can do or show (a mode, a snap, a rendering, a measurement, an operation). Has a hat of type `feature`, or `operation` (see `docs/hats.md`; features and operations are listed there, not here).
-- **Operation** (^180): a feature the user can do (add node, move node, split a segment, merge, delete). Every operation is a feature; not every feature is an operation (a snap rule, a gizmo, a label is not).
+- **Operation** (^180, ^391): something the user does that *writes*, or should write later: changes the map, exports, saves, imports, creates, renames or deletes a project; selecting counts once the selection is persisted (^390). Switching which project is open does not. Every operation is a feature; not every feature is an operation (a snap rule, a gizmo, a label is not).
+- **Hats (^392):** every operation and every control has a hat for just itself. A hat that describes several things stays as the decision, and each thing gets its own hat that points to it.
 - **Control:** one input (key, button or gesture, with its modifiers) that does something *in a given context*. Controls are contextual by design (^45), so every row names its **context**: the mode (view, select, draw, extend), what is under the pointer, and the state of the app (selection, drag, being drawn, touch).
 - **Hat:** reused if the feature, control or operation already has one (^371 rule 1); registered first if not.
 
@@ -81,7 +82,9 @@ Operations here: *enter draw mode* (from select mode, ^54), *leave draw mode* (`
 | `Esc`, `RMB` click | back to select mode | no |
 | `Tab` | view mode | same as everywhere: explored |
 | `P`, `Ctrl+O` | projects modal (over draw mode) | has to be explored again once a project exists |
-| `Ctrl+S`, `Ctrl+Z`, `Ctrl+Y` (global keys) | the same toasts | yes, by equivalence (one handler for every mode) |
+| `Ctrl+S` | has to be explored again once there is data to save | not yet |
+| `Ctrl+Z` | has to be explored again after each operation | not yet |
+| `Ctrl+Y`, `Ctrl+Shift+Z` | has to be explored again after an operation was undone | not yet |
 | `RMB` drag, wheel, `Ctrl` + wheel, `MMB` drag | camera, without hints (^389) | not yet |
 
 ### view mode (empty map)
