@@ -1,7 +1,7 @@
 <script lang="ts">
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
-  import { controlTower } from './editor/parallel';
+  import { focusTower } from './editor/parallel';
   import { barsOf } from './editor/towers';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
@@ -43,13 +43,6 @@
   /** The bars of the runs of parallel segments, derived from the graph (^350). */
   const bars = $derived(barsOf(editor.graph));
 
-  /** The line through the control points that are interlocked with the one that is hovered or dragged (^344). */
-  const tower = () => {
-    const f = editor.focus;
-    const edge = f?.type === 'rad' ? editor.chains[f.road]?.edgeIds[f.i] : undefined;
-    return edge === undefined ? null : controlTower(editor.graph, edge, f!.k ?? 0, f!.t ?? 0.5);
-  };
-
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
     const drop = dropOf(editor.graph, editor.press, editor.snapped);
@@ -72,7 +65,7 @@
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
       bars: bars,
-      tower: tower(),
+      tower: focusTower(editor.graph, editor.chains, editor.focus),
       turning: turningOf(editor.chains, editor.press),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };

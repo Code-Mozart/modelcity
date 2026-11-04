@@ -98,7 +98,19 @@ export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   }
 }
 
-/** The dashed orange line through the interlocked control points of parallel segments, from the outermost to the innermost (^344). */
-export function drawTowerLine(f: Frame, { p, q }: { p: Vec; q: Vec }, pal: Palette) {
-  segment(f.ctx, toScreen(f, p), toScreen(f, q), { color: pal.orange, width: 2, dash: [6, 5] });
+/** The dashed orange line through the interlocked control points of parallel segments, with the other control points on it as rings (^344, ^361). */
+export function drawTowerLine(f: Frame, tower: TowerShape, pal: Palette) {
+  segment(f.ctx, toScreen(f, tower.p), toScreen(f, tower.q), {
+    color: pal.orange,
+    width: 2,
+    dash: [6, 5],
+  });
+  for (const at of tower.others) ring(f.ctx, toScreen(f, at), 6.5, { color: pal.orange, width: 2 });
+}
+
+/** The line and the other control points on it (^361). */
+export interface TowerShape {
+  p: Vec;
+  q: Vec;
+  others: Vec[];
 }

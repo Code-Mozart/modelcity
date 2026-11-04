@@ -3,7 +3,8 @@ import type { Piece } from '../curves/types';
 import { LANE_WIDTH_M } from '../curves/lane';
 import { dist, dot, fromAngle, type Vec } from '../curves/vec';
 import { edgeOfId, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
-import { curveOfEdge } from './chains';
+import { curveOfEdge, type Chain } from './chains';
+import type { Focus } from './focus';
 
 const TOL_M = 1e-3;
 
@@ -51,6 +52,8 @@ export function withParallels(g: Graph, ids: number[]): number[] {
 export interface TowerLine {
   p: Vec;
   q: Vec;
+  /** The control points of the other segments, to show as rings (^361). */
+  others: Vec[];
 }
 
 /** The two points that are farthest apart: the ends of a row of points on a line. */
@@ -69,11 +72,22 @@ function ends(points: Vec[]): [Vec, Vec] {
  */
 export function controlTower(g: Graph, edge: number, k: number, t: number): TowerLine | null {
   const ids = withParallels(g, [edge]);
-  const at = ids.flatMap((id) => {
+  const own = curveOfEdge(g, edge)?.pieces[k];
+  const places = ids.flatMap((id) => {
     const piece = curveOfEdge(g, id)?.pieces[k];
-    return piece && sweeps(piece) ? [{ x: pointOn(piece, t).x, y: pointOn(piece, t).y }] : [];
+    if (!piece || !sweeps(piece) || !own || !sweeps(own)) return [];
+    // A segment that runs the other way has the same end of the bend at the other end of its arc (^360).
+    const same = Math.sign(piece.da) === Math.sign(own.da);
+    const { x, y } = pointOn(piece, same ? t : 1 - t);
+    return [{ id, at: { x, y } }];
   });
-  if (ids.length < 2 || at.length !== ids.length) return null;
-  const [p, q] = ends(at);
-  return { p, q };
+  if (ids.length < 2 || places.length !== ids.length) return null;
+  const [p, q] = ends(places.map((c) => c.at));
+  return { p, q, others: places.filter((c) => c.id !== edge).map((c) => c.at) };
+}
+
+/** The line for the control point that is hovered or dragged, if it is a radius point of a segment with parallel ones (^344). */
+export function focusTower(g: Graph, chains: Chain[], focus: Focus | null): TowerLine | null {
+  const edge = focus?.type === 'rad' ? chains[focus.road]?.edgeIds[focus.i] : undefined;
+  return edge === undefined ? null : controlTower(g, edge, focus!.k ?? 0, focus!.t ?? 0.5);
 }

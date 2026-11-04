@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { edgeOfId, withRadius, type Graph } from '../model/graph';
-import { threeBends, twoBends } from '../testing/graphHelpers';
+import { bendsBothWays, threeBends, twoBends } from '../testing/graphHelpers';
 import { chainsOf } from './chains';
 import { controlTower } from './parallel';
 import { shareConcentric, sharedWith } from './sharedRadius';
@@ -73,6 +73,19 @@ describe('the line through interlocked control points (^344)', () => {
 
   it('through the end radius points, across the lanes on that side (a vertical or horizontal line)', () => {
     for (const t of [0, 1]) expect(length(controlTower(threeBends(), 0, 1, t))).toBeCloseTo(6, 1);
+  });
+
+  it('across the end points at the same end, also for a segment that runs the other way (^360)', () => {
+    const g = bendsBothWays();
+    for (const [t, axis] of [
+      [0, 'x'],
+      [1, 'y'],
+    ] as const) {
+      const line = controlTower(g, 0, 1, t)!;
+      expect(length(line)).toBeCloseTo(6, 1);
+      expect(line.p[axis]).toBeCloseTo(line.q[axis], 6); // vertical at the start, horizontal at the end
+      expect(line.others).toHaveLength(2);
+    }
   });
 
   it('none without a parallel segment', () => {

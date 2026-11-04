@@ -8,7 +8,7 @@ import { ordered } from '../model/junction';
 import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
-import { drawCircles, drawCorners, drawGuides, drawTowerLine } from './guides';
+import { drawCircles, drawCorners, drawGuides, drawTowerLine, type TowerShape } from './guides';
 import { drawBars, type BarShape } from './bars';
 import { drawMeasures } from './measures';
 import { drawCompass, drawOffset, type Turning } from './compass';
@@ -71,7 +71,7 @@ export interface Scene {
   /** The bars beside the nodes of runs of parallel segments (^350). */
   bars: BarShape[];
   /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
-  tower: { p: Vec; q: Vec } | null;
+  tower: TowerShape | null;
   /** The heading being set, with the arrow following the cursor, and the compass for the first node of an arm (^314, ^316). */
   turning: Turning | null;
   /** Where the nodes that are moved were, shown as snap points while they move (^113). */

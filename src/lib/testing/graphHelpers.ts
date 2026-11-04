@@ -49,3 +49,21 @@ export const threeBends = (): Graph =>
       [4, 5, 23],
     ],
   );
+
+/** Two bends one lane width apart that run the same way (20 and 17 m) and a third one, 23 m, that runs back the other way (^360). */
+export const bendsBothWays = (): Graph =>
+  graphOf(
+    [
+      [0, 0, 0],
+      [50, 30, H],
+      [0, 3, 0],
+      [47, 30, H],
+      [53, 30, -H],
+      [0, -3, Math.PI],
+    ],
+    [
+      [0, 1, 20],
+      [2, 3, 17],
+      [4, 5, 23],
+    ],
+  );
