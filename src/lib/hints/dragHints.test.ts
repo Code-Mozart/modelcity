@@ -20,14 +20,10 @@ describe('while a handle is dragged (^286)', () => {
         show,
       ),
     ).toEqual(['LMB drag: move node', 'Esc: cancel', 'Ctrl: no snapping', 'Alt: opposite heading']);
+    // the heading of a node that was just placed: no `Shift` (^358, ^335)
     expect(
       hintsFor(false, node(false), 1, { drag: { ...drag('head'), place: true } }).map(show),
-    ).toEqual([
-      'LMB drag: turn heading',
-      'Esc: cancel',
-      'Ctrl: no snapping',
-      'Shift: snap only the position',
-    ]);
+    ).toEqual(['LMB drag: turn heading', 'Esc: cancel', 'Ctrl: no snapping']);
     expect(rows(drag('head'))).toEqual([
       'LMB drag: turn heading',
       'Esc: cancel',
@@ -36,5 +32,13 @@ describe('while a handle is dragged (^286)', () => {
       'Shift+Alt: aim away from snap suggestion',
     ]);
     expect(rows(drag('rad'))).toEqual(['LMB drag: change radius', 'Esc: cancel']);
+  });
+
+  it('placing a node at a snap: Shift keeps only its position (^358)', () => {
+    const rows = hintsFor(true, { kind: 'empty' }, 0, { snapping: true, placing: true }).map(show);
+    expect(rows).toContain('Shift: snap only the position');
+    expect(hintsFor(true, { kind: 'empty' }, 0, { placing: true }).map(show)).not.toContain(
+      'Shift: snap only the position',
+    );
   });
 });

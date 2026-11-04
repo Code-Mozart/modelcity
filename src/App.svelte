@@ -65,6 +65,7 @@
             pinned: editor.pins.list.length,
             snapping: editor.snapped !== null,
             touching: invertible(editor),
+            placing: editor.drawing,
             rotating: camera.rotating,
             drag,
           }),

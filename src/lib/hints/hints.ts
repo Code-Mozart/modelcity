@@ -253,6 +253,8 @@ export interface HintState {
   snapping?: boolean;
   /** The pointer snapped to a touching point, whose heading `Alt` inverts (^254, ^301). */
   touching?: boolean;
+  /** A node would be placed at the snap by a click: `Shift` keeps only the position (^358). */
+  placing?: boolean;
   /** The middle button is held: the compass uses `S` and the other letters. */
   rotating?: boolean;
 }
@@ -261,6 +263,9 @@ export interface HintState {
 function snapHints(selected: number, s: HintState): Hint[] {
   const ctrl = [
     ...(s.snapping ? [hint({ kind: 'key', label: 'Ctrl' }, 'no snapping')] : []),
+    ...(s.snapping && s.placing
+      ? [hint({ kind: 'key', label: 'Shift' }, 'snap only the position')]
+      : []),
     ...(s.touching ? [hint({ kind: 'key', label: 'Alt' }, 'opposite heading')] : []),
   ];
   const key = { kind: 'key', label: 'S' } as const;
@@ -281,8 +286,7 @@ function dragHints(
     hint(ESC, 'cancel'),
     ...(s.snapping || type === 'head' ? [key('Ctrl', 'no snapping')] : []),
     ...(s.touching ? [key('Alt', 'opposite heading')] : []),
-    // Setting the heading of a node just placed: `Shift` snaps only the position (^358, unvisitable); of an existing node: aim (^335).
-    ...(place ? [key('Shift', 'snap only the position')] : []),
+    // Aiming (^335) is for the heading of an existing node; not while one that was just placed is set (^358).
     ...(type === 'head' && !place
       ? [key('Shift', 'aim at snap suggestion'), key('Shift+Alt', 'aim away from snap suggestion')]
       : []),

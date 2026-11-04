@@ -30,11 +30,12 @@ export function snappedTo(
   press: Press | null,
 ): Placement | null {
   if (!hit) return null;
-  // A heading takes the heading of what it snapped to, the pointer stays where it is (^313).
-  if (turningNode(press) !== null && info.shift)
+  // A heading takes the heading of what it snapped to, the pointer stays where it is (^313); `Shift` aims at it, for an existing node (^335).
+  if (press?.kind === 'drag' && turningNode(press) !== null && info.shift)
     return { pt: info.pt, th: null, aim: { at: hit.pt, away: info.alt } };
   if (turningNode(press) !== null) return { pt: info.pt, th: headingFrom(hit, info.alt) };
-  return { pt: hit.pt, th: placedHeading(hit, info.alt), line: onLine(hit) };
+  // A click places the node at the snap with its heading; `Shift` keeps only the position (^358).
+  return { pt: hit.pt, th: info.shift ? null : placedHeading(hit, info.alt), line: onLine(hit) };
 }
 
 /** Where a click places a node: where the pointer snapped, else at the pointer with the automatic heading. */
@@ -230,13 +231,8 @@ const placing = (hover: Hover | null) =>
   (hover?.kind === 'handle' && ['node', 'rad'].includes(hover.handle.type));
 
 /** Whether the pointer places or moves a node now: in draw mode, or dragging a node. */
-/** Whether the heading of a node that was moved or placed snaps now: not while `Shift` leaves it free on a placed node (^358). */
-function turns(press: Press, info: PointerInfo | null): boolean {
-  return press.kind === 'place' ? !info?.shift : true;
-}
-
-function snaps({ press, hover, drawing, info }: SnapArgs): 'place' | 'move' | 'turn' | null {
-  if (turningNode(press) !== null) return press!.moved && turns(press!, info) ? 'turn' : null;
+function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | 'turn' | null {
+  if (turningNode(press) !== null) return press!.moved ? 'turn' : null;
   if (press) return movedIds(press).length || controlEdge(press) !== null ? 'move' : null;
   return drawing && placing(hover) ? 'place' : null;
 }
@@ -291,11 +287,10 @@ function withoutExtendAtTip(hit: SnapHit, a: SnapArgs): SnapHit {
 
 /** What a hover is made of for the snapping: the editor state and the chains with the zoom. */
 export interface SnapWorld {
-  /** `Alt` is held: the other heading of a touching point (^301). */
-  alt: boolean;
+  /** The pointer with its keys: `Alt` takes the other heading (^301), `Shift` snaps only the position (^358). */
+  info: PointerInfo | null;
   drawn: Drawn;
   chains: Chain[];
-  scale: number;
 }
 
 /**
@@ -313,7 +308,10 @@ export function snapPreview(
   return (
     nodeHover(snap, w) ??
     curveHover(snap, w) ??
-    previewOf(w.drawn, { pt: snap.pt, th: placedHeading(snap, w.alt) })
+    previewOf(w.drawn, {
+      pt: snap.pt,
+      th: w.info?.shift ? null : placedHeading(snap, w.info?.alt ?? false),
+    })
   );
 }
 
@@ -321,7 +319,7 @@ export function snapPreview(
 function nodeHover(snap: SnapHit, w: SnapWorld): Hover | null {
   // Wherever a node is, it is that node: never a second one on top of it (^248, ^296).
   const at = (h: RoadHandle) => h.type === 'node' && dist(h, snap.pt) < MERGE_WORLD_M;
-  const handle = chainHandles(w.chains, w.scale).find(at);
+  const handle = chainHandles(w.chains, w.info?.scale ?? 1).find(at);
   return handle ? { kind: 'handle', handle } : null;
 }
 

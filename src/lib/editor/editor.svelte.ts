@@ -116,10 +116,9 @@ export class Editor {
   );
   hover = $derived<Hover | null>(
     snapPreview(this.hoverRaw, this.snapped, () => ({
-      alt: this.lastInfo?.alt ?? false,
+      info: this.lastInfo,
       drawn: this.snapshot(),
       chains: this.chains,
-      scale: this.lastInfo?.scale ?? 1,
     })),
   );
   /** The three modes (^120): extend mode is draw mode while a node is being extended. */

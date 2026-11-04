@@ -60,3 +60,19 @@ describe('a node beside another touches it and gets a heading (^254, ^253, ^301)
     expect(ed.hover).toMatchObject({ kind: 'preview', node: { x: 0.4, y: 3.3 } });
   });
 });
+
+describe('Shift on a click that places a node (^358)', () => {
+  it('keeps only the position: the node gets its automatic heading', () => {
+    const ed = drawMode(g());
+    const lane = (shift: boolean) => ({ ...snapping(0.4, -3.3), shift });
+    ed.pointerMove(lane(false));
+    const copied = ed.hover?.kind === 'preview' ? ed.hover.node : null;
+    expect(Math.abs(heading(copied!.th))).toBeCloseTo(Math.PI);
+    ed.pointerMove(lane(true));
+    const only = ed.hover?.kind === 'preview' ? ed.hover.node : null;
+    expect(only).toMatchObject({ x: 0, y: -3, th: 0 });
+    ed.pointerDown(lane(true));
+    ed.pointerUp();
+    expect(ed.graph.nodes.at(-1)).toMatchObject({ x: 0, y: -3, th: 0 });
+  });
+});
