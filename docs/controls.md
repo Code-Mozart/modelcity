@@ -64,12 +64,14 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^465 | extend mode, only the first node placed, pointer on its heading control point | `LMB` drag | turn heading (operation ^468); not pressed yet | `LMB` drag: turn heading | n/a | the heading snaps (^251, ^315); the hover ring (^469) | unit `editor/editor.test` (dragging the heading), `editor/branching.test`, `editor/headingSnap.test` |
 | ^466 | extend mode, pointer on a heading control point | `Alt` + `LMB` click | flip arm (^234); not pressed yet | `Alt`+`LMB`: flip arm | n/a | a click, not a drag | unit `editor/controls.test`; e2e `editing.spec` |
 | ^467 | extend mode, only the first node placed, pointer not on the start node | `Esc` or `RMB` click | cancel first node (operation ^437); not pressed yet | `Esc or RMB`: finish, should be `cancel` (bug ^438) | n/a | undoable, like ^436 | unit `editor/undoRedo.test`, `editor/editor.test` (a right click on empty space finishes the road, finishing with one node cancels it) |
-| ^477 | extend mode, only the first node placed, pointer on empty canvas | `LMB` click | place next node (operation ^475); not pressed yet | `LMB`: add node (to become `place node`, ^421) | n/a | the node snaps (^101); `Shift` keeps only the position (^416) | unit `editor/extend.test`, `editor/editor.test`, `editor/snapping.test` |
+| ^477 | extend mode, only the first node placed, pointer on empty canvas | `LMB` click | place next node (operation ^475); walked in step 35 | `LMB`: add node (to become `place node`, ^421) | n/a | the node snaps (^101); `Shift` keeps only the position (^416) | unit `editor/extend.test`, `editor/editor.test`, `editor/snapping.test` |
 | ^478 | extend mode, only the first node placed, pointer on empty canvas | `LMB` drag | place next node and set heading (operation ^476); not pressed yet | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | the heading snaps (^251) | unit `editor/editor.test`, `editor/touching.test` |
 | ^488 | select mode, pointer on a node | `LMB` drag | move node (operation ^433); not pressed yet | `LMB` drag: move node | n/a | snapping (`Ctrl` turns it off); the nodes selected move together | unit `editor/editor.test`, `editor/branching.test`, `editor/snapping.test`; e2e `smoke.spec`, `editing.spec` |
 | ^489 | select mode, pointer on a node | `RMB` click | delete node (operation ^434); not pressed yet | `RMB`: delete node | n/a | | unit `editor/controls.test`, `editor/rightClickSelected.test` |
 | ^490 | select mode, pointer on a node | `LMB` click | select node (operation ^486), `select instead` with a selection; not pressed yet | `LMB`: select | n/a | hidden once visited (^110) | unit `editor/selection.test` |
 | ^491 | select mode, pointer on a node | `Alt` + `LMB` click | select branch (operation ^487); not pressed yet | `Alt`+`LMB`: select branch (or deselect branch) | n/a | hidden once visited (^110); with `Alt` held the hovered branch gets its outline (^99) | unit `editor/branchSelect.test`, `editor/hoverFresh.test` |
+| ^496 | select mode, empty canvas, nothing selected | `LMB` drag | select by box (operation ^492); not pressed yet | `LMB` drag: select (hidden once visited, ^110) | n/a | the nodes inside are selected live | unit `editor/selection.test`, `editor/controls.test` |
+| ^497 | draw mode, nothing drawn, pointer on a node without a segment | `LMB` click | extend road (operation ^493): the node becomes the node being drawn from; extend mode | `LMB`: split, should be `extend` (bug ^494) | n/a | the history step is `split road` (bug ^494) | gap: no test for a node without a segment |
 
 ## Still to walk (checklist, no hats yet)
 
@@ -303,7 +305,7 @@ Reached from (E3) by moving the pointer off the control point onto empty canvas.
 | `Shift` held (step 30) | no effect (the extend line has no heading to drop); the hint shows anyway (bug ^473) | yes (control ^416) |
 | `Ctrl` held on its own (step 31) | nothing at once; after a small move the snap line and the `Ctrl` and `Shift` hints go (bug ^472) | yes (control ^415) |
 | `Ctrl` released on its own (step 32) | nothing at once; after a small move the snap is back, as in step 29 | yes (control ^415) |
-| `LMB` click | place next node (^477) | no |
+| `LMB` click | place next node (^477) | yes (step 35; the node was snapped to the extend line) |
 | `LMB` drag | place next node and set heading (^478) | no |
 | `Esc`, `RMB` | cancel first node (^467) | no |
 | `Ctrl+Z` | undoes `place node` (the undo hint shows now) | no |
@@ -320,6 +322,26 @@ Step 34. Hints: `LMB` drag: move node (^488), `RMB`: delete node (^489), `LMB`: 
 |-------|--------|----------|
 | `LMB` drag, `RMB`, `LMB`, `Alt`+`LMB` on the node | move node, delete node, select node, select branch | no (hints seen) |
 | the other inputs of select mode | as in (A) | no |
+
+### extend mode, a segment exists, the pointer on its end node (E6)
+
+Step 35, from (R2): `LMB` on empty canvas enters draw mode (control ^393), `LMB` on the lone node extends it (control ^497, hint `split` and step `split road`, bug ^494), the pointer is moved along the +60° extend line (^337) and `LMB` places the second node at about 30 m (control ^477, operation ^475). Extend mode (outline, icons). Hints: `Tab`: view mode (a new session, not visited), `LMB` or `Esc`: finish (control ^412, the pointer is on the node being drawn from), `LMB` drag: move node (^413), `RMB`: delete node (^414), `Ctrl` and `Shift` (while snapping, ^415, ^416), `S`: pin snap suggestions (bug ^419; ^417), `P`: projects. History panel: the undo hint (visited controls come back, a new session shows it at once) and one batch of two steps: `split road` (the click on the lone node; the user read it as `split node`, to check) and `place node`.
+
+| Item | What it is | Hats | Tested |
+|------|------------|------|--------|
+| a white solid circle at the start node | the node dot of the skeleton | ^60 | gap ^479 |
+| a thin white solid curve between the nodes, with four small white arrows | the curve of the segment and its direction arrows (one every 72 px) | ^60, ^80, ^86 | unit `curves/arrows.test`; drawing: gap ^479 |
+| the end node larger and solid blue, a blue ring around it | the node being drawn from is drawn like a selected one (bug ^419); the ring is the hover ring (^469) | ^70, ^419, ^469 | unit `editor/hoverFresh.test` |
+| a bend capsule, dark gray fill, a darker thin stroke | the generated road geometry, 3 m wide with an outline | ^90 | gap ^479 |
+| a turquoise snap curve above the white curve | the curve of the segment as a snap suggestion (the pointer may snap along it, ^336, ^265 to ^273); drawn above the skeleton on purpose (^482) | ^101, ^265 to ^273, ^482 | unit `snap/snap.test`, `editor/ownCurve.test` |
+| two turquoise snap lines through the end node | its heading line and its normal (`node-heading`, `node-normal`) | ^265 to ^267 | unit `snap/snap.test`, `editor/snapping.test` |
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `LMB` drag on empty canvas | place next node and set heading (^478, operation ^476) | no (next step) |
+| `LMB` click on empty canvas | place the next node (^477) | no (as in step 35, with a segment) |
+| `LMB` or `Esc` | finish road (^412) | no |
+| `LMB` drag on the node, `RMB` | move node, delete node | no |
 
 ### view mode (empty map)
 
@@ -411,5 +433,6 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 32 | (E4) | `Ctrl` released | no effect until the pointer moves, then the snap is back |
 | 33 | (E4) | reload the page | (R) select mode, the lone node north, no history (^485, ^484) |
 | 34 | (R) | the pointer on the lone node | (R2) hover ring and the hints of a node in select mode (^488 to ^491) |
+| 35 | (R2) | `LMB` on empty canvas, `LMB` on the lone node, the pointer moved along the +60° extend line, `LMB` at about 30 m | (D) draw mode, then (E5) extend mode on the lone node (controls ^393, ^497), then (E6) extend mode with a segment (control ^477) |
 
-`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(R2)** (select mode, the pointer on the lone node, after a reload). Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
+`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(E6)** (extend mode, a segment exists, the pointer on its end node). Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
