@@ -1,4 +1,4 @@
-next: ^435
+next: ^436
 
 # Hats
 
@@ -450,6 +450,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^432 | operation | done (found in the audit ^371; split off from ^239, ^216) | **Finish road (operation):** The road being drawn is finished: `Esc`, `RMB`, or a click on the start node (^412); back to draw mode. Name of its history step: `finish road`. Origin: ^239, ^216. |
 | ^433 | operation | done (found in the audit ^371; split off from ^44, ^216) | **Move node (operation):** A node is dragged to a new place (with the nodes selected together, `move N nodes`), snapping to the snap suggestions (^413). Origin: ^44, ^216. |
 | ^434 | operation | done (found in the audit ^371; split off from ^44, ^216) | **Delete node (operation):** A node is removed with `RMB` (^414) or `Del` (the selected nodes); its segments are removed with it. Origin: ^44, ^216. |
+
+| ^435 | decision | decided (user: one name shared by the hint and the history); assumed (details: the internal name is separate, several operations may share a name, steps may add detail) | **One user-facing name per operation (user, audit ^371):** the control hint and the history step of an operation use the same name, no aliases (`place node`). The operation hat has its own unique internal name (`place first node`, ^409); several operations may share one user-facing name when context tells them apart; a history step may add detail after it (`select 3 nodes`, `move 3 nodes`). Known mismatches, not fixed in the audit: `add node` vs `place node` (^421), `finish` (hint, ^142) vs `finish road` (history step); to be decided by the user which side changes. |
 
 ## Rented ranges
 
