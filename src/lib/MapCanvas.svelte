@@ -1,6 +1,7 @@
 <script lang="ts">
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
+  import { scaffoldHidden } from './editor/phase';
   import { focusTower } from './editor/parallel';
   import { barsOf } from './editor/towers';
   import { previousPlaces } from './editor/snapping';
@@ -55,7 +56,12 @@
       viewing: editor.viewing,
       selectedSegments: editor.selectedSegments,
       outline: editor.hoverSegments,
-      hideScaffold: editor.movingGroup || editor.pointer?.ctrl === true || drop !== null,
+      hideScaffold: scaffoldHidden({
+        phase: editor.phase,
+        movingGroup: editor.movingGroup,
+        ctrl: editor.pointer?.ctrl === true,
+        dropping: drop !== null,
+      }),
       hover: editor.hover,
       mergePreview: editor.mergePreview,
       focus: editor.focus,

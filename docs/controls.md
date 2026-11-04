@@ -246,3 +246,7 @@ Beside the nodes of a *run* (^353) of parallel segments (^334) one *run bar* (a 
 ### Snapping the position only (^358)
 
 On *add node* (`LMB` click) in draw and extend mode, `Shift` keeps the snap of the position but not of the heading: the node is placed at the snap with its automatic heading, not the heading of the lane, offset curve or snap line it snapped to. The hint `Shift: snap only the position` shows while a click would place a node at a snap and is never hidden. It is not available on *add node and set heading* (`LMB` drag). (For the heading point of an existing node `Shift` aims, ^335.)
+
+### Extend mode shows no scaffold (^362)
+
+While a road is extended from a node, the scaffold gizmos of the existing segments are hidden (only the skeleton shows). The preview of the segment being built keeps its dashed heading lines and measurements.

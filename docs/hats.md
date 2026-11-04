@@ -1,4 +1,4 @@
-next: ^362
+next: ^363
 
 # Hats
 
@@ -399,3 +399,4 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^359 | image | reference (user) | **The line through the end radius points ran diagonally (user):** `docs/mocks/hat359.png`: six lanes, three running each way; the dashed line from the hovered control point ran across the whole bend instead of across the lanes. See ^360. |
 | ^360 | bug | done (milestone ^255, PR #31) | **The line through the end radius points ran diagonally for lanes that run the other way (user, ^359):** the end of an arc at `t = 0` is the *other* end of the bend for a segment that runs the other way. The point of each parallel segment is now taken at the same end (a segment whose arc turns the other way has `1 - t`). Tested by a unit test and by `e2e/radii.spec.ts`, which reads the line the app computes (`window.__modelcity.tower()`). My earlier fix (sorting the points by x) was a different, real problem but not this one. |
 | ^361 | feature | done (milestone ^255, PR #31) | **The other control points on the line are shown (user):** while the line of ^344 shows, the control points of the other interlocked segments on it are drawn as orange rings (not solid): the middle radius points along the bisector of the bend, the end radius points along the shared normal. |
+| ^362 | feature | done (milestone ^255, PR #31) | **No scaffold gizmos in extend mode (user):** while a road is extended from a node, all scaffold gizmos of the existing segments (heading lines, circles, control points, labels) are hidden; the skeleton and the preview of the segment being built (its dashed heading lines and measurements, ^321) still show. |
