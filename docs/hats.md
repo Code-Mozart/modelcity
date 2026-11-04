@@ -2,7 +2,7 @@ next: ^409
 
 # Hats
 
-Registry of all hats. Never reuse or renumber. Keep this file up to date. Types `operation` and `control` (^371, ^392): a `control` is one input (or its alternatives) in one context; an `operation` is defined in ^391. Type `operation` (^371): a feature the user can do; every operation is a feature, so list it as `operation` instead of `feature`. The controls that trigger it are in `docs/controls.md`, which only references hats.
+Registry of all hats, and of the ranges rented out to other files (below). Never reuse or renumber. Keep this file up to date. Types `operation` and `control` (^371, ^392): a `control` is one input (or its alternatives) in one context; an `operation` is defined in ^391. Type `operation` (^371): a feature the user can do; every operation is a feature, so list it as `operation` instead of `feature`. The controls that trigger it are in `docs/controls.md`, which only references hats.
 
 | Hat | Type | Status | Summary |
 |-----|------|--------|---------|
@@ -430,19 +430,11 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^390 | feature | planned (roadmap, no milestone; user, asked in the audit ^371) | **The selection is persisted (user):** the selection of a project is stored with it and is there again when the project is opened (today it is only editor state and is lost on reload, and not in the stored model). It changes the stored model (`docs/data-model.md`), so it needs the user's agreement, a version bump and a migration (^173), and the question whether selecting then counts as a *write* (an operation, ^391). |
 | ^391 | decision | decided (user; revised: the camera and switching the open project count) | **What an operation is (user, audit ^371):** something the user *deliberately does* that changes the map, the stored project or what is open, or writes an output: editing the map, undo and redo, selecting (also an undo step already, ^103), pan, zoom and rotate (the camera is stored with the project, ^236), exporting, saving, importing, creating, renaming, deleting and switching a project. **Not operations:** changing the mode (select, draw, extend, view), opening or closing a modal, hovering. The same input can be one in one context and not in another: `Esc` finishes a road (an operation) or leaves draw mode with nothing drawn (not). Every operation is a feature. Refines the glossary (^180). |
 | ^392 | decision | decided (user; the audit's rule 4, extends ^371) | **A hat for each operation and for each control (user):** every operation has a hat for just itself (a feature and an operation are the same hat, no duplicate on purpose); every control has its own hat as well, because an operation can have several controls (and one control several operations, by context). Existing hats are reused where they already describe exactly that one thing; a hat that describes several (for example ^54: enter draw mode, leave it, the first node) stays as the decision, and each one gets its own hat that points to it. |
-| ^393 | control | done (found in the audit ^371) | **select mode, empty canvas, nothing selected / `LMB` click:** enter draw mode. Its feature or decision: ^54. A control (^392): this input in this context. |
-| ^394 | control | done (found in the audit ^371) | **select mode / `Tab`:** go to view mode. Its feature or decision: ^104. A control (^392): this input in this context. |
-| ^395 | control | done (found in the audit ^371) | **view mode / `Tab`:** go back to select mode (its hint is hidden after the visit, bug ^384). Its feature or decision: ^104. A control (^392): this input in this context. |
-| ^396 | control | done (found in the audit ^371) | **any mode, no modal, nothing to save yet / `Ctrl+S`:** two info toasts, nothing is saved. Its feature or decision: ^226. A control (^392): this input in this context. |
-| ^397 | control | done (found in the audit ^371) | **any mode, no modal, nothing to undo / `Ctrl+Z`:** info toast `nothing to undo`. Its feature or decision: ^242. A control (^392): this input in this context. |
-| ^398 | control | done (found in the audit ^371) | **any mode, no modal, nothing to redo / `Ctrl+Y` or `Ctrl+Shift+Z`:** info toast `nothing to redo`. Its feature or decision: ^242. A control (^392): this input in this context. |
-| ^399 | control | done (found in the audit ^371) | **any mode, no modal / `Ctrl+O`:** open the projects modal and the file window. Its feature or decision: ^223. A control (^392): this input in this context. |
-| ^400 | control | done (found in the audit ^371) | **any mode, no modal, no text field focused / `P`:** open the projects modal. Its feature or decision: ^222. A control (^392): this input in this context. |
-| ^401 | control | done (found in the audit ^371) | **projects modal (list) / `Esc`:** close the modal. Its feature or decision: ^168. A control (^392): this input in this context. |
-| ^402 | control | done (found in the audit ^371) | **projects modal, pointer outside the dialog / `LMB` click:** close the modal. Its feature or decision: ^168. A control (^392): this input in this context. |
-| ^403 | control | done (found in the audit ^371) | **projects modal, pointer on the X / `LMB` click:** close the modal. Its feature or decision: ^168. A control (^392): this input in this context. |
-| ^404 | control | done (found in the audit ^371) | **projects modal, pointer on `Import file…` / `LMB` click:** open the file window. Its feature or decision: ^164. A control (^392): this input in this context. |
-| ^405 | control | done (found in the audit ^371) | **projects modal, pointer on `Export JSON` / `LMB` click:** export the project as a file (not yet explored). Its feature or decision: ^163. A control (^392): this input in this context. |
-| ^406 | control | done (found in the audit ^371) | **projects modal, pointer on `New project` / `LMB` click:** make a blank project (not yet explored). Its feature or decision: ^171. A control (^392): this input in this context. |
-| ^407 | control | done (found in the audit ^371) | **projects modal, pointer on the search field / `LMB` click:** focus the search field (^178). Its feature or decision: ^178. A control (^392): this input in this context. |
-| ^408 | control | done (found in the audit ^371) | **draw mode, nothing drawn yet / `Esc` or `RMB` click:** leave draw mode, back to select mode. Its feature or decision: ^54. A control (^392): this input in this context. |
+
+## Rented ranges
+
+A range of hats whose rows are written in another file instead of here (^392). This file stays the one place that mints hats: a range is reserved here first, the file holds one row per hat of its range (each row starts with `| ^N |`), none missing, none outside the range, and `next:` counts the range. Checked by `src/lib/hats.test.ts`.
+
+| Range | File | What |
+|-------|------|------|
+| ^393–^408 | docs/controls.md | controls (type `control`): one input, or its alternatives, in one context |

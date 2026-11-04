@@ -3,7 +3,20 @@ import { describe, expect, it } from 'vitest';
 
 /** Guards the hat registry rules (.claude/CLAUDE.md): unique hats, and `next:` is always right. */
 const registry = readFileSync(new URL('../../docs/hats.md', import.meta.url), 'utf8');
-const ids = [...registry.matchAll(/^\| \^(\d+) \|/gm)].map((m) => Number(m[1]));
+const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
+const listed = [...registry.matchAll(/^\| \^(\d+) \|/gm)].map((m) => Number(m[1]));
+/** Ranges rented out to other files (`## Rented ranges` in docs/hats.md): the file defines one row per hat. */
+const rented = [...registry.matchAll(/^\| \^(\d+)–\^(\d+) \| (\S+) \|/gm)].map((m) => ({
+  from: Number(m[1]),
+  to: Number(m[2]),
+  file: m[3]!,
+}));
+const defined = (file: string) =>
+  [...read(file).matchAll(/^\| \^(\d+) \|/gm)].map((m) => Number(m[1]));
+const ids = [
+  ...listed,
+  ...rented.flatMap((r) => defined(r.file).filter((id) => id >= r.from && id <= r.to)),
+];
 
 describe('hat registry (docs/hats.md)', () => {
   it('lists hats and states the next one on the first line', () => {
@@ -22,8 +35,23 @@ describe('hat registry (docs/hats.md)', () => {
     expect(sorted).toEqual(sorted.map((_, i) => i + 1));
   });
 
-  it('is the only place hats are defined: every hat in docs/controls.md exists (^371)', () => {
-    const controls = readFileSync(new URL('../../docs/controls.md', import.meta.url), 'utf8');
+  it('a rented range is whole: every hat of it is defined once in its file, none outside it (^392)', () => {
+    for (const r of rented) {
+      const own = defined(r.file);
+      const all = Array.from({ length: r.to - r.from + 1 }, (_, i) => r.from + i);
+      expect(
+        own.filter((id) => id < r.from || id > r.to),
+        `${r.file}: hats outside ^${r.from}-^${r.to}`,
+      ).toEqual([]);
+      expect(
+        own.sort((a, b) => a - b),
+        `${r.file} must define every hat of ^${r.from}-^${r.to} once`,
+      ).toEqual(all);
+    }
+  });
+
+  it('every hat named in docs/controls.md exists (^371)', () => {
+    const controls = read('docs/controls.md');
     const used = [...controls.matchAll(/\^(\d+)/g)].map((m) => Number(m[1]));
     const missing = used.filter((id) => !ids.includes(id));
     expect(
