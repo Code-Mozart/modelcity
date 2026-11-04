@@ -58,6 +58,7 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^436 | extend mode, only the first node placed, pointer on it | `LMB` click or `Esc` | cancel first node (operation ^437): the node is taken away, back to draw mode (feature ^423) | `LMB or Esc`: finish, should be `cancel` (bug ^438) | n/a | undoable: undo brings the node back at its place; `Esc` is the alternative input, not pressed yet | unit `editor` tests (to check); e2e: gap |
 | ^450 | any mode, no modal, a project is open (it has data) | `Ctrl+S` | save project (operation ^428) at once: toast ^440 `saved`, then toast ^442 `modelcity saves automatically` (^232) | none (exemption not yet decided) | n/a | the background: ^165 (the browser's database), ^166 autosave, ^445 (400 ms), ^446 (5 s), ^447, ^448 | unit `project/load.test`; e2e `projects.spec` |
 | ^454 | any mode, no modal, a step in the history to undo | `Ctrl+Z` | undo (operation ^453): the last step is taken back; here the cancel of the first node, so the node is back with its heading | the undo hint of the history panel: `Ctrl+Z`: undo (`Alt` to undo batch), shown while there is a step to undo (^109, ^241) | n/a | the undone step stays in the panel in gray, joined to its batch (^107, ^108); the `Alt` note is always shown (roadmap ^418) | unit `editor/history.test`; e2e `editing.spec` |
+| ^456 | any mode, no modal, an undone step to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | redo (operation ^455): the undone step is done again; here the cancel, so the node is gone and the preview is back (draw mode, nothing drawn) | the redo hint of the history panel: `Ctrl+Y` or `Ctrl+Shift+Z`: redo (`Alt` to redo batch), while there is a step to redo (^109, ^241) and the control is not hidden as visited (^110) | n/a | the redone step is white again; after a redo with nothing left to redo and both undo and redo visited, the panel shows no hints; the panel goes after about 3 s (^107) | unit `editor/history.test`; e2e `editing.spec` |
 
 ## Walk-through (depth first)
 
@@ -104,7 +105,7 @@ Features here: *enter draw mode* (from select mode, ^54) and *leave draw mode* (
 | `P`, `Ctrl+O` | projects modal (over draw mode) | has to be explored again once a project exists |
 | `Ctrl+S` | has to be explored again once there is data to save | not yet |
 | `Ctrl+Z` | has to be explored again after each operation | explored with the first one (^454); after later operations again |
-| `Ctrl+Y`, `Ctrl+Shift+Z` | has to be explored again after an operation was undone | not yet |
+| `Ctrl+Y`, `Ctrl+Shift+Z` | has to be explored again after an operation was undone | explored with the first one (^456); the batch variants with `Alt` after a finished road |
 | `RMB` drag, wheel, `Ctrl` + wheel, `MMB` drag | camera, without hints (^389) | not yet |
 
 ### extend mode, one node placed (the pointer still on it)
@@ -153,7 +154,7 @@ Reached by `Ctrl+Z` in (D2) (control ^454). The mode and outline are those the h
 
 | Input | Result | Explored |
 |-------|--------|----------|
-| `Ctrl+Y` or `Ctrl+Shift+Z` | redo: the cancel is done again (D2) | no |
+| `Ctrl+Y` or `Ctrl+Shift+Z` | redo: the cancel is done again (D2) | yes (control ^456; `Ctrl+Shift+Z` is its alternative, not pressed) |
 | `Alt+Ctrl+Z`, `Alt+Ctrl+Y` | undo or redo of the whole batch | not yet: explore after a finished road |
 | `Ctrl+Z` again | nothing to undo? (the history has two steps, one undone) | no |
 | the other inputs of (E), `Ctrl+S`, `P` | as in (E) | by equivalence of the state, not pressed |
@@ -233,5 +234,6 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 17 | (E) | `LMB` click on the placed node | (D2) draw mode, nothing drawn, with a batch of two steps in the history (operation `cancel first node`, ^437) |
 | 18 | (D2) | `Ctrl+S` (some seconds later) | the same state; toasts `saved` and `modelcity saves automatically` (^440, ^442) appear at once and go after 3 s; the history panel went away after about 3 s (^107); the project is saved (operation ^428, control ^450) |
 | 19 | (D2) | `Ctrl+Z` (pointer still where the node was) | (E2) the node is back with its heading (operation `undo`, ^453, control ^454) |
+| 20 | (E2) | `Ctrl+Y` | (D2) again: draw mode, nothing drawn, the preview is back; the history shows both steps white; no hints in the panel because `undo` and `redo` were just used (^110); the panel goes after about 3 s (operation `redo`, ^455, control ^456) |
 
-`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(E2)**. Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
+`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(D2)** (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.

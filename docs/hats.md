@@ -1,4 +1,4 @@
-next: ^455
+next: ^457
 
 # Hats
 
@@ -473,6 +473,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 
 | ^453 | operation | done (^81, ^88, ^103; found in the audit ^371) | **Undo (operation):** the last step of the history is taken back and goes grayed out in the history panel, where it can be redone (^107, ^109); with `Alt` the whole batch is undone (^103). Undoing a step that cancelled the first node brings the node back at its place with its heading. User-facing name: `undo`. Controls: ^454 (a step to undo), ^397 (nothing to undo, toast ^443). Origin: ^81, ^103. |
 
+| ^455 | operation | done (^81, ^88, ^103; found in the audit ^371) | **Redo (operation):** the last undone step is done again and turns white again in the history panel; with `Alt` the whole batch (^103). Here it redoes the cancel of the first node: the node and its arrow are a preview again. User-facing name: `redo`. Controls: ^456 (a step to redo), ^398 (nothing to redo, toast ^444). Origin: ^81, ^103. |
+
 ## Rented ranges
 
 A range of hats whose rows are written in another file instead of here (^392). This file stays the one place that mints hats: a range is reserved here first, the file holds one row per hat of its range (each row starts with `| ^N |`), none missing, none outside the range, and `next:` counts the range. Checked by `src/lib/hats.test.ts`.
@@ -484,3 +486,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^436–^436 | docs/controls.md | control: cancel the first node |
 | ^450–^450 | docs/controls.md | control: `Ctrl+S` with a project that has data |
 | ^454–^454 | docs/controls.md | control: `Ctrl+Z` with something to undo |
+| ^456–^456 | docs/controls.md | control: `Ctrl+Y` with something to redo |
