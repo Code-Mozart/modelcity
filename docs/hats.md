@@ -1,4 +1,4 @@
-next: ^457
+next: ^464
 
 # Hats
 
@@ -475,6 +475,12 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 
 | ^455 | operation | done (^81, ^88, ^103; found in the audit ^371) | **Redo (operation):** the last undone step is done again and turns white again in the history panel; with `Alt` the whole batch (^103). Here it redoes the cancel of the first node: the node and its arrow are a preview again. User-facing name: `redo`. Controls: ^456 (a step to redo), ^398 (nothing to redo, toast ^444). Origin: ^81, ^103. Tested: unit `editor/undoRedo.test`, `editor/steps.test`, `editor/history.test`. |
 
+| ^457 | feature | done (found in the audit ^371) | **Heading snap step 45° (feature):** a heading that is dragged snaps in steps of 45° (to the compass directions for the first node of an arm, ^315, otherwise from the heading it had) up to 90 px from the node it turns (`ANGLE_TIERS` in `snap/angles.ts`). The 90 px are `assumed`, tuned by feel. Part of ^251. Tested: unit `snap/angles.test` (the step gets finer with the distance), `editor/editor.test` (^251). |
+| ^458 | feature | done (found in the audit ^371) | **Heading snap step 15° (feature):** from 90 px from the node (about 1.1 arrow lengths, the arrow is 80 px) the steps are 15°. `assumed`. Part of ^251. Tested: as ^457. |
+| ^459 | feature | done (found in the audit ^371) | **Heading snap step 5° (feature):** from 180 px (about 2.25 arrow lengths) the steps are 5°. `assumed`. Part of ^251. Tested: as ^457. |
+| ^460 | feature | done (found in the audit ^371) | **Heading snap step 1° (feature):** from 320 px (4 arrow lengths) the steps are 1°. `assumed`. Part of ^251. Tested: as ^457. |
+| ^463 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: the compass directions and the label of the first node of an arm:** that the heading of the first node snaps to the compass directions, and the label with the compass icon and the degrees (`270°` for east, 0 is north and counts counter-clockwise, above the icon while the heading points down; ^315, ^316, `render/compass.ts`), has no test found. |
+
 ## Rented ranges
 
 A range of hats whose rows are written in another file instead of here (^392). This file stays the one place that mints hats: a range is reserved here first, the file holds one row per hat of its range (each row starts with `| ^N |`), none missing, none outside the range, and `next:` counts the range. Checked by `src/lib/hats.test.ts`.
@@ -487,3 +493,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^450–^450 | docs/controls.md | control: `Ctrl+S` with a project that has data |
 | ^454–^454 | docs/controls.md | control: `Ctrl+Z` with something to undo |
 | ^456–^456 | docs/controls.md | control: `Ctrl+Y` with something to redo |
+| ^461–^462 | docs/controls.md | controls while the heading of a node being placed is dragged |
