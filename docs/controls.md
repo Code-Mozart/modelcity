@@ -29,7 +29,7 @@ Contexts are named by their mode and map state; a context is a *state* of the au
 | Hat | Context | Control | Operation | Hint | Visitable | Special behavior | Tests |
 |-----|---------|---------|-----------|------|-----------|------------------|-------|
 | ^104 | first load (select mode, empty map) | `Tab` | Enter view mode | `Tab`: view mode | n/a (a key) | the hint is hidden for a while after use (^110) | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
-| ^104 | view mode | `Tab` | Back to select mode | `Tab`: select mode | n/a | hidden for a while after use (^110) | e2e `modes.spec` |
+| ^104 | view mode | `Tab` | Back to select mode | should be `Tab`: select mode, but it is hidden after entering (bug ^384) | n/a | hidden for a while after use (^110) | e2e `modes.spec` |
 | ^226, ^185, ^232 | any mode, nothing saved yet | `Ctrl+S` | Nothing is saved; two info toasts: `nothing to save yet`, `modelcity saves automatically` | none (exemption: not yet decided, ^371) | n/a | toasts (^210) disappear after 3 s, an identical toast is not shown twice | unit `project/load.test`; e2e: gap ^379 |
 | ^242, ^81 | any mode, nothing to undo | `Ctrl+Z`, `Alt+Ctrl+Z` | Nothing; info toast `nothing to undo` | none | n/a | toast, 3 s | e2e `editing.spec` (plain); `Alt`: gap ^380 |
 | ^242, ^81 | any mode, nothing to redo | `Ctrl+Y`, `Ctrl+Shift+Z`, `Alt` variants | Nothing; info toast `nothing to redo` | none | n/a | toast, 3 s | e2e `editing.spec` (plain); `Alt`: gap ^380 |
@@ -62,7 +62,7 @@ Screen: blank canvas; a blue outline around the window; four mode icons (eye, po
 
 ### view mode (empty map)
 
-Screen: no outline; two icons (the eye now ringed, the pointer white); hints `RMB drag` pan, wheel zoom, `MMB drag` rotate, `P` projects (the `Tab` hint is hidden because it was just used, ^110); the default cursor. Hats: ^104, ^119, ^110.
+Screen: no outline; two icons (the eye now ringed, the pointer white); hints `RMB drag` pan, wheel zoom, `MMB drag` rotate, `P` projects (there is no `Tab` hint: the control counts as visited because it was just used, ^110, which is a bug, ^384); the default cursor. Hats: ^104, ^119, ^110.
 
 | Input | Result | Explored |
 |-------|--------|----------|
