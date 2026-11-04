@@ -61,6 +61,9 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^456 | any mode, no modal, an undone step to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | redo (operation ^455): the undone step is done again; here the cancel, so the node is gone and the preview is back (draw mode, nothing drawn) | the redo hint of the history panel: `Ctrl+Y` or `Ctrl+Shift+Z`: redo (`Alt` to redo batch), while there is a step to redo (^109, ^241) and the control is not hidden as visited (^110) | n/a | the redone step is white again; after a redo with nothing left to redo and both undo and redo visited, the panel shows no hints; the panel goes after about 3 s (^107) | unit `editor/undoRedo.test`, `editor/steps.test`, `hud/panel.test` (redoing colors them back in), `hints/usage.test`; e2e `editing.spec` |
 | ^461 | a node is being placed and its heading dragged (the button is held) | `Esc` | cancel (feature ^295): the node is not placed, nothing is a step | `Esc`: cancel (^286) | n/a | the hints are only about the drag (^286) | unit `editor/cancelDrag.test` (a node that is placed with its heading is not placed) |
 | ^462 | a node is being placed and its heading dragged | `Ctrl` held | no snapping (feature ^101): the heading follows the pointer freely, also the 45° steps | `Ctrl`: no snapping (shown for every heading drag, ^286) | no (never hidden) | not learnable, ^110 | unit `editor/editor.test` (Ctrl switches it off, ^251), `editor/snapping.test` |
+| ^465 | extend mode, only the first node placed, pointer on its heading control point | `LMB` drag | turn heading (operation ^468); not pressed yet | `LMB` drag: turn heading | n/a | the heading snaps (^251, ^315); the hover ring (^469) | unit `editor/editor.test` (dragging the heading), `editor/branching.test`, `editor/headingSnap.test` |
+| ^466 | extend mode, pointer on a heading control point | `Alt` + `LMB` click | flip arm (^234); not pressed yet | `Alt`+`LMB`: flip arm | n/a | a click, not a drag | unit `editor/controls.test`; e2e `editing.spec` |
+| ^467 | extend mode, only the first node placed, pointer not on the start node | `Esc` or `RMB` click | cancel first node (operation ^437); not pressed yet | `Esc or RMB`: finish, should be `cancel` (bug ^438) | n/a | undoable, like ^436 | unit `editor/undoRedo.test`, `editor/editor.test` (a right click on empty space finishes the road, finishing with one node cancels it) |
 
 ## Still to walk (checklist, no hats yet)
 
@@ -254,10 +257,25 @@ Reached from (D2) by pressing `LMB` and moving with the button held (control ^41
 | Input | Result | Explored |
 |-------|--------|----------|
 | move the pointer | the heading follows, with the steps above | yes (to the arrow's tip: 45°; further out: 15°, 5°, 1°, observed by the user at about 1.5, 2 and 4 arrow lengths, matching 1.1, 2.25 and 4) |
-| release `LMB` | the node stays with that heading (operation ^420 done); extend mode | no |
-| `Esc` | cancel (control ^461): the node is not placed | no |
+| release `LMB` | the node stays with that heading (operation ^420 done); extend mode (E3, below) | yes (step 26, with the pointer on the heading control point) |
+| `Esc` | cancel (control ^461): the node is not placed; back to draw mode, the preview has the default heading again (right; planned: keep it, ^464) | yes (step 24) |
+| release `LMB` after that `Esc` | nothing changes (the button was still held; the pointer that goes on moving afterwards changes nothing) | yes (step 25; unit `editor/cancelDrag.test`) |
 | `Ctrl` held | no snapping (control ^462) | no |
 | `Alt`, `RMB`, `MMB`, the wheel | nothing known; to try | no |
+
+### extend mode, the first node placed with a heading, pointer on its heading control point (E3)
+
+Reached by releasing `LMB` in (P) with the pointer on the orange circle (heading 0°, up). Screen: extend mode (outline, icons); the node as a larger blue circle (it counts as selected, bug ^419); an orange arrow pointing up with the heading control point midway; a blue ring around the control point (hover ring, ^469, the pointer is on it); no compass any more (it shows only while the heading is dragged). Hints, top to bottom: `LMB` drag: turn heading (^465), `Alt`+`LMB`: flip arm (^466), `Esc` or `RMB`: finish (should be `cancel`, ^438; control ^467), `S`: pin snap suggestions (bug ^419; control ^417), `P`: projects (^400). No `Ctrl` hint, because nothing snaps under the pointer here; no `Tab` hint (visited), no camera hints (^389). History panel: the earlier batch (`place node`, `finish road`, one batch with a shared white right border) and one `place node` in white with its own border (the new drawing session is a batch of one so far, ^439). Hats: ^420, ^468, ^469, ^107, ^108.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| move the pointer off the control point | the control point's ring goes; over empty canvas the dashed preview of the next node and segment shows | no (next step) |
+| `LMB` drag on the control point | turn heading (^465) | no |
+| `Alt`+`LMB` click on the control point | flip arm (^466) | no |
+| `Esc`, `RMB` | cancel first node (^467) | no |
+| `LMB` click on empty canvas, `LMB` drag | place next node | no |
+| `Ctrl+Z` | undoes `place node`; the panel's undo hint shows | no |
+| `Tab`, `P` and the others of (E) | as in (E) | no |
 
 ### view mode (empty map)
 
@@ -338,5 +356,8 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 21 | (D2) | `LMB` pressed and held, the pointer moved right to the tip of the heading arrow | (P) placing the first node with its heading: extend mode, hints of the drag, compass icon and the label `270°` (control ^411) |
 | 22 | (P) | the pointer moved up and a little left, staying on the tip | the arrow moves in 45° steps; after one step `315°` |
 | 23 | (P) | the pointer moved farther out: 1.5, 2, then 4 arrow lengths | steps of 15°, 5°, then 1° (^458 to ^460) |
+| 24 | (P) | `Esc` | (D2): back to draw mode with a preview node; the preview heading is the default again (right); the placing is cancelled (control ^461) |
+| 25 | (D2) | release `LMB` (still held) | nothing changes |
+| 26 | (D2) | `LMB` pressed again, dragged up to the orange circle (half an arrow length, `0°`), released | (E3) extend mode, the node placed with its heading up (operation ^420 done, control ^411) |
 
-`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(P)** (the button is held). Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
+`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(E3)**. Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.

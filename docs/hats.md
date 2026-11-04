@@ -1,4 +1,4 @@
-next: ^464
+next: ^470
 
 # Hats
 
@@ -481,6 +481,10 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^460 | feature | done (found in the audit ^371) | **Heading snap step 1° (feature):** from 320 px (4 arrow lengths) the steps are 1°. `assumed`. Part of ^251. Tested: as ^457. |
 | ^463 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gap: the compass directions and the label of the first node of an arm:** that the heading of the first node snaps to the compass directions, and the label with the compass icon and the degrees (`270°` for east, 0 is north and counts counter-clockwise, above the icon while the heading points down; ^315, ^316, `render/compass.ts`), has no test found. |
 
+| ^464 | feature | planned (roadmap, no milestone; user, found in the audit ^371) | **The preview keeps the cancelled or previous heading (user):** after `Esc` cancels the placing of a node with a heading drag (^461, ^295), the preview node in draw mode has the default heading again (right, ^54), which is the wanted behavior for now. Planned: it keeps the heading that was cancelled, or the one of the previous node, so the next node starts where the last one was aimed. Needs a decision which of the two, and what a click then gives (^318, ^358). |
+| ^468 | operation | done (^9, ^132, ^216; found in the audit ^371) | **Turn heading (operation):** the heading of a node is turned by dragging its heading control point (the orange circle on the arrow's stem) or an S-curve corner; the copies of a shared node turn with it; the angle snap applies (^251), as a compass for the first node of an arm (^315). User-facing name `turn heading` (^435), also the name of its history step. Controls: ^465 here; more in the checklist. |
+| ^469 | feature | done (found in the audit ^371) | **The hover ring around a control point (feature):** a blue ring (with a small gap) shows around the control point under the pointer, a hand cursor with it; derived from the pointer, ^238. Tested: unit `editor/hoverFresh.test`; e2e `editing.spec`. |
+
 ## Rented ranges
 
 A range of hats whose rows are written in another file instead of here (^392). This file stays the one place that mints hats: a range is reserved here first, the file holds one row per hat of its range (each row starts with `| ^N |`), none missing, none outside the range, and `next:` counts the range. Checked by `src/lib/hats.test.ts`.
@@ -494,3 +498,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^454–^454 | docs/controls.md | control: `Ctrl+Z` with something to undo |
 | ^456–^456 | docs/controls.md | control: `Ctrl+Y` with something to redo |
 | ^461–^462 | docs/controls.md | controls while the heading of a node being placed is dragged |
+| ^465–^467 | docs/controls.md | controls of the first node placed with its heading, pointer on its heading control point |
