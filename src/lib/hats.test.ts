@@ -35,18 +35,16 @@ describe('hat registry (docs/hats.md)', () => {
     expect(sorted).toEqual(sorted.map((_, i) => i + 1));
   });
 
-  it('a rented range is whole: every hat of it is defined once in its file, none outside it (^392)', () => {
-    for (const r of rented) {
-      const own = defined(r.file);
-      const all = Array.from({ length: r.to - r.from + 1 }, (_, i) => r.from + i);
+  it('rented ranges are whole: each file defines every hat of its ranges once, none outside them (^392)', () => {
+    for (const file of new Set(rented.map((r) => r.file))) {
+      const all = rented
+        .filter((r) => r.file === file)
+        .flatMap((r) => Array.from({ length: r.to - r.from + 1 }, (_, i) => r.from + i));
+      const own = defined(file).sort((a, b) => a - b);
       expect(
-        own.filter((id) => id < r.from || id > r.to),
-        `${r.file}: hats outside ^${r.from}-^${r.to}`,
-      ).toEqual([]);
-      expect(
-        own.sort((a, b) => a - b),
-        `${r.file} must define every hat of ^${r.from}-^${r.to} once`,
-      ).toEqual(all);
+        own,
+        `${file} must define every hat of its rented ranges, once each, and no other`,
+      ).toEqual(all.sort((a, b) => a - b));
     }
   });
 
