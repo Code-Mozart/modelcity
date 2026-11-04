@@ -66,6 +66,10 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^467 | extend mode, only the first node placed, pointer not on the start node | `Esc` or `RMB` click | cancel first node (operation ^437); not pressed yet | `Esc or RMB`: finish, should be `cancel` (bug ^438) | n/a | undoable, like ^436 | unit `editor/undoRedo.test`, `editor/editor.test` (a right click on empty space finishes the road, finishing with one node cancels it) |
 | ^477 | extend mode, only the first node placed, pointer on empty canvas | `LMB` click | place next node (operation ^475); not pressed yet | `LMB`: add node (to become `place node`, ^421) | n/a | the node snaps (^101); `Shift` keeps only the position (^416) | unit `editor/extend.test`, `editor/editor.test`, `editor/snapping.test` |
 | ^478 | extend mode, only the first node placed, pointer on empty canvas | `LMB` drag | place next node and set heading (operation ^476); not pressed yet | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | the heading snaps (^251) | unit `editor/editor.test`, `editor/touching.test` |
+| ^488 | select mode, pointer on a node | `LMB` drag | move node (operation ^433); not pressed yet | `LMB` drag: move node | n/a | snapping (`Ctrl` turns it off); the nodes selected move together | unit `editor/editor.test`, `editor/branching.test`, `editor/snapping.test`; e2e `smoke.spec`, `editing.spec` |
+| ^489 | select mode, pointer on a node | `RMB` click | delete node (operation ^434); not pressed yet | `RMB`: delete node | n/a | | unit `editor/controls.test`, `editor/rightClickSelected.test` |
+| ^490 | select mode, pointer on a node | `LMB` click | select node (operation ^486), `select instead` with a selection; not pressed yet | `LMB`: select | n/a | hidden once visited (^110) | unit `editor/selection.test` |
+| ^491 | select mode, pointer on a node | `Alt` + `LMB` click | select branch (operation ^487); not pressed yet | `Alt`+`LMB`: select branch (or deselect branch) | n/a | hidden once visited (^110); with `Alt` held the hovered branch gets its outline (^99) | unit `editor/branchSelect.test`, `editor/hoverFresh.test` |
 
 ## Still to walk (checklist, no hats yet)
 
@@ -288,9 +292,9 @@ Reached from (E3) by moving the pointer off the control point onto empty canvas.
 | the preview node, a semi-transparent white dot under the pointer, with a semi-transparent orange arrow | the node a click would place, with its automatic heading | ^47, ^54, ^120 | unit `editor/extend.test`, `editor/editor.test`; drawing: gap ^479 |
 | a white dashed curve from the start node to the preview | the segment a click would add | ^120, ^125 | gap ^479 |
 | two dashed orange lines spanning the circle, the preview's arrow a continuation of the upper one | the heading lines of the two nodes, which meet at the bend point of the arc | ^321 | gap ^479 |
-| an orange label of two lines, `45°` and `28.0m`, left of where the lines meet | the bend angle and the radius of the arc (`bendLines` in `render/measures.ts`); the radius is the largest that fits (auto), so the circle goes through both nodes | ^303 | unit `curves/measure.test`; drawing: gap ^479 |
+| an orange label of two lines, `45°` and `28.0m`, left of where the lines meet | the bend angle and the radius of the arc (`bendLines` in `render/measures.ts`); the radius is the largest that fits (auto), so the circle goes through both nodes; the bend point and the radius control points are not drawn in the preview (decision ^480) | ^303 | unit `curves/measure.test`; drawing: gap ^479 |
 | an orange label `19.0m` halfway (step 27) or `21.9m` left of the dashed curve (step 28) | the length of the preview segment; its color should be that of its line (^470) | ^303, ^342 | unit `curves/measure.test`, `hud/measureText.test` |
-| a turquoise line the node snaps to | step 27: the heading line of the start node (its `node-heading` rule, vertical, the pointer is on it); step 29: the extend line at +60° from the start heading (^337, only in extend mode); it lies over the preview, hiding what is below it (question ^471) | ^101, ^265 to ^267, ^337 | unit `snap/snap.test`, `editor/ownCurve.test`, `editor/snapping.test`; e2e `snapping.spec` |
+| a turquoise line the node snaps to | step 27: the heading line of the start node (its `node-heading` rule, vertical, the pointer is on it); step 29: the extend line at +60° from the start heading (^337, only in extend mode); it lies over the preview, hiding what is below it (answered: it should lie under it, ^482) | ^101, ^265 to ^267, ^337 | unit `snap/snap.test`, `editor/ownCurve.test`, `editor/snapping.test`; e2e `snapping.spec` |
 | the undo hint is back in the history panel | visited controls come back after 5 minutes (^110) | ^110, ^109 | unit `hints/usage.test` |
 
 | Input | Result | Explored |
@@ -303,6 +307,19 @@ Reached from (E3) by moving the pointer off the control point onto empty canvas.
 | `LMB` drag | place next node and set heading (^478) | no |
 | `Esc`, `RMB` | cancel first node (^467) | no |
 | `Ctrl+Z` | undoes `place node` (the undo hint shows now) | no |
+
+### select mode after a reload, with a lone node (R)
+
+Reached from (E4) by reloading the page (step 33). The project that was open last opens (^485); the camera is restored, the road being drawn is not: select mode, a single node with its heading north (it was saved by the autosave, so a node without a segment survives, question ^484), no history panel (the history is not stored, ^449), no hint visits (a new session). Hints: `Tab`: view mode, `LMB`: draw mode, the camera hints, `P`: projects (control ^393 and the others of select mode, see (A)). To confirm: the list does not show `LMB` drag: select (box select, ^70), which select mode with nothing selected and the pointer on empty canvas should show. Hats: ^485, ^449, ^484.
+
+### select mode, the pointer on the lone node (R2)
+
+Step 34. Hints: `LMB` drag: move node (^488), `RMB`: delete node (^489), `LMB`: select (^490), `Alt`+`LMB`: select branch (^491), the camera hints, `P`: projects. A blue ring around the node (the hover ring, ^469, the node is a control point). No history panel. To confirm: whether the `Tab` hint is still shown (the code puts it first, ^104). Tested: unit `hints/hints.test` (select mode over a handle), `editor/hoverFresh.test`.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `LMB` drag, `RMB`, `LMB`, `Alt`+`LMB` on the node | move node, delete node, select node, select branch | no (hints seen) |
+| the other inputs of select mode | as in (A) | no |
 
 ### view mode (empty map)
 
@@ -392,5 +409,7 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 30 | (E4) | `Shift` held | no effect (^473) |
 | 31 | (E4) | `Ctrl` held | no effect until the pointer moves, then the snap and its hints go (^472) |
 | 32 | (E4) | `Ctrl` released | no effect until the pointer moves, then the snap is back |
+| 33 | (E4) | reload the page | (R) select mode, the lone node north, no history (^485, ^484) |
+| 34 | (R) | the pointer on the lone node | (R2) hover ring and the hints of a node in select mode (^488 to ^491) |
 
-`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(E4)** (the preview, snapped to the extend line at +60°). Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
+`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(R2)** (select mode, the pointer on the lone node, after a reload). Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
