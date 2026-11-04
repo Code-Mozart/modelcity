@@ -9,6 +9,8 @@
 - **Control:** one input (key, button or gesture, with its modifiers) that does something *in a given context*. Controls are contextual by design (^45), so every row names its **context**: the mode (view, select, draw, extend), what is under the pointer, and the state of the app (selection, drag, being drawn, touch).
 - **Hat:** reused if the feature, control or operation already has one (^371 rule 1); registered first if not.
 
+**Not audited in detail (user):** layout and colors. The audit records what exists, what it does and what it is tied to; where things sit, how big they are and which color they have is described only where it is the point of a feature (for example the blue border of the current card), and otherwise left to the design hats (^32, ^211).
+
 ## Columns
 
 | Column | Meaning |
