@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Summary } from '../curves/measure';
+  import { boxText, lengthText, radiusText } from './measureText';
 
   /**
    * The measurements panel (^323): bottom left over the map, above the scale bar while that shows.
@@ -7,27 +8,15 @@
    */
   let { summary, lifted }: { summary: Summary; lifted: boolean } = $props();
 
-  /** The box in meters, or in kilometers when it is large: `2.1 x 3.1 km` (^342). */
-  function box({ width, height }: Summary['box']): string {
-    const km = Math.max(width, height) >= 1000;
-    const f = (m: number) => (km ? (m / 1000).toFixed(1) : m.toFixed(1));
-    return `${f(width)} x ${f(height)} ${km ? 'km' : 'm'}`;
-  }
   const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
-  const meters = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${m.toFixed(1)} m`);
+  const radius = $derived(radiusText(summary));
 </script>
 
 <div class="panel" class:lifted aria-label="Measurements">
   <div>{count(summary.nodes, 'node')} and {count(summary.segments, 'segment')} selected</div>
-  <div>Box: {box(summary.box)}</div>
-  <div>Length: {meters(summary.length)}</div>
-  {#if summary.radius}
-    <div>
-      Radius: min {meters(summary.radius.min)}, max {meters(summary.radius.max)}, average {meters(
-        summary.radius.avg,
-      )}, median {meters(summary.radius.median)}
-    </div>
-  {/if}
+  <div>Box: {boxText(summary.box)}</div>
+  <div>Length: {lengthText(summary.length)}</div>
+  {#if radius}<div>{radius}</div>{/if}
 </div>
 
 <style>

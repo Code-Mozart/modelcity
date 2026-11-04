@@ -297,6 +297,8 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   }
   if (scene.mergePreview) drawPreview(f, scene.mergePreview, pal, true);
   if (scene.band) drawBand(f, scene.band, pal);
+  // The bars of the runs are below the nodes, so that selected nodes stay blue (^350).
+  drawBars(f, scene.bars, NODE_DOT_PX, pal);
   scene.roads.forEach((road, i) => {
     drawNodes(
       f,
@@ -310,7 +312,6 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
       pal,
     );
   });
-  drawBars(f, scene.bars, NODE_DOT_PX, pal);
   // The outline of the hovered segment (or branch) is on top of everything (^99).
   drawOutlines(f, scene.roads, scene.outline, pal.blue);
 }
