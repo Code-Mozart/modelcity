@@ -31,9 +31,9 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 
 | Hat | Context | Control | Operation or feature | Hint | Visitable | Special behavior | Tests |
 |-----|---------|---------|----------------------|------|-----------|------------------|-------|
-| ^393 | select mode, empty canvas, nothing selected | `LMB` click | enter draw mode (feature ^423; not an operation) | `LMB`: draw mode | n/a | | e2e `modes.spec` |
-| ^394 | select mode | `Tab` | go to view mode (feature ^425) | `Tab`: view mode, hidden for a while after the control was used (^110) | n/a | after a round trip the hint is missing until the visit times out | unit `hud/modes.test`, `editor/modes.test`; e2e `modes.spec` |
-| ^395 | view mode | `Tab` | back to select mode (feature ^422) | should be `Tab`: select mode, hidden by bug ^384 | n/a | | e2e `modes.spec` |
+| ^393 | select mode, empty canvas, nothing selected | `LMB` click | enter draw mode (feature ^423; not an operation) | `LMB`: draw mode | n/a | unit `editor/modes.test`; e2e `modes.spec` |
+| ^394 | select mode | `Tab` | go to view mode (feature ^425) | `Tab`: view mode, hidden for a while after the control was used (^110) | n/a | after a round trip the hint is missing until the visit times out | unit `editor/modes.test` (Tab goes to view mode from every mode, and back), `hints/hints.test`; e2e `modes.spec` |
+| ^395 | view mode | `Tab` | back to select mode (feature ^422) | should be `Tab`: select mode, hidden by bug ^384 | n/a | unit `editor/modes.test`, `hints/hints.test`; e2e `modes.spec` |
 | ^396 | any mode, no modal, nothing to save | `Ctrl+S` | save project (operation ^428): nothing to save, toasts ^441 and ^442 (^232) | none (exemption not yet decided) | n/a | toasts 3 s, identical toast not shown twice | unit `project/load.test`; e2e: gap ^379 |
 | ^397 | any mode, no modal, nothing to undo | `Ctrl+Z` | toast ^443 `nothing to undo` (^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
 | ^398 | any mode, no modal, nothing to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | toast ^444 `nothing to redo` (^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
@@ -46,8 +46,8 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^405 | projects modal, pointer on `Export JSON` | `LMB` click | export project (operation ^429); to explore | `LMB`: export JSON | yes (hover) | | e2e `projects.spec` |
 | ^406 | projects modal, pointer on `New project` | `LMB` click | new project (operation ^431); to explore | `LMB`: new project | yes (hover) | | e2e `projects.spec` |
 | ^407 | projects modal, pointer on the search field, not focused | `LMB` click | focus the search (feature ^427, walked later) | `LMB`: search (only while not focused) | yes (hover) | the field is focused when the modal opens | e2e `projects.spec` |
-| ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (features ^423, ^422) | `Esc or RMB`: finish | n/a | | unit `editor/modes.test` (assumed; to check) |
-| ^410 | draw mode, nothing drawn yet, empty canvas | `LMB` click | place first node (operation ^409); enters extend mode (feature ^424) | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; a project may be made at once, which is fine (^386 withdrawn, ^449) | unit `editor/extend.test`, `modes.test`; e2e `modes.spec` |
+| ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (features ^423, ^422) | `Esc or RMB`: finish | n/a | unit `editor/modes.test` (Esc or a right click leave draw mode before any node has been placed) |
+| ^410 | draw mode, nothing drawn yet, empty canvas | `LMB` click | place first node (operation ^409); enters extend mode (feature ^424) | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; a project may be made at once, which is fine (^386 withdrawn, ^449) | unit `editor/modes.test` (the first click only enters draw mode, the second places a node), `editor/extend.test` |
 | ^411 | draw mode, nothing drawn yet, empty canvas | `LMB` drag | place first node and set its heading (op ^420); enters extend mode; to explore | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | a drag under 6 px keeps the automatic heading | unit `editor/controls.test`; e2e `smoke.spec` |
 | ^412 | extend mode, a segment exists, pointer on the start node | `LMB` click or `Esc` | finish road (operation ^432); to explore | `LMB or Esc`: finish | n/a | with only one node: to explore | e2e `smoke.spec`, `editing.spec` |
 | ^413 | extend mode, pointer on a node | `LMB` drag | move node (operation ^433); to explore | `LMB` drag: move node | n/a | snapping, `Ctrl` | unit `editor/snapping.test`; e2e `snapping.spec` |
@@ -55,10 +55,89 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^415 | draw or extend mode, the pointer snaps | `Ctrl` held | no snapping (^101) | `Ctrl`: no snapping, shown only while snapping | no (never hidden) | not learnable, ^110 | e2e `snapping.spec` |
 | ^416 | draw or extend mode, the pointer snaps, a click would place a node | `Shift` held | the node keeps only the snap position, not its heading (^358); to explore | `Shift`: snap only the position, shown only then | no | not on a drag-place | unit `editor/headingSnap.test` |
 | ^417 | any mode, at least one node selected (also, by bug ^419, the start node in extend mode) | `S` | pin the snap suggestions of the selected nodes (^258); to explore | `S`: pin snap suggestions | no (never hidden, ^258) | with nothing selected and something pinned: `S` unpins | e2e `snapping.spec` |
-| ^436 | extend mode, only the first node placed, pointer on it | `LMB` click or `Esc` | cancel first node (operation ^437): the node is taken away, back to draw mode (feature ^423) | `LMB or Esc`: finish, should be `cancel` (bug ^438) | n/a | undoable: undo brings the node back at its place; `Esc` is the alternative input, not pressed yet | unit `editor` tests (to check); e2e: gap |
-| ^450 | any mode, no modal, a project is open (it has data) | `Ctrl+S` | save project (operation ^428) at once: toast ^440 `saved`, then toast ^442 `modelcity saves automatically` (^232) | none (exemption not yet decided) | n/a | the background: ^165 (the browser's database), ^166 autosave, ^445 (400 ms), ^446 (5 s), ^447, ^448 | unit `project/load.test`; e2e `projects.spec` |
-| ^454 | any mode, no modal, a step in the history to undo | `Ctrl+Z` | undo (operation ^453): the last step is taken back; here the cancel of the first node, so the node is back with its heading | the undo hint of the history panel: `Ctrl+Z`: undo (`Alt` to undo batch), shown while there is a step to undo (^109, ^241) | n/a | the undone step stays in the panel in gray, joined to its batch (^107, ^108); the `Alt` note is always shown (roadmap ^418) | unit `editor/history.test`; e2e `editing.spec` |
-| ^456 | any mode, no modal, an undone step to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | redo (operation ^455): the undone step is done again; here the cancel, so the node is gone and the preview is back (draw mode, nothing drawn) | the redo hint of the history panel: `Ctrl+Y` or `Ctrl+Shift+Z`: redo (`Alt` to redo batch), while there is a step to redo (^109, ^241) and the control is not hidden as visited (^110) | n/a | the redone step is white again; after a redo with nothing left to redo and both undo and redo visited, the panel shows no hints; the panel goes after about 3 s (^107) | unit `editor/history.test`; e2e `editing.spec` |
+| ^436 | extend mode, only the first node placed, pointer on it | `LMB` click or `Esc` | cancel first node (operation ^437): the node is taken away, back to draw mode (feature ^423) | `LMB or Esc`: finish, should be `cancel` (bug ^438) | n/a | undoable: undo brings the node back at its place; `Esc` is the alternative input, not pressed yet | unit `editor/undoRedo.test` (cancelling a lone node with Esc can be undone), `editor/editor.test` (finishing a road with one node cancels it); e2e: gap |
+| ^450 | any mode, no modal, a project is open (it has data) | `Ctrl+S` | save project (operation ^428) at once: toast ^440 `saved`, then toast ^442 `modelcity saves automatically` (^232) | none (exemption not yet decided) | n/a | the background: ^165 (the browser's database), ^166 autosave, ^445 (400 ms), ^446 (5 s), ^447, ^448 | unit `project/load.test` (Ctrl+S saves at once and says so); e2e `projects.spec` |
+| ^454 | any mode, no modal, a step in the history to undo | `Ctrl+Z` | undo (operation ^453): the last step is taken back; here the cancel of the first node, so the node is back with its heading | the undo hint of the history panel: `Ctrl+Z`: undo (`Alt` to undo batch), shown while there is a step to undo (^109, ^241) | n/a | the undone step stays in the panel in gray, joined to its batch (^107, ^108); the `Alt` note is always shown (roadmap ^418) | unit `editor/undoRedo.test`, `editor/steps.test`, `hud/panel.test` (undone steps grayed), `hints/usage.test` (the hint is hidden when visited); e2e `editing.spec` (the recent history panel grays out undone steps) |
+| ^456 | any mode, no modal, an undone step to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | redo (operation ^455): the undone step is done again; here the cancel, so the node is gone and the preview is back (draw mode, nothing drawn) | the redo hint of the history panel: `Ctrl+Y` or `Ctrl+Shift+Z`: redo (`Alt` to redo batch), while there is a step to redo (^109, ^241) and the control is not hidden as visited (^110) | n/a | the redone step is white again; after a redo with nothing left to redo and both undo and redo visited, the panel shows no hints; the panel goes after about 3 s (^107) | unit `editor/undoRedo.test`, `editor/steps.test`, `hud/panel.test` (redoing colors them back in), `hints/usage.test`; e2e `editing.spec` |
+
+## Still to walk (checklist, no hats yet)
+
+What the code and the old reference say exists and has not been walked with the user. It is a list so that nothing is forgotten, not documentation: every item gets its hats, its hint, whether it is visitable, its special behavior and its tests only when the walk reaches it, because the real findings of this audit came from the walk and not from reading the code. The list is by context and input; what it does is the name of the operation or feature (a number is an existing hat).
+
+| Walked | Context | Control | Does |
+|--------|---------|---------|------|
+| [ ] | select mode, empty canvas, something selected | `LMB` click | deselect all |
+| [ ] | select mode, empty canvas | `LMB` drag | select by box |
+| [ ] | select mode, empty canvas, something selected | `Shift` + `LMB` drag | add to selection |
+| [ ] | select mode, something selected | `Esc` | deselect all |
+| [ ] | any mode, something selected | `Del` or `Backspace` | ^434 |
+| [ ] | select mode, pointer on a node | `LMB` click | select node |
+| [ ] | select mode, pointer on a node, something selected | `Shift` + `LMB` click | add to selection, deselect |
+| [ ] | select mode, pointer on a node | `Alt` + `LMB` click | select branch |
+| [ ] | select mode, pointer on a node, something selected | `Alt` + `Shift` + `LMB` click | select branch, deselect |
+| [ ] | select mode, pointer on a curve | `LMB` click | select segment |
+| [ ] | select mode, pointer on a curve, something selected | `Shift` + `LMB` click | add to selection, deselect |
+| [ ] | select mode, pointer on a curve | `Alt` + `LMB` click | select branch |
+| [ ] | select mode, pointer on a node | `LMB` drag | ^433 |
+| [ ] | select mode, pointer on a selected node, several selected | `LMB` drag | ^433 |
+| [ ] | select mode, pointer on a node | `Alt` + `LMB` drag | move branch |
+| [ ] | any mode, pointer on a heading control point | `LMB` drag | turn heading |
+| [ ] | any mode, pointer on a bend point | `LMB` drag | bend curve |
+| [ ] | any mode, pointer on a radius point | `LMB` drag | change radius |
+| [ ] | any mode, pointer on a corner point of an S-curve | `LMB` drag | turn heading |
+| [ ] | any mode, pointer on a radius point, a segment whose two nodes are selected | `LMB` drag | change radius |
+| [ ] | select mode, pointer on a node | `RMB` click | ^434 |
+| [ ] | any mode, several nodes selected, pointer on one of them or on a segment between them | `RMB` click | ^434 |
+| [ ] | any mode, pointer on a heading control point | `Alt` + `LMB` click | ^234 |
+| [ ] | a handle is dragged or a node is placed with its heading | `Esc` | ^295 |
+| [ ] | a handle is dragged, the pointer snaps | `Ctrl` held | ^101 |
+| [ ] | the heading of an existing node is dragged, it snapped to something | `Shift` held | ^335 |
+| [ ] | the heading of an existing node is dragged, it snapped to something | `Shift` + `Alt` held | ^335 |
+| [ ] | a handle is dragged, the pointer snapped to a touching point or a heading | `Alt` held | ^301 |
+| [ ] | a node is dragged onto another node, released | `LMB` release | merge nodes by drop |
+| [ ] | a node is dragged onto a curve, released | `LMB` release | join node into a curve by drop |
+| [ ] | a radius point is dragged onto a node of its segment | `LMB` release | ^141 |
+| [ ] | draw mode, nothing drawn, pointer on the only end node of a road | `LMB` click | extend road |
+| [ ] | draw mode, nothing drawn, pointer on another node | `LMB` click | split road |
+| [ ] | draw mode, nothing drawn, pointer on a curve | `LMB` click | split road, insert node |
+| [ ] | draw mode, nothing drawn, pointer on a curve | `LMB` drag | insert node |
+| [ ] | draw mode, nothing drawn, pointer on a curve | `RMB` click | remove segment |
+| [ ] | draw mode, nothing drawn, pointer on a curve | `Alt` + `RMB` click | remove branch |
+| [ ] | draw mode, pointer on a radius point | `LMB` click | split road, merge road |
+| [ ] | draw mode, right after a split, pointer on the inserted node | `LMB` click | ^276 |
+| [ ] | draw mode, right after a split on a curve, nothing placed after it | `Esc` or `RMB` click | ^237 |
+| [ ] | extend mode, a segment exists, empty canvas | `LMB` click | place next node |
+| [ ] | extend mode, empty canvas | `LMB` drag | place next node and set heading |
+| [ ] | extend mode, pointer on a node of another road | `LMB` click | merge road |
+| [ ] | extend mode, pointer on a curve (also of the road itself) | `LMB` click | merge road |
+| [ ] | extend mode, pointer on the node the road started at | `LMB` click | close road |
+| [ ] | extend mode, pointer on a curve | `LMB` drag | insert node |
+| [ ] | extend mode, pointer on a curve | `RMB` click | remove segment |
+| [ ] | extend mode, pointer on a curve | `Alt` + `RMB` click | remove branch |
+| [ ] | extend mode, a segment exists, empty canvas | `RMB` click or `Esc` | ^432 |
+| [ ] | any mode, nothing selected, something pinned | `S` | ^258 |
+| [ ] | any mode, no modal | `RMB` drag | pan |
+| [ ] | any mode, no modal | wheel | zoom |
+| [ ] | any mode, no modal | `Ctrl` + wheel (a pinch on a touchpad) | zoom |
+| [ ] | any mode, no modal | `MMB` drag left or right | rotate |
+| [ ] | any mode, no modal | `MMB` drag up or down | zoom |
+| [ ] | the middle button is held (rotating) | `Esc` | ^31 |
+| [ ] | the middle button is held (rotating) | `N`, `E`, `S`, `W` | rotate to a compass direction |
+| [ ] | the middle button is held (rotating), pointer on a compass key cap | `LMB` click | rotate to a compass direction |
+| [ ] | touch, one finger | touch | ^40 |
+| [ ] | touch, a second finger comes down | touch | ^40 |
+| [ ] | touch, two fingers | twist, pinch, move | pan, zoom, rotate |
+| [ ] | projects modal, pointer on a project card | `LMB` click | open project |
+| [ ] | projects modal, pointer on the pen of a card | `LMB` click | rename project |
+| [ ] | projects modal, a name is being typed | `Enter` or `LMB` on the check | rename project |
+| [ ] | projects modal, a name is being typed | `Esc` or `LMB` on the cross | ^233 |
+| [ ] | projects modal, pointer on the bin of a card | `LMB` click | delete project |
+| [ ] | projects modal, a delete is being asked | `LMB` on the check | delete project |
+| [ ] | projects modal, a delete is being asked | `Esc` or `LMB` on the cross | ^233 |
+| [ ] | projects modal, the search field has the focus | typing | ^427 |
+| [ ] | projects modal, a rename is unfinished | `LMB` outside the dialog, `Esc`, `P` | ^233 |
+
+Features without a control of their own, still to be walked from the screen: the skeleton and the scaffold (^60, ^66, ^133), the road surface (^90), the run bars (^350), the measurements panel (^342), the snap guides (^101), the compass and the heading label (^33, ^316), the scale bar (^34), the camera limits (^37), the hover outline of segments and branches (^99), the toasts (`exported`, `imported`, the rename warning, the pin tip, the heading tip), the import and load errors (^192 to ^209), touch (^382).
 
 ## Walk-through (depth first)
 
