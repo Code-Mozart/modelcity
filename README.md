@@ -36,6 +36,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Node** | A point a road passes through, drawn as a dot. It lies on the curve and carries a heading | decided | ^6 |
 | **Heading** | The direction of the road at a node, shown as an arrow | decided | ^6, ^9 |
 | **Segment** | The curve between two nodes, with a direction (from its start node to its end node), a radius (its own, or auto) and a lane. Older texts, the code (`GEdge`) and the stored file (`edges`) say *edge*: the same thing, the old word (^747, ^748) | decided (user) | ^60, ^747 |
+| **Void** | The part of the map under the pointer where there is no node, no control point and no segment (not "empty canvas": something can be selected, and the canvas is never empty) | decided (user) | ^754 |
 | **Selected segment** | A segment whose two nodes are both selected (`selectedSegments` in the code); it is drawn in the color of selected nodes, and its scaffold is shown together with those of the other selected segments | decided | ^133, ^231 |
 | **Leaf node** | A node at either end of a road, also the only node of a road | decided | ^65 |
 | **Bend** (L-curve) | A segment with one turn: straight, arc, straight | decided; assumed (that "L-curve" and "bend" are one thing) | ^6 |

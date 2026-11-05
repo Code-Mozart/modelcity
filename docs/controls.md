@@ -25,13 +25,266 @@
 | Special behavior | Everything else that applies: toast message (^210), cursor, hides after use (^110), snapping, and so on. |
 | Tests | Where it is tested: unit (one module), integration (the editor engine with a graph, no browser), e2e (the browser). |
 
+## Controls by context (the user's table)
+
+The review table of the project owner (`docs/please-remove-me.md`, removed), with the hat of each row added: `= ^N` is a control hat that already exists, `^N` a new one. Its columns: the mode or modal; what else must hold; the input; what the hint says (only if displayed); what it does; where it is displayed; whether the hint is *visitable* (hidden for 5 minutes after use, ^110; "yes, but should not be" is the user's wish, see ^756). `Ctrl+O` is an import in this table (the modal opening is a side effect), see ^758. Written in the same detail from now on.
+
+| Hat | Mode and modal | Additional context | Input | What it says | What it does | Displayed where | Visitable |
+|-----|----------------|--------------------|-------|--------------|--------------|-----------------|-----------|
+| = ^450 | any mode & no modal | - | Ctrl+S | - | save immediately | nowhere | - |
+| = ^454 | any mode & no modal | - | Ctrl+Z, with optional Alt | undo ([Alt] to undo batch) | no Alt: undo, with Alt: undo batch | history panel, only when there is something to undo | yes |
+| = ^456 | any mode & no modal | - | Ctrl+Y or Ctrl+Shift+Z with optional Alt | redo ([Alt] to redo batch) | no Alt: redo, with Alt: redo batch | history panel, only when there is something to redo | yes |
+| = ^399 | any mode or modal | - | Ctrl+O | - | import project | no | - |
+| = ^400 | any mode & no modal | - | P | projects | open project modal with search focused | control hints panel, for now. will be changed with ^97 | no |
+| = ^722 | any mode & no modal | always, but only one mouse button can be dragged at a time | RMB drag | pan | pan camera | control hints panel | yes |
+| = ^725 | any mode & no modal | always, but only one mouse button can be dragged at a time | MMB drag | rotate | left or right: rotate camera, up or down: dolly zoom | control hints panel | yes |
+| = ^723 | any mode & no modal | - | Mouse wheel | zoom | zoom | control hints panel | yes |
+| = ^724 | any mode & no modal | - | Ctrl+Mouse wheel | zoom fast | stronger zoom | nowhere today, but should be in control hints panel | yes, but only after Mouse wheel zoom without Ctrl was visited, and visitation-state resets with the "normal" zoom time |
+| = ^394 | select mode | - | Tab | view mode | switch to view mode | control hints panel | yes, but should not be |
+| ^771 | draw mode | - | Tab | view mode | switch to view mode | control hints panel | yes, but should not be |
+| ^772 | extend mode | - | Tab | view mode | switch to view mode | control hints panel | yes, but should not be |
+| = ^395 | view mode | - | Tab | select mode | switch to select mode | control hints panel | yes, but should not be |
+| = ^401 | project modal | - | Esc | close | close project modal | control hints panel | no |
+| = ^403 | project modal | X button hovered | LMB or Esc | close | close project modal | control hints panel | no |
+| = ^740 | project modal | search bar focused | (any, with exceptions) | - | types to the search | nowhere | no |
+| = ^407 | project modal | search bar not focused, but hovered by mouse | LMB | search | focus search bar | control hints panel | no |
+| = ^733 | project modal | project card hovered, but not any of the buttons at the right | LMB | open | open project | control hints panel | no |
+| = ^734 | project modal | pen icon hovered on project card | LMB | rename | goes to project renaming | control hints panel | no |
+| = ^735 | project modal | while renaming a project & checkmark icon hovered | Enter or LMB | rename | rename project | control hints panel | no |
+| = ^736 | project modal | while renaming a project & checkmark icon hovered | Esc | cancel | cancel rename | control hints panel | no |
+| = ^736 | project modal | while renaming a project & cancel icon hovered | Esc or LMB | cancel | cancel rename | control hints panel | no |
+| ^773 | project modal | while renaming a project & cancel icon hovered | Enter | rename | rename project | control hints panel | no |
+| = ^737 | project modal | bin icon hovered on project card | LMB | delete | goes to delete confirmation | control hints panel | no |
+| = ^738 | project modal | while confirmation to delete a project & checkmark icon hovered | LMB | delete | delete project | control hints panel | no |
+| = ^739 | project modal | while confirmation to delete a project & checkmark icon hovered | Esc | cancel | cancel project deletion | control hints panel | no |
+| = ^739 | project modal | while confirmation to delete a project & cancel icon hovered | Esc or LMB | cancel | cancel rename | control hints panel | no |
+| = ^404 | project modal | "Import file..." button hovered | LMB | import | import project (open file picker) | control hints panel | no |
+| = ^405 | project modal | "Export JSON" button hovered | LMB | export JSON | export project (open file picker or download JSON directly, depending on browser settings) | control hints panel | no |
+| = ^406 | project modal | "New project" button hovered | LMB | new project | new project or close, if the current project is none | control hints panel | no |
+| = ^495 | select mode | mouse does not hover over a node or control point | LMB drag | select | set selection by box | control hints panel | yes |
+| = ^685 | select mode | mouse does not hover over a node or control point & something selected | Shift+LMB drag | add to selection | add nodes in box to selection | control hints panel | yes |
+| = ^684 | select mode | mouse over void & something selected | LMB or Esc | deselect all | deselect all | control hints panel | yes |
+| = ^686 | select mode | mouse over node, control point or segment & something selected | Esc | deselect all | deselect all | control hints panel | yes |
+| = ^687 | select mode | something selected | Del | delete selected | delete nodes | control hints panel | yes, but it shouldn't |
+| = ^417 | select mode | something selected | S | pin snap suggestions | pin snap suggestions | control hints panel | no |
+| = ^721 | select mode | nothing selected & some snap suggestions pinned | S | unpin all snap suggestions | pin snap suggestions | control hints panel | no |
+| = ^488 | select mode | node hovered | LMB drag | move node | move nodes | control hints panel | no |
+| = ^489 | select mode | node hovered | RMB (should also allow Del in the future as alternative) | delete node | delete nodes | control hints panel | no |
+| = ^490 | select mode | node hovered & nothing selected | LMB | select | set selected node | control hints panel | yes |
+| = ^491 | select mode | node hovered | Alt+LMB | select branch | set selected branch | control hints panel | yes |
+| = ^688 | select mode | selected node hovered | Shift+LMB | deselect | toggle node selection | control hints panel | yes |
+| = ^689 | select mode | selected node hovered | Alt+Shift+LMB | add branch to selection | toggle branch selection | control hints panel | yes |
+| ^774 | select mode | unselected node hovered & something selected | LMB | select instead | set selected node | control hints panel | yes |
+
+## Controls by combination (generated by running the editor)
+
+Generated by driving the editor engine (no browser) over the combinations of the user's list: the mode (select, draw, extend), the thing under the pointer (the void, a node, the node being drawn from, a heading control point, an end radius point, the mid radius point, a bend point, a segment), the button and manner (`LMB` click and drag, `RMB` click, `Esc`), the modifiers (none, `Alt`, `Shift`, `Ctrl`, `Alt`+`Shift`), the selection (nothing; only the hovered node; it and others; one other; others; both nodes of the hovered segment; part of it; the whole branch), with and without parallel segments, on the user's project `combinations` (`docs/combinations.json`). It lists what happened: the history step, the mode, the selection and the node and segment counts; **it did not look at the screen**. Rows that do nothing and have no hint are left out; rows that differ only by modifier or by what is under the pointer are merged. *Snapping* (not, position only, heading only, both) is a property of the position of the pointer: a row says "the pointer snaps" when it did at the place used; the rules (`Ctrl` turns it off, `Alt` inverts the heading, `Shift` keeps only the position or aims) are in `docs/features.md`. "What it says" is the control hint at that moment. `= ^N` is a control that exists already and is the same row; the hat of a new row stands for exactly that combination.
+
+| Hat | Mode | Under the pointer | Additional context | Input | What it says | What it does | Displayed where | Visitable |
+|-----|------|-------------------|--------------------|-------|--------------|--------------|-----------------|-----------|
+| ^822 | select | over a bend point | - | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `bend curve` | nowhere | - |
+| ^821 | select | over a bend point | - | LMB drag or Ctrl+LMB drag | bend curve | step `bend curve` | control hints panel | no |
+| ^811 | select | over a heading control point | - | Alt+LMB | flip arm | step `flip arm` | control hints panel | no |
+| ^812 | select | over a heading control point | - | Alt+Shift+LMB | - | step `flip arm` | nowhere | - |
+| ^810 | select | over a heading control point | - | LMB or Ctrl+LMB | - | step `select node`; the selection becomes the hovered node | nowhere | - |
+| ^814 | select | over a heading control point | - | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `turn heading` | nowhere | - |
+| ^813 | select | over a heading control point | - | LMB drag or Ctrl+LMB drag | turn heading | step `turn heading`; the selection becomes the hovered node | control hints panel | no |
+| = ^491 | select | over a node | selection: nothing; only the hovered node | Alt+LMB | select branch | step `select N nodes`; nodes are added to the selection | control hints panel | yes |
+| ^781 | select | over a node | selection: only the hovered node; no parallel segments | Alt+LMB | select branch | step `select node`; nodes are added to the selection | control hints panel | yes |
+| ^782 | select | over a node | selection: the hovered node and others; no parallel segments | Alt+LMB | select branch | step `select node`; the selection is replaced | control hints panel | yes |
+| ^783 | select | over a node | selection: the hovered node and others; only one other node; other nodes, not the hovered one | Alt+LMB | select branch | step `select N nodes`; the selection is replaced | control hints panel | yes |
+| = ^689 | select | over a node | selection: nothing | Alt+Shift+LMB | - | step `select N nodes`; nodes are added to the selection | nowhere | - |
+| ^787 | select | over a node | selection: only the hovered node; the hovered node and others; no parallel segments | Alt+Shift+LMB | add branch to selection | step `select node`; nodes are added to the selection | control hints panel | yes |
+| ^788 | select | over a node | selection: only the hovered node; the hovered node and others; only one other node; other nodes, not the hovered one | Alt+Shift+LMB | add branch to selection | step `select N nodes`; nodes are added to the selection | control hints panel | yes |
+| = ^688 | select | over a node | selection: nothing | Shift+LMB | - | step `select node`; the selection becomes the hovered node | nowhere | - |
+| ^784 | select | over a node | selection: only the hovered node | Shift+LMB | deselect | step `deselect all`; the selection is cleared | control hints panel | yes |
+| ^785 | select | over a node | selection: the hovered node and others | Shift+LMB | deselect | step `deselect node`; nodes are removed from the selection | control hints panel | yes |
+| ^786 | select | over a node | selection: only one other node; other nodes, not the hovered one | Shift+LMB | select | step `select node`; nodes are added to the selection | control hints panel | yes |
+| = ^490 | select | over a node | selection: nothing | LMB or Ctrl+LMB | select | step `select node`; the selection becomes the hovered node | control hints panel | yes |
+| ^779 | select | over a node | selection: the hovered node and others | LMB or Ctrl+LMB | - | step `deselect N nodes`; the selection becomes the hovered node | nowhere | - |
+| ^780 | select | over a node | selection: only one other node; other nodes, not the hovered one | LMB or Ctrl+LMB | select instead | step `select node`; the selection becomes the hovered node | control hints panel | yes |
+| ^791 | select | over a node | selection: nothing; only the hovered node | Alt+LMB drag | - | step `move N nodes`; nodes are added to the selection | nowhere | - |
+| ^792 | select | over a node | selection: the hovered node and others; only one other node; other nodes, not the hovered one | Alt+LMB drag | - | step `move N nodes`; the selection is replaced | nowhere | - |
+| ^797 | select | over a node | - | Alt+Shift+LMB drag | - | step `move N nodes`; nodes are added to the selection | nowhere | - |
+| ^793 | select | over a node | selection: nothing | Shift+LMB drag | - | step `move node`; the selection becomes the hovered node | nowhere | - |
+| ^794 | select | over a node | selection: only the hovered node | Shift+LMB drag | - | step `move node` | nowhere | - |
+| ^795 | select | over a node | selection: the hovered node and others | Shift+LMB drag | - | step `move N nodes` | nowhere | - |
+| ^796 | select | over a node | selection: only one other node; other nodes, not the hovered one | Shift+LMB drag | - | step `move N nodes`; nodes are added to the selection | nowhere | - |
+| = ^488 | select | over a node | selection: nothing; only one other node; other nodes, not the hovered one | LMB drag or Ctrl+LMB drag | move node | step `move node`; the selection becomes the hovered node | control hints panel | no |
+| ^789 | select | over a node | selection: only the hovered node | LMB drag or Ctrl+LMB drag | move node | step `move node` | control hints panel | no |
+| ^790 | select | over a node | selection: the hovered node and others | LMB drag or Ctrl+LMB drag | move node | step `move N nodes` | control hints panel | no |
+| ^809 | select | over a node | selection: only the hovered node; the hovered node and others; only one other node; other nodes, not the hovered one | Esc | deselect all | step `deselect all`; the selection is cleared | control hints panel | yes |
+| ^803 | select | over a node | selection: nothing; no parallel segments | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | step `delete node`; nodes -2, segments -1 | nowhere | - |
+| ^804 | select | over a node | selection: only the hovered node; only one other node; other nodes, not the hovered one; no parallel segments | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | step `delete node`; the selection is cleared; nodes -2, segments -1 | nowhere | - |
+| ^805 | select | over a node | selection: the hovered node and others; no parallel segments | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | step `delete N nodes`; the selection is cleared; nodes -5, segments -4 | nowhere | - |
+| ^806 | select | over a node | selection: nothing; the hovered node or segment has parallel segments | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | step `delete node`; nodes -1, segments -1 | nowhere | - |
+| ^807 | select | over a node | selection: only the hovered node; only one other node; other nodes, not the hovered one; the hovered node or segment has parallel segments | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | step `delete node`; the selection is cleared; nodes -1, segments -1 | nowhere | - |
+| ^808 | select | over a node | selection: the hovered node and others; the hovered node or segment has parallel segments | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | step `delete N nodes`; the selection is cleared; nodes -4, segments -3 | nowhere | - |
+| = ^489 | select | over a node | selection: nothing; no parallel segments | RMB or Ctrl+RMB | delete node | step `delete node`; nodes -2, segments -1 | control hints panel | no |
+| ^798 | select | over a node | selection: only the hovered node; only one other node; other nodes, not the hovered one; no parallel segments | RMB or Ctrl+RMB | delete node | step `delete node`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
+| ^799 | select | over a node | selection: the hovered node and others; no parallel segments | RMB or Ctrl+RMB | delete node | step `delete N nodes`; the selection is cleared; nodes -5, segments -4 | control hints panel | no |
+| ^800 | select | over a node | selection: nothing; the hovered node or segment has parallel segments | RMB or Ctrl+RMB | delete node | step `delete node`; nodes -1, segments -1 | control hints panel | no |
+| ^801 | select | over a node | selection: only the hovered node; only one other node; other nodes, not the hovered one; the hovered node or segment has parallel segments | RMB or Ctrl+RMB | delete node | step `delete node`; the selection is cleared; nodes -1, segments -1 | control hints panel | no |
+| ^802 | select | over a node | selection: the hovered node and others; the hovered node or segment has parallel segments | RMB or Ctrl+RMB | delete node | step `delete N nodes`; the selection is cleared; nodes -4, segments -3 | control hints panel | no |
+| ^816 | select | over an end radius point | - | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `change radius` | nowhere | - |
+| ^815 | select | over an end radius point | - | LMB drag or Ctrl+LMB drag | change radius | step `change radius` | control hints panel | no |
+| ^817 | select | over an end radius point | selection: something else selected | Esc | deselect all | step `deselect all`; the selection is cleared | control hints panel | yes |
+| ^820 | select | over the mid radius point | - | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `change radius` | nowhere | - |
+| ^818 | select | over the mid radius point | selection: nothing; no parallel segments | LMB drag or Ctrl+LMB drag | change radius | - | control hints panel | no |
+| ^819 | select | over the mid radius point | - | LMB drag or Ctrl+LMB drag | change radius | step `change radius` | control hints panel | no |
+| ^827 | select | over a segment | selection: nothing; part of the hovered segment (one node) | Alt+LMB | select branch | step `select N nodes`; nodes are added to the selection | control hints panel | yes |
+| ^828 | select | over a segment | selection: both nodes of the hovered segment; all of the hovered branch | Alt+LMB | deselect branch | step `deselect all`; the selection is cleared | control hints panel | yes |
+| ^829 | select | over a segment | selection: both nodes of the hovered segment; part of the hovered segment (one node) | Alt+LMB | select branch | step `select node`; nodes are added to the selection | control hints panel | yes |
+| ^830 | select | over a segment | selection: other nodes | Alt+LMB | select branch | step `select N nodes`; the selection is replaced | control hints panel | yes |
+| ^836 | select | over a segment | selection: both nodes of the hovered segment; all of the hovered branch | Alt+Shift+LMB | deselect branch | step `deselect all`; the selection is cleared | control hints panel | yes |
+| ^837 | select | over a segment | selection: both nodes of the hovered segment; part of the hovered segment (one node) | Alt+Shift+LMB | add branch to selection | step `select node`; nodes are added to the selection | control hints panel | yes |
+| ^838 | select | over a segment | selection: part of the hovered segment (one node); other nodes | Alt+Shift+LMB | add branch to selection | step `select N nodes`; nodes are added to the selection | control hints panel | yes |
+| ^832 | select | over a segment | selection: both nodes of the hovered segment; all of the hovered branch | Shift+LMB | deselect segment | step `deselect all`; the selection is cleared | control hints panel | yes |
+| ^833 | select | over a segment | selection: part of the hovered segment (one node) | Shift+LMB | add segment to selection | step `select node`; nodes are added to the selection | control hints panel | yes |
+| ^834 | select | over a segment | selection: other nodes | Shift+LMB | add segment to selection | step `select N nodes`; nodes are added to the selection | control hints panel | yes |
+| ^835 | select | over a segment | selection: all of the hovered branch; the hovered node or segment has parallel segments | Shift+LMB | deselect segment | step `deselect N nodes`; nodes are removed from the selection | control hints panel | yes |
+| ^831 | select | over a segment | selection: nothing | Shift+LMB or Alt+Shift+LMB | - | step `select N nodes`; nodes are added to the selection | nowhere | - |
+| ^823 | select | over a segment | selection: nothing | LMB or Ctrl+LMB | select segment | step `select N nodes`; nodes are added to the selection | control hints panel | yes |
+| ^824 | select | over a segment | selection: part of the hovered segment (one node) | LMB or Ctrl+LMB | select segment instead | step `select node`; nodes are added to the selection | control hints panel | yes |
+| ^825 | select | over a segment | selection: other nodes | LMB or Ctrl+LMB | select segment instead | step `select N nodes`; the selection is replaced | control hints panel | yes |
+| ^826 | select | over a segment | selection: all of the hovered branch; the hovered node or segment has parallel segments | LMB or Ctrl+LMB | - | step `deselect node`; nodes are removed from the selection | nowhere | - |
+| ^840 | select | over a segment | selection: both nodes of the hovered segment; part of the hovered segment (one node); all of the hovered branch; other nodes | Alt+LMB drag | - | step `deselect all`; the selection is cleared | nowhere | - |
+| ^841 | select | over a segment | selection: both nodes of the hovered segment; part of the hovered segment (one node); all of the hovered branch; other nodes | Shift+LMB drag | add to selection | - | control hints panel | yes |
+| ^839 | select | over a segment | selection: both nodes of the hovered segment; part of the hovered segment (one node); all of the hovered branch; other nodes | LMB drag or Ctrl+LMB drag | select | step `deselect all`; the selection is cleared | control hints panel | yes |
+| ^864 | select | over a segment | selection: both nodes of the hovered segment; part of the hovered segment (one node); all of the hovered branch; other nodes | Esc | deselect all | step `deselect all`; the selection is cleared | control hints panel | yes |
+| ^848 | select | over a segment | selection: nothing; no parallel segments | Alt+RMB | remove branch | step `remove branch`; nodes -2, segments -1 | control hints panel | no |
+| ^849 | select | over a segment | selection: both nodes of the hovered segment; all of the hovered branch; no parallel segments | Alt+RMB | remove branch | step `delete N nodes`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
+| ^850 | select | over a segment | selection: part of the hovered segment (one node); other nodes; no parallel segments | Alt+RMB | remove branch | step `remove branch`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
+| ^851 | select | over a segment | selection: nothing; the hovered node or segment has parallel segments | Alt+RMB | remove branch | step `remove branch`; nodes -3, segments -2 | control hints panel | no |
+| ^852 | select | over a segment | selection: both nodes of the hovered segment; all of the hovered branch; the hovered node or segment has parallel segments | Alt+RMB | remove branch | step `delete N nodes`; the selection is cleared; nodes -3, segments -2 | control hints panel | no |
+| ^853 | select | over a segment | selection: part of the hovered segment (one node); other nodes; the hovered node or segment has parallel segments | Alt+RMB | remove branch | step `remove branch`; the selection is cleared; nodes -3, segments -2 | control hints panel | no |
+| ^860 | select | over a segment | selection: nothing; no parallel segments | Alt+Shift+RMB | - | step `remove branch`; nodes -2, segments -1 | nowhere | - |
+| ^861 | select | over a segment | selection: part of the hovered segment (one node); other nodes; no parallel segments | Alt+Shift+RMB | - | step `remove branch`; the selection is cleared; nodes -2, segments -1 | nowhere | - |
+| ^862 | select | over a segment | selection: nothing; the hovered node or segment has parallel segments | Alt+Shift+RMB | - | step `remove branch`; nodes -3, segments -2 | nowhere | - |
+| ^863 | select | over a segment | selection: part of the hovered segment (one node); other nodes; the hovered node or segment has parallel segments | Alt+Shift+RMB | - | step `remove branch`; the selection is cleared; nodes -3, segments -2 | nowhere | - |
+| ^854 | select | over a segment | selection: nothing; no parallel segments | Shift+RMB | - | step `remove segment`; nodes -2, segments -1 | nowhere | - |
+| ^856 | select | over a segment | selection: part of the hovered segment (one node); other nodes; no parallel segments | Shift+RMB | - | step `remove segment`; the selection is cleared; nodes -2, segments -1 | nowhere | - |
+| ^857 | select | over a segment | selection: nothing; the hovered node or segment has parallel segments | Shift+RMB | - | step `remove segment`; nodes -1, segments -1 | nowhere | - |
+| ^859 | select | over a segment | selection: part of the hovered segment (one node); other nodes; the hovered node or segment has parallel segments | Shift+RMB | - | step `remove segment`; the selection is cleared; nodes -1, segments -1 | nowhere | - |
+| ^855 | select | over a segment | selection: both nodes of the hovered segment; all of the hovered branch; no parallel segments | Shift+RMB or Alt+Shift+RMB | - | step `delete N nodes`; the selection is cleared; nodes -2, segments -1 | nowhere | - |
+| ^858 | select | over a segment | selection: both nodes of the hovered segment; all of the hovered branch; the hovered node or segment has parallel segments | Shift+RMB or Alt+Shift+RMB | - | step `delete N nodes`; the selection is cleared; nodes -3, segments -2 | nowhere | - |
+| ^842 | select | over a segment | selection: nothing; no parallel segments | RMB or Ctrl+RMB | remove segment | step `remove segment`; nodes -2, segments -1 | control hints panel | no |
+| ^843 | select | over a segment | selection: both nodes of the hovered segment; all of the hovered branch; no parallel segments | RMB or Ctrl+RMB | remove segment | step `delete N nodes`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
+| ^844 | select | over a segment | selection: part of the hovered segment (one node); other nodes; no parallel segments | RMB or Ctrl+RMB | remove segment | step `remove segment`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
+| ^845 | select | over a segment | selection: nothing; the hovered node or segment has parallel segments | RMB or Ctrl+RMB | remove segment | step `remove segment`; nodes -1, segments -1 | control hints panel | no |
+| ^846 | select | over a segment | selection: both nodes of the hovered segment; all of the hovered branch; the hovered node or segment has parallel segments | RMB or Ctrl+RMB | remove segment | step `delete N nodes`; the selection is cleared; nodes -3, segments -2 | control hints panel | no |
+| ^847 | select | over a segment | selection: part of the hovered segment (one node); other nodes; the hovered node or segment has parallel segments | RMB or Ctrl+RMB | remove segment | step `remove segment`; the selection is cleared; nodes -1, segments -1 | control hints panel | no |
+| ^775 | select | over the void | selection: nothing | Alt+LMB | - | goes to draw mode | nowhere | - |
+| ^776 | select | over the void | selection: something else selected | Alt+LMB | - | step `deselect all`; the selection is cleared | nowhere | - |
+| = ^393 | select | over the void | selection: nothing | LMB or Ctrl+LMB | draw mode | goes to draw mode | control hints panel | no |
+| = ^684 | select | over the void | selection: something else selected | LMB or Ctrl+LMB | deselect all | step `deselect all`; the selection is cleared | control hints panel | no |
+| ^778 | select | over the void | selection: something else selected | Alt+LMB drag | - | step `deselect all`; the selection is cleared | nowhere | - |
+| = ^685 | select | over the void | selection: something else selected | Shift+LMB drag | add to selection | - | control hints panel | yes |
+| = ^495 | select | over the void, over a segment | selection: nothing | LMB drag or Ctrl+LMB drag | select | - | control hints panel | yes |
+| ^777 | select | over the void | selection: something else selected | LMB drag or Ctrl+LMB drag | select | step `deselect all`; the selection is cleared | control hints panel | yes |
+| = ^686 | select | over the void, over a heading control point, over the mid radius point, over a bend point | selection: something else selected | Esc | deselect all | step `deselect all`; the selection is cleared | control hints panel | yes |
+| ^899 | draw | over a bend point | - | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `bend curve` | nowhere | - |
+| ^898 | draw | over a bend point | - | LMB drag or Ctrl+LMB drag | bend curve | step `bend curve` | control hints panel | no |
+| ^881 | draw | over a heading control point | - | Alt+LMB | flip arm | step `flip arm` | control hints panel | no |
+| ^882 | draw | over a heading control point | - | Alt+Shift+LMB | - | step `flip arm` | nowhere | - |
+| ^884 | draw | over a heading control point | - | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `turn heading` | nowhere | - |
+| ^883 | draw | over a heading control point | - | LMB drag or Ctrl+LMB drag | turn heading | step `turn heading` | control hints panel | no |
+| ^872 | draw | over a node | no parallel segments; the pointer snaps | Alt+LMB | - | step `extend road`; goes to extend mode; the selection becomes the hovered node | nowhere | - |
+| ^873 | draw | over a node | the hovered node or segment has parallel segments; the pointer snaps | Alt+LMB | - | step `split road`; goes to extend mode; the selection becomes the hovered node | nowhere | - |
+| ^870 | draw | over a node | no parallel segments | LMB or Ctrl+LMB | extend | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
+| ^871 | draw | over a node | the hovered node or segment has parallel segments | LMB or Ctrl+LMB | split | step `split road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
+| ^875 | draw | over a node | the pointer snaps | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `move node` | nowhere | - |
+| ^874 | draw | over a node | - | LMB drag or Ctrl+LMB drag | move node | step `move node` | control hints panel | no |
+| ^880 | draw | over a node, over a segment | - | Esc | finish | goes to select mode | control hints panel | no |
+| ^878 | draw | over a node | no parallel segments; the pointer snaps | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | step `delete node`; nodes -2, segments -1 | nowhere | - |
+| ^879 | draw | over a node | the hovered node or segment has parallel segments; the pointer snaps | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | step `delete node`; nodes -1, segments -1 | nowhere | - |
+| ^876 | draw | over a node | no parallel segments | RMB or Ctrl+RMB | delete node | step `delete node`; nodes -2, segments -1 | control hints panel | no |
+| ^877 | draw | over a node | the hovered node or segment has parallel segments | RMB or Ctrl+RMB | delete node | step `delete node`; nodes -1, segments -1 | control hints panel | no |
+| ^886 | draw | over an end radius point | the pointer snaps | Alt+LMB or Shift+LMB or Alt+Shift+LMB | - | step `split road`; goes to extend mode; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
+| ^885 | draw | over an end radius point | - | LMB or Ctrl+LMB | split | step `split road`; goes to extend mode; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
+| ^888 | draw | over an end radius point | the pointer snaps | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `change radius` | nowhere | - |
+| ^887 | draw | over an end radius point | - | LMB drag or Ctrl+LMB drag | change radius | step `change radius` | control hints panel | no |
+| ^891 | draw | over an end radius point | - | Esc | finish | goes to select mode | control hints panel | no |
+| ^890 | draw | over an end radius point | the pointer snaps | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | goes to select mode | nowhere | - |
+| ^889 | draw | over an end radius point | - | RMB or Ctrl+RMB | finish | goes to select mode | control hints panel | no |
+| ^893 | draw | over the mid radius point, over a segment | the pointer snaps | Alt+LMB or Shift+LMB or Alt+Shift+LMB | - | step `split road`; goes to extend mode; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
+| ^892 | draw | over the mid radius point, over a segment | - | LMB or Ctrl+LMB | split | step `split road`; goes to extend mode; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
+| ^896 | draw | over the mid radius point | the hovered node or segment has parallel segments; the pointer snaps | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `change radius` | nowhere | - |
+| ^894 | draw | over the mid radius point | no parallel segments | LMB drag or Ctrl+LMB drag | change radius | - | control hints panel | no |
+| ^895 | draw | over the mid radius point | the hovered node or segment has parallel segments | LMB drag or Ctrl+LMB drag | change radius | step `change radius` | control hints panel | no |
+| ^897 | draw | over the mid radius point | the pointer snaps | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | goes to select mode | nowhere | - |
+| ^901 | draw | over a segment | the pointer snaps | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `insert node`; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
+| ^900 | draw | over a segment | - | LMB drag or Ctrl+LMB drag | insert and set heading | step `insert node`; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
+| ^904 | draw | over a segment | no parallel segments; the pointer snaps | Alt+RMB | remove branch | step `remove branch`; nodes -2, segments -1 | control hints panel | no |
+| ^905 | draw | over a segment | the hovered node or segment has parallel segments; the pointer snaps | Alt+RMB | remove branch | step `remove branch`; nodes -3, segments -2 | control hints panel | no |
+| ^908 | draw | over a segment | no parallel segments; the pointer snaps | Alt+Shift+RMB | - | step `remove branch`; nodes -2, segments -1 | nowhere | - |
+| ^909 | draw | over a segment | the hovered node or segment has parallel segments; the pointer snaps | Alt+Shift+RMB | - | step `remove branch`; nodes -3, segments -2 | nowhere | - |
+| ^906 | draw | over a segment | no parallel segments; the pointer snaps | Shift+RMB | - | step `remove segment`; nodes -2, segments -1 | nowhere | - |
+| ^907 | draw | over a segment | the hovered node or segment has parallel segments; the pointer snaps | Shift+RMB | - | step `remove segment`; nodes -1, segments -1 | nowhere | - |
+| ^902 | draw | over a segment | no parallel segments | RMB or Ctrl+RMB | remove segment | step `remove segment`; nodes -2, segments -1 | control hints panel | no |
+| ^903 | draw | over a segment | the hovered node or segment has parallel segments | RMB or Ctrl+RMB | remove segment | step `remove segment`; nodes -1, segments -1 | control hints panel | no |
+| ^865 | draw | over the void | - | Alt+LMB or Shift+LMB or Alt+Shift+LMB | - | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments +0 | nowhere | - |
+| = ^410 | draw | over the void | - | LMB or Ctrl+LMB | add node | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments +0 | control hints panel | no |
+| ^866 | draw | over the void | - | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments +0 | nowhere | - |
+| = ^411 | draw | over the void | - | LMB drag or Ctrl+LMB drag | add node and set heading | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments +0 | control hints panel | no |
+| ^869 | draw | over the void, over a heading control point, over the mid radius point, over a bend point | - | Esc | finish | goes to select mode | control hints panel | no |
+| ^868 | draw | over the void, over a heading control point, over a bend point | - | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | goes to select mode | nowhere | - |
+| ^867 | draw | over the void, over a heading control point, over the mid radius point, over a bend point | - | RMB or Ctrl+RMB | finish | goes to select mode | control hints panel | no |
+| ^951 | extend | over the node being drawn from | the pointer snaps | Alt+LMB | - | goes to draw mode | nowhere | - |
+| = ^412 | extend | over the node being drawn from | - | LMB or Ctrl+LMB | finish | goes to draw mode | control hints panel | no |
+| ^952 | extend | over the node being drawn from | - | Esc | finish | goes to select mode | control hints panel | no |
+| ^942 | extend | over a bend point | - | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `bend curve` | nowhere | - |
+| ^941 | extend | over a bend point | - | LMB drag or Ctrl+LMB drag | bend curve | step `bend curve` | control hints panel | no |
+| ^924 | extend | over a heading control point | - | Alt+LMB | flip arm | step `flip arm` | control hints panel | no |
+| ^925 | extend | over a heading control point | - | Alt+Shift+LMB | - | step `flip arm` | nowhere | - |
+| ^927 | extend | over a heading control point | - | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `turn heading` | nowhere | - |
+| ^926 | extend | over a heading control point | - | LMB drag or Ctrl+LMB drag | turn heading | step `turn heading` | control hints panel | no |
+| ^928 | extend | over a heading control point, over a bend point | - | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | goes to draw mode | nowhere | - |
+| ^917 | extend | over a node | no parallel segments; the pointer snaps | Alt+LMB | - | step `close road`; goes to draw mode; nodes +0, segments +1 | nowhere | - |
+| ^918 | extend | over a node | the hovered node or segment has parallel segments; the pointer snaps | Alt+LMB | - | step `merge road`; goes to draw mode; nodes +0, segments +1 | nowhere | - |
+| ^915 | extend | over a node | no parallel segments | LMB or Ctrl+LMB | close | step `close road`; goes to draw mode; nodes +0, segments +1 | control hints panel | no |
+| ^916 | extend | over a node | the hovered node or segment has parallel segments | LMB or Ctrl+LMB | merge | step `merge road`; goes to draw mode; nodes +0, segments +1 | control hints panel | no |
+| ^920 | extend | over a node, over the node being drawn from | the pointer snaps | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `move node` | nowhere | - |
+| ^919 | extend | over a node, over the node being drawn from | - | LMB drag or Ctrl+LMB drag | move node | step `move node` | control hints panel | no |
+| ^923 | extend | over a node, over a segment | - | Esc | finish | goes to select mode | control hints panel | no |
+| ^922 | extend | over a node, over the node being drawn from | the pointer snaps | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | step `delete node`; nodes -1, segments -1 | nowhere | - |
+| ^921 | extend | over a node, over the node being drawn from | - | RMB or Ctrl+RMB | delete node | step `delete node`; nodes -1, segments -1 | control hints panel | no |
+| ^930 | extend | over an end radius point | the pointer snaps | Alt+LMB or Shift+LMB or Alt+Shift+LMB | - | step `merge road`; goes to draw mode; nodes +1, segments +2 | nowhere | - |
+| ^929 | extend | over an end radius point | - | LMB or Ctrl+LMB | merge | step `merge road`; goes to draw mode; nodes +1, segments +2 | control hints panel | no |
+| ^932 | extend | over an end radius point | the pointer snaps | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `change radius` | nowhere | - |
+| ^931 | extend | over an end radius point | - | LMB drag or Ctrl+LMB drag | change radius | step `change radius` | control hints panel | no |
+| ^935 | extend | over an end radius point | - | Esc | finish | goes to select mode | control hints panel | no |
+| ^934 | extend | over an end radius point | the pointer snaps | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | goes to draw mode | nowhere | - |
+| ^933 | extend | over an end radius point | - | RMB or Ctrl+RMB | finish | goes to draw mode | control hints panel | no |
+| ^937 | extend | over the mid radius point, over a segment | the pointer snaps | Alt+LMB or Shift+LMB or Alt+Shift+LMB | - | step `merge road`; goes to draw mode; nodes +1, segments +2 | nowhere | - |
+| ^936 | extend | over the mid radius point, over a segment | - | LMB or Ctrl+LMB | merge | step `merge road`; goes to draw mode; nodes +1, segments +2 | control hints panel | no |
+| ^940 | extend | over the mid radius point | the hovered node or segment has parallel segments; the pointer snaps | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `change radius` | nowhere | - |
+| ^938 | extend | over the mid radius point | no parallel segments | LMB drag or Ctrl+LMB drag | change radius | - | control hints panel | no |
+| ^939 | extend | over the mid radius point | the hovered node or segment has parallel segments | LMB drag or Ctrl+LMB drag | change radius | step `change radius` | control hints panel | no |
+| ^944 | extend | over a segment | the pointer snaps | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `insert node`; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
+| ^943 | extend | over a segment | - | LMB drag or Ctrl+LMB drag | insert and set heading | step `insert node`; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
+| ^946 | extend | over a segment | no parallel segments; the pointer snaps | Alt+RMB | remove branch | step `remove branch`; nodes -1, segments -1 | control hints panel | no |
+| ^947 | extend | over a segment | the hovered node or segment has parallel segments; the pointer snaps | Alt+RMB | remove branch | step `remove branch`; nodes -3, segments -2 | control hints panel | no |
+| ^949 | extend | over a segment | no parallel segments; the pointer snaps | Alt+Shift+RMB | - | step `remove branch`; nodes -1, segments -1 | nowhere | - |
+| ^950 | extend | over a segment | the hovered node or segment has parallel segments; the pointer snaps | Alt+Shift+RMB | - | step `remove branch`; nodes -3, segments -2 | nowhere | - |
+| ^948 | extend | over a segment | the pointer snaps | Shift+RMB | - | step `remove segment`; nodes -1, segments -1 | nowhere | - |
+| ^945 | extend | over a segment | - | RMB or Ctrl+RMB | remove segment | step `remove segment`; nodes -1, segments -1 | control hints panel | no |
+| ^910 | extend | over the void | the pointer snaps | Alt+LMB or Shift+LMB or Alt+Shift+LMB | - | step `place node`; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
+| = ^477 | extend | over the void | - | LMB or Ctrl+LMB | add node | step `place node`; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
+| ^911 | extend | over the void | the pointer snaps | Alt+LMB drag or Shift+LMB drag or Alt+Shift+LMB drag | - | step `place node`; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
+| = ^478 | extend | over the void | - | LMB drag or Ctrl+LMB drag | add node and set heading | step `place node`; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
+| ^914 | extend | over the void, over a heading control point, over the mid radius point, over a bend point | - | Esc | finish | goes to select mode | control hints panel | no |
+| ^913 | extend | over the void, over the mid radius point | the pointer snaps | Alt+RMB or Shift+RMB or Alt+Shift+RMB | - | goes to draw mode | nowhere | - |
+| ^912 | extend | over the void, over a heading control point, over the mid radius point, over a bend point | - | RMB or Ctrl+RMB | finish | goes to draw mode | control hints panel | no |
+
+
 ## Controls
 
 Each row is one control (^392): an input, or alternative inputs that do the same, in one context. The Hat column starts with the control's own hat. Rows for states not walked yet follow as the audit goes on.
 
 | Hat | Context | Control | Operation or feature | Hint | Visitable | Special behavior | Tests |
 |-----|---------|---------|----------------------|------|-----------|------------------|-------|
-| ^393 | select mode, empty canvas, nothing selected | `LMB` click | enter draw mode (feature ^423; not an operation) | `LMB`: draw mode | n/a | unit `editor/modes.test`; e2e `modes.spec` |
+| ^393 | select mode, the void, nothing selected | `LMB` click | enter draw mode (feature ^423; not an operation) | `LMB`: draw mode | n/a | unit `editor/modes.test`; e2e `modes.spec` |
 | ^394 | select mode | `Tab` | go to view mode (feature ^425) | `Tab`: view mode, hidden for a while after the control was used (^110) | n/a | after a round trip the hint is missing until the visit times out | unit `editor/modes.test` (Tab goes to view mode from every mode, and back), `hints/hints.test`; e2e `modes.spec` |
 | ^395 | view mode | `Tab` | back to select mode (feature ^422) | should be `Tab`: select mode, hidden by bug ^384 | n/a | unit `editor/modes.test`, `hints/hints.test`; e2e `modes.spec` |
 | ^396 | any mode, no modal, nothing to save | `Ctrl+S` | save project (operation ^428): nothing to save, toasts ^441 and ^442 (^232) | none (exemption not yet decided) | n/a | toasts 3 s, identical toast not shown twice | unit `project/load.test`; e2e: gap ^379 |
@@ -47,8 +300,8 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^406 | projects modal, pointer on `New project` | `LMB` click | new project (operation ^431); to explore | `LMB`: new project | yes (hover) | | e2e `projects.spec` |
 | ^407 | projects modal, pointer on the search field, not focused | `LMB` click | focus the search (feature ^427, walked later) | `LMB`: search (only while not focused) | yes (hover) | the field is focused when the modal opens | e2e `projects.spec` |
 | ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (features ^423, ^422) | `Esc or RMB`: finish | n/a | unit `editor/modes.test` (Esc or a right click leave draw mode before any node has been placed) |
-| ^410 | draw mode, nothing drawn yet, empty canvas | `LMB` click | place first node (operation ^409); enters extend mode (feature ^424) | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; a project may be made at once, which is fine (^386 withdrawn, ^449) | unit `editor/modes.test` (the first click only enters draw mode, the second places a node), `editor/extend.test` |
-| ^411 | draw mode, nothing drawn yet, empty canvas | `LMB` drag | place first node and set its heading (op ^420); enters extend mode with the press; the release is not yet explored | before the press `LMB` drag: add node and set heading (to become `place node and set heading`, ^421); while dragging `LMB` drag: turn heading (^286) | n/a | a drag under 6 px keeps the automatic heading; the heading snaps to the compass (^315) and to steps (^457 to ^460), with the label (^316) | unit `editor/editor.test`, `editor/cancelDrag.test`; the compass and label: gap ^463; e2e `smoke.spec` |
+| ^410 | draw mode, nothing drawn yet, the void | `LMB` click | place first node (operation ^409); enters extend mode (feature ^424) | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; a project may be made at once, which is fine (^386 withdrawn, ^449) | unit `editor/modes.test` (the first click only enters draw mode, the second places a node), `editor/extend.test` |
+| ^411 | draw mode, nothing drawn yet, the void | `LMB` drag | place first node and set its heading (op ^420); enters extend mode with the press; the release is not yet explored | before the press `LMB` drag: add node and set heading (to become `place node and set heading`, ^421); while dragging `LMB` drag: turn heading (^286) | n/a | a drag under 6 px keeps the automatic heading; the heading snaps to the compass (^315) and to steps (^457 to ^460), with the label (^316) | unit `editor/editor.test`, `editor/cancelDrag.test`; the compass and label: gap ^463; e2e `smoke.spec` |
 | ^412 | extend mode, a segment exists, pointer on the start node | `LMB` click or `Esc` | finish road (operation ^432); to explore | `LMB or Esc`: finish | n/a | with only one node: to explore | e2e `smoke.spec`, `editing.spec` |
 | ^413 | extend mode, pointer on a node | `LMB` drag | move node (operation ^433); to explore | `LMB` drag: move node | n/a | snapping, `Ctrl` | unit `editor/snapping.test`; e2e `snapping.spec` |
 | ^414 | extend mode, pointer on a node | `RMB` click | delete node (operation ^434); to explore | `RMB`: delete node | n/a | | unit `editor/removal` tests (to check) |
@@ -64,13 +317,13 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^465 | extend mode, only the first node placed, pointer on its heading control point | `LMB` drag | turn heading (operation ^468); not pressed yet | `LMB` drag: turn heading | n/a | the heading snaps (^251, ^315); the hover ring (^469) | unit `editor/editor.test` (dragging the heading), `editor/branching.test`, `editor/headingSnap.test` |
 | ^466 | extend mode, pointer on a heading control point | `Alt` + `LMB` click | flip arm (^234); not pressed yet | `Alt`+`LMB`: flip arm | n/a | a click, not a drag | unit `editor/controls.test`; e2e `editing.spec` |
 | ^467 | extend mode, only the first node placed, pointer not on the start node | `Esc` or `RMB` click | cancel first node (operation ^437); not pressed yet | `Esc or RMB`: finish, should be `cancel` (bug ^438) | n/a | undoable, like ^436 | unit `editor/undoRedo.test`, `editor/editor.test` (a right click on empty space finishes the road, finishing with one node cancels it) |
-| ^477 | extend mode, pointer on empty canvas | `LMB` click | place next node (operation ^475); walked in steps 35 and 36 (press) | `LMB`: add node (to become `place node`, ^421) | n/a | the node snaps (^101); `Shift` keeps only the position (^416) | unit `editor/extend.test`, `editor/editor.test`, `editor/snapping.test` |
-| ^478 | extend mode, pointer on empty canvas | `LMB` drag | place next node and set heading (operation ^476); walked in steps 36 and 37 (not released yet) | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | the heading snaps (^251) | unit `editor/editor.test`, `editor/touching.test` |
+| ^477 | extend mode, pointer on the void | `LMB` click | place next node (operation ^475); walked in steps 35 and 36 (press) | `LMB`: add node (to become `place node`, ^421) | n/a | the node snaps (^101); `Shift` keeps only the position (^416) | unit `editor/extend.test`, `editor/editor.test`, `editor/snapping.test` |
+| ^478 | extend mode, pointer on the void | `LMB` drag | place next node and set heading (operation ^476); walked in steps 36 and 37 (not released yet) | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | the heading snaps (^251) | unit `editor/editor.test`, `editor/touching.test` |
 | ^488 | select mode, pointer on a node | `LMB` drag | move node (operation ^433); not pressed yet | `LMB` drag: move node | n/a | snapping (`Ctrl` turns it off); the nodes selected move together | unit `editor/editor.test`, `editor/branching.test`, `editor/snapping.test`; e2e `smoke.spec`, `editing.spec` |
 | ^489 | select mode, pointer on a node | `RMB` click | delete node (operation ^434); not pressed yet | `RMB`: delete node | n/a | | unit `editor/controls.test`, `editor/rightClickSelected.test` |
 | ^490 | select mode, pointer on a node | `LMB` click | select node (operation ^486), `select instead` with a selection; not pressed yet | `LMB`: select | n/a | hidden once visited (^110) | unit `editor/selection.test` |
 | ^491 | select mode, pointer on a node | `Alt` + `LMB` click | select branch (operation ^487); not pressed yet | `Alt`+`LMB`: select branch (or deselect branch) | n/a | hidden once visited (^110); with `Alt` held the hovered branch gets its outline (^99) | unit `editor/branchSelect.test`, `editor/hoverFresh.test` |
-| ^495 | select mode, empty canvas, nothing selected | `LMB` drag | select by box (operation ^492); not pressed yet | `LMB` drag: select (hidden once visited, ^110) | n/a | the nodes inside are selected live | unit `editor/selection.test`, `editor/controls.test` |
+| ^495 | select mode, the void, nothing selected | `LMB` drag | select by box (operation ^492); not pressed yet | `LMB` drag: select (hidden once visited, ^110) | n/a | the nodes inside are selected live | unit `editor/selection.test`, `editor/controls.test` |
 | ^496 | draw mode, nothing drawn, pointer on a node without a segment | `LMB` click | extend road (operation ^493): the node becomes the node being drawn from; extend mode | `LMB`: split, should be `extend` (bug ^494) | n/a | the history step is `split road` (bug ^494) | gap: no test for a node without a segment |
 
 ## Controls found in the code, not walked yet (^684–^741)
@@ -79,8 +332,8 @@ Found by the sweep of the code (the hints, the key and pointer dispatch, the mod
 
 | Hat | Context | Control | Does (operation or feature) | Hint in the code | Tests |
 |-----|---------|---------|----------------------------|------------------|-------|
-| ^684 | select mode, empty canvas, something selected | `LMB` click | deselect all (^557) | `LMB`: deselect all (^75) | unit `editor/editor.test` (strong), `editor/extend.test` (strong), `editor/modes.test` (strong) |
-| ^685 | select mode, empty canvas, something selected | `Shift` + `LMB` drag | add to selection (^682) | `Shift`+`LMB` drag: add to selection | unit `editor/selection.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
+| ^684 | select mode, the void, something selected | `LMB` click | deselect all (^557) | `LMB`: deselect all (^75) | unit `editor/editor.test` (strong), `editor/extend.test` (strong), `editor/modes.test` (strong) |
+| ^685 | select mode, the void, something selected | `Shift` + `LMB` drag | add to selection (^682) | `Shift`+`LMB` drag: add to selection | unit `editor/selection.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
 | ^686 | select mode, something selected | `Esc` | deselect all (^557) | `Esc`: deselect all (^218) | unit `editor/branchSelect.test` (weak), `editor/controls.test` (weak), `editor/editor.test` (weak) |
 | ^687 | any mode, something selected | `Del` or `Backspace` | ^434 | `Del`: delete selected | unit `editor/controls.test` (weak), `editor/editor.test` (weak), `editor/modes.test` (weak) |
 | ^688 | select mode, pointer on a node, something selected | `Shift` + `LMB` click | add to selection (^682); deselect (^683) | `Shift`+`LMB`: select or deselect | unit `editor/controls.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
@@ -115,7 +368,7 @@ Found by the sweep of the code (the hints, the key and pointer dispatch, the mod
 | ^717 | extend mode, pointer on a curve | `LMB` drag | insert node (^10) | `LMB` drag: insert and set heading | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/ownCurve.test` (strong) |
 | ^718 | extend mode, pointer on a curve | `RMB` click | remove segment (^551) | `RMB`: remove segment | unit `editor/editor.test` (strong), `editor/branching.test` (weak), `editor/concentricBuild.test` (weak) |
 | ^719 | extend mode, pointer on a curve | `Alt` + `RMB` click | remove branch (^552) | `Alt`+`RMB`: remove branch | unit `editor/controls.test` (strong), `editor/editor.test` (strong), `editor/branchSelect.test` (weak) |
-| ^720 | extend mode, a segment exists, empty canvas | `RMB` click or `Esc` | ^432 | `Esc or RMB`: finish | unit `editor/selection.test` (strong), `hints/hints.test` (weak), `editor/controls.test` (weak) |
+| ^720 | extend mode, a segment exists, the void | `RMB` click or `Esc` | ^432 | `Esc or RMB`: finish | unit `editor/selection.test` (strong), `hints/hints.test` (weak), `editor/controls.test` (weak) |
 | ^721 | any mode, nothing selected, something pinned | `S` | ^258 | `S`: unpin all snap suggestions | unit `editor/pins.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
 | ^722 | any mode, no modal | `RMB` drag | pan (^501) | `RMB` drag: pan (hidden after use, ^110; missing in draw mode, ^389) | unit `editor/extend.test` (weak), `editor/modes.test` (weak) |
 | ^723 | any mode, no modal | wheel | zoom (^502) | wheel: zoom (hidden after use; missing in draw mode, ^389) | none found |
@@ -168,7 +421,7 @@ Screen: blank canvas; a blue outline around the window; four mode icons (eye, po
 
 The same as first load, except that the `Tab` hint is hidden: `Tab` was used (twice), and a control that was used lately has its hint hidden for a while (^110). This is the designed behavior, like the camera controls after their first use; the hint comes back when the visit times out. It is the same mechanism as the bug ^384, where it hides the way out of view mode. Transitions (this state is reached by the journey, so it is explored from here on): `LMB` click is explored (draw mode, below); `LMB` drag (box select), the camera controls and `P` are not explored: after the first node the camera and selection will be explored in a state where they do something, and `P` has to be explored again (a project exists then). The global keys (`Ctrl+S`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+O`, `Tab`) are as in first load. Tested in general by unit `hints/usage.test`; for `Tab` itself: gap, to be checked against e2e `editing.spec` ("a used control loses its hint").
 
-### draw mode (nothing drawn yet; entered by `LMB` on empty canvas in select mode)
+### draw mode (nothing drawn yet; entered by `LMB` on the void in select mode)
 
 Screen: the outline and the mode icons in the draw mode's color (the pen is the current mode); the cursor is a crosshair; a preview of the node a click would add follows the pointer, an arrow pointing right (the automatic heading of the first node, ^54). Hints: `LMB`: add node; `LMB` drag: add node and set heading; `Esc` or `RMB`: finish; `P`: projects. The `Tab` hint is hidden (visited, ^110). **No camera hints** although the camera works here (bug ^389). Hats: ^54, ^48, ^47, ^23, ^40, ^110.
 
@@ -210,8 +463,8 @@ Reached by `LMB` in draw mode (nothing drawn). The node is selected, the road ha
 | Input | Result | Explored |
 |-------|--------|----------|
 | move the pointer away | the dashed preview of the next node and segment appears | no |
-| `LMB` click on empty canvas | place node 2 (the first segment) | no |
-| `LMB` drag on empty canvas | place node 2 with a heading | no |
+| `LMB` click on the void | place node 2 (the first segment) | no |
+| `LMB` drag on the void | place node 2 with a heading | no |
 | `LMB` click on the node | with one node only: cancel first node: draw mode again, nothing placed; history: batch `place node`, `finish road` (should be `cancel`, ^438) | yes (state below) |
 | `Esc` | the same as the `LMB` click (alternative input of the same control ^436) | not pressed yet |
 | `LMB` drag on the node | move node | no |
@@ -263,17 +516,17 @@ Reached by releasing `LMB` in (P) with the pointer on the orange circle (heading
 
 | Input | Result | Explored |
 |-------|--------|----------|
-| move the pointer off the control point | the control point's ring goes; over empty canvas the dashed preview of the next node and segment shows | no (next step) |
+| move the pointer off the control point | the control point's ring goes; over the void the dashed preview of the next node and segment shows | no (next step) |
 | `LMB` drag on the control point | turn heading (^465) | no |
 | `Alt`+`LMB` click on the control point | flip arm (^466) | no |
 | `Esc`, `RMB` | cancel first node (^467) | no |
-| `LMB` click on empty canvas, `LMB` drag | place next node | no |
+| `LMB` click on the void, `LMB` drag | place next node | no |
 | `Ctrl+Z` | undoes `place node`; the panel's undo hint shows | no |
 | `Tab`, `P` and the others of (E) | as in (E) | no |
 
 ### extend mode, the preview of the next node (E4)
 
-Reached from (E3) by moving the pointer off the control point onto empty canvas. Extend mode as before (outline, icons, the cursor is a crosshair). Hints, top to bottom: `LMB`: add node (`place node`, ^421; control ^477), `LMB` drag: add node and set heading (control ^478), `Esc` or `RMB`: finish (`cancel`, ^438; control ^467), `Ctrl`: no snapping (^415), `Shift`: snap only the position (^416; to be shortened, ^474), `S`: pin snap suggestions (bug ^419; ^417), `P`: projects (^400). The `Ctrl` and `Shift` hints show only while the pointer snaps. History panel: the same three rows as before (the batch `place node`, `finish road` and the single `place node`); the undo hint has come back, because the interval of the visited control ran out (5 minutes, ^110, designed).
+Reached from (E3) by moving the pointer off the control point onto the void. Extend mode as before (outline, icons, the cursor is a crosshair). Hints, top to bottom: `LMB`: add node (`place node`, ^421; control ^477), `LMB` drag: add node and set heading (control ^478), `Esc` or `RMB`: finish (`cancel`, ^438; control ^467), `Ctrl`: no snapping (^415), `Shift`: snap only the position (^416; to be shortened, ^474), `S`: pin snap suggestions (bug ^419; ^417), `P`: projects (^400). The `Ctrl` and `Shift` hints show only while the pointer snaps. History panel: the same three rows as before (the batch `place node`, `finish road` and the single `place node`); the undo hint has come back, because the interval of the visited control ran out (5 minutes, ^110, designed).
 
 | Item | What it is | Hats | Tested |
 |------|------------|------|--------|
@@ -298,7 +551,7 @@ Reached from (E3) by moving the pointer off the control point onto empty canvas.
 
 ### select mode after a reload, with a lone node (R)
 
-Reached from (E4) by reloading the page (step 33). The project that was open last opens (^485); the camera is restored, the road being drawn is not: select mode, a single node with its heading north (it was saved by the autosave, so a node without a segment survives, question ^484), no history panel (the history is not stored, ^449), no hint visits (a new session). Hints: `Tab`: view mode, `LMB`: draw mode, the camera hints, `P`: projects (control ^393 and the others of select mode, see (A)). To confirm: the list does not show `LMB` drag: select (box select, ^70), which select mode with nothing selected and the pointer on empty canvas should show. Hats: ^485, ^449, ^484.
+Reached from (E4) by reloading the page (step 33). The project that was open last opens (^485); the camera is restored, the road being drawn is not: select mode, a single node with its heading north (it was saved by the autosave, so a node without a segment survives, question ^484), no history panel (the history is not stored, ^449), no hint visits (a new session). Hints: `Tab`: view mode, `LMB`: draw mode, the camera hints, `P`: projects (control ^393 and the others of select mode, see (A)). To confirm: the list does not show `LMB` drag: select (box select, ^70), which select mode with nothing selected and the pointer on the void should show. Hats: ^485, ^449, ^484.
 
 ### select mode, the pointer on the lone node (R2)
 
@@ -311,7 +564,7 @@ Step 34. Hints: `LMB` drag: move node (^488), `RMB`: delete node (^489), `LMB`: 
 
 ### extend mode, a segment exists, the pointer on its end node (E6)
 
-Step 35, from (R2): `LMB` on empty canvas enters draw mode (control ^393), `LMB` on the lone node extends it (control ^496, hint `split` and step `split road`, bug ^494), the pointer is moved along the +60° extend line (^337) and `LMB` places the second node at about 30 m (control ^477, operation ^475). Extend mode (outline, icons). Hints: `Tab`: view mode (a new session, not visited), `LMB` or `Esc`: finish (control ^412, the pointer is on the node being drawn from), `LMB` drag: move node (^413), `RMB`: delete node (^414), `Ctrl` and `Shift` (while snapping, ^415, ^416), `S`: pin snap suggestions (bug ^419; ^417), `P`: projects. History panel: the undo hint (visited controls come back, a new session shows it at once) and one batch of two steps: `split road` (the click on the lone node; the user read it as `split node`, to check) and `place node`.
+Step 35, from (R2): `LMB` on the void enters draw mode (control ^393), `LMB` on the lone node extends it (control ^496, hint `split` and step `split road`, bug ^494), the pointer is moved along the +60° extend line (^337) and `LMB` places the second node at about 30 m (control ^477, operation ^475). Extend mode (outline, icons). Hints: `Tab`: view mode (a new session, not visited), `LMB` or `Esc`: finish (control ^412, the pointer is on the node being drawn from), `LMB` drag: move node (^413), `RMB`: delete node (^414), `Ctrl` and `Shift` (while snapping, ^415, ^416), `S`: pin snap suggestions (bug ^419; ^417), `P`: projects. History panel: the undo hint (visited controls come back, a new session shows it at once) and one batch of two steps: `split road` (the click on the lone node; the user read it as `split node`, to check) and `place node`.
 
 | Item | What it is | Hats | Tested |
 |------|------------|------|--------|
@@ -324,8 +577,8 @@ Step 35, from (R2): `LMB` on empty canvas enters draw mode (control ^393), `LMB`
 
 | Input | Result | Explored |
 |-------|--------|----------|
-| `LMB` drag on empty canvas | place next node and set heading (^478, operation ^476) | no (next step) |
-| `LMB` click on empty canvas | place the next node (^477) | no (as in step 35, with a segment) |
+| `LMB` drag on the void | place next node and set heading (^478, operation ^476) | no (next step) |
+| `LMB` click on the void | place the next node (^477) | no (as in step 35, with a segment) |
 | `LMB` or `Esc` | finish road (^412) | no |
 | `LMB` drag on the node, `RMB` | move node, delete node | no |
 
@@ -413,8 +666,8 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 12 | (V) | `P` | (M) |
 | 13 | (M) | `LMB` on the X | (V) |
 | 14 | (V) | `Tab` | (A): the `Tab` hint is gone (^110) |
-| 15 | (A) | `LMB` click on empty canvas | (D) draw mode, nothing drawn yet |
-| 16 | (D) | `LMB` click on empty canvas | (E) extend mode, one node placed (operation `place first node`, ^409) |
+| 15 | (A) | `LMB` click on the void | (D) draw mode, nothing drawn yet |
+| 16 | (D) | `LMB` click on the void | (E) extend mode, one node placed (operation `place first node`, ^409) |
 | 17 | (E) | `LMB` click on the placed node | (D2) draw mode, nothing drawn, with a batch of two steps in the history (operation `cancel first node`, ^437) |
 | 18 | (D2) | `Ctrl+S` (some seconds later) | the same state; toasts `saved` and `modelcity saves automatically` (^440, ^442) appear at once and go after 3 s; the history panel went away after about 3 s (^107); the project is saved (operation ^428, control ^450) |
 | 19 | (D2) | `Ctrl+Z` (pointer still where the node was) | (E2) the node is back with its heading (operation `undo`, ^453, control ^454) |
@@ -433,7 +686,7 @@ The record of what the audit has pressed, in sequence. `(S)` first-load state, `
 | 32 | (E4) | `Ctrl` released | no effect until the pointer moves, then the snap is back |
 | 33 | (E4) | reload the page | (R) select mode, the lone node north, no history (^485, ^484) |
 | 34 | (R) | the pointer on the lone node | (R2) hover ring and the hints of a node in select mode (^488 to ^491) |
-| 35 | (R2) | `LMB` on empty canvas, `LMB` on the lone node, the pointer moved along the +60° extend line, `LMB` at about 30 m | (D) draw mode, then (E5) extend mode on the lone node (controls ^393, ^496), then (E6) extend mode with a segment (control ^477) |
+| 35 | (R2) | `LMB` on the void, `LMB` on the lone node, the pointer moved along the +60° extend line, `LMB` at about 30 m | (D) draw mode, then (E5) extend mode on the lone node (controls ^393, ^496), then (E6) extend mode with a segment (control ^477) |
 | 36 | (E6) | the pointer moved right along the +60° line to a segment of 34.0 m, `LMB` pressed and held | (E7) the second node is placed, the hints stay those of the press (^499) |
 | 37 | (E7) | the pointer moved a bit further right, the button still held | (E8) dragging the heading of the new node: hints of the drag, an S-curve, the label `45°` (^341, ^498) |
 
