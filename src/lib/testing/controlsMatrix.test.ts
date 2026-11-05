@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { runMatrix, runOne, targetsOf, freshEditor } from './controlsMatrix';
-import { groupRows, rowsToMarkdown } from './controlsMatrixRows';
+import { groupRows, rowCells, rowsToMarkdown, sortedRows } from './controlsMatrixRows';
 
 /**
  * The controls matrix (^371): drives the editor over the combinations and lists what each input
@@ -9,7 +9,8 @@ import { groupRows, rowsToMarkdown } from './controlsMatrixRows';
  *
  *   CONTROLS_MATRIX_OUT=/some/dir bunx vitest run src/lib/testing/controlsMatrix.test.ts
  *
- * It writes `matrix.json` (every try) and `matrix.md` (the rows, without hats) to that directory.
+ * It writes `matrix.json` (every try), `matrix.md` (the rows, without hats) and `rows.json` (the rows
+ * with a try each, for the screenshots in `screenshots/`) to that directory.
  */
 const project = readFileSync(new URL('./fixtures/combinations.json', import.meta.url), 'utf8');
 const out = process.env.CONTROLS_MATRIX_OUT;
@@ -47,7 +48,10 @@ describe('controls matrix', () => {
     () => {
       const recs = runMatrix(project);
       writeFileSync(`${out}/matrix.json`, JSON.stringify(recs));
-      writeFileSync(`${out}/matrix.md`, rowsToMarkdown(groupRows(recs)));
+      const rows = groupRows(recs);
+      writeFileSync(`${out}/matrix.md`, rowsToMarkdown(rows));
+      const forShots = sortedRows(rows).map((r) => ({ cells: rowCells(r), example: r.example }));
+      writeFileSync(`${out}/rows.json`, JSON.stringify(forShots));
       expect(recs.length).toBeGreaterThan(1000);
     },
     240_000,

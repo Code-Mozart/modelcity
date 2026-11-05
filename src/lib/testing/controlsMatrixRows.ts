@@ -12,6 +12,8 @@ export interface Row {
   hintId: string;
   /** The values of each dimension the row holds for. */
   values: Record<Dim, string[]>;
+  /** One of the tries the row stands for: what a screenshot of the row shows. */
+  example: Rec;
   /** The dimensions the row does not depend on: it holds for every value there is with the others. */
   any: Record<Dim, boolean>;
 }
@@ -117,7 +119,7 @@ function rowsOfPlace(recs: Rec[]): Row[] {
   return [...byOutcome.values()].flatMap((rs) =>
     reduce(rs.map((r) => cubeOf(r, ignored, coarse))).map((cube) => {
       const first = rs[0]!;
-      const values = Object.fromEntries(DIMS.map((d) => [d, [...cube[d]]])) as Record<
+      const values = Object.fromEntries(DIMS.map((d) => [d, [...cube[d]].sort()])) as Record<
         Part,
         string[]
       >;
@@ -130,6 +132,7 @@ function rowsOfPlace(recs: Rec[]): Row[] {
         out: outcomeOf(first),
         hint: first.hint,
         hintId: first.hintId,
+        example: first,
         values: { under: [first.under], ...values },
         any: { under: false, ...Object.fromEntries(DIMS.map((d) => [d, covers(d)])) } as Row['any'],
       };
@@ -216,29 +219,32 @@ function contextText(r: Row): string {
 const describeUnder = (r: Row) =>
   r.any.under ? 'anywhere' : uniq(r.values.under).map(underText).join(', ');
 
+/** The cells of a row of the table (without its hat, ^392). */
+export function rowCells(r: Row): string[] {
+  return [
+    r.mode,
+    describeUnder(r),
+    contextText(r),
+    inputText(r),
+    r.hint ? r.hint.split(': ').slice(1).join(': ') : '-',
+    r.out || '-',
+    r.hint ? 'control hints panel' : 'nowhere',
+    r.hint ? (r.hintId ? 'yes' : 'no') : '-',
+  ].map((c) => c.replace(/\|/g, '\\|'));
+}
+
+/** The rows in a stable order. */
+export const sortedRows = (rows: Row[]): Row[] => {
+  const order = (r: Row) =>
+    `${['select', 'draw', 'extend'].indexOf(r.mode)}|${r.values.under[0]}|${r.action}|${r.values.mod.join()}`;
+  return [...rows].sort((a, b) => order(a).localeCompare(order(b)));
+};
+
 /** The table without hats (they are added by hand, ^392): one line per row, in a stable order. */
 export function rowsToMarkdown(rows: Row[]): string {
   const head = [
     '| Mode | Under the pointer | Additional context | Input | What it says | What it does | Displayed where | Visitable |',
     '|------|-------------------|--------------------|-------|--------------|--------------|-----------------|-----------|',
   ];
-  const line = (r: Row) =>
-    [
-      r.mode,
-      describeUnder(r),
-      contextText(r),
-      inputText(r),
-      r.hint ? r.hint.split(': ').slice(1).join(': ') : '-',
-      r.out || '-',
-      r.hint ? 'control hints panel' : 'nowhere',
-      r.hint ? (r.hintId ? 'yes' : 'no') : '-',
-    ]
-      .map((c) => c.replace(/\|/g, '\\|'))
-      .join(' | ');
-  const order = (r: Row) =>
-    `${['select', 'draw', 'extend'].indexOf(r.mode)}|${r.values.under[0]}|${r.action}|${r.values.mod.join()}`;
-  return [
-    ...head,
-    ...[...rows].sort((a, b) => order(a).localeCompare(order(b))).map((r) => `| ${line(r)} |`),
-  ].join('\n');
+  return [...head, ...sortedRows(rows).map((r) => `| ${rowCells(r).join(' | ')} |`)].join('\n');
 }
