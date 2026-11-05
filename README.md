@@ -35,7 +35,7 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Branch** | Both the concept of splits and merges and a chain of nodes without any: its first and last node have a number of edges other than two, all nodes between have exactly two. A "T" has three branches, an "L" one (with bends), an "A" four (roof, bar, two legs) | decided | ^130 |
 | **Node** | A point a road passes through, drawn as a dot. It lies on the curve and carries a heading | decided | ^6 |
 | **Heading** | The direction of the road at a node, shown as an arrow | decided | ^6, ^9 |
-| **Segment** | The curve between two nodes (`edge` in the code) | decided | ^60 |
+| **Segment** | The curve between two nodes, with a direction (from its start node to its end node), a radius (its own, or auto) and a lane. Older texts, the code (`GEdge`) and the stored file (`edges`) say *edge*: the same thing, the old word (^747, ^748) | decided (user) | ^60, ^747 |
 | **Selected segment** | A segment whose two nodes are both selected (`selectedSegments` in the code); it is drawn in the color of selected nodes, and its scaffold is shown together with those of the other selected segments | decided | ^133, ^231 |
 | **Leaf node** | A node at either end of a road, also the only node of a road | decided | ^65 |
 | **Bend** (L-curve) | A segment with one turn: straight, arc, straight | decided; assumed (that "L-curve" and "bend" are one thing) | ^6 |
