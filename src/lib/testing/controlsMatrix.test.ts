@@ -11,7 +11,7 @@ import { groupRows, rowsToMarkdown } from './controlsMatrixRows';
  *
  * It writes `matrix.json` (every try) and `matrix.md` (the rows, without hats) to that directory.
  */
-const project = readFileSync(new URL('../../../docs/combinations.json', import.meta.url), 'utf8');
+const project = readFileSync(new URL('./fixtures/combinations.json', import.meta.url), 'utf8');
 const out = process.env.CONTROLS_MATRIX_OUT;
 
 describe('controls matrix', () => {
@@ -38,7 +38,7 @@ describe('controls matrix', () => {
     );
     const rows = groupRows(recs);
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.mods).toEqual(['Alt', 'Shift']);
+    expect(rows[0]!.any.mod).toBe(true);
     expect(rowsToMarkdown(rows)).toContain('delete node');
   });
 

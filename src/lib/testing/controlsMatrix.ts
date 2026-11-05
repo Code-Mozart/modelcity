@@ -13,7 +13,7 @@ import { branchOfEdge } from '../model/junction';
 /**
  * The controls matrix (^371): the editor engine driven over the combinations of mode, what is under
  * the pointer, button and manner, modifiers, selection, parallel segments and snapping, on a
- * project (`docs/combinations.json`). It records what each input did; no browser, no screen.
+ * project (`src/lib/testing/fixtures/combinations.json`). It records what each input did; no browser, no screen.
  */
 export type Mode = 'select' | 'draw' | 'extend';
 export type Action = 'click' | 'drag' | 'rmb' | 'esc';
