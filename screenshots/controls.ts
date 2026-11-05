@@ -13,6 +13,7 @@ import '../src/lib/testHook';
  *   bun run screenshots                  all rows (about 200: takes a few minutes)
  *   bun run screenshots --limit 3        the first rows only
  *   bun run screenshots --hat ^779       one row (more: repeat the flag)
+ *   bun run screenshots --html-only      only write index.html again (no browser, no new pictures)
  */
 const OUT = 'screenshots/out';
 const URL = 'http://localhost:5173';
@@ -35,6 +36,7 @@ interface Shot extends Item {
 const args = process.argv.slice(2);
 const flag = (name: string) => args.flatMap((a, i) => (a === name ? [args[i + 1]!] : []));
 const [limit] = flag('--limit');
+const htmlOnly = args.includes('--html-only');
 const only = flag('--hat').map((h) => h.replace('^', '').replace('hat', ''));
 
 /** The hat of each row of the generated table: the table is the one that has the hats. */
@@ -48,10 +50,12 @@ function hatsOfTable(): Map<string, string> {
 }
 
 function rowsToShoot(): Shot[] {
-  const made = spawnSync('bunx', ['vitest', 'run', 'src/lib/testing/controlsMatrix.test.ts'], {
-    env: { ...process.env, CONTROLS_MATRIX_OUT: OUT },
-    stdio: 'inherit',
-  });
+  const made = htmlOnly
+    ? { status: 0 }
+    : spawnSync('bunx', ['vitest', 'run', 'src/lib/testing/controlsMatrix.test.ts'], {
+        env: { ...process.env, CONTROLS_MATRIX_OUT: OUT },
+        stdio: 'inherit',
+      });
   if (made.status !== 0) throw new Error('the matrix did not run');
   const items: Item[] = JSON.parse(readFileSync(`${OUT}/rows.json`, 'utf8'));
   const hats = hatsOfTable();
@@ -134,29 +138,61 @@ async function shootRow(page: Page, project: string, s: Shot) {
   for (const k of keys) await page.keyboard.up(k);
 }
 
-const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const PAGE_STYLE = `body{margin:0;font:14px sans-serif;height:100vh;display:flex;flex-direction:column}
+#head{padding:6px 10px;border-bottom:1px solid #ccc}#pics{flex:1;display:flex;gap:4px;min-height:0;padding:4px}
+#pics div{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
+#pics img{max-width:100%;min-height:0;flex:1;object-fit:contain}
+#foot{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-top:1px solid #ccc}
+button{font-size:16px;padding:6px 14px}.on-a{background:#9d9}.on-r{background:#e99}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px;vertical-align:top}.rej{background:#fdd}`;
+
+/** The review page: one row at a time with its two pictures, accepted or rejected; at the end a table. */
+const PAGE_SCRIPT = `
+const rows = ROWS, key = 'modelcity-review';
+let state = {}; try { state = JSON.parse(localStorage.getItem(key) || '{}'); } catch {}
+let i = 0;
+const $ = (id) => document.getElementById(id);
+const save = () => { try { localStorage.setItem(key, JSON.stringify(state)); } catch {} };
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+function show() {
+  if (i >= rows.length) return summary();
+  const r = rows[i];
+  $('head').innerHTML = '<b>' + (i + 1) + ' / ' + rows.length + ' ^' + r.hat + '</b> | ' + r.cells.slice(0, 6).map(esc).join(' | ');
+  $('pics').innerHTML = ['before', 'after'].map((w) => '<div>' + w + '<img src="hat' + r.hat + '-' + w + '.png"></div>').join('');
+  $('acc').className = state[r.hat] === 'accepted' ? 'on-a' : '';
+  $('rej').className = state[r.hat] === 'rejected' ? 'on-r' : '';
+}
+function set(v) { state[rows[i].hat] = v; save(); i++; show(); }
+function summary() {
+  document.body.innerHTML = '<div style="padding:10px"><table><tr><th>Hat</th><th>State</th>' + ['Mode', 'Under the pointer', 'Context', 'Input', 'Says', 'Does'].map((h) => '<th>' + h + '</th>').join('') + '</tr>' +
+    rows.map((r) => '<tr class="' + (state[r.hat] === 'rejected' ? 'rej' : '') + '"><td>^' + r.hat + '</td><td>' + (state[r.hat] || 'not reviewed') + '</td>' + r.cells.slice(0, 6).map((c) => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('') + '</table></div>';
+  const bad = rows.filter((r) => state[r.hat] === 'rejected');
+  console.log('Rejected rows (' + bad.length + '):\\n' + bad.map((r) => '^' + r.hat + ' | ' + r.cells.slice(0, 6).join(' | ')).join('\\n'));
+}
+$('acc').onclick = () => set('accepted'); $('rej').onclick = () => set('rejected');
+$('prev').onclick = () => { i = Math.max(0, i - 1); show(); }; $('next').onclick = () => { i++; show(); };
+show();`;
+
 function indexHtml(shots: Shot[]): string {
-  const head = ['Hat', 'Mode', 'Under the pointer', 'Context', 'Input', 'Says', 'Does'];
-  const line = (s: Shot) => {
-    const pics = ['before', 'after']
-      .map(
-        (w) => `<a href="hat${s.hat}-${w}.png"><img loading="lazy" src="hat${s.hat}-${w}.png"></a>`,
-      )
-      .join('');
-    const cells = s.cells.slice(0, 6).map((c) => `<td>${esc(c)}</td>`);
-    return `<tr><td>^${s.hat}</td>${cells.join('')}<td class="pics">${pics}</td></tr>`;
-  };
-  return `<!doctype html><meta charset="utf-8"><title>Controls</title>
-<style>body{font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px;vertical-align:top}
-table{border-collapse:collapse}img{width:420px;margin:2px}.pics{white-space:nowrap}</style>
-<table><tr>${head.map((h) => `<th>${h}</th>`).join('')}<th>Before / after</th></tr>
-${shots.map(line).join('\n')}</table>`;
+  const rows = JSON.stringify(shots.map((s) => ({ hat: s.hat, cells: s.cells }))).replace(
+    /</g,
+    '\\u003c',
+  );
+  return `<!doctype html><meta charset="utf-8"><title>Controls</title><style>${PAGE_STYLE}</style>
+<div id="head"></div><div id="pics"></div>
+<div id="foot"><button id="prev">&larr; back</button><span><button id="rej">reject</button> <button id="acc">accept</button></span><button id="next">skip &rarr;</button></div>
+<script>${PAGE_SCRIPT.replace('ROWS', rows)}</script>`;
 }
 
 async function main() {
   mkdirSync(OUT, { recursive: true });
   const project = readFileSync('src/lib/testing/fixtures/combinations.json', 'utf8');
   const shots = rowsToShoot();
+  if (htmlOnly) {
+    writeFileSync(`${OUT}/index.html`, indexHtml(shots));
+    console.log(`${shots.length} rows: ${OUT}/index.html`);
+    return;
+  }
   const stop = await devServer();
   const browser = await chromium.launch();
   const page = await (
