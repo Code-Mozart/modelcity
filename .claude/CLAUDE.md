@@ -88,7 +88,7 @@ The user entrusts the details to Claude. Principles:
 
 ## Context
 
-- Controls: `docs/controls.md` is the current reference; update it together with the hat when a control changes.
+- Controls and features (^371, ^786): `docs/controls.md` (controls) and `docs/features.md` (features and operations, with where each is tested) are the reference. A new feature, operation, control or toast gets its hat and its row in the same PR; a changed control updates its row. `docs/controls.md` is incomplete on purpose until the milestone ^783 (controls as data); new controls get a row under *Controls by context*. When controls change, run the matrix (`CONTROLS_MATRIX_OUT=/some/dir bunx vitest run src/lib/testing/controlsMatrix.test.ts`: it drives the editor over the combinations and lists what each input did and what the hints say) and look at what changed. At the end of a milestone sweep the code once more for what was missed.
 - Product background and design decisions: `docs/handover.md` (its mention of single-page HTML demos is outdated; we build a real app now).
 - Stack: bun + TypeScript + Svelte 5 + Vite + vitest (^1). Code map of `src/lib/` (^12): `curves/` the pure curve geometry library; `model/` the graph, chains and junctions; `editor/` the interaction engine (`editor.svelte.ts`) with its pure helpers, selection and undo; `camera/` view, pan, zoom, rotate and bounds; `render/` canvas drawing; `hints/` the control hints and the input symbols; `ui/` generic components (list, icons, notices); `project/` projects, storage, files and the projects modal; `MapCanvas.svelte` input dispatch and view.
 

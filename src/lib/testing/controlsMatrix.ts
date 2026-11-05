@@ -52,10 +52,6 @@ export interface Rec {
   hovered: number;
   dN: number;
   dE: number;
-  /** Where the pointer was put, where a drag ended (if it was told to), the pinned nodes: enough to do the try again. */
-  at: Spot;
-  dragTo?: Spot;
-  pinned: number[];
 }
 
 const modInfo = (mod: string) => ({
@@ -277,9 +273,6 @@ export function runOne(text: string, s: Try): Rec {
     hovered: s.t.node,
     dN: ed.graph.nodes.length - before.nodes,
     dE: ed.graph.edges.length - before.edges,
-    at: s.t.at,
-    dragTo: s.t.dragTo,
-    pinned: s.pinned,
   };
 }
 

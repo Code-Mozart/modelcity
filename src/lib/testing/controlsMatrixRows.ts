@@ -12,8 +12,6 @@ export interface Row {
   hintId: string;
   /** The values of each dimension the row holds for. */
   values: Record<Dim, string[]>;
-  /** One of the tries the row stands for: what a screenshot of the row shows. */
-  example: Rec;
   /** The dimensions the row does not depend on: it holds for every value there is with the others. */
   any: Record<Dim, boolean>;
 }
@@ -132,7 +130,6 @@ function rowsOfPlace(recs: Rec[]): Row[] {
         out: outcomeOf(first),
         hint: first.hint,
         hintId: first.hintId,
-        example: first,
         values: { under: [first.under], ...values },
         any: { under: false, ...Object.fromEntries(DIMS.map((d) => [d, covers(d)])) } as Row['any'],
       };
@@ -220,7 +217,7 @@ const describeUnder = (r: Row) =>
   r.any.under ? 'anywhere' : uniq(r.values.under).map(underText).join(', ');
 
 /** The cells of a row of the table (without its hat, ^392). */
-export function rowCells(r: Row): string[] {
+function rowCells(r: Row): string[] {
   return [
     r.mode,
     describeUnder(r),
@@ -234,7 +231,7 @@ export function rowCells(r: Row): string[] {
 }
 
 /** The rows in a stable order. */
-export const sortedRows = (rows: Row[]): Row[] => {
+const sortedRows = (rows: Row[]): Row[] => {
   const order = (r: Row) =>
     `${['select', 'draw', 'extend'].indexOf(r.mode)}|${r.values.under[0]}|${r.action}|${r.values.mod.join()}`;
   return [...rows].sort((a, b) => order(a).localeCompare(order(b)));
