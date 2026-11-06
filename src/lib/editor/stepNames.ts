@@ -22,6 +22,7 @@ const HANDLE_NAME = {
 
 const ACT_NAME = {
   finish: 'finish road',
+  cancel: 'cancel first node',
   close: 'close road',
   merge: 'merge road',
   extend: 'extend road',

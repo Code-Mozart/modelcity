@@ -33,6 +33,7 @@ import {
 } from './chains';
 import { moveOf } from './moves';
 import { phaseOf } from './phase';
+import { onlyFirstNode } from '../model/junction';
 import { emptyGraph, nodeOf, roundToMm, sameGraph, type Graph } from '../model/graph';
 import {
   afterEmptyClick,
@@ -244,7 +245,7 @@ export class Editor {
     // A split on a curve that was finished at once gives the curve back (an inserted node would stay), unless the click was on the inserted node (^276).
     this.graph = finishedGraph(this.graph, keep ? null : this.splitUndo);
     this.leaveDrawing(toSelect || this.active === null);
-    this.commit(before, 'finish road');
+    this.commit(before, onlyFirstNode(before) ? 'cancel first node' : 'finish road');
   }
 
   /** Left button pressed. */
@@ -343,7 +344,7 @@ export class Editor {
     this.selection = afterHandleClick(this.selection, press);
     if (press.flip) this.restore(flipArmFrom(this.snapshot(), id));
     else if (press.curve) this.clickedRadius(press.curve);
-    else if (press.act === 'finish') this.finishRoad(false, true);
+    else if (press.act === 'finish' || press.act === 'cancel') this.finishRoad(false, true);
     else if (press.act === 'extend') this.edit('extend road', (d) => extendTo(d, id));
     else if (press.act === 'split') this.restore(splitAt(this.snapshot(), id));
     else if (press.act === 'merge' || press.act === 'close') this.merge(id);

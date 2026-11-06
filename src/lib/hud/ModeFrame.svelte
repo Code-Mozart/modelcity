@@ -10,7 +10,7 @@
 <div class="frame" data-testid="mode-frame" data-mode={phase} style:--mode={mode.outline}></div>
 <div class="modes" aria-hidden="true">
   {#each shownIn(phase) as p (p)}
-    <span class="mode" class:on={p === phase} style:--mode={MODES[p].color} title={MODES[p].label}>
+    <span class="mode" class:on={p === phase} style:--mode={MODES[p].color}>
       <Icon name={MODES[p].icon} />
     </span>
   {/each}

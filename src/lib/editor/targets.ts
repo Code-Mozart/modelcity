@@ -10,7 +10,7 @@ import {
   mergeEnd,
   nodeAction,
 } from '../model/junction';
-import { allSelected, isSelected, pickedCount } from './selection';
+import { allSelected, isSelected, onSelection, pickedCount } from './selection';
 import type { Hover, Placement, Snapshot } from './types';
 import type { HintTarget } from '../hints/hints';
 
@@ -30,6 +30,7 @@ function handleTarget(drawn: Drawn, handle: RoadHandle, drawing: boolean): HintT
     act: node && drawing ? nodeAction(drawn, handle.id) : radiusAct(drawn, handle, drawing),
     selected: (node || handle.type === 'head') && isSelected(selection, handle.id),
     lane: node && !drawing && allSelected(selection, branchOfNode(graph, handle.id)),
+    onSelection: node && onSelection(selection, [handle.id]),
   };
 }
 
@@ -41,6 +42,7 @@ function curveTarget(drawn: Drawn, hit: RoadHit, drawing: boolean): HintTarget {
     picked: e ? pickedCount(selection, [e.start, e.end]) : 0,
     act: drawing ? curveAction(drawn) : null,
     lane: !drawing && allSelected(selection, branchOfEdge(graph, hit.edge)),
+    onSelection: !!e && onSelection(selection, [e.start, e.end]),
   };
 }
 

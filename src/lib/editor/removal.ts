@@ -1,5 +1,5 @@
 import { edgeOfId, type Graph } from '../model/graph';
-import { branchEdges, isSelected } from './selection';
+import { branchEdges, onSelection } from './selection';
 import { removeNodesFrom, removeSegmentsFrom } from './ops';
 import type { RoadHandle, RoadHit } from './chains';
 import type { Snapshot } from './types';
@@ -24,11 +24,6 @@ function segmentsRemoval(g: Graph, edge: number, branch: boolean): Removal {
     name: branch ? 'remove branch' : 'remove segment',
     change: (d) => removeSegmentsFrom(d, ids),
   };
-}
-
-/** Whether a right click on this node or segment is on the selection, which has several nodes (^290). */
-function onSelection(selection: number[], ids: number[]): boolean {
-  return selection.length > 1 && ids.every((id) => isSelected(selection, id));
 }
 
 /**

@@ -5,6 +5,7 @@ import { parseProject } from '../project/migrate';
 import { hintsFor, type Hint } from '../hints/hints';
 import { show } from './hintHelpers';
 import { headingFrom, placedHeading } from '../snap/heading';
+import { hintStateOf } from '../editor/hintState';
 import { curveOfEdge } from '../editor/chains';
 import { curveAt, handleAt } from '../editor/hits';
 import { pointOn } from '../curves/piece';
@@ -78,14 +79,9 @@ export function freshEditor(text: string, mode: Mode, pinned: number[] = []): Ed
 }
 
 function hintsNow(ed: Editor): Hint[] {
-  const heading =
-    placedHeading(ed.snapped, false) !== null ||
-    (ed.press !== null && headingFrom(ed.snapped, false) !== null);
   return hintsFor(ed.drawing, ed.hintTarget, ed.selection.length, {
     pinned: ed.pins.list.length,
-    snapping: ed.snapped !== null,
-    touching: heading,
-    placing: ed.drawing,
+    ...hintStateOf(ed),
   });
 }
 

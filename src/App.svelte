@@ -21,7 +21,8 @@
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
   import { dropOf } from './lib/editor/drop';
-  import { headingFrom, placedHeading } from './lib/snap/heading';
+  import { headingFrom } from './lib/snap/heading';
+  import { hintStateOf } from './lib/editor/hintState';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
@@ -48,10 +49,6 @@
     untrack(() => used && usage.mark(used.id));
   });
   // While a handle is dragged, the hints are about the drag only (^286); the graph is read so that it follows the drag.
-  /** The snap gives a heading that `Alt` inverts: a lane or a normal for a placed node, or the copied heading (^301, ^313). */
-  const invertible = (e: Editor) =>
-    placedHeading(e.snapped, false) !== null ||
-    (e.press !== null && headingFrom(e.snapped, false) !== null);
   const drag = $derived.by(() => {
     const [press, graph] = [editor.press, editor.graph];
     // Setting the heading of a node that was just placed is dragging a heading too (^286).
@@ -69,9 +66,7 @@
         : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
             hidden: usage.hidden,
             pinned: editor.pins.list.length,
-            snapping: editor.snapped !== null,
-            touching: invertible(editor),
-            placing: editor.drawing,
+            ...hintStateOf(editor),
             rotating: camera.rotating,
             drag,
           }),
@@ -195,7 +190,7 @@
   <Hints {hints} />
   <VersionText visible={banner.visible} />
   <div class="right">
-    <ToastList {toasts} />
+    <div class="toasts"><ToastList {toasts} /></div>
     {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}
   </div>
   {#if summary.segments > 0}<MeasurementsPanel {summary} lifted={camera.scaleBarVisible} />{/if}
@@ -204,17 +199,20 @@
 </main>
 
 <style>
-  /* The toasts and the recent history panel share one column, so they never overlap (^232). */
+  /* The toasts and the recent history panel share one column, so they never overlap (^232). The column has no layer of its own: the toasts are above the veil of the projects modal, the panel under it (^387). */
   .right {
     position: absolute;
     right: 1.1667em;
     top: 1em;
-    z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 0.8em;
     pointer-events: none;
+  }
+  .toasts {
+    position: relative;
+    z-index: 2;
   }
   main {
     position: relative;
