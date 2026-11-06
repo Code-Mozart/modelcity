@@ -15,14 +15,14 @@ import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { Pins } from './pins.svelte';
-import { nodesRemoval, rightClickRemoval, type Removal } from './removal';
+import { nodesRemoval, rightClickRemoval, underHover, type Removal } from './removal';
 import { Timeline, type Move } from './timeline.svelte';
 import type { ControlId } from '../hints/hints';
 import { pressName } from './stepNames';
 import { controlUsed } from './usage';
 import { pointerOf } from './proximity';
 import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
-import { curveAt, focusOf, handleAt, hoverAt } from './hits';
+import { focusOf, hoverAt } from './hits';
 import {
   chainHandles,
   chainSegments,
@@ -391,12 +391,11 @@ export class Editor {
     this.restore(press.undo);
   }
 
-  /** Right click without moving: removes what is under the pointer, else finishes the road (^43, ^160, ^290). */
+  /** Right click without moving: removes what is under the pointer (what the hint says: the hover, snapped like a left click), else finishes the road (^43, ^160, ^290, ^808). */
   rightClick(info: PointerInfo) {
     if (this.viewing) return;
-    const handle = handleAt(this.handles(info.scale), info);
-    const hit = handle ? null : curveAt(this.chains, info);
-    const r = rightClickRemoval(this.graph, this.selection, { handle, hit }, info.alt);
+    this.lastInfo = info;
+    const r = rightClickRemoval(this.graph, this.selection, underHover(this.hover), info.alt);
     if (r) this.removal(r);
     else this.finishRoad();
   }

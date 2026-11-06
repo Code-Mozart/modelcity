@@ -104,3 +104,30 @@ describe('sliding along a curve still snaps to the other suggestions (^802)', ()
     expect(ed.snapped?.pt).toMatchObject({ x: 30, y: 0 });
   });
 });
+
+describe('the right click does what the hint says where the pointer is snapped (^808)', () => {
+  const near = () => {
+    const ed = drawMode(
+      mapOf([
+        [
+          [0, 0],
+          [100, 0],
+        ],
+      ]),
+    );
+    ed.pointerMove(look(4, 0.1, 4)); // on the segment, 16 px from the first node: pulled to it
+    return ed;
+  };
+
+  it('the hover is the node, the hint says delete node', () => {
+    const ed = near();
+    expect(ed.hover).toMatchObject({ kind: 'handle', handle: { type: 'node' } });
+    expect(ed.hintTarget).toMatchObject({ kind: 'handle', type: 'node' });
+  });
+
+  it('and the right click deletes that node, not the segment under the raw pointer', () => {
+    const ed = near();
+    ed.rightClick(look(4, 0.1, 4));
+    expect(ed.timeline.history.past.at(-1)?.name).toBe('delete node');
+  });
+});

@@ -2,7 +2,7 @@ import { edgeOfId, type Graph } from '../model/graph';
 import { branchEdges, onSelection } from './selection';
 import { removeNodesFrom, removeSegmentsFrom } from './ops';
 import type { RoadHandle, RoadHit } from './chains';
-import type { Snapshot } from './types';
+import type { Hover, Snapshot } from './types';
 
 /** A removal as one undoable step: its name, and what it does to the state. */
 export interface Removal {
@@ -46,3 +46,11 @@ export function rightClickRemoval(
   if (e && onSelection(selection, [e.start, e.end])) return nodesRemoval(selection);
   return segmentsRemoval(g, hit.edge, alt);
 }
+
+/** What a right click works on: the node or curve that is hovered, as the hint says (^808). */
+export const underHover = (
+  h: Hover | null,
+): { handle: RoadHandle | null; hit: RoadHit | null } => ({
+  handle: h?.kind === 'handle' ? h.handle : null,
+  hit: h?.kind === 'candidate' ? h.hit : null,
+});

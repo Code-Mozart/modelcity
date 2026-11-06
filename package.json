@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
   "version": "0.36.0",
-  "moniker": "Snap headings",
+  "moniker": "Snapping engine, part 3",
   "private": true,
   "type": "module",
   "scripts": {
