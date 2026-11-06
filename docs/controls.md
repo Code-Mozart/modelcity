@@ -27,7 +27,7 @@
 
 ## Controls by context (the user's table)
 
-The controls of select mode with the pointer on a node (^488 to ^491, ^686 to ^689) are made from a table in code, `src/lib/hints/nodeControls.ts` (^783, the spike): the hint of each is its `says`, and `src/lib/hints/nodeControls.test.ts` checks the table against the editor. This is the model for the other areas.
+All controls that have a hint are rows of tables in code, `src/lib/hints/` (`areaControls.ts` and its parts, `project/modalHints.ts`; ^783): the hint of each is its `says`, and `src/lib/hints/controls.test.ts` checks the rows against the editor. The reference made from the tables is `docs/controls-by-table.md` (generated, a snapshot); this file keeps the context and the decisions.
 
 The review table of the project owner (`docs/please-remove-me.md`, removed), with the hat of each row added: `= ^N` is a control hat that already exists, `^N` a new one. Its columns: the mode or modal; what else must hold; the input; what the hint says (only if displayed); what it does; where it is displayed; whether the hint is *visitable* (hidden for 5 minutes after use, ^110; "yes, but should not be" is the user's wish, see ^756). `Ctrl+O` is an import in this table (the modal opening is a side effect), see ^758. Written in the same detail from now on.
 

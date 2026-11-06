@@ -1,0 +1,144 @@
+import { describe, expect, it } from 'vitest';
+import {
+  MODAL_CONTROLS,
+  type ModalFacts,
+  type ModalMode,
+  type ModalTarget,
+} from '../project/modalHints';
+import { factsOf, ready, SCENARIOS } from '../testing/controlScenarios';
+import { AREA_CONTROLS, DRAG_CONTROLS, PANEL_CONTROLS, VIEW_CONTROLS } from './areaControls';
+import type { Control } from './controls';
+import type { Facts } from './facts';
+import { HISTORY_CONTROLS, type HintTarget } from './hints';
+import type { Input } from './inputs';
+
+/**
+ * The reference of all controls, made from the tables (^783): `docs/controls-by-table.md`. It is a
+ * snapshot: when a control changes the test fails; take the new one with
+ * `bunx vitest run -u src/lib/hints/controlsDoc.test.ts`.
+ */
+function inputText(input: Input | Input[]): string {
+  if (Array.isArray(input)) return input.map(inputText).join(' or ');
+  if (input.kind === 'wheel') return 'wheel';
+  if (input.kind === 'key') return input.label;
+  if (input.kind === 'keys') return input.labels.join('+');
+  const mods = [input.alt ? 'Alt' : '', input.shift ? 'Shift' : ''].filter(Boolean);
+  const button = { lmb: 'LMB', rmb: 'RMB', mmb: 'MMB' }[input.button];
+  return [...mods, `${button}${input.drag ? ' drag' : ''}`].join('+');
+}
+
+const cell = (texts: string[]) => (texts.length ? texts.join('; ') : '-').replace(/\|/g, '\\|');
+const uniq = (xs: string[]) => [...new Set(xs)];
+
+/** The pointer controls: where they exist is the scenarios that have them, what they say is what they said there. */
+function pointerRows(): string[] {
+  return AREA_CONTROLS.map((c) => {
+    const where: string[] = [];
+    const says: string[] = [];
+    const quiet: string[] = [];
+    for (const s of SCENARIOS) {
+      for (const sel of s.selections) {
+        const f = factsOf(ready(s, sel));
+        if (!c.on(f)) continue;
+        where.push(s.name);
+        const text = c.says(f);
+        if (text !== null) says.push(`\`${text}\``);
+        else if (c.listens(f))
+          quiet.push(`${s.name}, ${sel.length ? `selected ${sel.join(' ')}` : 'nothing selected'}`);
+      }
+    }
+    return `| ^${c.hat} | ${inputText(c.input)} | ${cell(uniq(where))} | ${cell(uniq(says))} | ${cell(uniq(quiet))} |`;
+  });
+}
+
+/** What a control says over the probes where it exists. */
+function saysOver<F>(c: Control<F>, probes: [string, F][]) {
+  const found = probes.filter(([, f]) => c.on(f));
+  const texts = uniq(found.flatMap(([, f]) => (c.says(f) === null ? [] : [`\`${c.says(f)}\``])));
+  return { where: uniq(found.map(([name]) => name)), texts };
+}
+
+function probeRows<F>(controls: Control<F>[], probes: [string, F][]): string[] {
+  return controls.map((c) => {
+    const { where, texts } = saysOver(c, probes);
+    return `| ^${c.hat} | ${inputText(c.input)} | ${cell(where)} | ${cell(texts)} | - |`;
+  });
+}
+
+const empty: HintTarget = { kind: 'empty' };
+const facts = (f: Partial<Facts> & { name?: string }): [string, Facts] => [
+  f.name ?? 'any',
+  { viewing: false, drawing: false, target: empty, selected: 0, state: {}, ...f },
+];
+const PANEL_PROBES: [string, Facts][] = [
+  facts({ name: 'select mode' }),
+  facts({ name: 'select mode, something selected', selected: 2 }),
+  facts({ name: 'draw or extend mode', drawing: true }),
+  facts({ name: 'view mode', viewing: true }),
+  facts({ name: 'snapped', state: { snapping: true, placing: true, touching: true } }),
+  facts({ name: 'something pinned', state: { pinned: 1 } }),
+  facts({ name: 'the compass', state: { rotating: true, pinned: 1 } }),
+];
+const DRAG_PROBES: [string, Facts][] = (['node', 'head', 'rad', 'ctrl'] as const).flatMap(
+  (type) => [
+    facts({ name: `dragging a ${type}`, state: { drag: { type, merge: false } } }),
+    facts({
+      name: `dragging a ${type}, snapped`,
+      state: { drag: { type, merge: true }, snapping: true, touching: true },
+    }),
+    facts({
+      name: `placing a node, heading dragged`,
+      state: { drag: { type: 'head', merge: false, place: true } },
+    }),
+  ],
+);
+const HISTORY_PROBES: [string, { undo: boolean; redo: boolean }][] = [
+  ['nothing to undo or redo', { undo: false, redo: false }],
+  ['something to undo', { undo: true, redo: false }],
+  ['something to redo', { undo: false, redo: true }],
+];
+const MODALS: ModalMode[] = ['list', 'rename', 'delete'];
+const TARGETS: ModalTarget[] = [
+  'card',
+  'rename',
+  'delete',
+  'confirm',
+  'cancel',
+  'close',
+  'new',
+  'import',
+  'export',
+  'search',
+];
+const MODAL_PROBES: [string, ModalFacts][] = MODALS.flatMap((mode) =>
+  [null, ...TARGETS].map((over): [string, ModalFacts] => [
+    `${mode}${over ? `, over ${over}` : ''}`,
+    { mode, over },
+  ]),
+);
+
+const HEAD =
+  '| Hat | Input | Where it exists | What the hint says | Listens, no hint |\n|---|---|---|---|---|\n';
+
+function document(): string {
+  const other = PANEL_CONTROLS.filter((c) => !AREA_CONTROLS.includes(c));
+  return [
+    '# Controls, made from the tables (^783)',
+    'Generated by `src/lib/hints/controlsDoc.test.ts` from the tables in `src/lib/hints/` (`areaControls.ts` and its parts, `project/modalHints.ts`); do not edit. The hand-made reference with the context of each control is `docs/controls.md`. Where a control exists is the list of the states the tests of `controls.test.ts` try (pointer controls) or of the probes of this test; *listens, no hint* is where the editor does something and no hint says so.',
+    '## The pointer, by what is under it\n\n' + HEAD + pointerRows().join('\n'),
+    '## Tab, camera, snap keys, P\n\n' + HEAD + probeRows(other, PANEL_PROBES).join('\n'),
+    '## View mode\n\n' + HEAD + probeRows(VIEW_CONTROLS, PANEL_PROBES).join('\n'),
+    '## While a handle is dragged\n\n' + HEAD + probeRows(DRAG_CONTROLS, DRAG_PROBES).join('\n'),
+    '## Undo and redo, in the recent history panel\n\n' +
+      HEAD +
+      probeRows(HISTORY_CONTROLS, HISTORY_PROBES).join('\n'),
+    '## The projects modal\n\n' + HEAD + probeRows(MODAL_CONTROLS, MODAL_PROBES).join('\n'),
+    '',
+  ].join('\n\n');
+}
+
+describe('the reference of the controls (^783)', () => {
+  it('is the snapshot, and has every control of the tables once', async () => {
+    await expect(document()).toMatchFileSnapshot('../../../docs/controls-by-table.md');
+  });
+});
