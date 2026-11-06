@@ -5,7 +5,9 @@ import { groupRows, rowsToMarkdown } from './controlsMatrixRows';
 
 /**
  * The controls matrix (^371): drives the editor over the combinations and lists what each input
- * did. The small checks always run; the whole matrix runs only when asked for:
+ * did. The small checks and the snapshot (`fixtures/controlsMatrix.md`, ^784) always run; when a control
+ * changes the snapshot fails with the diff: look at it, and take the new one with
+ * `bunx vitest run -u src/lib/testing/controlsMatrix.test.ts`, to be reviewed in the PR. The whole matrix (every try) runs only when asked for:
  *
  *   CONTROLS_MATRIX_OUT=/some/dir bunx vitest run src/lib/testing/controlsMatrix.test.ts
  *
@@ -52,4 +54,11 @@ describe('controls matrix', () => {
     },
     240_000,
   );
+});
+
+describe('the controls snapshot (^784)', () => {
+  it('the rows of the controls are the snapshot: a change of a control shows up as a diff (^784)', async () => {
+    const rows = rowsToMarkdown(groupRows(runMatrix(project)));
+    await expect(rows).toMatchFileSnapshot('./fixtures/controlsMatrix.md');
+  }, 120_000);
 });
