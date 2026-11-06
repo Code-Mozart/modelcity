@@ -5,3 +5,4 @@ docs
 README.md
 .claude
 standalone-demos
+src/lib/testing/fixtures/controlsMatrix.md

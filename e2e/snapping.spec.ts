@@ -55,3 +55,26 @@ test('a node dropped on another node is merged into it', async ({ page }) => {
   await app.drag({ x: 30, y: 0 }, { x: 0.3, y: 0.3 });
   expect(await app.nodes()).toHaveLength(0); // the only segment of the road went with it (^285)
 });
+
+/** The heading a snap gives (^793, ^794): the heading of the node on its normal line, `Alt` inverts it, the hint says what `Shift` does, and the origin is the node. */
+test('a node on the normal line of a node takes its heading, Alt inverts it', async ({ page }) => {
+  const app = new App(page);
+  await road(app);
+  await app.hover({ x: 0.4, y: -25 });
+  const heading = () =>
+    page.evaluate(() => {
+      const h = window.__modelcity!.editor.hover;
+      return h?.kind === 'preview' ? h.node.th : null;
+    });
+  expect(await heading()).toBeCloseTo(0, 3); // the heading of the node at the origin: east
+  const origins = await page.evaluate(() =>
+    (window.__modelcity!.editor.snapped?.by ?? []).flatMap((s) =>
+      s.kind === 'curve' ? (s.gives ?? []).map((g) => g.origin?.at) : [],
+    ),
+  );
+  expect(origins).toContainEqual({ x: 0, y: 0 });
+  await page.keyboard.down('Alt'); // at once, with no move of the pointer (^801)
+  expect(Math.abs((await heading())!)).toBeCloseTo(Math.PI, 3);
+  await page.keyboard.up('Alt');
+  await expect(app.hints()).toContainText('snap only the position');
+});
