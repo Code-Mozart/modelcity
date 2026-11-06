@@ -21,7 +21,8 @@
   import { actionFor, keyOf } from './lib/editor/keymap';
   import { modalHints } from './lib/project/modalHints';
   import { dropOf } from './lib/editor/drop';
-  import { headingFrom, placedHeading } from './lib/snap/heading';
+  import { headingFrom } from './lib/snap/heading';
+  import { snapHintState } from './lib/editor/hintState';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
@@ -48,10 +49,6 @@
     untrack(() => used && usage.mark(used.id));
   });
   // While a handle is dragged, the hints are about the drag only (^286); the graph is read so that it follows the drag.
-  /** The snap gives a heading that `Alt` inverts: a lane or a normal for a placed node, or the copied heading (^301, ^313). */
-  const invertible = (e: Editor) =>
-    placedHeading(e.snapped, false) !== null ||
-    (e.press !== null && headingFrom(e.snapped, false) !== null);
   const drag = $derived.by(() => {
     const [press, graph] = [editor.press, editor.graph];
     // Setting the heading of a node that was just placed is dragging a heading too (^286).
@@ -69,9 +66,7 @@
         : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
             hidden: usage.hidden,
             pinned: editor.pins.list.length,
-            snapping: editor.snapped !== null,
-            touching: invertible(editor),
-            placing: editor.drawing,
+            ...snapHintState(editor),
             rotating: camera.rotating,
             drag,
           }),

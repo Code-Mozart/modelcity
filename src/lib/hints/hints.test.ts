@@ -17,6 +17,8 @@ const hiddenIds =
     ids.includes(id);
 
 const empty: HintTarget = { kind: 'empty' };
+/** The camera rows, shown in every mode (^389). */
+const CAMERA = ['RMB drag: pan', 'Wheel: zoom', 'MMB drag: rotate'];
 
 describe('control hints (^49)', () => {
   it('draw mode on empty canvas: add a node, with a heading, or finish', () => {
@@ -24,6 +26,7 @@ describe('control hints (^49)', () => {
       'LMB: add node',
       'LMB drag: add node and set heading',
       'Esc or RMB: finish',
+      ...CAMERA,
     ]);
   });
 
@@ -34,6 +37,7 @@ describe('control hints (^49)', () => {
       'Esc: finish',
       'RMB: remove segment',
       'Alt+RMB: remove branch',
+      ...CAMERA,
     ]);
   });
 
@@ -42,6 +46,7 @@ describe('control hints (^49)', () => {
       'LMB drag: move node',
       'RMB: delete node',
       'Esc: finish',
+      ...CAMERA,
     ]);
   });
 });
@@ -53,6 +58,7 @@ describe('control hints over nodes and handles (^49)', () => {
       'LMB or Esc: finish',
       'LMB drag: move node',
       'RMB: delete node',
+      ...CAMERA,
     ]);
   });
 
@@ -62,10 +68,13 @@ describe('control hints over nodes and handles (^49)', () => {
       'LMB drag: move node',
       'RMB: delete node',
       'Esc: finish',
+      ...CAMERA,
     ]);
   });
+});
 
-  it('over other handles: what dragging does, and both ways to finish', () => {
+describe('control hints over the other handles (^49)', () => {
+  it('what dragging does, and both ways to finish', () => {
     const h = (type: 'head' | 'ctrl' | 'rad'): HintTarget => ({
       kind: 'handle',
       type,
@@ -75,9 +84,18 @@ describe('control hints over nodes and handles (^49)', () => {
       'LMB drag: turn heading',
       'Alt+LMB: flip arm',
       'Esc or RMB: finish',
+      ...CAMERA,
     ]);
-    expect(rows(true, h('ctrl'))).toEqual(['LMB drag: bend curve', 'Esc or RMB: finish']);
-    expect(rows(true, h('rad'))).toEqual(['LMB drag: change radius', 'Esc or RMB: finish']);
+    expect(rows(true, h('ctrl'))).toEqual([
+      'LMB drag: bend curve',
+      'Esc or RMB: finish',
+      ...CAMERA,
+    ]);
+    expect(rows(true, h('rad'))).toEqual([
+      'LMB drag: change radius',
+      'Esc or RMB: finish',
+      ...CAMERA,
+    ]);
   });
 });
 
@@ -253,14 +271,33 @@ describe('visited controls are hidden (^110)', () => {
     ]);
   });
 
-  it('draw mode and moving are not hidden', () => {
+  it('draw mode and moving are not hidden, only the camera rows are (^389)', () => {
     const all = () => true;
     const rows = (h: ReturnType<typeof hintsFor>) =>
-      h.map(show).filter((r) => !r.startsWith('Tab'));
+      h.map(show).filter((r) => !r.startsWith('Tab') && !CAMERA.includes(r));
     expect(rows(hintsFor(true, empty, 0, { hidden: all }))).toEqual(rows(hintsFor(true, empty, 0)));
     expect(hintsFor(false, node(false), 0, { hidden: all }).map(show)).toContain(
       'LMB drag: move node',
     );
+  });
+});
+
+describe('the camera in draw mode (^389)', () => {
+  it('is hinted, and hidden after use like everywhere', () => {
+    expect(hintsFor(true, empty).map(show)).toEqual(expect.arrayContaining(CAMERA));
+    const used = hintsFor(true, empty, 0, { hidden: hiddenIds('pan') }).map(show);
+    expect(used).not.toContain('RMB drag: pan');
+    expect(used).toContain('Wheel: zoom');
+  });
+});
+
+describe('Shift: snap only the position (^481)', () => {
+  const shift = 'Shift: snap only the position';
+  it('is hinted when a click would place a node with a heading at the snap', () => {
+    expect(hintsFor(true, empty, 0, { snapping: true, placing: true }).map(show)).toContain(shift);
+  });
+  it('is not when the snap gives no heading (placing is false then)', () => {
+    expect(hintsFor(true, empty, 0, { snapping: true }).map(show)).not.toContain(shift);
   });
 });
 
@@ -270,6 +307,8 @@ describe('Tab (^104)', () => {
     expect(hintsFor(false, empty, 0, { hidden: hiddenIds('view') }).map(show)).not.toContain(
       'Tab: view mode',
     );
+    // The way out of view mode is never hidden: it is the only one (^384).
+    expect(viewHints(hiddenIds('view')).map(show)).toContain('Tab: select mode');
     expect(viewHints().map(show)).toEqual([
       'Tab: select mode',
       'RMB drag: pan',

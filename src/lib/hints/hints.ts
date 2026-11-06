@@ -115,8 +115,10 @@ const segmentRemoval = [
   hint(mouse('rmb', false, 'alt'), 'remove branch'),
 ];
 
-/** Draw mode: a road is being drawn. */
-function drawModeHints(target: HintTarget): Hint[] {
+/** Draw mode: a road is being drawn; the camera works as everywhere (^389). */
+const drawModeHints = (target: HintTarget): Hint[] => [...drawRows(target), ...CAMERA];
+
+function drawRows(target: HintTarget): Hint[] {
   if (target.kind === 'handle') {
     const rows = handleHints(target);
     // On a node a right click deletes it, so only Esc finishes there.
@@ -237,9 +239,9 @@ const PROJECT_HINTS: Hint[] = [hint({ kind: 'key', label: 'P' }, 'projects')];
 const tabHints = (text: string, hidden: Hidden): Hint[] =>
   [hint({ kind: 'key', label: 'Tab' }, text, 'view')].filter((r) => !visited(r, hidden));
 
-/** View mode: only the camera and the way out. */
+/** View mode: only the camera and the way out, which is never hidden: it is the only way (^384). */
 export const viewHints = (hidden: Hidden = () => false): Hint[] => [
-  ...tabHints('select mode', hidden),
+  ...tabHints('select mode', () => false),
   ...CAMERA.filter((r) => !visited(r, hidden)),
   ...PROJECT_HINTS,
 ];
@@ -253,7 +255,7 @@ export interface HintState {
   snapping?: boolean;
   /** The pointer snapped to a touching point, whose heading `Alt` inverts (^254, ^301). */
   touching?: boolean;
-  /** A node would be placed at the snap by a click: `Shift` keeps only the position (^358). */
+  /** A click would place a node at the snap *with a heading*: `Shift` keeps only the position (^358, ^481). */
   placing?: boolean;
   /** The middle button is held: the compass uses `S` and the other letters. */
   rotating?: boolean;

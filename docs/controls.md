@@ -84,7 +84,7 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 |-----|---------|---------|----------------------|------|-----------|------------------|-------|
 | ^393 | select mode, the void, nothing selected | `LMB` click | enter draw mode (feature ^423; not an operation) | `LMB`: draw mode | n/a | unit `editor/modes.test`; e2e `modes.spec` |
 | ^394 | select mode | `Tab` | go to view mode (feature ^425) | `Tab`: view mode, hidden for a while after the control was used (^110) | n/a | after a round trip the hint is missing until the visit times out | unit `editor/modes.test` (Tab goes to view mode from every mode, and back), `hints/hints.test`; e2e `modes.spec` |
-| ^395 | view mode | `Tab` | back to select mode (feature ^422) | should be `Tab`: select mode, hidden by bug ^384 | n/a | unit `editor/modes.test`, `hints/hints.test`; e2e `modes.spec` |
+| ^395 | view mode | `Tab` | back to select mode (feature ^422) | `Tab`: select mode, never hidden (^384, fixed) | n/a | unit `editor/modes.test`, `hints/hints.test`; e2e `modes.spec` |
 | ^396 | any mode, no modal, nothing to save | `Ctrl+S` | save project (operation ^428): nothing to save, toasts ^441 and ^442 (^232) | none (exemption not yet decided) | n/a | toasts 3 s, identical toast not shown twice | unit `project/load.test`; e2e: gap ^379 |
 | ^397 | any mode, no modal, nothing to undo | `Ctrl+Z` | toast ^443 `nothing to undo` (^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
 | ^398 | any mode, no modal, nothing to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | toast ^444 `nothing to redo` (^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
@@ -168,10 +168,10 @@ Found by the sweep of the code (the hints, the key and pointer dispatch, the mod
 | ^719 | extend mode, pointer on a curve | `Alt` + `RMB` click | remove branch (^552) | `Alt`+`RMB`: remove branch | unit `editor/controls.test` (strong), `editor/editor.test` (strong), `editor/branchSelect.test` (weak) |
 | ^720 | extend mode, a segment exists, the void | `RMB` click or `Esc` | ^432 | `Esc or RMB`: finish | unit `editor/selection.test` (strong), `hints/hints.test` (weak), `editor/controls.test` (weak) |
 | ^721 | any mode, nothing selected, something pinned | `S` | unpin snap suggestions (operation ^778, feature ^258) | `S`: unpin all snap suggestions | unit `editor/pins.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
-| ^722 | any mode, no modal | `RMB` drag | pan (^501) | `RMB` drag: pan (hidden after use, ^110; missing in draw mode, ^389) | unit `editor/extend.test` (weak), `editor/modes.test` (weak) |
-| ^723 | any mode, no modal | wheel | zoom (^502) | wheel: zoom (hidden after use; missing in draw mode, ^389) | none found |
+| ^722 | any mode, no modal | `RMB` drag | pan (^501) | `RMB` drag: pan (hidden after use, ^110; also in draw mode, ^389) | unit `editor/extend.test` (weak), `editor/modes.test` (weak) |
+| ^723 | any mode, no modal | wheel | zoom (^502) | wheel: zoom (hidden after use; also in draw mode, ^389) | none found |
 | ^724 | any mode, no modal | `Ctrl` + wheel (a pinch on a touchpad) | zoom (^502) | none (^376) | unit `editor/phase.test` (weak) |
-| ^725 | any mode, no modal | `MMB` drag left or right | rotate (^503) | `MMB` drag: rotate (hidden after use; missing in draw mode, ^389) | unit `editor/extend.test` (weak), `editor/modes.test` (weak), `editor/radiusClick.test` (weak) |
+| ^725 | any mode, no modal | `MMB` drag left or right | rotate (^503) | `MMB` drag: rotate (hidden after use; also in draw mode, ^389) | unit `editor/extend.test` (weak), `editor/modes.test` (weak), `editor/radiusClick.test` (weak) |
 | ^726 | any mode, no modal | `MMB` drag up or down | zoom (^502) | none (the compass shows it while dragging) | unit `editor/extend.test` (strong), `camera/camera.test` (weak), `editor/modes.test` (weak) |
 | ^727 | the middle button is held (rotating) | `Esc` | ^31 | none (the compass shows the keys) | none found |
 | ^728 | the middle button is held (rotating) | `N`, `E`, `S`, `W` | rotate to a direction (^504) | the compass key caps | none found |
@@ -339,7 +339,7 @@ Reached from (E3) by moving the pointer off the control point onto the void. Ext
 | Input | Result | Explored |
 |-------|--------|----------|
 | move the pointer onto the heading line (step 27), left of the start node (28), onto the extend line (29) | the preview, snap, labels and lines above | yes |
-| `Shift` held (step 30) | no effect (the extend line has no heading to drop); the hint shows anyway (bug ^473) | yes (control ^416) |
+| `Shift` held (step 30) | no effect (the extend line has no heading to drop); the hint is not shown then (^473, ^481, fixed) | yes (control ^416) |
 | `Ctrl` held on its own (step 31) | nothing at once; after a small move the snap line and the `Ctrl` and `Shift` hints go (bug ^472) | yes (control ^415) |
 | `Ctrl` released on its own (step 32) | nothing at once; after a small move the snap is back, as in step 29 | yes (control ^415) |
 | `LMB` click | place next node (^477) | yes (step 35; the node was snapped to the extend line) |

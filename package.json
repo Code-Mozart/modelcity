@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.34.0",
-  "moniker": "Version display and favicon",
+  "version": "0.35.0",
+  "moniker": "Hints and controls fixes",
   "private": true,
   "type": "module",
   "scripts": {
