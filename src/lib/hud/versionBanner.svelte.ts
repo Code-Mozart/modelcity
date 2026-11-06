@@ -1,9 +1,9 @@
-/** How long without any input until the version shows again (^787, assumed). */
-export const IDLE_MS = 60_000;
+/** How long without any input until the version shows again (^787, decided). */
+export const IDLE_MS = 10_000;
 
 /**
  * When the version is shown (^787): at page load until the first input, and again after some time
- * without input. Any input (pointer, key, wheel) hides it and starts the time again.
+ * without input. Any press of a button or key (not a mere pointer move, nor the wheel) hides it and starts the time again.
  */
 export class VersionBanner {
   visible = $state(true);

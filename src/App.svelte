@@ -180,9 +180,7 @@
 
 <svelte:window
   onkeydown={onKeyDown}
-  onpointermove={() => banner.used()}
   onpointerdown={() => banner.used()}
-  onwheel={() => banner.used()}
   onkeyup={(e) => {
     camera.keyUp(e.key);
     editor.modifiers(modsOf(e));
