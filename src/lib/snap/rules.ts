@@ -46,11 +46,12 @@ const point = (at: Vec, rule: Rule, from: number[], extra: Partial<SnapPoint> = 
 function line(
   at: Vec,
   dir: Vec,
-  made: { rule: Rule; from: number[]; heading?: number },
+  made: { rule: Rule; from: number[]; heading?: number; along?: boolean },
 ): SnapCurve {
-  const { rule, from, heading } = made;
+  const { rule, from, heading, along } = made;
   return {
     ...(heading === undefined ? {} : { heading }),
+    ...(along ? { along } : {}),
     kind: 'curve',
     pieces: [infiniteLine(at, dir)],
     straight: true,
@@ -71,8 +72,8 @@ export function nodeRules(n: RuleNode, width: number): Suggestion[] {
   const heading = n.th;
   return [
     line(n, perp(dir), { rule: 'node-normal', from: [n.id], heading }),
-    // No heading: a road drawn on along the heading keeps its automatic one, not a sideways one (^318).
-    line(n, dir, { rule: 'node-heading', from: [n.id] }),
+    // A tangent line: a node on it heads along it, away from this node (^793).
+    line(n, dir, { rule: 'node-heading', from: [n.id], along: true }),
     point(n, 'node-points', [n.id], { heading, node: n.id }),
     point(add(n, side), 'node-points', [n.id], { heading }),
     // Right-hand traffic (^253): on the right the lane runs the same way, on the left the opposite way.
@@ -178,7 +179,7 @@ function inflectionRules(e: RuleEdge, E: TwoArcEdge): Suggestion[] {
   const heading = angleOf(t);
   return [
     point(E.J, 'inflection-point', from, { heading }),
-    line(E.J, t, { rule: 'inflection-lines', from, heading: heading + Math.PI / 2 }),
+    line(E.J, t, { rule: 'inflection-lines', from, along: true }),
     line(E.J, perp(t), { rule: 'inflection-lines', from, heading }),
   ];
 }

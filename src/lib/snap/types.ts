@@ -53,6 +53,8 @@ export interface SnapCurve extends Base {
   side?: 1 | -1;
   /** The direction of the normal of a snap line: the heading a node placed on it gets (^318). */
   heading?: number;
+  /** A tangent line: a node placed on it gets the direction along it, away from its base (^793). */
+  along?: boolean;
 }
 
 export type Suggestion = SnapPoint | SnapCurve;
