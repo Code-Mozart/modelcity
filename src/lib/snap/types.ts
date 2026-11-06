@@ -11,6 +11,7 @@ export type Rule =
   | 'node-points' // ^267
   | 'curve' // ^268
   | 'bend' // ^269
+  | 'middle' // ^798
   | 'radius-point' // ^270
   | 'tick' // ^271
   | 'inflection-point' // ^272
@@ -37,6 +38,18 @@ export interface SnapPoint extends Base {
 }
 
 /**
+ * What one point that made a snap line gives a node placed on it (^318, ^793): the direction of its
+ * normal (`heading`), or the direction along the line, away from the point (`along`, a tangent
+ * line), or nothing. `from` are the nodes of the point, for the arrows of ^795.
+ */
+export interface Gift {
+  at: Vec;
+  from: number[];
+  heading?: number;
+  along?: boolean;
+}
+
+/**
  * A snap suggestion that leaves one degree of freedom along a curve (^263). A snap line is a
  * straight one (a long line piece, undirected). `origins` are the points that made it (^275).
  */
@@ -51,12 +64,8 @@ export interface SnapCurve extends Base {
   edge?: number;
   /** An offset curve: on the right (+1, the lane runs the same way) or the left (-1, the opposite way, ^253). */
   side?: 1 | -1;
-  /** The direction of the normal of a snap line: the heading a node placed on it gets (^318). */
-  heading?: number;
-  /** A tangent line: a node placed on it gets the direction along it, away from its base (^793). */
-  along?: boolean;
-  /** Coinciding lines that differ in what heading they give were merged: this one gives none (^792). */
-  disputed?: boolean;
+  /** What the points that made a straight line give a node placed on it: one each, as lines that coincide are one (^275, ^792). */
+  gives?: Gift[];
 }
 
 export type Suggestion = SnapPoint | SnapCurve;

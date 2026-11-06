@@ -65,7 +65,7 @@ describe('how far of the maximum distance a hit is (^294)', () => {
   });
 
   it('the curve of a segment has none, it is offered anywhere', () => {
-    expect(ask(straight(), 15, 0.1)?.reach).toBeNull();
+    expect(ask(straight(), 7, 0.1)?.reach).toBeNull();
   });
 });
 
@@ -96,7 +96,7 @@ describe('the rules of arcs (^269 to ^273)', () => {
 
 describe('snapping to them (^101, ^102)', () => {
   it('a point near nothing is not pulled anywhere', () => {
-    expect(ask(straight(), 15, 8)).toBeNull();
+    expect(ask(straight(), 7, 8)).toBeNull();
   });
 
   it('pulls to the nearest line, within the near distance only', () => {

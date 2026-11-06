@@ -35,7 +35,7 @@ describe('the heading a snap gives (^313, ^317, ^318, ^301)', () => {
   it('a node placed on an offset curve takes the heading of its lane', () => {
     expect(norm(placedHeading(at(20, 3.2), false))).toBeCloseTo(0);
     expect(norm(placedHeading(at(20, -3.2), false))).toBeCloseTo(Math.PI);
-    expect(placedHeading(at(20, 0.3), false)).toBeNull(); // the segment itself: it is merged into
+    expect(placedHeading(at(10, 0.3), false)).toBeNull(); // the segment itself: it is merged into
   });
 
   it('a node placed on the normal line of a node copies the heading of the node (^318)', () => {

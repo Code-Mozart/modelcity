@@ -32,13 +32,13 @@ describe('split and merge use the snap suggestions (^101)', () => {
 
   it('a curve that is near is a place on the curve, and a click splits there', () => {
     const ed = drawMode(road());
-    ed.pointerMove(look(20, 1, 20));
+    ed.pointerMove(look(12, 1, 20));
     expect(ed.hover).toMatchObject({ kind: 'candidate' });
     expect(ed.snapped?.by[0]).toMatchObject({ rule: 'curve' });
-    ed.pointerDown(look(20, 1, 20));
+    ed.pointerDown(look(12, 1, 20));
     ed.pointerUp();
     expect(ed.graph.nodes).toHaveLength(3);
-    expect(ed.graph.nodes.at(-1)).toMatchObject({ x: 20, y: 0 });
+    expect(ed.graph.nodes.at(-1)).toMatchObject({ x: 12, y: 0 });
   });
 
   it('with Ctrl it is the way it was: only what is under the pointer', () => {
@@ -46,5 +46,17 @@ describe('split and merge use the snap suggestions (^101)', () => {
     ed.pointerMove(at(-2.8, 0));
     expect(ed.hover).toMatchObject({ kind: 'preview' });
     expect(ed.snapped).toBeNull();
+  });
+});
+
+describe('the middle line of a straight segment (^798)', () => {
+  it('at the middle of a straight segment, where its middle line crosses it, a click splits exactly there (^798)', () => {
+    const ed = drawMode(road());
+    ed.pointerMove(look(20, 1, 20));
+    expect(ed.hover).toMatchObject({ kind: 'candidate' });
+    ed.pointerDown(look(20, 1, 20));
+    ed.pointerUp();
+    expect(ed.graph.nodes).toHaveLength(3);
+    expect(ed.graph.nodes.at(-1)).toMatchObject({ x: 20, y: 0 });
   });
 });

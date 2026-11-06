@@ -180,7 +180,9 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
   }));
   // The node that is dragged keeps its snap lines: sideways, or further along its heading (^300).
   const own = were.filter((n) => n.id === press.id).flatMap((n) => nodeRules(n, LANE_WIDTH_M));
-  const lines = own.filter((s) => s.kind === 'curve').map((s) => ({ ...s, from: [] }));
+  const lines = own
+    .filter((s): s is SnapCurve => s.kind === 'curve')
+    .map((s) => ({ ...s, from: [], gives: s.gives?.map((g) => ({ ...g, from: [] })) }));
   return [
     ...suggestionsOfGraph(without(before, moving)),
     ...places,
@@ -325,7 +327,8 @@ function nodeHover(snap: SnapHit, w: SnapWorld): Hover | null {
 
 /** The place on a curve the pointer snapped to (the curve of a segment, or a radius point on it), as a candidate. */
 function curveHover(snap: SnapHit, w: SnapWorld): Hover | null {
-  const by = snap.by[0];
+  // Where a line crosses the curve (the middle line of a straight segment, ^798) it is a place on the curve all the same.
+  const by = snap.by.find((s) => s.kind === 'curve' && s.rule === 'curve') ?? snap.by[0];
   const onCurve =
     by?.kind === 'curve'
       ? by.rule === 'curve'

@@ -52,14 +52,22 @@ describe('at a crossing the heading does not depend on the order (^792, ^793)', 
     }
   });
 
-  it('two lines that differ give none, in either order', () => {
+  it('two lines that differ: the heading of the nearer node, in either order (^793)', () => {
+    // A's normal line (heading 0) crosses C's (heading 90°) at (0, -20): C is 5 m away, A 20 m.
+    const near = node(3, 5, -20, Math.PI / 2);
     for (const order of [
-      [A, C],
-      [C, A],
+      [A, near],
+      [near, A],
     ]) {
-      expect(placedHeading(hitAt(order, 0, -20), false)).toBeNull();
-      expect(headingFrom(hitAt(order, 0, -20), false)).toBeNull();
+      expect(norm(placedHeading(hitAt(order, 0, -20), false))).toBeCloseTo(Math.PI / 2);
+      // The dragged heading copies the direction away from the nearer base: west of C.
+      expect(norm(headingFrom(hitAt(order, 0, -20), false))).toBeCloseTo(Math.PI);
     }
+  });
+
+  it('equally far: the first one', () => {
+    expect(norm(placedHeading(hitAt([A, C], 0, -20), false))).toBeCloseTo(0);
+    expect(norm(placedHeading(hitAt([C, A], 0, -20), false))).toBeCloseTo(Math.PI / 2);
   });
 });
 
@@ -70,8 +78,9 @@ describe('the nodes a suggested heading comes from (^795)', () => {
     expect(headingSources(hitAt([A, F], 0, -20), false).sort()).toEqual([1, 5]);
   });
 
-  it('none where the lines differ, or where there is no heading', () => {
-    expect(headingSources(hitAt([A, C], 0, -20), false)).toEqual([]);
+  it('only the nearer node where the lines differ, none where there is no heading', () => {
+    const near = node(3, 5, -20, Math.PI / 2);
+    expect(headingSources(hitAt([A, near], 0, -20), false)).toEqual([3]);
     expect(headingSources(null, false)).toEqual([]);
   });
 
@@ -85,7 +94,7 @@ describe('the nodes a suggested heading comes from (^795)', () => {
   });
 });
 
-describe('coinciding lines that give different headings give none, in either order (^792)', () => {
+describe('coinciding lines that give different headings: the nearer node decides (^792, ^793)', () => {
   it('two nodes that face each other: their heading lines are one line, with two bases', () => {
     const C1 = node(1, 0, 0, 0);
     const D1 = node(2, 30, 0, Math.PI);
@@ -93,7 +102,8 @@ describe('coinciding lines that give different headings give none, in either ord
       [C1, D1],
       [D1, C1],
     ]) {
-      expect(placedHeading(hitAt(order, 15, 0.2), false)).toBeNull();
+      expect(norm(placedHeading(hitAt(order, 10, 0.2), false))).toBeCloseTo(0);
+      expect(norm(placedHeading(hitAt(order, 20, 0.2), false))).toBeCloseTo(Math.PI);
       expect(norm(placedHeading(hitAt(order, 45, 0.2), false))).toBeCloseTo(0); // ahead of both bases
     }
   });
@@ -105,7 +115,8 @@ describe('coinciding lines that give different headings give none, in either ord
       [east, west],
       [west, east],
     ]) {
-      expect(placedHeading(hitAt(order, 0.2, 20), false)).toBeNull();
+      expect(norm(placedHeading(hitAt(order, 0.2, 2), false))).toBeCloseTo(0);
+      expect(norm(placedHeading(hitAt(order, 0.2, 8), false))).toBeCloseTo(Math.PI);
     }
   });
 

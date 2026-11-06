@@ -1,4 +1,3 @@
-import { sameAngle } from './angle';
 import type { EdgeRef } from '../curves/path';
 import { pointOn, sweeps } from '../curves/piece';
 import type { Arc, BendEdge, Piece, TwoArcEdge } from '../curves/types';
@@ -50,9 +49,9 @@ function line(
   made: { rule: Rule; from: number[]; heading?: number; along?: boolean },
 ): SnapCurve {
   const { rule, from, heading, along } = made;
+  const gift = { at: { x: at.x, y: at.y }, from, ...(heading === undefined ? {} : { heading }) };
   return {
-    ...(heading === undefined ? {} : { heading }),
-    ...(along ? { along } : {}),
+    gives: [{ ...gift, ...(along ? { along } : {}) }],
     kind: 'curve',
     pieces: [infiniteLine(at, dir)],
     straight: true,
@@ -158,9 +157,11 @@ function bendRules(e: RuleEdge, E: BendEdge, arc: Arc): Suggestion[] {
   const from = [e.start, e.end];
   const bisector = unitOr(sub(E.C, arc.c), { x: 1, y: 0 });
   const middle = add(arc.c, mul(bisector, arc.r));
+  // The curve at the middle runs along the second line, so a node on the first one heads that way, and on the second along it (^799).
+  const there = pointOn(arc, 0.5);
   return [
-    line(middle, bisector, { rule: 'bend', from }),
-    line(middle, perp(bisector), { rule: 'bend', from }),
+    line(middle, bisector, { rule: 'bend', from, heading: angleOf({ x: there.tx, y: there.ty }) }),
+    line(middle, perp(bisector), { rule: 'bend', from, along: true }),
   ];
 }
 
@@ -185,11 +186,23 @@ function inflectionRules(e: RuleEdge, E: TwoArcEdge): Suggestion[] {
   ];
 }
 
+/** The line across the middle of a straight segment, the way of its symmetry (^798): a node on it heads along the segment. */
+function middleRules(e: RuleEdge, E: { pieces: Piece[] }): Suggestion[] {
+  const [first, last] = [E.pieces[0], E.pieces[E.pieces.length - 1]];
+  if (first?.type !== 'line' || last?.type !== 'line') return [];
+  const way = unitOr(sub(last.Q, first.P), { x: 1, y: 0 });
+  const middle = mul(add(first.P, last.Q), 0.5);
+  return [
+    line(middle, perp(way), { rule: 'middle', from: [e.start, e.end], heading: angleOf(way) }),
+  ];
+}
+
 /** Everything one segment makes. */
 export function edgeRules(e: RuleEdge): Suggestion[] {
   const E = e.ref.E;
   const arcs = E.pieces.filter(sweeps);
   const out = [...curveRules(e), ...arcs.flatMap((a) => arcRules(e, a))];
+  if (E.kind === 'line') out.push(...middleRules(e, E));
   if (E.kind === 'C' && arcs[0]) out.push(...bendRules(e, E, arcs[0]));
   if (E.kind === 'S' || E.kind === 'H') out.push(...inflectionRules(e, E));
   return out;
@@ -208,23 +221,17 @@ function sameLine(a: SnapCurve, b: SnapCurve): boolean {
   return parallel && Math.abs(dot(perp(y.u), sub(x.p, y.p))) <= 1e-3;
 }
 
-/** Whether two lines give a node on them the same kind of heading: none, the same direction, or both along themselves (^792). */
-function sameGift(a: SnapCurve, b: SnapCurve): boolean {
-  if (!!a.along !== !!b.along || (a.heading === undefined) !== (b.heading === undefined))
-    return false;
-  return a.heading === undefined || b.heading === undefined || sameAngle(a.heading, b.heading);
-}
-
-/** Two lines that coincide are one suggestion that keeps all origins (^275); if they give different headings, it gives none (^792). */
+/** Two lines that coincide are one suggestion that keeps all origins and all they give (^275, ^792). */
 function mergeLines(list: SnapCurve[]): SnapCurve[] {
   const out: SnapCurve[] = [];
   for (const c of list) {
     const twin = out.find((o) => sameLine(o, c));
-    if (!twin) out.push({ ...c, origins: [...c.origins], from: [...c.from] });
+    if (!twin)
+      out.push({ ...c, origins: [...c.origins], from: [...c.from], gives: [...(c.gives ?? [])] });
     else {
       twin.origins.push(...c.origins);
       twin.from = [...new Set([...twin.from, ...c.from])];
-      if (!sameGift(twin, c)) twin.disputed = true;
+      twin.gives = [...(twin.gives ?? []), ...(c.gives ?? [])];
     }
   }
   return out;

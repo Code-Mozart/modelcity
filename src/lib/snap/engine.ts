@@ -108,8 +108,14 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
     : null;
 }
 
-/** A node comes before other points and a crossing last when they are at the same place (a crossing is computed, ^280). */
-const pointRank = (p: SnapPoint) => (p.node !== undefined ? 0 : p.rule === 'crossing' ? 2 : 1);
+/**
+ * Where a moved node was picked up comes first when points are at the same place (^800): it is the
+ * node itself, with its own heading. Then a node, other points, and a crossing last (a crossing is computed, ^280).
+ */
+const pointRank = (p: SnapPoint) => {
+  if (p.rule === 'previous') return -1;
+  return p.node !== undefined ? 0 : p.rule === 'crossing' ? 2 : 1;
+};
 const byPoint = (a: SnapPoint, b: SnapPoint, pt: Vec) => {
   const d = dist(a.at, pt) - dist(b.at, pt);
   return Math.abs(d) > 1e-6 ? d : pointRank(a) - pointRank(b);

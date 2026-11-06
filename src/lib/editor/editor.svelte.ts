@@ -34,6 +34,7 @@ import {
 import { moveOf } from './moves';
 import { phaseOf } from './phase';
 import { onlyFirstNode } from '../model/junction';
+import { withKeys, type Keys } from './modifiers';
 import { emptyGraph, nodeOf, roundToMm, sameGraph, type Graph } from '../model/graph';
 import {
   afterEmptyClick,
@@ -291,9 +292,11 @@ export class Editor {
     if (moved) Object.assign(this, moved);
   }
 
-  /** Alt or Shift went down or up: what is under the pointer can look different, such as the hovered branch (^99), though the pointer did not move. */
-  modifiers({ alt, shift, ctrl }: { alt: boolean; shift: boolean; ctrl?: boolean }) {
-    this.lastInfo &&= { ...this.lastInfo, alt, shift, ctrl: ctrl ?? this.lastInfo.ctrl };
+  /** Alt, Shift or Ctrl went down or up: what is under the pointer can look different (^99); a press goes on with the new keys, also with no move (^801). */
+  modifiers(keys: Keys) {
+    const { info, changed } = withKeys(this.lastInfo, keys);
+    this.lastInfo = info;
+    if (changed && info && this.press) this.pointerMove(info);
   }
 
   private hoverNow(): Hover | null {
@@ -315,10 +318,8 @@ export class Editor {
 
   /** The segments under the pointer that get an outline: the one, or with Alt held the whole branch (^99, ^128). */
   get hoverSegments() {
-    return chainSegments(
-      this.chains,
-      hoveredEdges(this.graph, this.hover, this.lastInfo?.alt ?? false),
-    );
+    const edges = hoveredEdges(this.graph, this.hover, this.lastInfo?.alt ?? false);
+    return chainSegments(this.chains, edges);
   }
 
   /** The curve a merge into the node or curve under the pointer would add (^123, ^125). */
@@ -328,8 +329,7 @@ export class Editor {
 
   /** Moving several nodes hides all scaffolds meanwhile (^78). */
   get movingGroup() {
-    const press = this.press;
-    return press?.kind === 'drag' && press.moved && press.group.length > 0;
+    return this.press?.kind === 'drag' && this.press.moved && this.press.group.length > 0;
   }
 
   private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
