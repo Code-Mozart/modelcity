@@ -8,4 +8,4 @@ export const MONIKER: string = moniker;
 export const VERSION_TEXT = `${VERSION}: ${MONIKER}`;
 
 /** The title of the browser tab (^788). */
-export const TAB_TITLE = `modelcity ${VERSION_TEXT}`;
+export const TAB_TITLE = `modelcity ${VERSION}`;

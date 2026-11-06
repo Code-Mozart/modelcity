@@ -5,7 +5,7 @@
   let { visible }: { visible: boolean } = $props();
 </script>
 
-<div class="version" class:visible aria-hidden={!visible}>{VERSION_TEXT}</div>
+{#if visible}<div class="version">{VERSION_TEXT}</div>{/if}
 
 <style>
   .version {
@@ -18,12 +18,7 @@
       500 var(--font-size) / 1.3 system-ui,
       sans-serif;
     white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.4s;
     pointer-events: none;
     filter: drop-shadow(0 0 2px var(--bg)) drop-shadow(0 0 2px var(--bg));
-  }
-  .version.visible {
-    opacity: 1;
   }
 </style>

@@ -37,7 +37,7 @@ describe('the version text (^367, ^788)', () => {
   it('comes from package.json', () => {
     expect(VERSION).toBe(`v${pkg.version}`);
     expect(VERSION_TEXT).toBe(`${VERSION}: ${MONIKER}`);
-    expect(TAB_TITLE).toBe(`modelcity ${VERSION_TEXT}`);
+    expect(TAB_TITLE).toBe(`modelcity ${VERSION}`);
   });
 
   it('is v0.<PR number>.0 with a moniker', () => {

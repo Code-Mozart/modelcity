@@ -1,4 +1,4 @@
-next: ^790
+next: ^791
 
 # Hats
 
@@ -547,6 +547,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^784 | chore | planned (roadmap, no milestone; Claude's proposal after the audit ^371) | **Snapshot of the controls matrix in CI:** commit the output of `src/lib/testing/controlsMatrix.test.ts` (about 200 rows, 10 s) and compare it in a test, so that every PR that changes a control shows the change as a diff. A change detector, not documentation; it gets noisy when hint texts change. Cheap, and useful before ^783. |
 | ^785 | chore | planned (roadmap, no milestone; found in the audit ^371) | **Test gaps of the audit:** in `docs/features.md` 77 rows are never run by any unit test (the render layer in `render/` and the Svelte components) and 100 have no test candidate. Each gap is to become a test (unit where the code is pure, e2e where it needs a browser, ^497) or a recorded exemption. Not one big task: take them with the milestone that touches the code. |
 | ^786 | decision | decided (user, after the audit ^371) | **Every new feature, operation, control or toast gets its hat and its row in the same PR:** features and operations a row in `docs/features.md` (with where it is tested), controls a row in `docs/controls.md` under *Controls by context*, and the hat (rented range in `docs/hats.md` when the file defines it). When controls change, run the matrix (`CONTROLS_MATRIX_OUT=/some/dir bunx vitest run src/lib/testing/controlsMatrix.test.ts`) and look at what changed; at the end of a milestone sweep the code once more for what was missed. Until ^783, `docs/controls.md` is incomplete on purpose. |
+| ^790 | feature | planned (roadmap, no milestone; very low priority; user) | **Animations for everything (user):** today the only animation was the fade of the version text (^787), which was removed. Later all state changes of the interface (panels, toasts, hints, modes) get an animation, and they must be very, very quick: nothing is more annoying than an animation that holds up the workflow. Each one is a feature of its own (^786); none may delay an input. |
 
 ## Rented ranges
 
