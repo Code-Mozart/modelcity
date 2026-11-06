@@ -1,13 +1,10 @@
 import type { HandleType } from '../curves/handles';
 import type { CurveAction, NodeAction } from '../model/junction';
+import { DEL, ESC, hint, keys, mouse, type Input } from './inputs';
+import { nodeHints } from './nodeControls';
 
-/** One way of operating the mouse or keyboard, shown as a symbol (^49). */
-export type Input =
-  | { kind: 'mouse'; button: 'lmb' | 'mmb' | 'rmb'; drag?: boolean; shift?: boolean; alt?: boolean }
-  | { kind: 'wheel' }
-  | { kind: 'key'; label: string }
-  /** Keys pressed together, e.g. Ctrl+Z. */
-  | { kind: 'keys'; labels: string[] };
+export { ENTER, ESC, hint, mouse } from './inputs';
+export type { Input } from './inputs';
 
 /**
  * The controls whose hints are hidden after the user used them, each on its own (^110): the camera
@@ -54,28 +51,6 @@ export type HintTarget =
       /** A right click removes the whole selection, which has several nodes (^290, ^779). */
       onSelection?: boolean;
     };
-
-export const mouse = (
-  button: 'lmb' | 'mmb' | 'rmb',
-  drag = false,
-  mod?: 'shift' | 'alt' | 'alt+shift',
-): Input => ({
-  kind: 'mouse',
-  button,
-  drag,
-  shift: mod === 'shift' || mod === 'alt+shift',
-  alt: mod === 'alt' || mod === 'alt+shift',
-});
-export const hint = (input: Input | Input[], text: string, id?: ControlId): Hint => ({
-  inputs: Array.isArray(input) ? input : [input],
-  text,
-  ...(id ? { id } : {}),
-});
-
-export const ESC: Input = { kind: 'key', label: 'Esc' };
-export const ENTER: Input = { kind: 'key', label: 'Enter' };
-const DEL: Input = { kind: 'key', label: 'Del' };
-const keys = (...labels: string[]): Input => ({ kind: 'keys', labels });
 
 const CAMERA: Hint[] = [
   hint(mouse('rmb', true), 'pan', 'pan'),
@@ -200,6 +175,15 @@ function pickHints(target: HintTarget, selected: number): Hint[] {
 
 /** Select mode: no road is being drawn. */
 function selectModeHints(target: HintTarget, selected: number): Hint[] {
+  // The controls of a node are a table (^783).
+  if (target.kind === 'handle' && target.type === 'node') {
+    const node = {
+      selected: !!target.selected,
+      lane: !!target.lane,
+      onSelection: !!target.onSelection,
+    };
+    return [...nodeHints({ selected, node }), ...CAMERA];
+  }
   const handle = target.kind === 'handle';
   const empty = target.kind === 'empty';
   const box = [hint(mouse('lmb', true), 'select', 'select-box')];
