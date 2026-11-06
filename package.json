@@ -1,5 +1,7 @@
 {
   "name": "modelcity",
+  "version": "0.34.0",
+  "moniker": "Version display and favicon",
   "private": true,
   "type": "module",
   "scripts": {

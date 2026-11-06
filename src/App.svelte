@@ -27,10 +27,16 @@
   import { ProjectSession } from './lib/project/session.svelte';
   import { IndexedDbStorage } from './lib/project/storage';
   import { installTestHook } from './lib/testHook';
+  import VersionText from './lib/hud/VersionText.svelte';
+  import { VersionBanner } from './lib/hud/versionBanner.svelte';
+  import { TAB_TITLE } from './lib/version';
 
   const editor = new Editor();
   const camera = new Camera();
   const toasts = new Toasts();
+  // The version and the moniker show at load and after a while without input (^787); the tab says it too (^788).
+  const banner = new VersionBanner();
+  document.title = TAB_TITLE;
   const session = new ProjectSession(editor, camera, new IndexedDbStorage(), {
     notify: (kind, text) => toasts.show(kind, text),
   });
@@ -163,6 +169,7 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
+    banner.used();
     editor.modifiers(modsOf(e));
     if (session.modalOpen) return modalKey(e);
     if (e.target instanceof HTMLInputElement) return;
@@ -173,6 +180,9 @@
 
 <svelte:window
   onkeydown={onKeyDown}
+  onpointermove={() => banner.used()}
+  onpointerdown={() => banner.used()}
+  onwheel={() => banner.used()}
   onkeyup={(e) => {
     camera.keyUp(e.key);
     editor.modifiers(modsOf(e));
@@ -185,6 +195,7 @@
   <MapCanvas {editor} {camera} onUse={(id) => usage.mark(id)} />
   <ModeFrame phase={editor.phase} />
   <Hints {hints} />
+  <VersionText visible={banner.visible} />
   <div class="right">
     <ToastList {toasts} />
     {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}
