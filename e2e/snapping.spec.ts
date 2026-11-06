@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { App } from './app';
 
 test.beforeEach(async ({ page }) => {
@@ -56,6 +56,14 @@ test('a node dropped on another node is merged into it', async ({ page }) => {
   expect(await app.nodes()).toHaveLength(0); // the only segment of the road went with it (^285)
 });
 
+/** Where the points that made what the pointer is snapped to are (^803). */
+const originsOfSnap = (page: Page) =>
+  page.evaluate(() => {
+    const by = window.__modelcity!.editor.snapped?.by ?? [];
+    const gifts = by.flatMap((s) => (s.kind === 'curve' ? (s.gives ?? []) : []));
+    return gifts.map((g) => g.origin?.at);
+  });
+
 /** The heading a snap gives (^793, ^794): the heading of the node on its normal line, `Alt` inverts it, the hint says what `Shift` does, and the origin is the node. */
 test('a node on the normal line of a node takes its heading, Alt inverts it', async ({ page }) => {
   const app = new App(page);
@@ -67,11 +75,7 @@ test('a node on the normal line of a node takes its heading, Alt inverts it', as
       return h?.kind === 'preview' ? h.node.th : null;
     });
   expect(await heading()).toBeCloseTo(0, 3); // the heading of the node at the origin: east
-  const origins = await page.evaluate(() =>
-    (window.__modelcity!.editor.snapped?.by ?? []).flatMap((s) =>
-      s.kind === 'curve' ? (s.gives ?? []).map((g) => g.origin?.at) : [],
-    ),
-  );
+  const origins = await originsOfSnap(page);
   expect(origins).toContainEqual({ x: 0, y: 0 });
   await page.keyboard.down('Alt'); // at once, with no move of the pointer (^801)
   expect(Math.abs((await heading())!)).toBeCloseTo(Math.PI, 3);
