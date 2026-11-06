@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { snapTo } from './engine';
-import { headingFrom, placedHeading } from './heading';
+import { headingFrom, headingSources, placedHeading } from './heading';
 import { suggestionsOf, type RuleNode } from './rules';
 
 /** Bare nodes with no segments: only the lines and points of the nodes (^265 to ^267). */
@@ -60,5 +60,27 @@ describe('at a crossing the heading does not depend on the order (^792, ^793)', 
       expect(placedHeading(hitAt(order, 0, -20), false)).toBeNull();
       expect(headingFrom(hitAt(order, 0, -20), false)).toBeNull();
     }
+  });
+});
+
+describe('the nodes a suggested heading comes from (^795)', () => {
+  it('the node of a tangent line, or of every line that agrees at a crossing', () => {
+    expect(headingSources(hitAt([A], 10, 0.3), false)).toEqual([1]);
+    const F = node(5, -10, -20, 0);
+    expect(headingSources(hitAt([A, F], 0, -20), false).sort()).toEqual([1, 5]);
+  });
+
+  it('none where the lines differ, or where there is no heading', () => {
+    expect(headingSources(hitAt([A, C], 0, -20), false)).toEqual([]);
+    expect(headingSources(null, false)).toEqual([]);
+  });
+
+  it('both nodes of a line they share (their heading lines coincide)', () => {
+    const E = node(6, 30, 0, 0);
+    expect(headingSources(hitAt([A, E], 50, 0.3), false).sort()).toEqual([1, 6]);
+  });
+
+  it('the same nodes for the dragged heading, which copies the direction', () => {
+    expect(headingSources(hitAt([A], 10, 0.3), true)).toEqual([1]);
   });
 });

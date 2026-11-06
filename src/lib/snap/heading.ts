@@ -33,16 +33,38 @@ const same = (a: number, b: number) => Math.abs(Math.sin((a - b) / 2)) < 1e-3;
  * depend on their order. A snap on a point is that point's alone (it is more specific than any
  * curve through it).
  */
-function agreed(hit: SnapHit, of: (s: Suggestion, pt: Vec) => number | null): number | null {
+function decide(
+  hit: SnapHit,
+  of: (s: Suggestion, pt: Vec) => number | null,
+): { th: number; by: Suggestion[] } | null {
   const first = hit.by[0];
   const among = first?.kind === 'point' ? [first] : hit.by;
   const given = among.flatMap((s) => {
     const th = of(s, hit.pt);
-    return th === null ? [] : [{ rank: rankOf(s), th }];
+    return th === null ? [] : [{ s, rank: rankOf(s), th }];
   });
   const rank = Math.min(...given.map((g) => g.rank));
   const best = given.filter((g) => g.rank === rank);
-  return best.length && best.every((g) => same(g.th, best[0]!.th)) ? best[0]!.th : null;
+  const th = best[0]?.th;
+  return th !== undefined && best.every((g) => same(g.th, th))
+    ? { th, by: best.map((g) => g.s) }
+    : null;
+}
+
+const agreed = (hit: SnapHit, of: (s: Suggestion, pt: Vec) => number | null) =>
+  decide(hit, of)?.th ?? null;
+
+/** Made by a node: its normal line, its heading line, its points (^265 to ^267). */
+const byNode = (s: Suggestion) => ['node-normal', 'node-heading', 'node-points'].includes(s.rule);
+
+/**
+ * The nodes the heading of a snap comes from (^795): of the suggestions that gave it, those that a
+ * node made (not the curve of a segment, which is shown already). `copied`: the heading control
+ * point copies it (^313), else a node placed or moved onto it takes it (^254, ^793).
+ */
+export function headingSources(hit: SnapHit | null, copied: boolean): number[] {
+  const given = hit && decide(hit, copied ? rawHeading : laneHeading);
+  return [...new Set((given?.by ?? []).filter(byNode).flatMap((s) => s.from))];
 }
 
 /**

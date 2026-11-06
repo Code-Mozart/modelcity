@@ -68,6 +68,8 @@ export interface Scene {
   /** What the placed or moved node is pulled to (^101), and the nodes whose suggestions are pinned (^258). */
   snap: SnapHit | null;
   pinned: NodeRef[];
+  /** The nodes whose heading the snap suggests: their arrows are turquoise, with no control point (^795). */
+  headingFrom: NodeRef[];
   /** The bars beside the nodes of runs of parallel segments (^350). */
   bars: BarShape[];
   /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
@@ -105,6 +107,8 @@ interface NodeState {
   active: boolean[];
   selected: number[];
   pinned: number[];
+  /** The nodes whose heading the snap suggests (^795). */
+  source: number[];
   /** The heading of one of its nodes is being set (^314). */
   turning: Turning | null;
 }
@@ -126,6 +130,7 @@ function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
   road.path.nodes.forEach((n, i) => {
     const turning = state.turning?.i === i ? state.turning : null;
     if (turning || arrowShown(active, i)) drawArrow(f, n, pal.orange);
+    if (state.source.includes(i)) drawArrow(f, n, pal.turquoise);
     if (turning) drawTurning(f, n, turning, pal);
     const picked = selected.includes(i);
     const color = picked ? pal.blue : state.pinned.includes(i) ? pal.turquoise : pal.ink;
@@ -307,6 +312,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
         active: active[i]!,
         selected: selectedIn(scene.selection, i),
         pinned: selectedIn(scene.pinned, i),
+        source: selectedIn(scene.headingFrom, i),
         turning: scene.turning?.road === i ? scene.turning : null,
       },
       pal,

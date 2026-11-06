@@ -305,6 +305,8 @@ function dragHints(
     hint(ESC, 'cancel'),
     ...(s.snapping || type === 'head' ? [key('Ctrl', 'no snapping')] : []),
     ...(s.touching ? [key('Alt', 'opposite heading')] : []),
+    // A moved node takes the heading of the snap, unless `Shift` keeps only its position (^796, ^358).
+    ...(type === 'node' && s.touching ? [key('Shift', 'snap only the position')] : []),
     // Aiming (^335) is for the heading of an existing node; not while one that was just placed is set (^358).
     ...(type === 'head' && !place
       ? [key('Shift', 'aim at snap suggestion'), key('Shift+Alt', 'aim away from snap suggestion')]
