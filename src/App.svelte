@@ -190,7 +190,7 @@
   <Hints {hints} />
   <VersionText visible={banner.visible} />
   <div class="right">
-    <ToastList {toasts} />
+    <div class="toasts"><ToastList {toasts} /></div>
     {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}
   </div>
   {#if summary.segments > 0}<MeasurementsPanel {summary} lifted={camera.scaleBarVisible} />{/if}
@@ -199,17 +199,20 @@
 </main>
 
 <style>
-  /* The toasts and the recent history panel share one column, so they never overlap (^232). */
+  /* The toasts and the recent history panel share one column, so they never overlap (^232). The column has no layer of its own: the toasts are above the veil of the projects modal, the panel under it (^387). */
   .right {
     position: absolute;
     right: 1.1667em;
     top: 1em;
-    z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 0.8em;
     pointer-events: none;
+  }
+  .toasts {
+    position: relative;
+    z-index: 2;
   }
   main {
     position: relative;

@@ -279,7 +279,7 @@ Everything the sweep of the code found that the user can see, do, wait for or th
 | = ^119 | feature | The mode icons (eye, pointer, pen, extend) with the current one in its color and ring | feedback | hud/ModeFrame.svelte, hud/modes.ts | certain | ^119 | no unit test runs this file; none found |
 | ^623 | feature | The screen outline in the color of the mode (none in view mode) | feedback | hud/ModeFrame.svelte | certain | ^119 | no unit test runs this file; none found |
 | ^624 | feature | View mode shows only the eye and the pointer icons | feedback | hud/modes.ts shownIn | certain | ^425 | no unit test runs this file; none found |
-| = ^378 | feature | The mode icons have a name as tooltip that never shows | feedback | hud/ModeFrame.svelte title | certain | ^378 | no unit test runs this file; none found |
+| = ^378 | feature | The mode icons have no tooltip (the dead `title` was removed; the mode is shown by its icon, the outline and the hints) | feedback | hud/ModeFrame.svelte | certain | ^378 | none |
 | = ^107 | feature | The recent history panel: the last 7 rows, with undone ones grayed | feedback | hud/panel.ts panelView | certain | ^107 | unit `hud/panel.test` (strong), `hud/recent.test` (strong); e2e `editing.spec` (strong) |
 | ^625 | feature | At most 3 undone rows are shown in the panel | feedback | hud/panel.ts MAX_UNDONE | certain | ^107 | unit `hud/panel.test` (strong), `hud/recent.test` (strong); e2e `editing.spec` (weak) |
 | = ^108 | feature | The rows of a batch are grouped and share one right border | feedback | hud/panel.ts, HistoryPanel.svelte | certain | ^108 | unit `hud/panel.test` (strong) |
@@ -295,7 +295,7 @@ Everything the sweep of the code found that the user can see, do, wait for or th
 | = ^232 | feature | Toasts: short messages in the top right with the icon of their kind | feedback | ui/ToastList.svelte, Notice.svelte | certain | ^232 | no unit test runs this file; none found |
 | = ^210 | feature | A toast has the icon of its kind (info, warning, success, error) | feedback | ui/Notice.svelte | certain | ^210 | no unit test runs this file; none found |
 | ^633 | feature | A key in square brackets in a message is shown as a key cap | feedback | ui/toastText.ts partsOf | certain | ^210 | unit `ui/toastText.test` (weak), `ui/toasts.test` (weak) |
-| = ^385 | feature | An empty list says `No project matches.` (the none text) | feedback | ui/FilterList.svelte | certain | ^385 | no unit test runs this file; none found |
+| = ^385 | feature | A list says `No project matches.` when the search finds nothing, and `No project yet.` when there is nothing to search (the none and the empty text) | feedback | ui/FilterList.svelte | certain | ^385 | e2e `projects.spec` (strong) |
 | = ^193 | feature | A refused file: `This is not a modelcity project file.` | feedback | project/file.ts REFUSAL_TEXT | certain | ^193 | unit `project/file.test` (weak), `project/load.test` (weak); e2e `projects.spec` (weak) |
 | = ^195 | feature | A refused file: newer version message | feedback | project/file.ts | certain | ^195 | unit `project/file.test` (weak), `project/load.test` (weak); e2e `projects.spec` (weak) |
 | = ^196 | feature | A refused file: old version message | feedback | project/file.ts | certain | ^196 | unit `project/file.test` (weak), `project/load.test` (weak); e2e `projects.spec` (weak) |

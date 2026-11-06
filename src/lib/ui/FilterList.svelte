@@ -15,6 +15,7 @@
     label,
     item,
     none = 'Nothing matches.',
+    empty = 'Nothing here yet.',
     query = $bindable(''),
     searchAttrs = {},
   }: {
@@ -23,7 +24,9 @@
     textOf: (item: T) => string;
     label: string;
     item: Snippet<[T]>;
+    /** What the list says when the search matches nothing, and when there is nothing to search (^385). */
     none?: string;
+    empty?: string;
     query?: string;
     searchAttrs?: Record<string, unknown>;
   } = $props();
@@ -51,7 +54,7 @@
     {#each shown as it (key(it))}
       {@render item(it)}
     {:else}
-      <li class="none">{none}</li>
+      <li class="none">{items.length === 0 ? empty : none}</li>
     {/each}
   </ul>
 </div>

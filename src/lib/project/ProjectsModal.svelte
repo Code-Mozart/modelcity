@@ -98,6 +98,7 @@
         textOf={(p) => titleOf(p.file)}
         label="Search projects"
         none="No project matches."
+        empty="No project yet."
         {searchAttrs}
       >
         {#snippet item(project)}

@@ -268,3 +268,12 @@ test('an error message takes its room from the list, the modal stays within thre
   await expect(modal.getByRole('button', { name: 'New project' })).toBeInViewport();
   void app;
 });
+
+test('a fresh browser says that there is no project yet, not that nothing matches (^385)', async ({
+  page,
+}) => {
+  await page.keyboard.press('p');
+  const dialog = modalOf(page);
+  await expect(dialog.getByText('No project yet.')).toBeVisible();
+  await expect(dialog.getByText('No project matches.')).toBeHidden();
+});
