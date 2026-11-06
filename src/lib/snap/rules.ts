@@ -89,12 +89,19 @@ export function nodeRules(n: RuleNode, width: number): Suggestion[] {
 }
 
 /**
+ * The angles of the extend lines from the heading: 7.5° to 82.5° in steps of 7.5° (^483). A curve
+ * that leaves the node at the angle α to its chord turns by 2α (a half circle, 180°, at the normal line,
+ * 90°), so the curve turns in steps of 15°.
+ */
+const EXTEND_ANGLES = Array.from({ length: 11 }, (_, k) => (k + 1) * 7.5);
+
+/**
  * What the node a road is extended from makes besides its own lines, only in extend mode (^325 to
- * ^330, ^337 to ^340): snap lines through it at 15° to 75° from its heading, in steps of 15°, and
+ * ^330, ^337 to ^340): snap lines through it at 7.5° to 82.5° from its heading, in steps of 7.5°, and
  * the same the other way.
  */
 export function extendRules(n: RuleNode): Suggestion[] {
-  return ([15, 30, 45, 60, 75] as const).flatMap((deg) =>
+  return EXTEND_ANGLES.flatMap((deg) =>
     (['+', '-'] as const).map((sign) =>
       line(n, fromAngle(n.th + ((sign === '+' ? deg : -deg) * Math.PI) / 180), {
         rule: `extend${sign}${deg}`,

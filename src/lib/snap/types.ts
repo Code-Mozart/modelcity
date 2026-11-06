@@ -1,8 +1,8 @@
 import type { Piece } from '../curves/types';
 import type { Vec } from '../curves/vec';
 
-/** The extend lines (^325 to ^330, ^337 to ^340): 15° to 75° from the heading in steps of 15°, to either side, one rule each. */
-export type ExtendRule = `extend${'+' | '-'}${15 | 30 | 45 | 60 | 75}`;
+/** The extend lines (^325 to ^330, ^337 to ^340, ^483): 7.5° to 82.5° from the heading in steps of 7.5°, to either side, one rule each. */
+export type ExtendRule = `extend${'+' | '-'}${number}`;
 
 /** Which rule made a snap suggestion (^265 to ^273, ^279, ^280): one hat each. */
 export type Rule =
