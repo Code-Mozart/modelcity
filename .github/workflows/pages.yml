@@ -32,3 +32,14 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+  # The version of package.json is the tag of the commit that was published (^367, ^789).
+  tag:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          v="v$(jq -r .version package.json)"
+          git rev-parse "$v" >/dev/null 2>&1 || { git tag "$v" && git push origin "$v"; }
