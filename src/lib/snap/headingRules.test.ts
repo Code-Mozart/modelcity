@@ -84,3 +84,39 @@ describe('the nodes a suggested heading comes from (^795)', () => {
     expect(headingSources(hitAt([A], 10, 0.3), true)).toEqual([1]);
   });
 });
+
+describe('coinciding lines that give different headings give none, in either order (^792)', () => {
+  it('two nodes that face each other: their heading lines are one line, with two bases', () => {
+    const C1 = node(1, 0, 0, 0);
+    const D1 = node(2, 30, 0, Math.PI);
+    for (const order of [
+      [C1, D1],
+      [D1, C1],
+    ]) {
+      expect(placedHeading(hitAt(order, 15, 0.2), false)).toBeNull();
+      expect(norm(placedHeading(hitAt(order, 45, 0.2), false))).toBeCloseTo(0); // ahead of both bases
+    }
+  });
+
+  it('the two lanes of a road at one place: opposite headings share their normal line', () => {
+    const east = node(1, 0, 0, 0);
+    const west = node(2, 0, 10, Math.PI);
+    for (const order of [
+      [east, west],
+      [west, east],
+    ]) {
+      expect(placedHeading(hitAt(order, 0.2, 20), false)).toBeNull();
+    }
+  });
+
+  it('nodes with the same heading: one line, that heading', () => {
+    const one = node(1, 0, 0, 0);
+    const two = node(2, 0, 10, 0);
+    for (const order of [
+      [one, two],
+      [two, one],
+    ]) {
+      expect(norm(placedHeading(hitAt(order, 0.2, 20), false))).toBeCloseTo(0);
+    }
+  });
+});

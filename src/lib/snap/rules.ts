@@ -1,3 +1,4 @@
+import { sameAngle } from './angle';
 import type { EdgeRef } from '../curves/path';
 import { pointOn, sweeps } from '../curves/piece';
 import type { Arc, BendEdge, Piece, TwoArcEdge } from '../curves/types';
@@ -207,7 +208,14 @@ function sameLine(a: SnapCurve, b: SnapCurve): boolean {
   return parallel && Math.abs(dot(perp(y.u), sub(x.p, y.p))) <= 1e-3;
 }
 
-/** Two lines that coincide are one suggestion that keeps all origins (^275). */
+/** Whether two lines give a node on them the same kind of heading: none, the same direction, or both along themselves (^792). */
+function sameGift(a: SnapCurve, b: SnapCurve): boolean {
+  if (!!a.along !== !!b.along || (a.heading === undefined) !== (b.heading === undefined))
+    return false;
+  return a.heading === undefined || b.heading === undefined || sameAngle(a.heading, b.heading);
+}
+
+/** Two lines that coincide are one suggestion that keeps all origins (^275); if they give different headings, it gives none (^792). */
 function mergeLines(list: SnapCurve[]): SnapCurve[] {
   const out: SnapCurve[] = [];
   for (const c of list) {
@@ -216,6 +224,7 @@ function mergeLines(list: SnapCurve[]): SnapCurve[] {
     else {
       twin.origins.push(...c.origins);
       twin.from = [...new Set([...twin.from, ...c.from])];
+      if (!sameGift(twin, c)) twin.disputed = true;
     }
   }
   return out;

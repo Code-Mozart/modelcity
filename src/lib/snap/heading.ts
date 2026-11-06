@@ -1,16 +1,24 @@
 import { angleOf, dot, sub, type Vec } from '../curves/vec';
 import { nearestOnPieces } from './geometry';
+import { sameAngle as same } from './angle';
 import type { SnapCurve, SnapHit, Suggestion } from './types';
 
 const flip = (th: number, on: boolean) => (on ? th + Math.PI : th);
 
-/** The direction of a snap line pointing away from its base, the point that made it (^313). */
+/**
+ * The direction of a snap line pointing away from its base, the point that made it (^313). A line
+ * made by several points (coinciding lines are one, ^275) has one only if they all agree: between
+ * two nodes that face each other it has none (^792).
+ */
 function awayFrom(c: SnapCurve, pt: Vec): number | null {
   const piece = c.pieces[0];
-  const base = c.origins[0];
-  if (piece?.type !== 'line' || !base) return null;
+  if (piece?.type !== 'line') return null;
   const d = sub(piece.Q, piece.P);
-  return dot(sub(pt, base), d) >= 0 ? angleOf(d) : angleOf(d) + Math.PI;
+  const ways = c.origins.map((base) =>
+    dot(sub(pt, base), d) >= 0 ? angleOf(d) : angleOf(d) + Math.PI,
+  );
+  const first = ways[0];
+  return first !== undefined && ways.every((w) => same(w, first)) ? first : null;
 }
 
 /** The direction of a segment's curve at a place, the opposite one on its left lane (^253). */
@@ -23,9 +31,6 @@ const isSegmentCurve = (s: SnapCurve) => ['curve', 'offset', 'own'].includes(s.r
 
 /** How specific a suggestion is: a point, then the curve of a segment (or a lane of it), then a line (^793, as `snapTo` ranks them). */
 const rankOf = (s: Suggestion) => (s.kind === 'point' ? 0 : isSegmentCurve(s) ? 1 : 2);
-
-/** Whether two headings are the same direction. */
-const same = (a: number, b: number) => Math.abs(Math.sin((a - b) / 2)) < 1e-3;
 
 /**
  * The heading the suggestions a snap is made of agree on (^793, ^792): of the most specific ones
@@ -94,11 +99,16 @@ export function placedHeading(hit: SnapHit | null, alt: boolean): number | null 
   return th === null ? null : flip(th, alt);
 }
 
+/** The heading a snap line gives a node on it: the direction along it (a tangent line), or of its normal (^318, ^793). */
+function lineHeading(s: SnapCurve, pt: Vec): number | null {
+  if (!s.straight || s.disputed) return null;
+  return s.along ? awayFrom(s, pt) : (s.heading ?? null);
+}
+
 /** The heading of the lane a snap is in, of a snap line, or of a point, before `Alt`. */
 function laneHeading(s: Suggestion, pt: Vec): number | null {
   if (s.kind === 'point')
     return s.rule === 'node-points' && s.node === undefined ? s.heading : null;
   if (s.rule === 'own' || s.rule === 'offset') return laneAt(s, pt);
-  if (s.rule === 'curve' || !s.straight) return null;
-  return s.along ? awayFrom(s, pt) : (s.heading ?? null);
+  return s.rule === 'curve' ? null : lineHeading(s, pt);
 }

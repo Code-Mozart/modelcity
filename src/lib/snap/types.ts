@@ -55,6 +55,8 @@ export interface SnapCurve extends Base {
   heading?: number;
   /** A tangent line: a node placed on it gets the direction along it, away from its base (^793). */
   along?: boolean;
+  /** Coinciding lines that differ in what heading they give were merged: this one gives none (^792). */
+  disputed?: boolean;
 }
 
 export type Suggestion = SnapPoint | SnapCurve;
