@@ -27,7 +27,7 @@ import {
 import type { Band } from '../editor/selection';
 import type { Pointer } from '../editor/proximity';
 import { drawOutlines } from './outline';
-import { drawSnap } from './snapGuides';
+import { drawSnap, drawSnapPoint } from './snapGuides';
 import type { SnapHit } from '../snap/types';
 import type { Piece } from '../curves/types';
 import { activeFlags, arrowShown, withSelectedTogether } from './scaffold';
@@ -70,7 +70,7 @@ export interface Scene {
   pinned: NodeRef[];
   /** The nodes whose heading the snap suggests: their arrows are turquoise, with no control point (^795). */
   headingFrom: NodeRef[];
-  /** The nodes whose points or lines the pointer is snapped to: a turquoise ring, as at the places a node was picked up (^803). */
+  /** The nodes whose points or lines the pointer is snapped to: the snap point of the node is shown (^803). */
   snapFrom: NodeRef[];
   /** The bars beside the nodes of runs of parallel segments (^350). */
   bars: BarShape[];
@@ -94,8 +94,6 @@ const DIRECTION_SPACING_PX = 72;
 const NODE_DOT_PX = 5.5;
 /** Selected nodes are blue and 150% larger (^70). */
 const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
-/** A ring around a dot: the same 7 px as the one at the place a node was picked up, for a normal dot (^113, ^803). */
-const RING_GAP_PX = 1.5;
 
 function drawArrow(f: Frame, node: { x: number; y: number; th: number }, color: string) {
   const a = toScreen(f, node);
@@ -151,7 +149,7 @@ function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
   });
 }
 
-/** A node dot: blue and larger if selected, turquoise if pinned, with a turquoise ring if the snap is made of it (^70, ^258, ^803). */
+/** A node dot: blue and larger if selected, turquoise if pinned, with the snap point of the node shown if the snap is made of it (^70, ^258, ^803). */
 function drawDot(
   f: Frame,
   n: { x: number; y: number },
@@ -161,8 +159,7 @@ function drawDot(
   const color = is.picked ? pal.blue : is.pinned ? pal.turquoise : pal.ink;
   const radius = is.picked ? SELECTED_DOT_PX : NODE_DOT_PX;
   dot(f.ctx, toScreen(f, n), radius, color);
-  if (is.origin)
-    ring(f.ctx, toScreen(f, n), radius + RING_GAP_PX, { color: pal.turquoise, width: 1.5 });
+  if (is.origin) drawSnapPoint(f, n, pal);
 }
 
 /** Preview of the node a click would create, with the curve to it from the last node (^40). */
@@ -322,8 +319,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   drawHover(f, scene.hover, scene.drawing, pal);
   if (scene.tower) drawTowerLine(f, scene.tower, pal);
   drawSnap(f, scene.snap, pal);
-  for (const at of scene.previous)
-    ring(f.ctx, toScreen(f, at), 7, { color: pal.turquoise, width: 1.5 });
+  for (const at of scene.previous) drawSnapPoint(f, at, pal);
   for (const pieces of scene.dropPreview) {
     for (const piece of pieces) strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
   }
