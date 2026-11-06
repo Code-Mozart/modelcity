@@ -22,7 +22,7 @@
   import { modalHints } from './lib/project/modalHints';
   import { dropOf } from './lib/editor/drop';
   import { headingFrom } from './lib/snap/heading';
-  import { snapHintState } from './lib/editor/hintState';
+  import { hintStateOf } from './lib/editor/hintState';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
@@ -66,7 +66,7 @@
         : hintsFor(editor.drawing, editor.hintTarget, editor.selection.length, {
             hidden: usage.hidden,
             pinned: editor.pins.list.length,
-            ...snapHintState(editor),
+            ...hintStateOf(editor),
             rotating: camera.rotating,
             drag,
           }),

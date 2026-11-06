@@ -94,7 +94,7 @@ function handleHints(target: HandleTarget): Hint[] {
   const { type, act } = target;
   const out: Hint[] = [];
   // Finishing is one row: the click on the node being drawn from, or Esc (^239).
-  if (act === 'finish') out.push(hint([mouse('lmb'), ESC], 'finish'));
+  if (act === 'finish' || act === 'cancel') out.push(hint([mouse('lmb'), ESC], act));
   else if (act) out.push(hint(mouse('lmb'), act));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
   if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
@@ -115,24 +115,26 @@ const segmentRemoval = [
   hint(mouse('rmb', false, 'alt'), 'remove branch'),
 ];
 
-/** Draw mode: a road is being drawn; the camera works as everywhere (^389). */
-const drawModeHints = (target: HintTarget): Hint[] => [...drawRows(target), ...CAMERA];
+/** Draw mode: a road is being drawn; the camera works as everywhere (^389). `finish` is `cancel` while only the first node is placed (^438). */
+const drawModeHints = (target: HintTarget, finish: string): Hint[] => [
+  ...drawRows(target, finish),
+  ...CAMERA,
+];
 
-function drawRows(target: HintTarget): Hint[] {
+function drawRows(target: HintTarget, finish: string): Hint[] {
   if (target.kind === 'handle') {
     const rows = handleHints(target);
     // On a node a right click deletes it, so only Esc finishes there.
-    const finish =
-      target.type === 'node' ? hint(ESC, 'finish') : hint([ESC, mouse('rmb')], 'finish');
-    return target.act === 'finish' ? rows : [...rows, finish];
+    const way = target.type === 'node' ? hint(ESC, finish) : hint([ESC, mouse('rmb')], finish);
+    return target.act === 'finish' || target.act === 'cancel' ? rows : [...rows, way];
   }
   const drag = target.kind === 'curve' ? 'insert and set heading' : 'add node and set heading';
   return [
     hint(mouse('lmb'), curveText(target)),
     hint(mouse('lmb', true), drag),
     ...(target.kind === 'curve'
-      ? [hint(ESC, 'finish'), ...segmentRemoval]
-      : [hint([ESC, mouse('rmb')], 'finish')]),
+      ? [hint(ESC, finish), ...segmentRemoval]
+      : [hint([ESC, mouse('rmb')], finish)]),
   ];
 }
 
@@ -259,6 +261,8 @@ export interface HintState {
   placing?: boolean;
   /** The middle button is held: the compass uses `S` and the other letters. */
   rotating?: boolean;
+  /** Only the first node of the road is placed: finishing takes it away, which is `cancel` (^438). */
+  firstNodeOnly?: boolean;
 }
 
 /** Ctrl while the editor snaps, and the pin; neither can be visited, so they are never hidden (^101, ^258). */
@@ -303,7 +307,9 @@ export function hintsFor(
 ): Hint[] {
   if (state.drag) return dragHints(state.drag, state);
   const hidden = state.hidden ?? (() => false);
-  const rows = drawing ? drawModeHints(target) : selectModeHints(target, selected);
+  const rows = drawing
+    ? drawModeHints(target, state.firstNodeOnly ? 'cancel' : 'finish')
+    : selectModeHints(target, selected);
   return [
     ...tabHints('view mode', hidden),
     ...rows.filter((r) => !visited(r, hidden)),

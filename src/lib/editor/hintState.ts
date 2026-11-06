@@ -1,12 +1,16 @@
 import { headingFrom, placedHeading } from '../snap/heading';
 import type { SnapHit } from '../snap/types';
+import type { Graph } from '../model/graph';
+import { onlyFirstNode } from '../model/junction';
 import type { Press } from './types';
 
-/** What the control hints need to know about the snap (^101, ^254, ^301, ^358, ^481). */
-export function snapHintState(e: {
+/** What the control hints need to know besides what is under the pointer: the snap (^101, ^254, ^301, ^358, ^481) and the road being drawn (^438). */
+export function hintStateOf(e: {
   drawing: boolean;
   snapped: SnapHit | null;
   press: Press | null;
+  graph: Graph;
+  active: number | null;
 }) {
   const heading = placedHeading(e.snapped, false) !== null;
   return {
@@ -15,5 +19,6 @@ export function snapHintState(e: {
     touching: heading || (e.press !== null && headingFrom(e.snapped, false) !== null),
     /** A click would place a node at the snap with a heading: only then `Shift` has something to drop. */
     placing: e.drawing && heading,
+    firstNodeOnly: onlyFirstNode(e),
   };
 }

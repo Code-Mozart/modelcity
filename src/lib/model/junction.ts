@@ -7,7 +7,7 @@ import { addEdge, edgesAt, edgesIn, edgesOut, type Graph } from './graph';
  * node it merges into it. With no road being drawn, on a lone end node it extends that road, on
  * any other node it splits a new road off.
  */
-export type NodeAction = 'finish' | 'close' | 'extend' | 'split' | 'merge' | null;
+export type NodeAction = 'finish' | 'cancel' | 'close' | 'extend' | 'split' | 'merge' | null;
 
 /** What a click on a curve does in draw mode: split a new road off, or merge into it, also into the road being drawn (^191). */
 export type CurveAction = 'split' | 'merge' | null;
@@ -25,9 +25,14 @@ export interface DrawState {
 
 const degree = (g: Graph, id: number) => edgesAt(g, id).length;
 
+/** Only the first node of the road is placed: finishing it takes the node away again (^437). */
+export const onlyFirstNode = (d: Pick<DrawState, 'graph' | 'active'>) =>
+  d.active !== null && degree(d.graph, d.active) === 0;
+
 export function nodeAction(d: DrawState, id: number): NodeAction {
-  if (id === d.active) return 'finish';
-  if (d.active === null) return degree(d.graph, id) === 1 ? 'extend' : 'split';
+  if (id === d.active) return onlyFirstNode(d) ? 'cancel' : 'finish';
+  // A node with no segment is extended too: there is nothing to split (^494).
+  if (d.active === null) return degree(d.graph, id) <= 1 ? 'extend' : 'split';
   return id === d.origin ? 'close' : 'merge';
 }
 
