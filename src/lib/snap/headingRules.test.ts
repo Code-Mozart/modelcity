@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { snapTo } from './engine';
-import { headingFrom, headingSources, originNodes, placedHeading } from './heading';
+import { headingFrom, headingSources, placedHeading, snapOrigins } from './heading';
 import { suggestionsOf, type RuleNode } from './rules';
 
 /** Bare nodes with no segments: only the lines and points of the nodes (^265 to ^267). */
@@ -71,26 +71,30 @@ describe('at a crossing the heading does not depend on the order (^792, ^793)', 
   });
 });
 
-describe('the nodes a suggested heading comes from (^795)', () => {
+/** Where the origins are, in a list that does not depend on their order. */
+const places = (os: { at: { x: number; y: number } }[]) =>
+  os.map((o) => `${o.at.x},${o.at.y}`).sort();
+
+describe('the points a suggested heading comes from (^795)', () => {
   it('the node of a tangent line, or of every line that agrees at a crossing', () => {
-    expect(headingSources(hitAt([A], 10, 0.3), false)).toEqual([1]);
+    expect(places(headingSources(hitAt([A], 10, 0.3), false))).toEqual(['0,0']);
     const F = node(5, -10, -20, 0);
-    expect(headingSources(hitAt([A, F], 0, -20), false).sort()).toEqual([1, 5]);
+    expect(places(headingSources(hitAt([A, F], 0, -20), false))).toEqual(['-10,-20', '0,0']);
   });
 
   it('only the nearer node where the lines differ, none where there is no heading', () => {
     const near = node(3, 5, -20, Math.PI / 2);
-    expect(headingSources(hitAt([A, near], 0, -20), false)).toEqual([3]);
+    expect(places(headingSources(hitAt([A, near], 0, -20), false))).toEqual(['5,-20']);
     expect(headingSources(null, false)).toEqual([]);
   });
 
   it('both nodes of a line they share (their heading lines coincide)', () => {
     const E = node(6, 30, 0, 0);
-    expect(headingSources(hitAt([A, E], 50, 0.3), false).sort()).toEqual([1, 6]);
+    expect(places(headingSources(hitAt([A, E], 50, 0.3), false))).toEqual(['0,0', '30,0']);
   });
 
   it('the same nodes for the dragged heading, which copies the direction', () => {
-    expect(headingSources(hitAt([A], 10, 0.3), true)).toEqual([1]);
+    expect(places(headingSources(hitAt([A], 10, 0.3), true))).toEqual(['0,0']);
   });
 });
 
@@ -132,11 +136,11 @@ describe('coinciding lines that give different headings: the nearer node decides
   });
 });
 
-describe('the nodes a snap is made of get a ring (^803)', () => {
+describe('the points a snap is made of show their snap point (^803)', () => {
   it('every node whose line or point the pointer is snapped to, also where there is no heading', () => {
     const F = node(5, -10, -20, 0);
-    expect(originNodes(hitAt([A, F], 0, -20)).sort()).toEqual([1, 5]);
-    expect(originNodes(hitAt([A], 10, 0.3))).toEqual([1]);
-    expect(originNodes(null)).toEqual([]);
+    expect(places(snapOrigins(hitAt([A, F], 0, -20)))).toEqual(['-10,-20', '0,0']);
+    expect(places(snapOrigins(hitAt([A], 10, 0.3)))).toEqual(['0,0']);
+    expect(snapOrigins(null)).toEqual([]);
   });
 });

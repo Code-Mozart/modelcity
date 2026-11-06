@@ -46,10 +46,16 @@ const point = (at: Vec, rule: Rule, from: number[], extra: Partial<SnapPoint> = 
 function line(
   at: Vec,
   dir: Vec,
-  made: { rule: Rule; from: number[]; heading?: number; along?: boolean },
+  made: { rule: Rule; from: number[]; heading?: number; along?: boolean; th?: number },
 ): SnapCurve {
-  const { rule, from, heading, along } = made;
-  const gift = { at: { x: at.x, y: at.y }, from, ...(heading === undefined ? {} : { heading }) };
+  const { rule, from, heading, along, th } = made;
+  const here = { x: at.x, y: at.y };
+  const gift = {
+    at: here,
+    from,
+    ...(heading === undefined ? {} : { heading }),
+    ...(th === undefined ? {} : { origin: { at: here, th } }),
+  };
   return {
     gives: [{ ...gift, ...(along ? { along } : {}) }],
     kind: 'curve',
@@ -70,14 +76,15 @@ export function nodeRules(n: RuleNode, width: number): Suggestion[] {
   const dir = fromAngle(n.th);
   const side = mul(perp(dir), width);
   const heading = n.th;
+  const origin = { at: { x: n.x, y: n.y }, th: n.th };
   return [
-    line(n, perp(dir), { rule: 'node-normal', from: [n.id], heading }),
+    line(n, perp(dir), { rule: 'node-normal', from: [n.id], heading, th: n.th }),
     // A tangent line: a node on it heads along it, away from this node (^793).
-    line(n, dir, { rule: 'node-heading', from: [n.id], along: true }),
-    point(n, 'node-points', [n.id], { heading, node: n.id }),
-    point(add(n, side), 'node-points', [n.id], { heading }),
+    line(n, dir, { rule: 'node-heading', from: [n.id], along: true, th: n.th }),
+    point(n, 'node-points', [n.id], { heading, node: n.id, origin }),
+    point(add(n, side), 'node-points', [n.id], { heading, origin }),
     // Right-hand traffic (^253): on the right the lane runs the same way, on the left the opposite way.
-    point(sub(n, side), 'node-points', [n.id], { heading: heading + Math.PI }),
+    point(sub(n, side), 'node-points', [n.id], { heading: heading + Math.PI, origin }),
   ];
 }
 
@@ -92,6 +99,7 @@ export function extendRules(n: RuleNode): Suggestion[] {
       line(n, fromAngle(n.th + ((sign === '+' ? deg : -deg) * Math.PI) / 180), {
         rule: `extend${sign}${deg}`,
         from: [n.id],
+        th: n.th,
       }),
     ),
   );
@@ -143,11 +151,13 @@ function arcRules(e: RuleEdge, arc: Arc): Suggestion[] {
   const at = (t: number) => pointOn(arc, t);
   const points = [0, 0.5, 1].map((t) => {
     const s = at(t);
-    return point(s, 'radius-point', from, { heading: angleOf({ x: s.tx, y: s.ty }) });
+    const th = angleOf({ x: s.tx, y: s.ty });
+    return point(s, 'radius-point', from, { heading: th, origin: { at: { x: s.x, y: s.y }, th } });
   });
   const ticks = [0, 1].map((t) => {
     const s = at(t);
-    return line(s, sub(s, arc.c), { rule: 'tick', from, heading: angleOf({ x: s.tx, y: s.ty }) });
+    const th = angleOf({ x: s.tx, y: s.ty });
+    return line(s, sub(s, arc.c), { rule: 'tick', from, heading: th, th });
   });
   return [...points, ...ticks];
 }
@@ -159,9 +169,10 @@ function bendRules(e: RuleEdge, E: BendEdge, arc: Arc): Suggestion[] {
   const middle = add(arc.c, mul(bisector, arc.r));
   // The curve at the middle runs along the second line, so a node on the first one heads that way, and on the second along it (^799).
   const there = pointOn(arc, 0.5);
+  const th = angleOf({ x: there.tx, y: there.ty });
   return [
-    line(middle, bisector, { rule: 'bend', from, heading: angleOf({ x: there.tx, y: there.ty }) }),
-    line(middle, perp(bisector), { rule: 'bend', from, along: true }),
+    line(middle, bisector, { rule: 'bend', from, heading: th, th }),
+    line(middle, perp(bisector), { rule: 'bend', from, along: true, th }),
   ];
 }
 
@@ -180,9 +191,12 @@ function inflectionRules(e: RuleEdge, E: TwoArcEdge): Suggestion[] {
   const t = inflectionTangent(E);
   const heading = angleOf(t);
   return [
-    point(E.J, 'inflection-point', from, { heading }),
-    line(E.J, t, { rule: 'inflection-lines', from, along: true }),
-    line(E.J, perp(t), { rule: 'inflection-lines', from, heading }),
+    point(E.J, 'inflection-point', from, {
+      heading,
+      origin: { at: { x: E.J.x, y: E.J.y }, th: heading },
+    }),
+    line(E.J, t, { rule: 'inflection-lines', from, along: true, th: heading }),
+    line(E.J, perp(t), { rule: 'inflection-lines', from, heading, th: heading }),
   ];
 }
 

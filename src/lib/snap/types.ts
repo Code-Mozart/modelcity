@@ -22,10 +22,18 @@ export type Rule =
   | ExtendRule // ^325 to ^330, ^337 to ^340
   | 'own'; // ^336
 
+/** The node or control point that made a suggestion, as the user sees it: its place and its own heading (^803). */
+export interface Origin {
+  at: Vec;
+  th: number;
+}
+
 interface Base {
   rule: Rule;
   /** The nodes that made it, for pinning (^258). */
   from: number[];
+  /** The point it comes from, if one is shown for it (^803). */
+  origin?: Origin;
 }
 
 /** A snap suggestion that leaves no freedom: a place, with the heading a node there would get, if any (^275). */
@@ -45,6 +53,8 @@ export interface SnapPoint extends Base {
 export interface Gift {
   at: Vec;
   from: number[];
+  /** The point that made the line, if one is shown for it (^803). */
+  origin?: Origin;
   heading?: number;
   along?: boolean;
 }

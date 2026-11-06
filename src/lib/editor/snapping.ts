@@ -184,7 +184,11 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
   const own = were.filter((n) => n.id === press.id).flatMap((n) => nodeRules(n, LANE_WIDTH_M));
   const lines = own
     .filter((s): s is SnapCurve => s.kind === 'curve')
-    .map((s) => ({ ...s, from: [], gives: s.gives?.map((g) => ({ ...g, from: [] })) }));
+    .map((s) => ({
+      ...s,
+      from: [],
+      gives: s.gives?.map((g) => ({ ...g, from: [], origin: undefined })),
+    }));
   return [
     ...suggestionsOfGraph(without(before, moving)),
     ...places,

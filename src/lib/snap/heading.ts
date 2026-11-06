@@ -1,7 +1,7 @@
 import { angleOf, dist, dot, sub, type Vec } from '../curves/vec';
 import { sameAngle as same } from './angle';
 import { nearestOnPieces } from './geometry';
-import type { Gift, SnapCurve, SnapHit, SnapPoint, Suggestion } from './types';
+import type { Gift, Origin, SnapCurve, SnapHit, SnapPoint, Suggestion } from './types';
 
 const flip = (th: number, on: boolean) => (on ? th + Math.PI : th);
 
@@ -24,17 +24,13 @@ const isSegmentCurve = (s: SnapCurve) => ['curve', 'offset', 'own'].includes(s.r
 /** How specific a suggestion is: a point, then the curve of a segment (or a lane of it), then a line (^793, as `snapTo` ranks them). */
 const rankOf = (s: Suggestion) => (s.kind === 'point' ? 0 : isSegmentCurve(s) ? 1 : 2);
 
-/** A heading a suggestion gives, how far the point that made it is, and the nodes that made it. */
+/** A heading a suggestion gives, how far the point that made it is, and that point. */
 interface Candidate {
   rank: number;
   th: number;
   far: number;
-  from: number[];
-  node: boolean;
+  origin?: Origin;
 }
-
-/** Made by a node: its normal line, its heading line, its points (^265 to ^267). */
-const byNode = (s: Suggestion) => ['node-normal', 'node-heading', 'node-points'].includes(s.rule);
 
 type Way = 'placed' | 'copied';
 
@@ -50,15 +46,15 @@ const pointGives = (s: SnapPoint, way: Way) =>
 
 /** The headings one suggestion gives at a place, each with the distance of the point that made it. */
 function candidatesOf(s: Suggestion, pt: Vec, way: Way): Candidate[] {
-  const [rank, node] = [rankOf(s), byNode(s)];
+  const rank = rankOf(s);
   if (s.kind === 'point') {
     const th = pointGives(s, way) ? s.heading : null;
-    return th === null ? [] : [{ rank, th, far: dist(s.at, pt), from: s.from, node }];
+    return th === null ? [] : [{ rank, th, far: dist(s.at, pt), origin: s.origin }];
   }
   if (isSegmentCurve(s)) return [segmentCandidate(s, pt, way)].flatMap((c) => c ?? []);
   return (s.straight ? (s.gives ?? []) : []).flatMap((g) => {
     const th = giftHeading(s, g, pt, way);
-    return th === null ? [] : [{ rank, th, far: dist(g.at, pt), from: g.from, node }];
+    return th === null ? [] : [{ rank, th, far: dist(g.at, pt), origin: g.origin }];
   });
 }
 
@@ -66,7 +62,7 @@ function candidatesOf(s: Suggestion, pt: Vec, way: Way): Candidate[] {
 function segmentCandidate(s: SnapCurve, pt: Vec, way: Way): Candidate | null {
   const th = way === 'placed' && s.rule === 'curve' ? null : laneAt(s, pt);
   const far = Math.min(...s.origins.map((o) => dist(o, pt)));
-  return th === null ? null : { rank: rankOf(s), th, far, from: s.from, node: false };
+  return th === null ? null : { rank: rankOf(s), th, far };
 }
 
 /**
@@ -107,17 +103,27 @@ export function placedHeading(hit: SnapHit | null, alt: boolean): number | null 
   return th === undefined ? null : flip(th, alt);
 }
 
-/** The nodes whose points or lines a snap is made of (^803): the suggestions that a node made, whatever they give. */
-export function originNodes(hit: SnapHit | null): number[] {
-  return [...new Set((hit?.by ?? []).filter(byNode).flatMap((s) => s.from))];
+/** The places in a list once: two within a millimeter are one. */
+const uniqueOrigins = (list: (Origin | undefined)[]): Origin[] =>
+  list.reduce<Origin[]>(
+    (out, o) => (!o || out.some((x) => dist(x.at, o.at) < 1e-3) ? out : [...out, o]),
+    [],
+  );
+
+/** The nodes and control points a snap is made of (^803): where its points and its lines come from, whatever they give. */
+export function snapOrigins(hit: SnapHit | null): Origin[] {
+  const made = (hit?.by ?? []).flatMap((s) =>
+    s.kind === 'point' ? [s.origin] : (s.gives ?? []).map((g) => g.origin),
+  );
+  return uniqueOrigins(made);
 }
 
 /**
- * The nodes the heading of a snap comes from (^795): of the suggestions that gave it, those that a
- * node made (not the curve of a segment, which is shown already). `copied`: the heading control
- * point copies it (^313), else a node placed or moved onto it takes it (^254, ^793).
+ * The points the heading of a snap comes from (^795): of the suggestions that gave it, those that a
+ * node or a control point made (not the curve of a segment, which is shown already). `copied`: the
+ * heading control point copies it (^313), else a node placed or moved onto it takes it (^254, ^793).
  */
-export function headingSources(hit: SnapHit | null, copied: boolean): number[] {
+export function headingSources(hit: SnapHit | null, copied: boolean): Origin[] {
   const given = hit && decide(hit, copied ? 'copied' : 'placed');
-  return [...new Set((given?.sources ?? []).filter((c) => c.node).flatMap((c) => c.from))];
+  return uniqueOrigins((given?.sources ?? []).map((c) => c.origin));
 }
