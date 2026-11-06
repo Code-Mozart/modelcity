@@ -60,3 +60,47 @@ describe('the middle line of a straight segment (^798)', () => {
     expect(ed.graph.nodes.at(-1)).toMatchObject({ x: 20, y: 0 });
   });
 });
+
+describe('sliding along a curve still snaps to the other suggestions (^802)', () => {
+  const crossing = () =>
+    drawMode(
+      mapOf([
+        [
+          [0, 0],
+          [100, 0],
+        ],
+        [
+          [30, -30],
+          [60, -30],
+        ],
+      ]),
+    );
+
+  it('on the curve, near where a line crosses it, the pointer is pulled to the crossing', () => {
+    const ed = crossing();
+    ed.pointerMove(look(30.6, 0.1, 4)); // on the segment, 0.6 m from the normal line of the other road's first node, away from the nodes and their handles
+    expect(ed.hover).toMatchObject({ kind: 'candidate' });
+    expect(ed.snapped?.pt).toMatchObject({ x: 30, y: 0 });
+  });
+
+  it('and a click there splits the segment at the crossing', () => {
+    const ed = crossing();
+    ed.pointerMove(look(30.6, 0.1, 4));
+    ed.pointerDown(look(30.6, 0.1, 4));
+    ed.pointerUp();
+    expect(
+      ed.graph.nodes.find((n) => Math.abs(n.x - 30) < 1e-6 && Math.abs(n.y) < 1e-6),
+    ).toBeDefined();
+  });
+
+  it('also in extend mode, where a click merges into the curve', () => {
+    const ed = crossing();
+    ed.pointerMove(look(60, -30, 4));
+    ed.pointerDown(look(60, -30, 4));
+    ed.pointerUp();
+    expect(ed.phase).toBe('extend');
+    ed.pointerMove(look(30.6, 0.1, 4));
+    expect(ed.hover).toMatchObject({ kind: 'candidate' });
+    expect(ed.snapped?.pt).toMatchObject({ x: 30, y: 0 });
+  });
+});

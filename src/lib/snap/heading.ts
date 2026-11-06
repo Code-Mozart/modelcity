@@ -107,6 +107,11 @@ export function placedHeading(hit: SnapHit | null, alt: boolean): number | null 
   return th === undefined ? null : flip(th, alt);
 }
 
+/** The nodes whose points or lines a snap is made of (^803): the suggestions that a node made, whatever they give. */
+export function originNodes(hit: SnapHit | null): number[] {
+  return [...new Set((hit?.by ?? []).filter(byNode).flatMap((s) => s.from))];
+}
+
 /**
  * The nodes the heading of a snap comes from (^795): of the suggestions that gave it, those that a
  * node made (not the curve of a segment, which is shown already). `copied`: the heading control

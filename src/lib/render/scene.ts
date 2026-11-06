@@ -70,6 +70,8 @@ export interface Scene {
   pinned: NodeRef[];
   /** The nodes whose heading the snap suggests: their arrows are turquoise, with no control point (^795). */
   headingFrom: NodeRef[];
+  /** The nodes whose points or lines the pointer is snapped to: a turquoise ring, as at the places a node was picked up (^803). */
+  snapFrom: NodeRef[];
   /** The bars beside the nodes of runs of parallel segments (^350). */
   bars: BarShape[];
   /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
@@ -92,6 +94,8 @@ const DIRECTION_SPACING_PX = 72;
 const NODE_DOT_PX = 5.5;
 /** Selected nodes are blue and 150% larger (^70). */
 const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
+/** A ring around a dot: the same 7 px as the one at the place a node was picked up, for a normal dot (^113, ^803). */
+const RING_GAP_PX = 1.5;
 
 function drawArrow(f: Frame, node: { x: number; y: number; th: number }, color: string) {
   const a = toScreen(f, node);
@@ -109,6 +113,8 @@ interface NodeState {
   pinned: number[];
   /** The nodes whose heading the snap suggests (^795). */
   source: number[];
+  /** The nodes the snap is made of (^803). */
+  origin: number[];
   /** The heading of one of its nodes is being set (^314). */
   turning: Turning | null;
 }
@@ -132,10 +138,31 @@ function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
     if (turning || arrowShown(active, i)) drawArrow(f, n, pal.orange);
     if (state.source.includes(i)) drawArrow(f, n, pal.turquoise);
     if (turning) drawTurning(f, n, turning, pal);
-    const picked = selected.includes(i);
-    const color = picked ? pal.blue : state.pinned.includes(i) ? pal.turquoise : pal.ink;
-    dot(f.ctx, toScreen(f, n), picked ? SELECTED_DOT_PX : NODE_DOT_PX, color);
+    drawDot(
+      f,
+      n,
+      {
+        picked: selected.includes(i),
+        pinned: state.pinned.includes(i),
+        origin: state.origin.includes(i),
+      },
+      pal,
+    );
   });
+}
+
+/** A node dot: blue and larger if selected, turquoise if pinned, with a turquoise ring if the snap is made of it (^70, ^258, ^803). */
+function drawDot(
+  f: Frame,
+  n: { x: number; y: number },
+  is: { picked: boolean; pinned: boolean; origin: boolean },
+  pal: Palette,
+) {
+  const color = is.picked ? pal.blue : is.pinned ? pal.turquoise : pal.ink;
+  const radius = is.picked ? SELECTED_DOT_PX : NODE_DOT_PX;
+  dot(f.ctx, toScreen(f, n), radius, color);
+  if (is.origin)
+    ring(f.ctx, toScreen(f, n), radius + RING_GAP_PX, { color: pal.turquoise, width: 1.5 });
 }
 
 /** Preview of the node a click would create, with the curve to it from the last node (^40). */
@@ -313,6 +340,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
         selected: selectedIn(scene.selection, i),
         pinned: selectedIn(scene.pinned, i),
         source: selectedIn(scene.headingFrom, i),
+        origin: selectedIn(scene.snapFrom, i),
         turning: scene.turning?.road === i ? scene.turning : null,
       },
       pal,

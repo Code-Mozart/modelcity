@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { snapTo } from './engine';
-import { headingFrom, headingSources, placedHeading } from './heading';
+import { headingFrom, headingSources, originNodes, placedHeading } from './heading';
 import { suggestionsOf, type RuleNode } from './rules';
 
 /** Bare nodes with no segments: only the lines and points of the nodes (^265 to ^267). */
@@ -129,5 +129,14 @@ describe('coinciding lines that give different headings: the nearer node decides
     ]) {
       expect(norm(placedHeading(hitAt(order, 0.2, 20), false))).toBeCloseTo(0);
     }
+  });
+});
+
+describe('the nodes a snap is made of get a ring (^803)', () => {
+  it('every node whose line or point the pointer is snapped to, also where there is no heading', () => {
+    const F = node(5, -10, -20, 0);
+    expect(originNodes(hitAt([A, F], 0, -20)).sort()).toEqual([1, 5]);
+    expect(originNodes(hitAt([A], 10, 0.3))).toEqual([1]);
+    expect(originNodes(null)).toEqual([]);
   });
 });

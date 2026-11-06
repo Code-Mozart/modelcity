@@ -1,7 +1,7 @@
 <script lang="ts">
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
-  import { headingSourceIds } from './editor/hintState';
+  import { headingSourceIds, snapOriginIds } from './editor/hintState';
   import { scaffoldHidden } from './editor/phase';
   import { focusTower } from './editor/parallel';
   import { barsOf } from './editor/towers';
@@ -72,6 +72,7 @@
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
       headingFrom: chainSelection(editor.chains, headingSourceIds(editor)),
+      snapFrom: chainSelection(editor.chains, snapOriginIds(editor)),
       bars: bars,
       tower: focusTower(editor.graph, editor.chains, editor.focus),
       turning: turningOf(editor.chains, editor.press),

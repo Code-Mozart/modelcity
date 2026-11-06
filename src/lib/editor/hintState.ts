@@ -1,4 +1,4 @@
-import { headingFrom, headingSources, placedHeading } from '../snap/heading';
+import { headingFrom, headingSources, originNodes, placedHeading } from '../snap/heading';
 import { turningNode } from './snapping';
 import type { SnapHit } from '../snap/types';
 import type { Graph } from '../model/graph';
@@ -28,3 +28,6 @@ export function hintStateOf(e: {
 export function headingSourceIds(e: { snapped: SnapHit | null; press: Press | null }): number[] {
   return headingSources(e.snapped, turningNode(e.press) !== null);
 }
+
+/** The nodes whose points or lines the pointer is snapped to, which get a turquoise ring (^803). */
+export const snapOriginIds = (e: { snapped: SnapHit | null }): number[] => originNodes(e.snapped);
