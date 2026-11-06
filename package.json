@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.35.0",
-  "moniker": "Hints and controls fixes",
+  "version": "0.36.0",
+  "moniker": "Snapping engine part 3",
   "private": true,
   "type": "module",
   "scripts": {

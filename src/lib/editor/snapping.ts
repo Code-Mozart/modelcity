@@ -3,6 +3,7 @@ import { pointOn, sweeps } from '../curves/piece';
 import { edgesAt, nodeOf, type Graph } from '../model/graph';
 import { cross, dist, sub, unitOr, type Vec } from '../curves/vec';
 import { curvesThrough, snapTo, type Reach, type SnapQuery } from '../snap/engine';
+import { nearestOnPieces } from '../snap/geometry';
 import { extendRules, nodeRules, suggestionsOf, type RuleEdge } from '../snap/rules';
 import type { SnapCurve, SnapHit, Suggestion } from '../snap/types';
 import {
@@ -15,6 +16,7 @@ import {
 } from './chains';
 import { previewOf, type Drawn } from './targets';
 import { headingFrom, placedHeading } from '../snap/heading';
+import type { RoadHit } from './chains';
 import type { Hover, Placement, PointerInfo, Press } from './types';
 
 /** How far a snap point may be from the line of a control point and still be reached, meters. */
@@ -180,7 +182,13 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
   }));
   // The node that is dragged keeps its snap lines: sideways, or further along its heading (^300).
   const own = were.filter((n) => n.id === press.id).flatMap((n) => nodeRules(n, LANE_WIDTH_M));
-  const lines = own.filter((s) => s.kind === 'curve').map((s) => ({ ...s, from: [] }));
+  const lines = own
+    .filter((s): s is SnapCurve => s.kind === 'curve')
+    .map((s) => ({
+      ...s,
+      from: [],
+      gives: s.gives?.map((g) => ({ ...g, from: [], origin: undefined })),
+    }));
   return [
     ...suggestionsOfGraph(without(before, moving)),
     ...places,
@@ -237,7 +245,7 @@ function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | 'turn' |
   return drawing && placing(hover) ? 'place' : null;
 }
 
-/** What a node or curve that is hovered already is as a snap suggestion, to show it like the others (^101). */
+/** What a node that is hovered already is as a snap suggestion, to show it like the others (^101). */
 function hoveredHit(base: Suggestion[], hover: Hover | null, q: SnapQuery): SnapHit | null {
   const hit = hoveredPlace(base, hover);
   if (!hit) return null;
@@ -257,24 +265,51 @@ function hoveredPlace(base: Suggestion[], hover: Hover | null): SnapHit | null {
     );
     return s?.kind === 'point' ? { pt: s.at, heading: s.heading, by: [s] } : null;
   }
-  if (hover?.kind !== 'candidate') return null;
-  const { at, edge } = hover.hit;
+  return null;
+}
+
+/**
+ * On the curve of a segment (to split or merge there), the pointer is pulled to what is on the curve
+ * (where a line crosses it, a point on it), not to anything beside it, which would take a click off
+ * the curve; else it stays where it is on the curve (^802).
+ */
+function slidingHit(base: Suggestion[], on: RoadHit, q: SnapQuery): SnapHit | null {
+  const onIt = (at: Vec) => (nearestOnPieces(on.ref.E.pieces, at)?.d ?? 1) < 1e-3;
+  const hit = snapTo(base, { ...q, reach: { curve: () => true, point: onIt } });
+  const here = hit?.by.some((s) => s.kind === 'point' || s.rule === 'curve');
+  const at = on.at;
+  const stay = { pt: { x: at.x, y: at.y }, heading: Math.atan2(at.ty, at.tx) };
+  return here ? hit : curveOf(base, on.edge, stay);
+}
+
+/** The curve of a segment as a snap suggestion, at a place on it. */
+function curveOf(
+  base: Suggestion[],
+  edge: number,
+  at: { pt: Vec; heading: number },
+): SnapHit | null {
   const curve = base.find((x) => x.kind === 'curve' && x.rule === 'curve' && x.edge === edge);
-  return curve ? { pt: at, heading: Math.atan2(at.ty, at.tx), by: [curve] } : null;
+  return curve ? { ...at, by: [curve] } : null;
+}
+
+/** What a node that is placed is pulled to, by what is hovered (^296, ^802). */
+function placeHit(base: Suggestion[], hover: Hover | null, q: SnapQuery): SnapHit | null {
+  if (hover?.kind === 'handle') return hoveredHit(base, hover, q);
+  return hover?.kind === 'candidate' ? slidingHit(base, hover.hit, q) : snapTo(base, q);
 }
 
 /**
  * What the pointer is pulled to, if it places or moves a node and `Ctrl` is not held (^101, ^112).
- * Over a node or a curve that is hovered already, that is it: splitting and merging use the same
- * suggestions as everything else.
+ * Over a node that is hovered already, that is it (^296). Over the curve of a segment it is pulled
+ * to what is on the curve too, such as where a line crosses it: splitting and merging use the same
+ * suggestions as everything else, not a hit test of their own (^802).
  */
 export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
   const { info } = a;
   const what = snaps(a);
   if (!info || info.ctrl || !what) return null;
   const query = { pt: info.pt, scale: info.scale, pinned: a.pinned, reach: reachOf(a.press) };
-  const placed = what === 'place' && a.hover?.kind !== 'preview';
-  const hit = placed ? hoveredHit(base, a.hover, query) : snapTo(base, query);
+  const hit = what === 'place' ? placeHit(base, a.hover, query) : snapTo(base, query);
   return hit && withoutExtendAtTip(hit, a);
 }
 
@@ -303,17 +338,19 @@ export function snapPreview(
   snap: SnapHit | null,
   world: () => SnapWorld,
 ): Hover | null {
-  if (hover?.kind !== 'preview' || !snap) return hover;
+  if (!snap || !placesAt(hover)) return hover;
   const w = world();
-  return (
-    nodeHover(snap, w) ??
-    curveHover(snap, w) ??
-    previewOf(w.drawn, {
-      pt: snap.pt,
-      th: w.info?.shift ? null : placedHeading(snap, w.info?.alt ?? false),
-    })
-  );
+  return nodeHover(snap, w) ?? curveHover(snap, w) ?? previewOf(w.drawn, placement(snap, w.info));
 }
+
+/** Whether a click would place a node where the pointer is: on the empty canvas or on a curve (^802). */
+const placesAt = (hover: Hover | null) => hover?.kind === 'preview' || hover?.kind === 'candidate';
+
+/** Where the node goes at the snap and with what heading: `Shift` keeps only the position, `Alt` inverts (^358, ^301). */
+const placement = (snap: SnapHit, info: PointerInfo | null) => ({
+  pt: snap.pt,
+  th: info?.shift ? null : placedHeading(snap, info?.alt ?? false),
+});
 
 /** The node the pointer snapped to, as a hovered handle. */
 function nodeHover(snap: SnapHit, w: SnapWorld): Hover | null {
@@ -325,7 +362,8 @@ function nodeHover(snap: SnapHit, w: SnapWorld): Hover | null {
 
 /** The place on a curve the pointer snapped to (the curve of a segment, or a radius point on it), as a candidate. */
 function curveHover(snap: SnapHit, w: SnapWorld): Hover | null {
-  const by = snap.by[0];
+  // Where a line crosses the curve (the middle line of a straight segment, ^798) it is a place on the curve all the same.
+  const by = snap.by.find((s) => s.kind === 'curve' && s.rule === 'curve') ?? snap.by[0];
   const onCurve =
     by?.kind === 'curve'
       ? by.rule === 'curve'

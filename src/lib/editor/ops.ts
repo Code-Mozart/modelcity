@@ -184,7 +184,7 @@ export function dragStep(
   const from = nodeOf(press.undo.graph, press.id)?.th ?? 0;
   const angle = info.ctrl ? null : { scale: info.scale, from };
   const next = withSharedRadius(
-    snappedDrag(d.graph, handle, { angle, info }, to),
+    snappedDrag(d.graph, handle, { angle, info, original: from }, to),
     d.selection,
     press,
   );
@@ -194,20 +194,22 @@ export function dragStep(
   return moveNodes(next, group, { x: node.x - press.origin.x, y: node.y - press.origin.y });
 }
 
-/** The handle dragged to the pointer, or where it snapped: a node takes the heading of a touching point (^254), a radius point on a node of its segment sets the radius to auto (^141). */
+/**
+ * The handle dragged to the pointer, or where it snapped: a node takes the heading of a snap (^254), and goes back
+ * to the one it had when it was picked up where there is none or with `Shift` (^801); a radius point on a node of
+ * its segment sets the radius to auto (^141).
+ */
 function snappedDrag(
   g: Graph,
   handle: RoadHandle,
-  how: { angle: AngleSnap | null; info: PointerInfo },
+  how: { angle: AngleSnap | null; info: PointerInfo; original: number },
   to: Placement | null,
 ): Graph {
   const dragged = dragGraph(g, handle, to?.pt ?? how.info.pt, { angle: how.angle });
-  if (!to) return dragged;
   // A snapped heading is copied (^313); a node that snapped takes the heading of the place (^254).
-  if (handle.type === 'node' || handle.type === 'head') {
-    const th = headingOf(nodeOf(dragged, handle.id), to);
-    return th === null ? dragged : withNode(dragged, handle.id, { th });
-  }
+  const th = to ? headingOf(nodeOf(dragged, handle.id), to) : null;
+  if (handle.type === 'node') return withNode(dragged, handle.id, { th: th ?? how.original });
+  if (handle.type === 'head' && th !== null) return withNode(dragged, handle.id, { th });
   return dragged;
 }
 

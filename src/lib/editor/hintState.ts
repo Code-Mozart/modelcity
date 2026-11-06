@@ -1,5 +1,6 @@
-import { headingFrom, placedHeading } from '../snap/heading';
-import type { SnapHit } from '../snap/types';
+import { headingFrom, headingSources, placedHeading } from '../snap/heading';
+import { turningNode } from './snapping';
+import type { Origin, SnapHit } from '../snap/types';
 import type { Graph } from '../model/graph';
 import { onlyFirstNode } from '../model/junction';
 import type { Press } from './types';
@@ -21,4 +22,12 @@ export function hintStateOf(e: {
     placing: e.drawing && heading,
     firstNodeOnly: onlyFirstNode(e),
   };
+}
+
+/** The points a suggested heading comes from, whose heading arrows are drawn in the snap color (^795). */
+export function headingSourceOrigins(e: {
+  snapped: SnapHit | null;
+  press: Press | null;
+}): Origin[] {
+  return headingSources(e.snapped, turningNode(e.press) !== null);
 }

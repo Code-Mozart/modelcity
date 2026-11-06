@@ -43,5 +43,7 @@ describe('the version text (^367, ^788)', () => {
   it('is v0.<PR number>.0 with a moniker', () => {
     expect(pkg.version).toMatch(/^0\.\d+\.0$/);
     expect(pkg.moniker.length).toBeGreaterThan(0);
+    // It is shown in the tab and in one line of text: no commas (^367).
+    expect(pkg.moniker).not.toContain(',');
   });
 });

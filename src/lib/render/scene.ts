@@ -27,8 +27,8 @@ import {
 import type { Band } from '../editor/selection';
 import type { Pointer } from '../editor/proximity';
 import { drawOutlines } from './outline';
-import { drawSnap } from './snapGuides';
-import type { SnapHit } from '../snap/types';
+import { drawSnap, drawSnapPoint } from './snapGuides';
+import type { Origin, SnapHit } from '../snap/types';
 import type { Piece } from '../curves/types';
 import { activeFlags, arrowShown, withSelectedTogether } from './scaffold';
 
@@ -68,6 +68,10 @@ export interface Scene {
   /** What the placed or moved node is pulled to (^101), and the nodes whose suggestions are pinned (^258). */
   snap: SnapHit | null;
   pinned: NodeRef[];
+  /** The nodes whose heading the snap suggests: their arrows are turquoise, with no control point (^795). */
+  headingFrom: Origin[];
+  /** The nodes whose points or lines the pointer is snapped to: the snap point of the node is shown (^803). */
+  snapFrom: Origin[];
   /** The bars beside the nodes of runs of parallel segments (^350). */
   bars: BarShape[];
   /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
@@ -127,10 +131,20 @@ function drawNodes(f: Frame, road: RoadScene, state: NodeState, pal: Palette) {
     const turning = state.turning?.i === i ? state.turning : null;
     if (turning || arrowShown(active, i)) drawArrow(f, n, pal.orange);
     if (turning) drawTurning(f, n, turning, pal);
-    const picked = selected.includes(i);
-    const color = picked ? pal.blue : state.pinned.includes(i) ? pal.turquoise : pal.ink;
-    dot(f.ctx, toScreen(f, n), picked ? SELECTED_DOT_PX : NODE_DOT_PX, color);
+    drawDot(f, n, { picked: selected.includes(i), pinned: state.pinned.includes(i) }, pal);
   });
+}
+
+/** A node dot: blue and larger if selected, turquoise if pinned, with the snap point of the node shown if the snap is made of it (^70, ^258, ^803). */
+function drawDot(
+  f: Frame,
+  n: { x: number; y: number },
+  is: { picked: boolean; pinned: boolean },
+  pal: Palette,
+) {
+  const color = is.picked ? pal.blue : is.pinned ? pal.turquoise : pal.ink;
+  const radius = is.picked ? SELECTED_DOT_PX : NODE_DOT_PX;
+  dot(f.ctx, toScreen(f, n), radius, color);
 }
 
 /** Preview of the node a click would create, with the curve to it from the last node (^40). */
@@ -290,8 +304,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   drawHover(f, scene.hover, scene.drawing, pal);
   if (scene.tower) drawTowerLine(f, scene.tower, pal);
   drawSnap(f, scene.snap, pal);
-  for (const at of scene.previous)
-    ring(f.ctx, toScreen(f, at), 7, { color: pal.turquoise, width: 1.5 });
+  for (const at of scene.previous) drawSnapPoint(f, at, pal);
   for (const pieces of scene.dropPreview) {
     for (const piece of pieces) strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
   }
@@ -299,6 +312,8 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   if (scene.band) drawBand(f, scene.band, pal);
   // The bars of the runs are below the nodes, so that selected nodes stay blue (^350).
   drawBars(f, scene.bars, NODE_DOT_PX, pal);
+  // The arrows of what the snap takes its heading from are under the dots, the snap points of what it is made of over them (^795, ^803).
+  for (const o of scene.headingFrom) drawArrow(f, { ...o.at, th: o.th }, pal.turquoise);
   scene.roads.forEach((road, i) => {
     drawNodes(
       f,
@@ -312,6 +327,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
       pal,
     );
   });
+  for (const o of scene.snapFrom) drawSnapPoint(f, o.at, pal);
   // The outline of the hovered segment (or branch) is on top of everything (^99).
   drawOutlines(f, scene.roads, scene.outline, pal.blue);
 }

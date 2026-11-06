@@ -46,11 +46,18 @@ const point = (at: Vec, rule: Rule, from: number[], extra: Partial<SnapPoint> = 
 function line(
   at: Vec,
   dir: Vec,
-  made: { rule: Rule; from: number[]; heading?: number },
+  made: { rule: Rule; from: number[]; heading?: number; along?: boolean; th?: number },
 ): SnapCurve {
-  const { rule, from, heading } = made;
-  return {
+  const { rule, from, heading, along, th } = made;
+  const here = { x: at.x, y: at.y };
+  const gift = {
+    at: here,
+    from,
     ...(heading === undefined ? {} : { heading }),
+    ...(th === undefined ? {} : { origin: { at: here, th } }),
+  };
+  return {
+    gives: [{ ...gift, ...(along ? { along } : {}) }],
     kind: 'curve',
     pieces: [infiniteLine(at, dir)],
     straight: true,
@@ -69,28 +76,37 @@ export function nodeRules(n: RuleNode, width: number): Suggestion[] {
   const dir = fromAngle(n.th);
   const side = mul(perp(dir), width);
   const heading = n.th;
+  const origin = { at: { x: n.x, y: n.y }, th: n.th };
   return [
-    line(n, perp(dir), { rule: 'node-normal', from: [n.id], heading }),
-    // No heading: a road drawn on along the heading keeps its automatic one, not a sideways one (^318).
-    line(n, dir, { rule: 'node-heading', from: [n.id] }),
-    point(n, 'node-points', [n.id], { heading, node: n.id }),
-    point(add(n, side), 'node-points', [n.id], { heading }),
+    line(n, perp(dir), { rule: 'node-normal', from: [n.id], heading, th: n.th }),
+    // A tangent line: a node on it heads along it, away from this node (^793).
+    line(n, dir, { rule: 'node-heading', from: [n.id], along: true, th: n.th }),
+    point(n, 'node-points', [n.id], { heading, node: n.id, origin }),
+    point(add(n, side), 'node-points', [n.id], { heading, origin }),
     // Right-hand traffic (^253): on the right the lane runs the same way, on the left the opposite way.
-    point(sub(n, side), 'node-points', [n.id], { heading: heading + Math.PI }),
+    point(sub(n, side), 'node-points', [n.id], { heading: heading + Math.PI, origin }),
   ];
 }
 
 /**
+ * The angles of the extend lines from the heading: 7.5° to 82.5° in steps of 7.5° (^483). A curve
+ * that leaves the node at the angle α to its chord turns by 2α (a half circle, 180°, at the normal line,
+ * 90°), so the curve turns in steps of 15°.
+ */
+const EXTEND_ANGLES = Array.from({ length: 11 }, (_, k) => (k + 1) * 7.5);
+
+/**
  * What the node a road is extended from makes besides its own lines, only in extend mode (^325 to
- * ^330, ^337 to ^340): snap lines through it at 15° to 75° from its heading, in steps of 15°, and
+ * ^330, ^337 to ^340): snap lines through it at 7.5° to 82.5° from its heading, in steps of 7.5°, and
  * the same the other way.
  */
 export function extendRules(n: RuleNode): Suggestion[] {
-  return ([15, 30, 45, 60, 75] as const).flatMap((deg) =>
+  return EXTEND_ANGLES.flatMap((deg) =>
     (['+', '-'] as const).map((sign) =>
       line(n, fromAngle(n.th + ((sign === '+' ? deg : -deg) * Math.PI) / 180), {
         rule: `extend${sign}${deg}`,
         from: [n.id],
+        th: n.th,
       }),
     ),
   );
@@ -142,11 +158,13 @@ function arcRules(e: RuleEdge, arc: Arc): Suggestion[] {
   const at = (t: number) => pointOn(arc, t);
   const points = [0, 0.5, 1].map((t) => {
     const s = at(t);
-    return point(s, 'radius-point', from, { heading: angleOf({ x: s.tx, y: s.ty }) });
+    const th = angleOf({ x: s.tx, y: s.ty });
+    return point(s, 'radius-point', from, { heading: th, origin: { at: { x: s.x, y: s.y }, th } });
   });
   const ticks = [0, 1].map((t) => {
     const s = at(t);
-    return line(s, sub(s, arc.c), { rule: 'tick', from, heading: angleOf({ x: s.tx, y: s.ty }) });
+    const th = angleOf({ x: s.tx, y: s.ty });
+    return line(s, sub(s, arc.c), { rule: 'tick', from, heading: th, th });
   });
   return [...points, ...ticks];
 }
@@ -156,9 +174,12 @@ function bendRules(e: RuleEdge, E: BendEdge, arc: Arc): Suggestion[] {
   const from = [e.start, e.end];
   const bisector = unitOr(sub(E.C, arc.c), { x: 1, y: 0 });
   const middle = add(arc.c, mul(bisector, arc.r));
+  // The curve at the middle runs along the second line, so a node on the first one heads that way, and on the second along it (^799).
+  const there = pointOn(arc, 0.5);
+  const th = angleOf({ x: there.tx, y: there.ty });
   return [
-    line(middle, bisector, { rule: 'bend', from }),
-    line(middle, perp(bisector), { rule: 'bend', from }),
+    line(middle, bisector, { rule: 'bend', from, heading: th, th }),
+    line(middle, perp(bisector), { rule: 'bend', from, along: true, th }),
   ];
 }
 
@@ -177,9 +198,23 @@ function inflectionRules(e: RuleEdge, E: TwoArcEdge): Suggestion[] {
   const t = inflectionTangent(E);
   const heading = angleOf(t);
   return [
-    point(E.J, 'inflection-point', from, { heading }),
-    line(E.J, t, { rule: 'inflection-lines', from, heading: heading + Math.PI / 2 }),
-    line(E.J, perp(t), { rule: 'inflection-lines', from, heading }),
+    point(E.J, 'inflection-point', from, {
+      heading,
+      origin: { at: { x: E.J.x, y: E.J.y }, th: heading },
+    }),
+    line(E.J, t, { rule: 'inflection-lines', from, along: true, th: heading }),
+    line(E.J, perp(t), { rule: 'inflection-lines', from, heading, th: heading }),
+  ];
+}
+
+/** The line across the middle of a straight segment, the way of its symmetry (^798): a node on it heads along the segment. */
+function middleRules(e: RuleEdge, E: { pieces: Piece[] }): Suggestion[] {
+  const [first, last] = [E.pieces[0], E.pieces[E.pieces.length - 1]];
+  if (first?.type !== 'line' || last?.type !== 'line') return [];
+  const way = unitOr(sub(last.Q, first.P), { x: 1, y: 0 });
+  const middle = mul(add(first.P, last.Q), 0.5);
+  return [
+    line(middle, perp(way), { rule: 'middle', from: [e.start, e.end], heading: angleOf(way) }),
   ];
 }
 
@@ -188,6 +223,7 @@ export function edgeRules(e: RuleEdge): Suggestion[] {
   const E = e.ref.E;
   const arcs = E.pieces.filter(sweeps);
   const out = [...curveRules(e), ...arcs.flatMap((a) => arcRules(e, a))];
+  if (E.kind === 'line') out.push(...middleRules(e, E));
   if (E.kind === 'C' && arcs[0]) out.push(...bendRules(e, E, arcs[0]));
   if (E.kind === 'S' || E.kind === 'H') out.push(...inflectionRules(e, E));
   return out;
@@ -206,15 +242,17 @@ function sameLine(a: SnapCurve, b: SnapCurve): boolean {
   return parallel && Math.abs(dot(perp(y.u), sub(x.p, y.p))) <= 1e-3;
 }
 
-/** Two lines that coincide are one suggestion that keeps all origins (^275). */
+/** Two lines that coincide are one suggestion that keeps all origins and all they give (^275, ^792). */
 function mergeLines(list: SnapCurve[]): SnapCurve[] {
   const out: SnapCurve[] = [];
   for (const c of list) {
     const twin = out.find((o) => sameLine(o, c));
-    if (!twin) out.push({ ...c, origins: [...c.origins], from: [...c.from] });
+    if (!twin)
+      out.push({ ...c, origins: [...c.origins], from: [...c.from], gives: [...(c.gives ?? [])] });
     else {
       twin.origins.push(...c.origins);
       twin.from = [...new Set([...twin.from, ...c.from])];
+      twin.gives = [...(twin.gives ?? []), ...(c.gives ?? [])];
     }
   }
   return out;

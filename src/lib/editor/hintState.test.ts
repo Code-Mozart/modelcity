@@ -19,19 +19,27 @@ describe('what the hints know about the snap (^481, ^473)', () => {
   });
 
   it('a snap line that gives a heading: `Shift` and `Alt` have something to do', () => {
-    const snapped = hit({ rule: 'normal', straight: true, heading: 1 });
+    const snapped = hit({
+      rule: 'node-normal',
+      straight: true,
+      gives: [{ at: { x: 0, y: -5 }, from: [], heading: 1 }],
+    });
     const s = hintStateOf({ ...base, snapped });
     expect([s.snapping, s.touching, s.placing]).toEqual([true, true, true]);
   });
 
   it('an extend line carries no heading: `Shift` has nothing to drop (^473)', () => {
-    const snapped = hit({ rule: 'extend', straight: true });
+    const snapped = hit({ rule: 'extend+45', straight: true, gives: [] });
     const s = hintStateOf({ ...base, snapped });
     expect([s.snapping, s.touching, s.placing]).toEqual([true, false, false]);
   });
 
   it('a snap with a heading in select mode is not a placement', () => {
-    const snapped = hit({ rule: 'normal', straight: true, heading: 1 });
+    const snapped = hit({
+      rule: 'node-normal',
+      straight: true,
+      gives: [{ at: { x: 0, y: -5 }, from: [], heading: 1 }],
+    });
     expect(hintStateOf({ ...base, drawing: false, snapped }).placing).toBe(false);
   });
 });

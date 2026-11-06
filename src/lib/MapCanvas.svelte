@@ -1,6 +1,8 @@
 <script lang="ts">
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
+  import { headingSourceOrigins } from './editor/hintState';
+  import { snapOrigins } from './snap/heading';
   import { scaffoldHidden } from './editor/phase';
   import { focusTower } from './editor/parallel';
   import { barsOf } from './editor/towers';
@@ -70,6 +72,8 @@
       previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
+      headingFrom: headingSourceOrigins(editor),
+      snapFrom: snapOrigins(editor.snapped),
       bars: bars,
       tower: focusTower(editor.graph, editor.chains, editor.focus),
       turning: turningOf(editor.chains, editor.press),

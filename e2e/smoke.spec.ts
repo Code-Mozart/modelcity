@@ -59,7 +59,10 @@ async function secondArm(app: App) {
 async function splitAndMerge(app: App) {
   await app.click({ x: 0, y: -60 }); // draw mode
   await app.click({ x: 30, y: -40 }); // curve of the second arm: split
+  // A click on a curve is pulled to where a snap line crosses it (^802), so the merge goes where it is clicked with Ctrl (^101).
+  await app.page.keyboard.down('Control');
   await app.click(await app.curvePoint({ x: 33, y: 10 })); // curve of the first arm: merge
+  await app.page.keyboard.up('Control');
   // five nodes of the arms, the node of the split, the node of the merge; the merge edge is the last
   const { nodes, edges } = await app.graph();
   expect(nodes).toHaveLength(7);

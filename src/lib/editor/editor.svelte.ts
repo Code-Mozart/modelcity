@@ -15,14 +15,14 @@ import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { Pins } from './pins.svelte';
-import { nodesRemoval, rightClickRemoval, type Removal } from './removal';
+import { nodesRemoval, rightClickRemoval, underHover, type Removal } from './removal';
 import { Timeline, type Move } from './timeline.svelte';
 import type { ControlId } from '../hints/hints';
 import { pressName } from './stepNames';
 import { controlUsed } from './usage';
 import { pointerOf } from './proximity';
 import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
-import { curveAt, focusOf, handleAt, hoverAt } from './hits';
+import { focusOf, hoverAt } from './hits';
 import {
   chainHandles,
   chainSegments,
@@ -34,6 +34,7 @@ import {
 import { moveOf } from './moves';
 import { phaseOf } from './phase';
 import { onlyFirstNode } from '../model/junction';
+import { withKeys, type Keys } from './modifiers';
 import { emptyGraph, nodeOf, roundToMm, sameGraph, type Graph } from '../model/graph';
 import {
   afterEmptyClick,
@@ -291,9 +292,11 @@ export class Editor {
     if (moved) Object.assign(this, moved);
   }
 
-  /** Alt or Shift went down or up: what is under the pointer can look different, such as the hovered branch (^99), though the pointer did not move. */
-  modifiers({ alt, shift, ctrl }: { alt: boolean; shift: boolean; ctrl?: boolean }) {
-    this.lastInfo &&= { ...this.lastInfo, alt, shift, ctrl: ctrl ?? this.lastInfo.ctrl };
+  /** Alt, Shift or Ctrl went down or up: what is under the pointer can look different (^99); a press goes on with the new keys, also with no move (^801). */
+  modifiers(keys: Keys) {
+    const { info, changed } = withKeys(this.lastInfo, keys);
+    this.lastInfo = info;
+    if (changed && info && this.press) this.pointerMove(info);
   }
 
   private hoverNow(): Hover | null {
@@ -315,10 +318,8 @@ export class Editor {
 
   /** The segments under the pointer that get an outline: the one, or with Alt held the whole branch (^99, ^128). */
   get hoverSegments() {
-    return chainSegments(
-      this.chains,
-      hoveredEdges(this.graph, this.hover, this.lastInfo?.alt ?? false),
-    );
+    const edges = hoveredEdges(this.graph, this.hover, this.lastInfo?.alt ?? false);
+    return chainSegments(this.chains, edges);
   }
 
   /** The curve a merge into the node or curve under the pointer would add (^123, ^125). */
@@ -328,8 +329,7 @@ export class Editor {
 
   /** Moving several nodes hides all scaffolds meanwhile (^78). */
   get movingGroup() {
-    const press = this.press;
-    return press?.kind === 'drag' && press.moved && press.group.length > 0;
+    return this.press?.kind === 'drag' && this.press.moved && this.press.group.length > 0;
   }
 
   private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
@@ -391,12 +391,11 @@ export class Editor {
     this.restore(press.undo);
   }
 
-  /** Right click without moving: removes what is under the pointer, else finishes the road (^43, ^160, ^290). */
+  /** Right click without moving: removes what is under the pointer (what the hint says: the hover, snapped like a left click), else finishes the road (^43, ^160, ^290, ^808). */
   rightClick(info: PointerInfo) {
     if (this.viewing) return;
-    const handle = handleAt(this.handles(info.scale), info);
-    const hit = handle ? null : curveAt(this.chains, info);
-    const r = rightClickRemoval(this.graph, this.selection, { handle, hit }, info.alt);
+    this.lastInfo = info;
+    const r = rightClickRemoval(this.graph, this.selection, underHover(this.hover), info.alt);
     if (r) this.removal(r);
     else this.finishRoad();
   }
