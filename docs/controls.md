@@ -1,252 +1,491 @@
-# Controls
-
-The current controls, in one place (^36). Controls in modelcity are **contextual by design** (^45): what a button or key does depends on the mode, on what is under the pointer and on what the user is doing right now. So this document is organized by context, and every context lists everything that works in it. The reasoning and history live in the hats; when a control changes, update this file and the hat that decided it.
-
-Code: editor keys in `src/lib/editor/keymap.ts`, pointer rules in `src/lib/editor/editor.svelte.ts`, camera rules in `src/lib/camera/camera.svelte.ts`, input dispatch in `src/lib/MapCanvas.svelte`, the hints in `src/lib/hints/hints.ts`.
-
-Mouse buttons: **LMB** left, **MMB** middle (wheel button), **RMB** right. "Click" means press and release without moving; "drag" means moving while the button is held.
-
-## Four modes (^48, ^104, ^120)
-
-The modes are shown as icons at the top left (eye: view, cursor: select, pen: draw, node with a dashed line: extend; view mode shows only the eye and the cursor); the current one is in the color of the mode and in a ring, the others in the text color. The screen has a hairline outline (0.5 px) in the same color: select blue, draw dark (the node color), extend orange, view none.
-- **View mode (^104):** nothing can be selected or edited, only the camera works (pan, zoom, rotate). Only the generated geometry is drawn: no skeleton (curves, node dots) and no scaffold. The icon is in the text color and there is no outline. `Tab` enters it from every mode (a road being drawn is finished; the selection is kept, though not shown), and `Tab` leaves it for select mode. In view mode the keys for editing, undo and redo do nothing. The icons are not clickable, the keyboard is the way (^44).
-
-- **Select mode:** no road is being drawn. The cursor is the default arrow and there is no preview.
-- **Draw mode:** the user is drawing, but no node is being extended. The cursor is a crosshair and a preview shows the node a click would add. A click on empty canvas starts a new road; a click on a node starts extending, splitting or merging as below.
-- **Extend mode:** a node is being extended (a road is being drawn, with the dashed preview line to the next node).
-
-A left click on empty canvas in select mode only enters draw mode (it places no node, ^54); the next click places node 1 of a new road (extend mode). A left drag in select mode does not enter draw mode: it spans the selection box (^70). Finishing the road (an RMB click on empty space, a click on the node being extended, a merge or a closed loop) goes back to **draw mode**; a second RMB click on empty space, or Esc at any time, leaves draw mode for select mode (^43, ^120). Esc from extend mode jumps straight to select mode.
-
-## What the left button does
-
-The left button always creates or edits; there are no tools (^44). What happens depends on the mode and on the first thing under the pointer, in this order:
-
-| Under the pointer | Select mode | Draw mode | Hats |
-|-------------------|-------------|-----------|------|
-| A handle: node, heading control point (on the arrow's stem), bend point (orange), radius point (orange), corner point of an S-curve (orange) | The handle is highlighted (blue ring). Click selects a node or heading. Drag edits it: moves the node (all selected nodes move with it, see Selection), turns the heading, drags the bend point, a radius point or a corner point of an S-curve (turns the heading of its node so that the heading line passes through the pointer, ^132; a hook's corner points are derived and cannot be dragged, ^105) | The same, with no node preview | ^9, ^44, ^48 |
-| A node of a road (draw mode, ^23) | Same as any handle (above) | **Nothing being drawn:** a click on a node that is the only end node of its road extends that road from it (^65): the road becomes the road being drawn, at that end (at the first node backwards, the new node is added before it; but a merge right after that click runs **out of** the clicked node, in the order of the clicks: click A, then D gives A to D, and D, then A gives D to A, ^239). A click on any other node, or on a node where roads meet, **splits**: a new road starts at that node (see below). **A road is being drawn:** a click on the node where the road started **closes** a loop (^162); a click on any other node **merges**: the road ends at that node, and drawing stops; a click on the node being drawn from finishes the road (the hint is one row, `[LMB] or [Esc]: finish`, ^239). Switching to the other end of the road being drawn was dropped (^162): leave and enter again. A drag moves the node as usual | ^23, ^65 |
-| A road's curve (as near as a node: 9 px, 16 on touch, and at least 0.5 m from the nodes at its ends, ^137) | No mark (the insert mark only exists in draw mode, ^79). Click selects its two nodes, Shift+click adds them (or deselects both if both are selected, ^74), Alt+click selects the branch (^131), or deselects it if all of it is selected. A drag spans the selection box | The curve gets a ring and a small tick (the white mark). A click inserts a node there (the curve does not change) and then, with nothing being drawn, **splits** a new road off that node, or, while a road is being drawn, **merges** that road into it (also on the road's own curve, ^191). A drag only inserts the node, never splits or merges, and sets its heading while dragging, which can turn the curve into an S-curve or hook (^133). Esc after a split leaves just the inserted node | ^10, ^23, ^44, ^48 |
-| Empty canvas | With nothing selected, click enters draw mode (no node yet); with a selection, click deselects all instead (^75); a Shift click does nothing. Drag spans the selection box (see Selection) | A preview of the node (and, once the road has nodes, the curve to it from the last one). The first click places node 1 of a new road, heading right (a drag sets its heading). Later clicks add a node at the end of the road, its heading chosen so that the new edge is a single circular arc (a hook beyond 180°, also when the cursor is behind the arrow). Drag adds the node at the press point with the heading pointing to the cursor, previewed live | ^40, ^44, ^46, ^48 |
-
-Details:
-
-- Dragging a heading (editing a handle, or placing a node) snaps it to angles (^251, ^315): in steps of 45° from the heading it had, farther from the node 15°, then 5°, then 1° (the farther the pointer, the finer). The first node of a new arm snaps to the compass directions instead, and the heading in degrees (0 is north, counter-clockwise) is written beside the node with the compass icon of the middle button (^316). `Ctrl` turns it off. The old `Shift` 15° snap is removed.
-- The heading also snaps to snap suggestions (^313): to a snap point's heading, a snap line's direction away from its base, a segment's direction (the opposite on its left). It copies the heading, not the position. `Alt` inverts the copied heading. `Shift` aims the heading at what it snapped to (a snap point, or the place on a snap line or curve), `Shift`+`Alt` away from it (^335); the control hints say so while a heading is dragged. The control point stays on the arrow (^314). A node placed on a snap line without dragging gets the direction of the line's normal (^318); dragging its heading there copies nothing, and a toast says to snap to something to copy a heading (^319).
-- Dragging a radius point to within 0.5% of the largest radius that fits makes the radius auto again: a deliberate snap, on any kind of segment, and the only way back to auto (the double-click was removed, ^143); with the snapping system it is to become a snap to the limiting node (^141).
-- A heading drag of a shared node turns all its copies (^92). Experiment (no shape tag): every curve is derived from the positions, headings and radii alone; the S-curve's middle line is always the derived one and cannot be moved.
-- The cursor shows what a click would do: a hand over a control point, a crosshair in draw mode, a plus-like copy cursor over a curve in draw mode (click inserts, splits or merges), a pointer over a curve in select mode (click selects), else the default arrow.
-- Dragging less than 6 px while placing a node does not set a heading, so a click keeps the automatic one.
-- Roads are independent of each other (^42).
-- Entering draw mode and placing the first node are two clicks (^54).
-
-## Splits and merges (^23)
-
-The map is a graph of nodes and edges (^106, `docs/data-model.md`); a road is a run of edges, one lane (^76). Several lanes next to each other are several roads, drawn by hand one lane width (3 m) apart (snapping them to each other was removed again, ^124), and roads can join at nodes:
-
-- **Split:** with nothing being drawn, click a node or a curve in draw mode: a new road starts there (on a curve the node is inserted first). The node then has one edge in and two out.
-- A split on a curve that is finished at once (`Esc`, a right click, a click on the node) leaves the curve as it was: the inserted node goes again (^237). Once the road has a second node, it stays.
-- **Merge:** while a road is being drawn, click a node or a curve of another road: the road ends there, and the node then has two edges in and one out. Extending the road backwards (from its first node) turns this around: the clicked node is where the road starts, so it is a split.
-- **Loops (^162):** a click on the node where the road being drawn started closes a loop (hint `close`).
-- **Nodes where roads meet** are one node with one heading: selected, moved, deleted and turned as one. Deleting a node with one edge in and one out joins its neighbours; deleting a node where roads meet removes all its edges, and nodes left without an edge go.
-
-## Selection (^70, ^71, ^72)
-
-A selection is 0..n nodes, also of different roads. Selected nodes are drawn blue and 150% larger (^73). A *selected segment* (both its nodes selected, also while the selection box is dragged) has its curve line and its direction arrows drawn blue, not its road surface (that is later, ^98; ^231). A **hovered segment** gets a blue outline, 20 px across (like the ring of a hovered node, 10 px in radius; at least a little wider than the road), with a half circle at each end and on top of everything; with Alt held the outline covers the whole branch that Alt+click would select (^99, ^128).
-
-| Input | Action |
-|-------|--------|
-| LMB drag on empty canvas (select mode) | Spans the selection box, axis-aligned with the viewport. The nodes inside are the new selection, live while dragging |
-| Shift + LMB drag on empty canvas | Same, but the nodes inside are added to the current selection |
-| LMB on an unselected node | It becomes the whole selection (select mode only: in draw mode a click on a node does not select, ^75) |
-| Alt + Shift + LMB click on a node or curve | Add the **branch** to the selection, or deselect it (the other nodes stay) if all its nodes are selected already (^244). Hint `[Alt]+[Shift]+[LMB]: add branch to selection` or `deselect branch`, only while something is selected | ^244 |
-| Alt + LMB click on a node or curve | Select the **branch** (a chain of nodes between two nodes where branches split, merge or end, both of them included, ^130, ^131); if the whole branch is selected already, deselect it instead. Alt + drag on a node moves the branch. On a node where branches meet or end, the branch that goes on from it in drawing direction (else the one before it) is meant (assumed) |
-| LMB click on empty canvas (something selected) | Deselect all; with nothing selected it enters draw mode instead (^75) |
-| LMB drag a selected node | All selected nodes move by the same translation; all scaffold gizmos are hidden meanwhile (^78). A click without moving reduces the selection to that node |
-| LMB drag a radius point of a segment whose two nodes are selected | The radius of all selected segments (both nodes selected) is set to the dragged value; their scaffolds are shown while the radius point is hovered or dragged (^77, ^129) |
-| Shift + LMB click on a node | Toggle whether the node is selected |
-| LMB click on a curve (select mode) | Select its two nodes (^74) |
-| Shift + LMB click on a curve | Add the segment (its two nodes) to the selection; only if both are selected already, deselect it (^74) |
-| Shift + LMB drag a node | Adds the node to the selection and moves the group |
-| Del or Backspace | Remove all selected nodes |
-
-Entering draw mode, finishing a road and removing nodes clear the selection.
-
-## Removing and finishing
-
-| Input | Action | Hats |
-|-------|--------|------|
-| RMB click on a node (either mode) | Remove that node. A road left with fewer than two nodes disappears, except the road being drawn, which may have one node | ^11, ^31, ^43 |
-| RMB click on a curve (either mode) | Remove that **segment**, and its nodes if it was their only segment. A segment in the middle of a road splits the road in two. While drawing, the road is not finished: it goes on from the node being drawn from if that is still there, else from its neighbour (the node at the other end of the removed segment) | ^160 |
-| Del or Backspace | Remove the selected nodes (same rule) | ^11 |
-| RMB click on empty space | Finish the road being drawn (leaves draw mode); nothing in select mode | ^43 |
-| Esc | Finish the road being drawn. With only one node the road is cancelled, because a road needs at least two nodes | ^43 |
-| Alt + RMB click on a curve (either mode) | Remove the whole **branch** the segment is on (^160): all its segments, and the nodes that had no other segment. While drawing: the road goes on from the node being drawn from if that is still there, else from a neighbour that still has a segment, else it is no longer drawn. Hint `[Alt]+[RMB]: remove branch` | ^160 |
-| Alt + LMB click on a heading control point | **Flip the arm** (^234, arm: ^130): every node connected to this one turns around (every heading a half circle) and every segment between them runs the other way, so the curves stay the same and their direction arrows turn. While drawing the road goes on from the same node. Hint `[Alt]+[LMB]: flip arm`. A click, not a drag: dragging the point turns the heading as always | ^234 |
-| Tab (any mode) | Enter view mode; in view mode, back to select mode (^104). The hint `[Tab]: view mode` is the top row of the hints and is hidden once used, like the camera hints (^110) | ^104 |
-| Esc (select mode, something selected) | Deselect all: a selection step like a click on empty canvas, so it joins the batch of selection steps before (^218) | ^218 |
-| LMB click on the node being drawn from (draw mode: the road's last node, or its first node if the road was extended backwards; a road with one node: that node) | Same as Esc. A click, not a drag: dragging the node moves it and keeps drawing | ^43 |
-
-## The hints (top left)
-
-The corner shows what the mouse and keys do right now, as rows of `[input]: action`, with symbols for the inputs (^49, ^50; `MouseIcon`, `MouseDragIcon`, `MouseWheelIcon`, `KeyCap`). The rows change with the mode and with what is under the pointer:
-
-| Mode and context | Rows |
-|------------------|------|
-| Select mode, empty canvas | `[LMB]: draw mode` (with a selection: `[LMB]: deselect all`), `[LMB drag]: select`, `[Shift]+[LMB drag]: add to selection` (only while something is selected), `[Esc]: deselect all` and `[Del]: delete selected` (same; ^218), `[RMB drag]: pan`, `[Wheel]: zoom`, `[MMB drag]: rotate` |
-| Select mode, over a curve | `[LMB]: select segment` (not if both are selected; `… instead` when something else is selected), `[LMB drag]: select`, `[Shift]+[LMB]: add segment to selection` or `deselect segment` (only with a selection), `[Alt]+[LMB]: select branch` (`deselect branch` if the whole branch is selected), `[Del]`, then the camera rows |
-| Select mode, over a handle | what dragging it does (`move node`, `turn heading`, `bend curve`, `change radius`), on a node `[RMB]: delete node`, `[LMB]: select` (`select instead` if something else is selected; not if it is selected), `[Shift]+[LMB]: select` (only with a selection) or `deselect`, `[Alt]+[LMB]: select branch` (`deselect branch` if the whole branch is selected), then `[Del]` and the camera rows |
-| Draw mode, empty canvas | `[LMB]: add node`, `[LMB drag]: add node and set heading`, `[Esc] or [RMB]: finish` |
-| Draw mode, over a curve | `[LMB]: split` (nothing being drawn), `merge` (any curve while drawing, the road's own too, ^191), `[LMB drag]: insert and set heading`, `[Esc]: finish`, `[RMB]: remove segment` (^160) |
-| Draw mode, over a node | `[LMB]: split` or `extend` (nothing being drawn), `merge` (another road's node while drawing), `close` (the node the road started at), `[LMB drag]: move node`, `[RMB]: delete node`, `[Esc]: finish`. The node being drawn from also has `[LMB]: finish` |
-| Draw mode, over a heading control point | `[LMB drag]: turn heading`, `[Alt]+[LMB]: flip arm` (^234), `[Esc] or [RMB]: finish` |
-| Draw mode, over another handle | what dragging it does, `[Esc] or [RMB]: finish` |
-
-While a button is held, the rows stay those of where it was pressed.
-
-## What is shown on the canvas (^60)
-
-Two levels of gizmo:
-
-- The **road surface** (^90) lies under everything: every segment is 3 m wide with an outline, in the Google Maps colors of the current theme. It is not a gizmo and cannot be edited; crossing roads merge.
-- The **skeleton** is always shown: the curves, the dots of the nodes, and small direction arrows along the curves every 72 px, pointing the way the road runs (^80, ^86). There are no numbering labels.
-- The **scaffold** of a segment (the curve between two nodes) is everything else: the orange lines, circle and control points (the bend's point and the heading control points), the heading arrows (orange), the axis line of an S-curve or hook and its corner points, the orange radius points, three per arc: one in the middle, on the bisector of the corner, and one at each end where the straight lines touch the arc (an end within 14 px of a node is not shown, ^139), and the radius label (`116.7m`), which hangs at the radius point that is hovered or dragged, else in the middle of the arc. It is shown completely or not at all.
-
-Only a single segment shows its scaffold at a time (^66), over all roads, with one exception: with several segments selected (both nodes of each), they show their scaffold all together or not at all (^133). Which one:
-
-1. A hovered or dragged orange point (bend, corner or radius) keeps its own segment, wherever the pointer is. A hovered or dragged node or heading control point takes the one of its two segments whose curve is closer to the pointer.
-2. Otherwise the segment whose curve the pointer is on (within 20 px of it), the closest curve first.
-3. Otherwise the segment with the control point closest to the pointer (a node, a heading control point, the bend point, a corner point of a hook or S-curve, a radius point), within 48 px; nearer curves break ties.
-
-If that segment is one of several selected ones, all selected segments show their scaffold, with their heading arrows (^133); if it is not, the selected ones show nothing. The heading arrows of the two nodes of the shown segment are shown with it, and no other arrows. A node of a road that has no segment yet always shows its heading arrow. A node being placed counts as dragged.
-
-Looks: blue means selected or user action (selected nodes and segments, the hover ring and outline, the selection box), orange is gizmo; an orange point that is hovered or dragged is as large as a selected node (^230). Filled points can be dragged (heading, bend, radius and corner points, all orange, ^134); the corners of an S-curve turn the heading of their node when dragged (the pointer is on the heading line). Nothing is hollow any more. On touch there is no hover, so scaffolds appear only while something is grabbed.
-
-## Projects (^82, ^148, ^163 to ^171)
-
-The map is a project, kept in the browser (IndexedDB) and saved by itself (autosave) a short while after the map changed (nodes, edges, lanes; at the latest 5 s after the oldest unsaved change, ^183); moving the camera alone does not change the date; the camera is saved once it has rested for 1 second (^236), and with every save. The project that was open last opens when the app starts. The camera of a project is saved with it and comes back when the project is opened, also after a reload (^236). Only `P: projects` is in the control hints panel; the other keys work but have no hint (^222, ^223, ^226): they are shown in the operations search when it exists (^97).
-
-| Input | Does |
-|-------|------|
-| `Ctrl+S` | Saves the open project to the browser at once (what autosave does a short while after a change) and says `saved` in a toast (^226, ^185, ^232); with nothing to save it says `nothing to save yet`. It does not export a file any more |
-| `P` | Opens the projects modal (below; ^222). The only one of these keys with a hint |
-| `Ctrl+O` | Opens the projects modal and, at once, the file window of `Import file…` (^223; a browser only opens a file window right after a key press, so it is to be tried in each browser) |
-
-The card `Export JSON` in the modal (formerly `Save to disc…`, ^226; no hotkey) downloads the project as a file (`<title>.modelcity.json`, the format of `docs/data-model.md`) and says so in a toast.
-
-**The projects modal** (^168, ^171, ^178, ^189): while it is up the control hints panel shows only its controls (what an input does right now, as briefly as is clear, ^181: Esc always, the click only over something that can be clicked, `Enter` while renaming; inputs that do the same are one row, `Esc or LMB: cancel`) and the map takes no input. A search field (focused on opening, so typing right away searches) filters the list, which is newest first. Everything is a card of the full width; the icons of a card are inside it. A project card shows the title (cut off with … if it is long; the full title is its tooltip, ^188) and how long ago it was changed (`just now`, `17 minutes ago`; after 8 weeks the date `YYYY-MM-DD hh:mm:ss` in local time; the tooltip is the exact time in ISO form with the offset, ^190, ^214); the open project has a blue outline and the italic label "open" on its own line. A click on a card opens that project (on the open one it just closes the modal); opening a project does not change any date. The pen turns the title into a text field and itself into a check mark: Enter or the check mark renames, Esc or the cross cancels (the modal stays); a rename is written at once, the modal is blocked meanwhile, and the date of the last change stays. The bin asks first: it turns into a cross and the pen into a check mark, and the card gets a red outline; the check mark deletes (for good, there is no bin to bring a project back), the cross or Esc cancels; the check mark is on the left, so a double click on the bin cancels. Below the list three cards without icons: `Import file…` (a project file becomes a new project of the browser and keeps the dates of the file, opening a file is not a change of the map; a file that is no project, or from a newer version, is refused with a message), `Save to disc…` (the same as `Ctrl+S`) and `New project`. **No project:** at first, and after `New project` or after the last project was deleted, there is a blank map and no project; then the `New project` card has the blue outline and a click on it only closes the modal. The map becomes a project (called "Untitled project") when it has something in it, a short while after: nothing is stored before. A refused file shows a red message with an error icon (^210, ^209: not a project, newer version, old version, damaged, unreadable; the details with where in the file are in the browser console, F12). The modal is wide and up to three quarters of the screen tall; only the list scrolls, also when a message takes room (^211). Hovering the search field says `search` while it is not the one typed in. The cross in the top right corner, Esc and a click next to the modal close the modal.
-
-**Renaming (^233):** while the name of a rename was changed, the modal does not close (click outside, the cross, `P`...) and no other card can be opened, renamed or deleted, nor `New project` or `Import file…` used; a warning toast says `Finish or cancel the rename first.` `Esc` or the cross of the card cancels the rename on purpose. With the name unchanged nothing would be lost, so the modal closes.
-
-**Search** (^178, `src/lib/ui/fuzzy.ts`): fuzzy, case does not matter. A title matches if all characters of the search appear in it in the same order, not necessarily next to each other (`hbr` finds "Harbour district"; spaces at the start and the end of the search are ignored, spaces inside count as characters). The best matches come first: every matching character scores 10, 8 more if it directly follows the one before, 6 more at the start of a word (the start of the title, or after a character that is no letter or digit), minus the characters skipped before it (at most 5). Equal scores keep the order of the list, so the newest project stays first. An empty search shows everything.
-
-Not decided yet: the UI to switch projects without the modal (it waits for the operations search, ^97) and a preview of the map on the cards (^179).
-
-## Undo and redo (^81, ^88)
-
-| Input | Action |
-|-------|--------|
-| Ctrl+Z (Cmd+Z) | Undo the last step |
-| Ctrl+Y or Ctrl+Shift+Z | Redo |
-| Alt+Ctrl+Z | Undo the whole batch the last step belongs to (^103) |
-| Alt+Ctrl+Y or Alt+Ctrl+Shift+Z | Redo a whole batch (^103) |
-
-**Single steps and batches (^103, ^216):** a batch is a run of consecutive steps of one kind: selection changes, or the steps of one drawing session (the first node until finishing the road). A step alone is a batch of one, so `Alt+Ctrl+Z` also undoes a single step and `Alt+Ctrl+Y` redoes one. A selection batch ends when the user does something other than selecting (camera moves do not end it). After an undo or redo the next step starts a batch of its own.
-
-## The recent history panel (top right; ^107, ^108, ^109)
-
-It shows the last **7** steps of the history, oldest on top, and the hints for undo and redo at its bottom (two rows: `Ctrl+Z: undo (Alt to undo batch)` and `Ctrl+Y or Ctrl+Shift+Z: redo (Alt to redo batch)`; each only while there is something to undo or redo, the Alt note in the muted color). Steps that were undone stay in the panel, grayed out (the muted text color) below the others, until they are redone, which colors them back in. The window slides: nothing undone, 7 steps; 1 undone, 6 and that one; 2 undone, 5 and 2; 3 or more undone, 4 and the next 3 that a redo would bring back.
-
-Names: `place node`, `move node`, `turn heading`, `bend curve`, `change radius`, `insert node`, `split road`, `merge road`, `close road`, `extend road`, `finish road`, `delete node`, `delete 3 nodes`, `select 2 nodes`, `deselect node`, `deselect all`. A run of selection steps is one row (`select 3 nodes`, named by what it selected in the end); a run that ends where it began (select, then deselect all) changed nothing and has no row, but its steps are still undone one by one or as a batch. Every step has a line on its right; the steps of a batch sit together, so their lines join. An undone step and its line are grayed out, also inside a batch that is only partly undone. A batch with more than 5 steps shows its last 4 under an italic `(N more steps)`. There are no batch titles.
-
-The panel appears the second a step is taken, undone or redone, and goes after 3 seconds without another one. While a road is being drawn it stays, and the 3 seconds start when the road is finished.
-
-## Camera (always, in every context)
-
-| Input | Action | Hats |
-|-------|--------|------|
-| Wheel | Zoom at the cursor (Ctrl+wheel, e.g. a trackpad pinch, is 4x faster) | ^30 |
-| RMB drag | Pan. A right click without moving is not a pan: see above | ^30, ^31 |
-| MMB drag left/right | Rotate about the point where the drag started (right = clockwise, 0.4° per pixel) | ^30, ^31 |
-| MMB drag up/down | Zoom about the same point (up = zoom in, 1% per pixel, like Blender's dolly) | ^30, ^31 |
-
-MMB drag details (^31): the first 20 pixels from where the drag started are a dead zone per axis, so a mostly vertical drag does not also rotate and vice versa. The effect starts from zero at the edge of the zone, and moving back inside undoes it. The scale bar (bottom left) is shown during the drag and for 2 seconds after any wheel or pinch zoom (^34).
-
-### While the middle button is held (rotating)
-
-The cursor becomes a compass (^33): the needle points to world north; the inner ring shows what dragging does (counterclockwise left, clockwise right, zoom in above, zoom out below); the N, E, S, W key caps on the outer ring sit in the on-screen direction of the real world direction, so they turn with the world, and turn blue while pressed. The left button does not create or edit while rotating.
-
-| Input | Action |
-|-------|--------|
-| Esc | Cancel: restore the view from before the drag (it does not finish a road) |
-| N, E, S, W | Rotate so that north, east, south or west is up (N resets). The drag continues from there with a fresh dead zone |
-| LMB click on a key cap of the compass | Same as the key |
-
-### Camera limits
-
-The camera cannot leave the content (^37, ^38, ^62): at least 12 px of the (invisible, screen-aligned) bounding box around the skeleton, the curves and the node dots (not the control points), always stay on screen, whatever you pan, zoom or rotate. With nothing drawn, the view does not pan at all.
-
-## Touch
-
-| Input | Action | Hats |
-|-------|--------|------|
-| One finger | Same as the left button in every context above | ^40 |
-| A second finger comes down | The one-finger action is undone (a node placed by the first finger disappears) and the gesture becomes a camera gesture | ^40 |
-| Two fingers | Twist rotates, pinch zooms, moving both pans (all about the midpoint) | ^30 |
-
-There is no one-finger pan any more: empty space belongs to creating (^14 is superseded).
-
-## Not decided yet
-
-- Typed length/angle, guide snapping and undo from the handover (^11).
-- The HUD beyond the control hints (^20, ^29), where the grid returns (^35), and a permanent rotation indicator (^31).
-
-## Visited controls are hidden (^110)
-
-The hint of a control the user has just used is hidden, each control on its own: the camera controls (`pan`, `zoom`, `rotate`), the select operations (`select`, with a box, `add to selection` with Shift, `select branch` with Alt, `deselect all` with Esc, `delete selected`) and the two history hints (`undo`, `redo`). It comes back after 5 minutes (user, for now) without using that control. Nothing is stored: a new session starts with all hints. Draw mode, moving and the project controls are not affected, nor is `[LMB]: draw mode`, so on a blank map it is the only mouse hint once the camera and select controls are visited.
-
-## Toasts (^232, ^185)
-
-A *message* (glossary) is any text for the user with the icon of its kind in front: a toast, or the error of a refused import in the modal (^210). Short messages in the top right corner, above the recent history panel, on a transparent background, each with the icon of its kind in front (^210): `saved` (`Ctrl+S`), `nothing to save yet`, `nothing to undo` and `nothing to redo` (`Ctrl+Z`, `Ctrl+Y` and their `Alt` forms with nothing to move, ^242), `exported <file>`, `imported <title>`, and the texts of a project that cannot be loaded from the browser storage (the same texts as a refused import, ^209; the stored project stays as it is and the app starts with a new, empty project; opening such a card tells it again and changes nothing). Confirmations stay 3 seconds, warnings and errors 8 seconds (assumed); several stack, but a message that is showing already does not appear twice: its time starts again (^242). The icon is always at the start of the text (user). `Ctrl+S` also says `modelcity saves automatically` in a second toast (info), every time (user).
-
-## Snapping (^101, ^153)
-
-A node that is **placed** (draw mode, empty canvas) or **moved** (dragged, also a group: the dragged node snaps, the others follow, ^264) is pulled to the nearest *snap suggestion* within 25 px (assumed): a snap point, a snap line or a snap curve (glossary). A turquoise guide shows what it is pulled to: a line or curve, and a ring at a point or where two cross (^280). The suggestions are made by rules (^265 to ^273, ^279): the line along the normal and along the heading of every node, three points at a node (on it and one lane width to each side), the curve of every segment and its two offsets one lane width away, the bisector and its tangent of a bend, the lines along the normal at the ticks the radius points (^270), and the inflection point of an S-curve or hook with the lines along its tangent and normal (drawn as a ring, ^260). Only those near their nodes (300 px, assumed) are offered, except those of **pinned** nodes and of the node being drawn from (^288). The nearest point (or crossing) wins, then the nearest curve; a point and the curves through it are shown together (^289). While nodes are moved their previous positions are snap points, shown as rings, and the node that is dragged keeps its snap lines there, along its normal and its heading (^113, ^300); in draw and extend mode a node, the curve of a segment and a radius point that are near are what a click works on (split, merge, extend, close, ^291): a node placed beside a curve is not left unconnected on it.
-
-| Input | What it does |
-|---|---|
-| `Ctrl` (held) | Turns snapping off and hides the scaffolds (^287); its hint `[Ctrl]: no snapping` shows only while a node snaps |
-| RMB on one of several selected nodes, or on a segment between two of them | Removes all selected nodes (^290) |
-| `S` (nodes selected) | Pins the snap suggestions of the selected nodes: offered at any distance, the nodes turn turquoise; each pin replaces the one before (`[S]: pin snap suggestions`, never hidden). While the middle button is held (the compass) `S` is the compass key |
-| `S` (nothing selected, something pinned) | Unpins all (`[S]: unpin all snap suggestions`) |
-| Drop a node on another node (within the snap radius, or 0.1 m at any zoom) | The nodes are merged: the node dropped on stays, with its heading; one undoable step (^248) |
-| Drop a node within 0.1 m of a curve, or snapped to it | The node joins the segment, which is split there; the node takes the tangent of the curve (^268, ^283). While dragging, the curves it would then have are shown dashed (^284) |
-| LMB click on a radius point (draw or extend mode) | Splits or merges there, like a click on the curve; a drag moves the radius (^278) |
-| LMB click on the node inserted by a split (draw mode) | Keeps the node and goes back to draw mode (^276); Esc or a right click right after the split still gives the curve back (^237) |
-
-`Esc` while a node or a control point is dragged, or a node is placed with its heading, cancels it (^295). Pulling a snap suggestion of a node that is not pinned to 85% of its maximum distance shows the tip `Select the node and press S to pin its snap suggestions`, every time; not for 5 minutes after `S` was used (^294, ^110).
-
-While a handle is dragged the hints are only about the drag (^286): what it does, `Ctrl` while snapping, `merge on release`. When the radius of several selected segments is dragged, segments parallel to it get the concentric radius (^282).
-
-### Headings from touching points (^254, ^253, ^301)
-
-When a node is placed or moved onto a point that touches another node (beside it, one lane width away, on its normal), it takes a heading from the side: on the right of the other node the same one, on the left the opposite one (right-hand traffic). `Alt` takes the other one. The control hint `Alt: opposite heading` shows while the pointer is snapped to such a point.
-
-### Control points snap (^249, ^141) and measurements (^303)
-
-The radius point, the bend point and the S-curve points snap like a node position: to the snap points, lines and curves of everything except their own segment (`Ctrl` turns it off, the control hint says so while dragging). A radius point snapped onto one of the nodes of its segment sets the radius to *auto* (the largest that fits). A segment built between nodes that are beside the nodes of another segment (parallel) gets the radius that makes it concentric with it (^281). Where a segment's scaffold is shown, its length (the arc length on bends) is next to the middle of its curve, and the radius label shows the bend angle as well (`93.7m · 53°`).
-
-### Measurements panel (^323, ^342)
-
-Bottom left, above the scale bar while it shows, only while at least one segment is selected. For the selected segments, from top to bottom: `n nodes and m segments selected`, the bounding box along the compass directions (`2.1 x 3.1 km`; whole meters below a kilometer), the total length (whole meters below a kilometer) and the `Curve radius`: one value for a single segment or when all four statistics are equal, else minimum, maximum, average and median. While a radius control point is hovered or dragged, a dashed orange line goes through the control points of the segments that are interlocked with it (parallel, ^334, ^302), from the outermost to the innermost; for an end radius point across the end radius points of the others at that end, also of segments that run the other way (^344, ^360); the control points of the others on the line are drawn as orange rings (^361). A control point that is dragged is also a snap point at its old place (^356). More than two lanes on top of each other follow each other (^348). While the heading of an existing node is dragged, a label beside its arrow says the offset from where it pointed (counter-clockwise positive, ^341). The radii of parallel segments (touching nodes at both ends and concentric, ^334) stay concentric when one changes, also when the others are not selected, unless only the two nodes of the changed segment are selected (^302); parallel segments among the selected keep their offset when another segment is dragged (^324, ^343).
-
-### The bars of parallel segments (^350)
-
-Beside the nodes of a *run* (^353) of parallel segments (^334) one *run bar* (a quarter of the diameter of a node circle thick) lies over the node circles on that side, its outer edge on the line that touches them, from the first to the last node of the run; on both sides of a tower (^352) if the segments are parallel on both. It is part of the skeleton: always shown, not in view mode, and drawn below the nodes so that selected nodes stay blue.
-
-### Snapping the position only (^358)
-
-On *add node* (`LMB` click) in draw and extend mode, `Shift` keeps the snap of the position but not of the heading: the node is placed at the snap with its automatic heading, not the heading of the lane, offset curve or snap line it snapped to. The hint `Shift: snap only the position` shows while a click would place a node at a snap and is never hidden. It is not available on *add node and set heading* (`LMB` drag). (For the heading point of an existing node `Shift` aims, ^335.)
-
-### Extend mode shows no scaffold (^362)
-
-While a road is extended from a node, the scaffold gizmos of the existing segments are hidden (only the skeleton shows). The preview of the segment being built keeps its dashed heading lines and measurements.
+# Controls and features (^371)
+
+**Status: incomplete, on purpose (^371, ^783).** The audit (^371) found every control and gave it a hat, but the *conditions* of each control (in which state it listens, what it says, what it does) are only written down in part: the user's table by context, the walked controls and the controls found in the code but not walked. The full reference comes from the milestone ^783 (controls as data, one table that the code and the hints both read). Until then a new or changed control gets its row in *Controls by context* in the same PR (^786), and `src/lib/testing/controlsMatrix.test.ts` can run the editor over the combinations to compare (its docblock says how). The old file before the audit is in the Git history (`git show origin/main:docs/controls.md` before the merge of ^371).
+
+## Definitions
+
+- **Feature:** anything the app can do or show (a mode, a snap, a rendering, a measurement, an operation). Has a hat of type `feature`, or `operation` (see `docs/hats.md`; features and operations are listed there, not here).
+- **Operation** (^180, ^391): something the user deliberately does that changes the map, the stored project or what is open, or writes an output (edit the map, undo, select, pan, zoom, rotate, export, save, import, create, rename, delete, switch a project). Not a mode change, not opening a modal, not hovering. Every operation is a feature; not every feature is an operation (a snap rule, a gizmo, a label is not).
+- **Hats (^392):** every operation and every control has a hat for just itself. A hat that describes several things stays as the decision, and each thing gets its own hat that points to it.
+- **Control** (README glossary): a user input (key or mouse, with modifiers) in a context. Controls are contextual by design (^45), so every row names its **context**: the mode (view, select, draw, extend), what is under the pointer, and the state of the app (selection, drag, being drawn, touch). The same input in two contexts is two controls.
+- **Hat:** reused if the feature, control or operation already has one (^371 rule 1); registered first if not.
+
+**Not audited in detail (user):** layout and colors. The audit records what exists, what it does and what it is tied to; where things sit, how big they are and which color they have is described only where it is the point of a feature (for example the blue border of the current card), and otherwise left to the design hats (^32, ^211).
+
+## Columns
+
+| Column | Meaning |
+|--------|---------|
+| Hat | The hat of the feature, control or operation. |
+| Context | Mode, what is under the pointer, app state. |
+| Control | The input, with modifiers. |
+| Operation | What it does there. |
+| Hint | The control hint (^181) it shows, or the recorded reason it has none (an exemption). |
+| Visitable | Whether and how the hint can be visited (hovered or reached, ^259): yes (how), no (why). |
+| Special behavior | Everything else that applies: toast message (^210), cursor, hides after use (^110), snapping, and so on. |
+| Tests | Where it is tested: unit (one module), integration (the editor engine with a graph, no browser), e2e (the browser). |
+
+## Controls by context (the user's table)
+
+The review table of the project owner (`docs/please-remove-me.md`, removed), with the hat of each row added: `= ^N` is a control hat that already exists, `^N` a new one. Its columns: the mode or modal; what else must hold; the input; what the hint says (only if displayed); what it does; where it is displayed; whether the hint is *visitable* (hidden for 5 minutes after use, ^110; "yes, but should not be" is the user's wish, see ^756). `Ctrl+O` is an import in this table (the modal opening is a side effect), see ^758. Written in the same detail from now on.
+
+| Hat | Mode and modal | Additional context | Input | What it says | What it does | Displayed where | Visitable |
+|-----|----------------|--------------------|-------|--------------|--------------|-----------------|-----------|
+| = ^450 | any mode & no modal | - | Ctrl+S | - | save immediately | nowhere | - |
+| = ^454 | any mode & no modal | - | Ctrl+Z, with optional Alt | undo ([Alt] to undo batch) | no Alt: undo, with Alt: undo batch | history panel, only when there is something to undo | yes |
+| = ^456 | any mode & no modal | - | Ctrl+Y or Ctrl+Shift+Z with optional Alt | redo ([Alt] to redo batch) | no Alt: redo, with Alt: redo batch | history panel, only when there is something to redo | yes |
+| = ^399 | any mode or modal | - | Ctrl+O | - | import project | no | - |
+| = ^400 | any mode & no modal | - | P | projects | open project modal with search focused | control hints panel, for now. will be changed with ^97 | no |
+| = ^722 | any mode & no modal | always, but only one mouse button can be dragged at a time | RMB drag | pan | pan camera | control hints panel | yes |
+| = ^725 | any mode & no modal | always, but only one mouse button can be dragged at a time | MMB drag | rotate | left or right: rotate camera, up or down: dolly zoom | control hints panel | yes |
+| = ^723 | any mode & no modal | - | Mouse wheel | zoom | zoom | control hints panel | yes |
+| = ^724 | any mode & no modal | - | Ctrl+Mouse wheel | zoom fast | stronger zoom | nowhere today, but should be in control hints panel | yes, but only after Mouse wheel zoom without Ctrl was visited, and visitation-state resets with the "normal" zoom time |
+| = ^394 | select mode | - | Tab | view mode | switch to view mode | control hints panel | yes, but should not be |
+| ^771 | draw mode | - | Tab | view mode | switch to view mode | control hints panel | yes, but should not be |
+| ^772 | extend mode | - | Tab | view mode | switch to view mode | control hints panel | yes, but should not be |
+| = ^395 | view mode | - | Tab | select mode | switch to select mode | control hints panel | yes, but should not be |
+| = ^401 | project modal | - | Esc | close | close project modal | control hints panel | no |
+| = ^403 | project modal | X button hovered | LMB or Esc | close | close project modal | control hints panel | no |
+| = ^740 | project modal | search bar focused | (any, with exceptions) | - | types to the search | nowhere | no |
+| = ^407 | project modal | search bar not focused, but hovered by mouse | LMB | search | focus search bar | control hints panel | no |
+| = ^733 | project modal | project card hovered, but not any of the buttons at the right | LMB | open | open project | control hints panel | no |
+| = ^734 | project modal | pen icon hovered on project card | LMB | rename | goes to project renaming | control hints panel | no |
+| = ^735 | project modal | while renaming a project & checkmark icon hovered | Enter or LMB | rename | rename project | control hints panel | no |
+| = ^736 | project modal | while renaming a project & checkmark icon hovered | Esc | cancel | cancel rename | control hints panel | no |
+| = ^736 | project modal | while renaming a project & cancel icon hovered | Esc or LMB | cancel | cancel rename | control hints panel | no |
+| ^773 | project modal | while renaming a project & cancel icon hovered | Enter | rename | rename project | control hints panel | no |
+| = ^737 | project modal | bin icon hovered on project card | LMB | delete | goes to delete confirmation | control hints panel | no |
+| = ^738 | project modal | while confirmation to delete a project & checkmark icon hovered | LMB | delete | delete project | control hints panel | no |
+| = ^739 | project modal | while confirmation to delete a project & checkmark icon hovered | Esc | cancel | cancel project deletion | control hints panel | no |
+| = ^739 | project modal | while confirmation to delete a project & cancel icon hovered | Esc or LMB | cancel | cancel rename | control hints panel | no |
+| = ^404 | project modal | "Import file..." button hovered | LMB | import | import project (open file picker) | control hints panel | no |
+| = ^405 | project modal | "Export JSON" button hovered | LMB | export JSON | export project (open file picker or download JSON directly, depending on browser settings) | control hints panel | no |
+| = ^406 | project modal | "New project" button hovered | LMB | new project | new project or close, if the current project is none | control hints panel | no |
+| = ^495 | select mode | mouse does not hover over a node or control point | LMB drag | select | set selection by box | control hints panel | yes |
+| = ^685 | select mode | mouse does not hover over a node or control point & something selected | Shift+LMB drag | add to selection | add nodes in box to selection | control hints panel | yes |
+| = ^684 | select mode | mouse over void & something selected | LMB or Esc | deselect all | deselect all | control hints panel | yes |
+| = ^686 | select mode | mouse over node, control point or segment & something selected | Esc | deselect all | deselect all | control hints panel | yes |
+| = ^687 | select mode | something selected | Del | delete selected | delete nodes | control hints panel | yes, but it shouldn't |
+| = ^417 | select mode | something selected | S | pin snap suggestions | pin snap suggestions | control hints panel | no |
+| = ^721 | select mode | nothing selected & some snap suggestions pinned | S | unpin all snap suggestions | pin snap suggestions | control hints panel | no |
+| = ^488 | select mode | node hovered | LMB drag | move node | move nodes | control hints panel | no |
+| = ^489 | select mode | node hovered | RMB (should also allow Del in the future as alternative) | delete node | delete nodes | control hints panel | no |
+| = ^490 | select mode | node hovered & nothing selected | LMB | select | set selected node | control hints panel | yes |
+| = ^491 | select mode | node hovered | Alt+LMB | select branch | set selected branch | control hints panel | yes |
+| = ^688 | select mode | selected node hovered | Shift+LMB | deselect | toggle node selection | control hints panel | yes |
+| = ^689 | select mode | selected node hovered | Alt+Shift+LMB | add branch to selection | toggle branch selection | control hints panel | yes |
+| ^774 | select mode | unselected node hovered & something selected | LMB | select instead | set selected node | control hints panel | yes |
+
+## Controls
+
+Each row is one control (^392): an input, or alternative inputs that do the same, in one context. The Hat column starts with the control's own hat. Rows for states not walked yet follow as the audit goes on.
+
+| Hat | Context | Control | Operation or feature | Hint | Visitable | Special behavior | Tests |
+|-----|---------|---------|----------------------|------|-----------|------------------|-------|
+| ^393 | select mode, the void, nothing selected | `LMB` click | enter draw mode (feature ^423; not an operation) | `LMB`: draw mode | n/a | unit `editor/modes.test`; e2e `modes.spec` |
+| ^394 | select mode | `Tab` | go to view mode (feature ^425) | `Tab`: view mode, hidden for a while after the control was used (^110) | n/a | after a round trip the hint is missing until the visit times out | unit `editor/modes.test` (Tab goes to view mode from every mode, and back), `hints/hints.test`; e2e `modes.spec` |
+| ^395 | view mode | `Tab` | back to select mode (feature ^422) | should be `Tab`: select mode, hidden by bug ^384 | n/a | unit `editor/modes.test`, `hints/hints.test`; e2e `modes.spec` |
+| ^396 | any mode, no modal, nothing to save | `Ctrl+S` | save project (operation ^428): nothing to save, toasts ^441 and ^442 (^232) | none (exemption not yet decided) | n/a | toasts 3 s, identical toast not shown twice | unit `project/load.test`; e2e: gap ^379 |
+| ^397 | any mode, no modal, nothing to undo | `Ctrl+Z` | toast ^443 `nothing to undo` (^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
+| ^398 | any mode, no modal, nothing to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | toast ^444 `nothing to redo` (^81) | none | n/a | toast 3 s | e2e `editing.spec`; `Alt` variant: gap ^380 |
+| ^399 | any mode, no modal | `Ctrl+O` | open the projects modal (feature ^426) and the file window of import project (operation ^430) | none (exemption not yet decided) | n/a | overrides the browser's `Ctrl+O`; the file window is the browser's own | e2e `projects.spec` |
+| ^400 | any mode, no modal, no text field focused | `P` | open the projects modal (feature ^426) | `P`: projects, always shown | n/a | | e2e `projects.spec` |
+| ^401 | projects modal | `Esc` | close the modal (feature ^426) | `Esc`: close (merged with `LMB` over the X) | n/a | | e2e `projects.spec` |
+| ^402 | projects modal, pointer outside the dialog | `LMB` click | close the modal (feature ^426; ^233: not while a rename is unfinished) | none (exemption: the backdrop is not a target) | no | | e2e `projects.spec` |
+| ^403 | projects modal, pointer on the X | `LMB` click | close the modal (feature ^426) | `Esc or LMB`: close | yes (hover) | | e2e `projects.spec` |
+| ^404 | projects modal, pointer on `Import file…` | `LMB` click | import project (operation ^430): open the file window | `LMB`: import | yes (hover) | | e2e `projects.spec` |
+| ^405 | projects modal, pointer on `Export JSON` | `LMB` click | export project (operation ^429); to explore | `LMB`: export JSON | yes (hover) | | e2e `projects.spec` |
+| ^406 | projects modal, pointer on `New project` | `LMB` click | new project (operation ^431); to explore | `LMB`: new project | yes (hover) | | e2e `projects.spec` |
+| ^407 | projects modal, pointer on the search field, not focused | `LMB` click | focus the search (feature ^427, walked later) | `LMB`: search (only while not focused) | yes (hover) | the field is focused when the modal opens | e2e `projects.spec` |
+| ^408 | draw mode, nothing drawn yet | `Esc` or `RMB` click | leave draw mode (features ^423, ^422) | `Esc or RMB`: finish | n/a | unit `editor/modes.test` (Esc or a right click leave draw mode before any node has been placed) |
+| ^410 | draw mode, nothing drawn yet, the void | `LMB` click | place first node (operation ^409); enters extend mode (feature ^424) | `LMB`: add node (to become `place node`, ^421) | n/a | the node placed is selected; a project may be made at once, which is fine (^386 withdrawn, ^449) | unit `editor/modes.test` (the first click only enters draw mode, the second places a node), `editor/extend.test` |
+| ^411 | draw mode, nothing drawn yet, the void | `LMB` drag | place first node and set its heading (op ^420); enters extend mode with the press; the release is not yet explored | before the press `LMB` drag: add node and set heading (to become `place node and set heading`, ^421); while dragging `LMB` drag: turn heading (^286) | n/a | a drag under 6 px keeps the automatic heading; the heading snaps to the compass (^315) and to steps (^457 to ^460), with the label (^316) | unit `editor/editor.test`, `editor/cancelDrag.test`; the compass and label: gap ^463; e2e `smoke.spec` |
+| ^412 | extend mode, a segment exists, pointer on the start node | `LMB` click or `Esc` | finish road (operation ^432); to explore | `LMB or Esc`: finish | n/a | with only one node: to explore | e2e `smoke.spec`, `editing.spec` |
+| ^413 | extend mode, pointer on a node | `LMB` drag | move node (operation ^433); to explore | `LMB` drag: move node | n/a | snapping, `Ctrl` | unit `editor/snapping.test`; e2e `snapping.spec` |
+| ^414 | extend mode, pointer on a node | `RMB` click | delete node (operation ^434); to explore | `RMB`: delete node | n/a | | unit `editor/removal` tests (to check) |
+| ^415 | draw or extend mode, the pointer snaps | `Ctrl` held | no snapping (^101) | `Ctrl`: no snapping, shown only while snapping | no (never hidden) | not learnable, ^110; holding it does not take effect until the pointer moves (bug ^472) | unit `editor/snapping.test` (Ctrl turns it off), `editor/snapHover.test`; e2e `snapping.spec` (a placed node snaps to the snap line, and Ctrl turns snapping off) |
+| ^416 | draw or extend mode, the pointer snaps, a click would place a node | `Shift` held | the node keeps only the snap position, not its heading (^358); to explore | `Shift`: snap only the position (to be shortened, ^474), shown only then | no | not on a drag-place; no visible effect on a snap without a heading, such as an extend line, yet the hint shows (bug ^473) | unit `editor/touching.test` (keeps only the position), `editor/headingSnap.test` |
+| ^417 | any mode, at least one node selected (also, by bug ^419, the start node in extend mode) | `S` | pin snap suggestions (operation ^777, feature ^258); to explore | `S`: pin snap suggestions | no (never hidden, ^258) | with nothing selected and something pinned: `S` unpins | e2e `snapping.spec` |
+| ^436 | extend mode, only the first node placed, pointer on it | `LMB` click or `Esc` | cancel first node (operation ^437): the node is taken away, back to draw mode (feature ^423) | `LMB or Esc`: finish, should be `cancel` (bug ^438) | n/a | undoable: undo brings the node back at its place; `Esc` is the alternative input, not pressed yet | unit `editor/undoRedo.test` (cancelling a lone node with Esc can be undone), `editor/editor.test` (finishing a road with one node cancels it); e2e: gap |
+| ^450 | any mode, no modal, a project is open (it has data) | `Ctrl+S` | save project (operation ^428) at once: toast ^440 `saved`, then toast ^442 `modelcity saves automatically` (^232) | none (exemption not yet decided) | n/a | the background: ^165 (the browser's database), ^166 autosave, ^445 (400 ms), ^446 (5 s), ^447, ^448 | unit `project/load.test` (Ctrl+S saves at once and says so); e2e `projects.spec` |
+| ^454 | any mode, no modal, a step in the history to undo | `Ctrl+Z` | undo (operation ^453): the last step is taken back; here the cancel of the first node, so the node is back with its heading | the undo hint of the history panel: `Ctrl+Z`: undo (`Alt` to undo batch), shown while there is a step to undo (^109, ^241) | n/a | the undone step stays in the panel in gray, joined to its batch (^107, ^108); the `Alt` note is always shown (roadmap ^418) | unit `editor/undoRedo.test`, `editor/steps.test`, `hud/panel.test` (undone steps grayed), `hints/usage.test` (the hint is hidden when visited); e2e `editing.spec` (the recent history panel grays out undone steps) |
+| ^456 | any mode, no modal, an undone step to redo | `Ctrl+Y` or `Ctrl+Shift+Z` | redo (operation ^455): the undone step is done again; here the cancel, so the node is gone and the preview is back (draw mode, nothing drawn) | the redo hint of the history panel: `Ctrl+Y` or `Ctrl+Shift+Z`: redo (`Alt` to redo batch), while there is a step to redo (^109, ^241) and the control is not hidden as visited (^110) | n/a | the redone step is white again; after a redo with nothing left to redo and both undo and redo visited, the panel shows no hints; the panel goes after about 3 s (^107) | unit `editor/undoRedo.test`, `editor/steps.test`, `hud/panel.test` (redoing colors them back in), `hints/usage.test`; e2e `editing.spec` |
+| ^461 | a node is being placed and its heading dragged (the button is held) | `Esc` | cancel (feature ^295): the node is not placed, nothing is a step | `Esc`: cancel (^286) | n/a | the hints are only about the drag (^286) | unit `editor/cancelDrag.test` (a node that is placed with its heading is not placed) |
+| ^462 | a node is being placed and its heading dragged | `Ctrl` held | no snapping (feature ^101): the heading follows the pointer freely, also the 45° steps | `Ctrl`: no snapping (shown for every heading drag, ^286) | no (never hidden) | not learnable, ^110 | unit `editor/editor.test` (Ctrl switches it off, ^251), `editor/snapping.test` |
+| ^465 | extend mode, only the first node placed, pointer on its heading control point | `LMB` drag | turn heading (operation ^468); not pressed yet | `LMB` drag: turn heading | n/a | the heading snaps (^251, ^315); the hover ring (^469) | unit `editor/editor.test` (dragging the heading), `editor/branching.test`, `editor/headingSnap.test` |
+| ^466 | extend mode, pointer on a heading control point | `Alt` + `LMB` click | flip arm (^234); not pressed yet | `Alt`+`LMB`: flip arm | n/a | a click, not a drag | unit `editor/controls.test`; e2e `editing.spec` |
+| ^467 | extend mode, only the first node placed, pointer not on the start node | `Esc` or `RMB` click | cancel first node (operation ^437); not pressed yet | `Esc or RMB`: finish, should be `cancel` (bug ^438) | n/a | undoable, like ^436 | unit `editor/undoRedo.test`, `editor/editor.test` (a right click on empty space finishes the road, finishing with one node cancels it) |
+| ^477 | extend mode, pointer on the void | `LMB` click | place next node (operation ^475); walked in steps 35 and 36 (press) | `LMB`: add node (to become `place node`, ^421) | n/a | the node snaps (^101); `Shift` keeps only the position (^416) | unit `editor/extend.test`, `editor/editor.test`, `editor/snapping.test` |
+| ^478 | extend mode, pointer on the void | `LMB` drag | place next node and set heading (operation ^476); walked in steps 36 and 37 (not released yet) | `LMB` drag: add node and set heading (to become `place node and set heading`, ^421) | n/a | the heading snaps (^251) | unit `editor/editor.test`, `editor/touching.test` |
+| ^488 | select mode, pointer on a node | `LMB` drag | move node (operation ^433); not pressed yet | `LMB` drag: move node | n/a | snapping (`Ctrl` turns it off); the nodes selected move together | unit `editor/editor.test`, `editor/branching.test`, `editor/snapping.test`; e2e `smoke.spec`, `editing.spec` |
+| ^489 | select mode, pointer on a node | `RMB` click | delete node (operation ^434); not pressed yet | `RMB`: delete node | n/a | | unit `editor/controls.test`, `editor/rightClickSelected.test` |
+| ^490 | select mode, pointer on a node | `LMB` click | select node (operation ^486), `select instead` with a selection; not pressed yet | `LMB`: select | n/a | hidden once visited (^110) | unit `editor/selection.test` |
+| ^491 | select mode, pointer on a node | `Alt` + `LMB` click | select branch (operation ^487); not pressed yet | `Alt`+`LMB`: select branch (or deselect branch) | n/a | hidden once visited (^110); with `Alt` held the hovered branch gets its outline (^99) | unit `editor/branchSelect.test`, `editor/hoverFresh.test` |
+| ^495 | select mode, the void, nothing selected | `LMB` drag | select by box (operation ^492); not pressed yet | `LMB` drag: select (hidden once visited, ^110) | n/a | the nodes inside are selected live | unit `editor/selection.test`, `editor/controls.test` |
+| ^496 | draw mode, nothing drawn, pointer on a node without a segment | `LMB` click | extend road (operation ^493): the node becomes the node being drawn from; extend mode | `LMB`: split, should be `extend` (bug ^494) | n/a | the history step is `split road` (bug ^494) | gap: no test for a node without a segment |
+
+## Controls found in the code, not walked yet (^684–^741)
+
+Found by the sweep of the code (the hints, the key and pointer dispatch, the modal): one row per control (^392), each with its own hat and the operation or feature it triggers (`docs/features.md`). *Hint* is what the code says; it has not been checked on screen. The controls that the walk has already reached have their hats above. Tests: candidates by title and module, as in `docs/features.md`.
+
+| Hat | Context | Control | Does (operation or feature) | Hint in the code | Tests |
+|-----|---------|---------|----------------------------|------------------|-------|
+| ^684 | select mode, the void, something selected | `LMB` click | deselect all (^557) | `LMB`: deselect all (^75) | unit `editor/editor.test` (strong), `editor/extend.test` (strong), `editor/modes.test` (strong) |
+| ^685 | select mode, the void, something selected | `Shift` + `LMB` drag | add to selection (^682) | `Shift`+`LMB` drag: add to selection | unit `editor/selection.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
+| ^686 | select mode, something selected | `Esc` | deselect all (^557) | `Esc`: deselect all (^218) | unit `editor/branchSelect.test` (weak), `editor/controls.test` (weak), `editor/editor.test` (weak) |
+| ^687 | any mode, something selected | `Del` or `Backspace` | ^434 | `Del`: delete selected | unit `editor/controls.test` (weak), `editor/editor.test` (weak), `editor/modes.test` (weak) |
+| ^688 | select mode, pointer on a node, something selected | `Shift` + `LMB` click | add to selection (^682); deselect (^683) | `Shift`+`LMB`: select or deselect | unit `editor/controls.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
+| ^689 | select mode, pointer on a node, something selected | `Alt` + `Shift` + `LMB` click | select branch (^487); deselect (^683) | `Alt`+`Shift`+`LMB`: add branch to selection (or deselect branch) | unit `editor/branchSelect.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
+| ^690 | select mode, pointer on a curve | `LMB` click | select segment (^555) | `LMB`: select segment | unit `editor/editor.test` (strong), `editor/controls.test` (strong), `editor/extend.test` (strong) |
+| ^691 | select mode, pointer on a curve, something selected | `Shift` + `LMB` click | add to selection (^682); deselect (^683) | `Shift`+`LMB`: add segment to selection, or deselect segment | unit `editor/editor.test` (strong), `editor/controls.test` (strong), `editor/extend.test` (strong) |
+| ^692 | select mode, pointer on a curve | `Alt` + `LMB` click | select branch (^487) | `Alt`+`LMB`: select branch (or deselect branch) | unit `editor/editor.test` (strong), `editor/extend.test` (strong), `editor/modes.test` (strong) |
+| ^693 | select mode, pointer on a selected node, several selected | `LMB` drag | ^433 | `LMB` drag: move node (the group moves) | unit `editor/branching.test` (strong), `editor/controls.test` (strong), `editor/editor.test` (strong) |
+| ^694 | select mode, pointer on a node | `Alt` + `LMB` drag | move branch (^681) | none (exemption not yet decided) | unit `editor/branching.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
+| ^695 | any mode, pointer on a bend point | `LMB` drag | bend curve (^534) | `LMB` drag: bend curve | unit `editor/branching.test` (strong), `curves/continuity.test` (weak), `editor/editor.test` (weak) |
+| ^696 | any mode, pointer on a radius point | `LMB` drag | change radius (^535) | `LMB` drag: change radius | unit `curves/continuity.test` (weak), `editor/branching.test` (weak), `editor/controlSnap.test` (weak) |
+| ^697 | any mode, pointer on a corner point of an S-curve | `LMB` drag | turn heading (^468) | `LMB` drag: turn heading | unit `editor/branching.test` (strong), `editor/inflection.test` (strong), `curves/continuity.test` (weak) |
+| ^698 | any mode, pointer on a radius point, a segment whose two nodes are selected | `LMB` drag | change radius (^535) | `LMB` drag: change radius (all selected segments) | unit `editor/selection.test` (strong), `editor/controlSnap.test` (strong), `editor/controls.test` (strong) |
+| ^699 | any mode, several nodes selected, pointer on one of them or on a segment between them | `RMB` click | ^434 | `RMB`: delete selected (^290) | unit `editor/rightClickSelected.test` (strong), `editor/controls.test` (strong), `editor/editor.test` (strong) |
+| ^700 | the heading of an existing node is dragged, it snapped to something | `Shift` held | ^335 | `Shift`: aim at snap suggestion | unit `editor/modes.test` (strong), `editor/headingSnap.test` (weak), `editor/branching.test` (weak) |
+| ^701 | the heading of an existing node is dragged, it snapped to something | `Shift` + `Alt` held | ^335 | `Shift+Alt`: aim away from snap suggestion | unit `editor/headingSnap.test` (strong), `editor/modes.test` (strong), `editor/branching.test` (weak) |
+| ^702 | a handle is dragged, the pointer snapped to a touching point or a heading | `Alt` held | ^301 | `Alt`: opposite heading | unit `editor/touching.test` (weak), `editor/branching.test` (weak), `editor/controlSnap.test` (weak) |
+| ^703 | a node is dragged onto another node, released | `LMB` release | merge nodes by drop (^248) | `LMB`: merge on release (while dragging) | unit `editor/merging.test` (strong), `editor/ownCurve.test` (strong), `editor/dropMerge.test` (strong) |
+| ^704 | a node is dragged onto a curve, released | `LMB` release | join node into a curve by drop (^680) | none (the dashed result shows, ^284) | unit `editor/ownCurve.test` (strong), `editor/branching.test` (weak), `editor/cancelDrag.test` (weak) |
+| ^705 | a radius point is dragged onto a node of its segment | `LMB` release | ^141 | none | unit `editor/controlSnap.test` (strong), `curves/radiusHandles.test` (strong), `editor/ownCurve.test` (strong) |
+| ^706 | draw mode, nothing drawn, pointer on another node | `LMB` click | split road (^549) | `LMB`: split | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/controls.test` (strong) |
+| ^707 | draw mode, nothing drawn, pointer on a curve | `LMB` click | split road (^549); insert node (^10) | `LMB`: split | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/controls.test` (strong) |
+| ^708 | draw mode, nothing drawn, pointer on a curve | `LMB` drag | insert node (^10) | `LMB` drag: insert and set heading | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/controls.test` (strong) |
+| ^709 | draw mode, nothing drawn, pointer on a curve | `RMB` click | remove segment (^551) | `RMB`: remove segment | unit `editor/branching.test` (strong), `editor/controls.test` (strong), `editor/editor.test` (strong) |
+| ^710 | draw mode, nothing drawn, pointer on a curve | `Alt` + `RMB` click | remove branch (^552) | `Alt`+`RMB`: remove branch | unit `editor/branching.test` (strong), `editor/controls.test` (strong), `editor/editor.test` (strong) |
+| ^711 | draw mode, pointer on a radius point | `LMB` click | split road (^549); merge road (^550) | none (as on the curve) | unit `editor/extend.test` (strong), `editor/modes.test` (strong), `editor/branching.test` (strong) |
+| ^712 | draw mode, right after a split, pointer on the inserted node | `LMB` click | ^276 | none | unit `editor/radiusClick.test` (strong), `editor/modes.test` (strong), `editor/extend.test` (strong) |
+| ^713 | draw mode, right after a split on a curve, nothing placed after it | `Esc` or `RMB` click | ^237 | `Esc or RMB`: finish | unit `editor/controls.test` (strong), `editor/radiusClick.test` (strong); e2e `editing.spec` (strong) |
+| ^714 | extend mode, pointer on a node of another road | `LMB` click | merge road (^550) | `LMB`: merge | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/editor.test` (strong) |
+| ^715 | extend mode, pointer on a curve (also of the road itself) | `LMB` click | merge road (^550) | `LMB`: merge | unit `editor/branching.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
+| ^716 | extend mode, pointer on the node the road started at | `LMB` click | close road (^162) | `LMB`: close | unit `editor/extend.test` (strong), `editor/branching.test` (strong), `editor/editor.test` (strong) |
+| ^717 | extend mode, pointer on a curve | `LMB` drag | insert node (^10) | `LMB` drag: insert and set heading | unit `editor/branching.test` (strong), `editor/extend.test` (strong), `editor/ownCurve.test` (strong) |
+| ^718 | extend mode, pointer on a curve | `RMB` click | remove segment (^551) | `RMB`: remove segment | unit `editor/editor.test` (strong), `editor/branching.test` (weak), `editor/concentricBuild.test` (weak) |
+| ^719 | extend mode, pointer on a curve | `Alt` + `RMB` click | remove branch (^552) | `Alt`+`RMB`: remove branch | unit `editor/controls.test` (strong), `editor/editor.test` (strong), `editor/branchSelect.test` (weak) |
+| ^720 | extend mode, a segment exists, the void | `RMB` click or `Esc` | ^432 | `Esc or RMB`: finish | unit `editor/selection.test` (strong), `hints/hints.test` (weak), `editor/controls.test` (weak) |
+| ^721 | any mode, nothing selected, something pinned | `S` | unpin snap suggestions (operation ^778, feature ^258) | `S`: unpin all snap suggestions | unit `editor/pins.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
+| ^722 | any mode, no modal | `RMB` drag | pan (^501) | `RMB` drag: pan (hidden after use, ^110; missing in draw mode, ^389) | unit `editor/extend.test` (weak), `editor/modes.test` (weak) |
+| ^723 | any mode, no modal | wheel | zoom (^502) | wheel: zoom (hidden after use; missing in draw mode, ^389) | none found |
+| ^724 | any mode, no modal | `Ctrl` + wheel (a pinch on a touchpad) | zoom (^502) | none (^376) | unit `editor/phase.test` (weak) |
+| ^725 | any mode, no modal | `MMB` drag left or right | rotate (^503) | `MMB` drag: rotate (hidden after use; missing in draw mode, ^389) | unit `editor/extend.test` (weak), `editor/modes.test` (weak), `editor/radiusClick.test` (weak) |
+| ^726 | any mode, no modal | `MMB` drag up or down | zoom (^502) | none (the compass shows it while dragging) | unit `editor/extend.test` (strong), `camera/camera.test` (weak), `editor/modes.test` (weak) |
+| ^727 | the middle button is held (rotating) | `Esc` | ^31 | none (the compass shows the keys) | none found |
+| ^728 | the middle button is held (rotating) | `N`, `E`, `S`, `W` | rotate to a direction (^504) | the compass key caps | none found |
+| ^729 | the middle button is held (rotating), pointer on a compass key cap | `LMB` click | rotate to a direction (^504) | the compass key caps | unit `camera/cameraEngine.test` (weak), `editor/extend.test` (weak), `editor/modes.test` (weak) |
+| ^730 | touch, one finger | touch | ^40 | none (^382) | unit `editor/editor.test` (weak) |
+| ^731 | touch, a second finger comes down | touch | ^40 | none (^382) | unit `editor/editor.test` (strong), `editor/extend.test` (weak), `editor/modes.test` (weak) |
+| ^732 | touch, two fingers | twist, pinch, move | pan (^501); zoom (^502); rotate (^503) | none (^382) | none found |
+| ^733 | projects modal, pointer on a project card | `LMB` click | open project (^648) | `LMB`: open | unit `project/session.test` (weak), `project/load.test` (weak); e2e `projects.spec` (weak) |
+| ^734 | projects modal, pointer on the pen of a card | `LMB` click | rename project (^649) | `LMB`: rename (opens a text field) | unit `project/session.test` (weak); e2e `projects.spec` (weak) |
+| ^735 | projects modal, a name is being typed | `Enter` or `LMB` on the check | rename project (^649) | `Enter`/`LMB`: rename | unit `hints/hints.test` (weak) |
+| ^736 | projects modal, a name is being typed | `Esc` or `LMB` on the cross | ^233 | `Esc or LMB`: cancel | unit `hints/hints.test` (weak) |
+| ^737 | projects modal, pointer on the bin of a card | `LMB` click | delete project (^650) | `LMB`: delete (asks first, ^233) | unit `project/session.test` (weak); e2e `projects.spec` (weak) |
+| ^738 | projects modal, a delete is being asked | `LMB` on the check | delete project (^650) | `LMB`: delete | unit `hints/hints.test` (weak) |
+| ^739 | projects modal, a delete is being asked | `Esc` or `LMB` on the cross | ^233 | `Esc or LMB`: cancel | unit `hints/hints.test` (weak); e2e `projects.spec` (weak) |
+| ^740 | projects modal, the search field has the focus | typing | ^427 | none (the field is the control) | none found |
+| ^741 | projects modal, a rename is unfinished | `LMB` outside the dialog, `Esc`, `P` | ^233 | warning toast `Finish or cancel the rename first.` | none found |
+
+## Walk-through (depth first)
+
+The audit is a depth-first walk through the app, by hand, one input at a time. A *state* is named by what the user sees, never given an id (hats are the only ids). For each state: the transitions explored and those still to explore. A transition that stays in the same state is listed as "same state".
+
+Stack (where we are, kept up to date at the end of the Journey): first load > view mode > **projects modal** (the file window is closed by Cancel; its second transition, Open file, is left for later)
+
+### first load (select mode, empty map)
+
+Screen: blank canvas; a blue outline around the window; four mode icons (eye, pointer in a blue ring, pen, extend); the hints `Tab` view mode, `LMB` draw mode, `LMB drag` select, `RMB drag` pan, wheel zoom, `MMB drag` rotate, `P` projects; the default cursor. Hats: ^119, ^104, ^120, ^49, ^377 (dark and light mode).
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `Ctrl+S` | same state, two toasts | yes |
+| `Ctrl+Z`, `Alt+Ctrl+Z` | same state, toast | yes |
+| `Ctrl+Y`, `Ctrl+Shift+Z`, `Alt` variants | same state, toast | yes |
+| `Tab` | view mode | yes |
+| `Ctrl+O` | projects modal with the file window open | yes (same in both states) |
+| `P` | projects modal, no file window: the state after *Cancel* of the file window | has to be explored again once a project exists (after the first road) |
+| `LMB` click | draw mode (nothing drawn yet) | yes |
+| `LMB` drag | box select (nothing to select) | not yet: explore after nodes exist, with selection |
+| `RMB` drag | pan | not yet: explore after nodes exist |
+| wheel | zoom | not yet: explore after nodes exist |
+| `Ctrl` + wheel | faster zoom (^376) | not yet: explore with the camera |
+| `MMB` drag | rotate with the compass | not yet: explore with the camera |
+| touch | one finger `LMB`, two fingers the camera (^382) | no |
+
+### select mode after a visit of view mode (empty map)
+
+The same as first load, except that the `Tab` hint is hidden: `Tab` was used (twice), and a control that was used lately has its hint hidden for a while (^110). This is the designed behavior, like the camera controls after their first use; the hint comes back when the visit times out. It is the same mechanism as the bug ^384, where it hides the way out of view mode. Transitions (this state is reached by the journey, so it is explored from here on): `LMB` click is explored (draw mode, below); `LMB` drag (box select), the camera controls and `P` are not explored: after the first node the camera and selection will be explored in a state where they do something, and `P` has to be explored again (a project exists then). The global keys (`Ctrl+S`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+O`, `Tab`) are as in first load. Tested in general by unit `hints/usage.test`; for `Tab` itself: gap, to be checked against e2e `editing.spec` ("a used control loses its hint").
+
+### draw mode (nothing drawn yet; entered by `LMB` on the void in select mode)
+
+Screen: the outline and the mode icons in the draw mode's color (the pen is the current mode); the cursor is a crosshair; a preview of the node a click would add follows the pointer, an arrow pointing right (the automatic heading of the first node, ^54). Hints: `LMB`: add node; `LMB` drag: add node and set heading; `Esc` or `RMB`: finish; `P`: projects. The `Tab` hint is hidden (visited, ^110). **No camera hints** although the camera works here (bug ^389). Hats: ^54, ^48, ^47, ^23, ^40, ^110.
+
+Features here: *enter draw mode* (from select mode, ^54) and *leave draw mode* (`Esc` or `RMB`, also before a node, ^54): both are mode changes, so **not operations** (^391). Operations: *add the first node of a road* (`LMB`, heading automatic) and *add the first node and set its heading* (`LMB` drag, ^40).
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `LMB` click | node 1 is placed; extend mode (below) | yes |
+| `LMB` drag | node 1 with the dragged heading; extend mode | no |
+| `Esc`, `RMB` click | back to select mode | no |
+| `Tab` | view mode | same as everywhere: explored |
+| `P`, `Ctrl+O` | projects modal (over draw mode) | has to be explored again once a project exists |
+| `Ctrl+S` | has to be explored again once there is data to save | not yet |
+| `Ctrl+Z` | has to be explored again after each operation | explored with the first one (^454); after later operations again |
+| `Ctrl+Y`, `Ctrl+Shift+Z` | has to be explored again after an operation was undone | explored with the first one (^456); the batch variants with `Alt` after a finished road |
+| `RMB` drag, wheel, `Ctrl` + wheel, `MMB` drag | camera, without hints (^389) | not yet |
+
+### extend mode, one node placed (the pointer still on it)
+
+Reached by `LMB` in draw mode (nothing drawn). The node is selected, the road has no segment. What the user sees, each item with where it comes from (visual details such as sizes and colors only as far as they are features):
+
+| Item | What it is | Hats, code | Tested |
+|------|------------|------------|--------|
+| orange outline | extend mode's outline | ^119, ^120 (`hud/modes.ts`) | e2e `modes.spec` |
+| four icons, the extend icon orange and ringed | the current mode | ^119, ^120 | unit `hud/modes.test` |
+| hints `LMB or Esc`: finish; `LMB` drag: move node; `RMB`: delete node | what the pointer over a node does (the node being drawn from: finishing); controls ^412, ^413, ^414 | ^49, ^142, ^239 (`handleHints`) | unit `hints/hints.test` |
+| hints `Ctrl`: no snapping; `Shift`: snap only the position | the pointer snaps (it lies on the snap lines of the node); ^415, ^416 | ^101, ^358 (`snapHints`) | unit `hints/hints.test`, `headingSnap.test` |
+| hint `S`: pin snap suggestions | **bug ^419 (user)**: it shows because the start node counts as selected in extend mode, which the user never agreed to; the control itself shows while nodes are selected in every mode (^258, no mode check); control ^417 | ^258, ^294 | e2e `snapping.spec` |
+| hint `P`: projects; no `Tab` hint, no camera hints | ^400; `Tab` visited (^110); camera missing (bug ^389) | | |
+| history panel: `place node` with a right border | the step of operation ^409 (the step is called `place node`; the operation `place first node`), a pending batch (the drawing session is one batch until the road is finished) | ^107, ^108, ^216 (`stepNames.ts`) | e2e `editing.spec` |
+| undo hint `Ctrl+Z: undo`, `(Alt to undo batch)` in gray | the undo hint in the panel; the Alt note shows always (roadmap ^418) | ^81, ^103, ^109 | unit `hints/hints.test` |
+| a turquoise line from bottom to top, one from left to right, both through the node | the snap lines of the node: its normal and its heading (`nodeRules`: `node-normal`, `node-heading`). The extend lines at 15° to 75° are left out at the node itself (`withoutExtendAtTip`) | ^101, ^265 to ^267, ^325 to ^340 | unit `snap/snap.test`, `editor/snapping.test`; e2e `snapping.spec` |
+| solid blue circle | the node dot: blue and larger because it is selected | ^70 (`scene.ts`, `SELECTED_DOT_PX`) | unit render tests (to check) |
+| blue ring around it, with a small gap | the hover ring: the pointer is on the node; hover is derived from the pointer position | ^238 (`hover` in `editor.svelte.ts`) | unit `editor/hoverFresh.test`; e2e `editing.spec` |
+| orange arrow pointing right | the heading arrow of the node (twice as long as to the control point); its heading is automatic (^54). Stronger than the preview's arrow (assumed: the preview is drawn fainter; to check) | ^9, ^126 (`drawArrow`) | none found |
+| solid orange circle half way on the arrow | the heading control point on the stem (about 75% of the dot's size, not measured) | ^9, ^126 | e2e `smoke.spec` (drag) |
+| cursor: a hand | the pointer is over a control point (a `grab` cursor over a handle) | ^48 | gap ^381 |
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| move the pointer away | the dashed preview of the next node and segment appears | no |
+| `LMB` click on the void | place node 2 (the first segment) | no |
+| `LMB` drag on the void | place node 2 with a heading | no |
+| `LMB` click on the node | with one node only: cancel first node: draw mode again, nothing placed; history: batch `place node`, `finish road` (should be `cancel`, ^438) | yes (state below) |
+| `Esc` | the same as the `LMB` click (alternative input of the same control ^436) | not pressed yet |
+| `LMB` drag on the node | move node | no |
+| `RMB` click on the node | delete node | no |
+| `Ctrl`, `Shift` held; `S` | no snapping; position only; pin | no |
+| `Tab` | view mode (a road being drawn is finished) | no |
+| `P`, `Ctrl+O` | projects modal | has to be explored again (data exists) |
+| `Ctrl+S`, `Ctrl+Z`, `Ctrl+Y` | to explore again: there is a step and maybe data to save | no |
+| `RMB` drag, wheel, `MMB` drag | camera | not yet |
+
+### draw mode, nothing drawn, after a cancelled first node
+
+Like *draw mode (nothing drawn yet)* (cursor, preview with a semi-transparent preview node and the orange arrow pointing right, the same hints), but the history now holds a batch of two steps, `place node` and `finish road`, with a shared right border in the panel, and the undo hint (`Ctrl+Z`) shows below the panel (^107, ^108, ^109, ^439). The map is empty again; whether a project was made meanwhile is ^386. Hats: ^437, ^439, ^435. `Ctrl+S` is explored here (control ^450). Not yet explored here: `Ctrl+Z`, `Alt+Ctrl+Z`, `Ctrl+Y` (they have something to undo now), the camera, `P`.
+
+### extend mode, the first node brought back by undo (E2)
+
+Reached by `Ctrl+Z` in (D2) (control ^454). The mode and outline are those the history snapshot restores: extend mode with the node as start node again (the user did not describe the outline; to confirm). The node has its heading; the pointer lies on it, so it is hovered and the cursor is a hand (^238). History panel: `place node` in white with a white right border, `finish road` in gray with a gray right border, the two borders touching (one batch, no gap, ^108); below it the redo hint `Ctrl+Y` or `Ctrl+Shift+Z`: redo, with `(Alt to redo batch)` in gray (^109, note roadmap ^418). Hats: ^453, ^107, ^108, ^109, ^81.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `Ctrl+Y` or `Ctrl+Shift+Z` | redo: the cancel is done again (D2) | yes (control ^456; `Ctrl+Shift+Z` is its alternative, not pressed) |
+| `Alt+Ctrl+Z`, `Alt+Ctrl+Y` | undo or redo of the whole batch | not yet: explore after a finished road |
+| `Ctrl+Z` again | nothing to undo? (the history has two steps, one undone) | no |
+| the other inputs of (E), `Ctrl+S`, `P` | as in (E) | by equivalence of the state, not pressed |
+
+### placing the first node with its heading (the button is held)
+
+Reached from (D2) by pressing `LMB` and moving with the button held (control ^411, operation ^420). The node is placed at the press; the road is already in extend mode, so the outline and the extend icon are orange. Screen and hints:
+
+| Item | What it is | Hats | Tested |
+|------|------------|------|--------|
+| hints `LMB` drag: turn heading, `Esc`: cancel, `Ctrl`: no snapping | the hints while a handle is dragged are only about the drag (no `P`, no camera hints, no `Shift`: it is not available on a drag-place, ^358) | ^286, ^461, ^462 | unit `hints/dragHints.test` |
+| the heading arrow follows the pointer in steps | the heading snaps to angle steps, finer the farther the pointer is from the node (the arrow is 80 px long): 45° up to 90 px (^457), 15° from 90 px, about 1.1 arrow lengths (^458), 5° from 180 px, about 2.25 (^459), 1° from 320 px, 4 arrow lengths (^460); for the first node of an arm the steps are absolute, from the compass directions (^315), not from the heading it had | ^251, ^315 | unit `snap/angles.test`, `editor/editor.test` |
+| a compass icon and a label such as `270°` | the compass icon of the middle-button rotation (a red needle pointing north, a silver one south, a point in the middle) and the heading in degrees, 0 is north, counter-clockwise (270° is east, 315° north-east); the needle keeps pointing up while the view is not rotated; the label is below the icon, above it when the heading points down | ^316 | gap ^463 |
+| cursor: a crosshair | the cursor of draw mode while a node is placed | ^48 | gap ^381 |
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| move the pointer | the heading follows, with the steps above | yes (to the arrow's tip: 45°; further out: 15°, 5°, 1°, observed by the user at about 1.5, 2 and 4 arrow lengths, matching 1.1, 2.25 and 4) |
+| release `LMB` | the node stays with that heading (operation ^420 done); extend mode (E3, below) | yes (step 26, with the pointer on the heading control point) |
+| `Esc` | cancel (control ^461): the node is not placed; back to draw mode, the preview has the default heading again (right; planned: keep it, ^464) | yes (step 24) |
+| release `LMB` after that `Esc` | nothing changes (the button was still held; the pointer that goes on moving afterwards changes nothing) | yes (step 25; unit `editor/cancelDrag.test`) |
+| `Ctrl` held | no snapping (control ^462) | no |
+| `Alt`, `RMB`, `MMB`, the wheel | nothing known; to try | no |
+
+### extend mode, the first node placed with a heading, pointer on its heading control point (E3)
+
+Reached by releasing `LMB` in (P) with the pointer on the orange circle (heading 0°, up). Screen: extend mode (outline, icons); the node as a larger blue circle (it counts as selected, bug ^419); an orange arrow pointing up with the heading control point midway; a blue ring around the control point (hover ring, ^469, the pointer is on it); no compass any more (it shows only while the heading is dragged). Hints, top to bottom: `LMB` drag: turn heading (^465), `Alt`+`LMB`: flip arm (^466), `Esc` or `RMB`: finish (should be `cancel`, ^438; control ^467), `S`: pin snap suggestions (bug ^419; control ^417), `P`: projects (^400). No `Ctrl` hint, because nothing snaps under the pointer here; no `Tab` hint (visited), no camera hints (^389). History panel: the earlier batch (`place node`, `finish road`, one batch with a shared white right border) and one `place node` in white with its own border (the new drawing session is a batch of one so far, ^439). Hats: ^420, ^468, ^469, ^107, ^108.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| move the pointer off the control point | the control point's ring goes; over the void the dashed preview of the next node and segment shows | no (next step) |
+| `LMB` drag on the control point | turn heading (^465) | no |
+| `Alt`+`LMB` click on the control point | flip arm (^466) | no |
+| `Esc`, `RMB` | cancel first node (^467) | no |
+| `LMB` click on the void, `LMB` drag | place next node | no |
+| `Ctrl+Z` | undoes `place node`; the panel's undo hint shows | no |
+| `Tab`, `P` and the others of (E) | as in (E) | no |
+
+### extend mode, the preview of the next node (E4)
+
+Reached from (E3) by moving the pointer off the control point onto the void. Extend mode as before (outline, icons, the cursor is a crosshair). Hints, top to bottom: `LMB`: add node (`place node`, ^421; control ^477), `LMB` drag: add node and set heading (control ^478), `Esc` or `RMB`: finish (`cancel`, ^438; control ^467), `Ctrl`: no snapping (^415), `Shift`: snap only the position (^416; to be shortened, ^474), `S`: pin snap suggestions (bug ^419; ^417), `P`: projects (^400). The `Ctrl` and `Shift` hints show only while the pointer snaps. History panel: the same three rows as before (the batch `place node`, `finish road` and the single `place node`); the undo hint has come back, because the interval of the visited control ran out (5 minutes, ^110, designed).
+
+| Item | What it is | Hats | Tested |
+|------|------------|------|--------|
+| the preview node, a semi-transparent white dot under the pointer, with a semi-transparent orange arrow | the node a click would place, with its automatic heading | ^47, ^54, ^120 | unit `editor/extend.test`, `editor/editor.test`; drawing: gap ^479 |
+| a white dashed curve from the start node to the preview | the segment a click would add | ^120, ^125 | gap ^479 |
+| two dashed orange lines spanning the circle, the preview's arrow a continuation of the upper one | the heading lines of the two nodes, which meet at the bend point of the arc | ^321 | gap ^479 |
+| an orange label of two lines, `45°` and `28.0m`, left of where the lines meet | the bend angle and the radius of the arc (`bendLines` in `render/measures.ts`); the radius is the largest that fits (auto), so the circle goes through both nodes; the bend point and the radius control points are not drawn in the preview (decision ^480) | ^303 | unit `curves/measure.test`; drawing: gap ^479 |
+| an orange label `19.0m` halfway (step 27) or `21.9m` left of the dashed curve (step 28) | the length of the preview segment; its color should be that of its line (^470) | ^303, ^342 | unit `curves/measure.test`, `hud/measureText.test` |
+| a turquoise line the node snaps to | step 27: the heading line of the start node (its `node-heading` rule, vertical, the pointer is on it); step 29: the extend line at +60° from the start heading (^337, only in extend mode); it lies over the preview, hiding what is below it (answered: it should lie under it, ^482) | ^101, ^265 to ^267, ^337 | unit `snap/snap.test`, `editor/ownCurve.test`, `editor/snapping.test`; e2e `snapping.spec` |
+| the undo hint is back in the history panel | visited controls come back after 5 minutes (^110) | ^110, ^109 | unit `hints/usage.test` |
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| move the pointer onto the heading line (step 27), left of the start node (28), onto the extend line (29) | the preview, snap, labels and lines above | yes |
+| `Shift` held (step 30) | no effect (the extend line has no heading to drop); the hint shows anyway (bug ^473) | yes (control ^416) |
+| `Ctrl` held on its own (step 31) | nothing at once; after a small move the snap line and the `Ctrl` and `Shift` hints go (bug ^472) | yes (control ^415) |
+| `Ctrl` released on its own (step 32) | nothing at once; after a small move the snap is back, as in step 29 | yes (control ^415) |
+| `LMB` click | place next node (^477) | yes (step 35; the node was snapped to the extend line) |
+| `LMB` drag | place next node and set heading (^478) | no |
+| `Esc`, `RMB` | cancel first node (^467) | no |
+| `Ctrl+Z` | undoes `place node` (the undo hint shows now) | no |
+
+### select mode after a reload, with a lone node (R)
+
+Reached from (E4) by reloading the page (step 33). The project that was open last opens (^485); the camera is restored, the road being drawn is not: select mode, a single node with its heading north (it was saved by the autosave, so a node without a segment survives, question ^484), no history panel (the history is not stored, ^449), no hint visits (a new session). Hints: `Tab`: view mode, `LMB`: draw mode, the camera hints, `P`: projects (control ^393 and the others of select mode, see (A)). To confirm: the list does not show `LMB` drag: select (box select, ^70), which select mode with nothing selected and the pointer on the void should show. Hats: ^485, ^449, ^484.
+
+### select mode, the pointer on the lone node (R2)
+
+Step 34. Hints: `LMB` drag: move node (^488), `RMB`: delete node (^489), `LMB`: select (^490), `Alt`+`LMB`: select branch (^491), the camera hints, `P`: projects. A blue ring around the node (the hover ring, ^469, the node is a control point). No history panel. To confirm: whether the `Tab` hint is still shown (the code puts it first, ^104). Tested: unit `hints/hints.test` (select mode over a handle), `editor/hoverFresh.test`.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `LMB` drag, `RMB`, `LMB`, `Alt`+`LMB` on the node | move node, delete node, select node, select branch | no (hints seen) |
+| the other inputs of select mode | as in (A) | no |
+
+### extend mode, a segment exists, the pointer on its end node (E6)
+
+Step 35, from (R2): `LMB` on the void enters draw mode (control ^393), `LMB` on the lone node extends it (control ^496, hint `split` and step `split road`, bug ^494), the pointer is moved along the +60° extend line (^337) and `LMB` places the second node at about 30 m (control ^477, operation ^475). Extend mode (outline, icons). Hints: `Tab`: view mode (a new session, not visited), `LMB` or `Esc`: finish (control ^412, the pointer is on the node being drawn from), `LMB` drag: move node (^413), `RMB`: delete node (^414), `Ctrl` and `Shift` (while snapping, ^415, ^416), `S`: pin snap suggestions (bug ^419; ^417), `P`: projects. History panel: the undo hint (visited controls come back, a new session shows it at once) and one batch of two steps: `split road` (the click on the lone node; the user read it as `split node`, to check) and `place node`.
+
+| Item | What it is | Hats | Tested |
+|------|------------|------|--------|
+| a white solid circle at the start node | the node dot of the skeleton | ^60 | gap ^479 |
+| a thin white solid curve between the nodes, with four small white arrows | the curve of the segment and its direction arrows (one every 72 px) | ^60, ^80, ^86 | unit `curves/arrows.test`; drawing: gap ^479 |
+| the end node larger and solid blue, a blue ring around it | the node being drawn from is drawn like a selected one (bug ^419); the ring is the hover ring (^469) | ^70, ^419, ^469 | unit `editor/hoverFresh.test` |
+| a bend capsule, dark gray fill, a darker thin stroke | the generated road geometry, 3 m wide with an outline | ^90 | gap ^479 |
+| a turquoise snap curve above the white curve | the curve of the segment as a snap suggestion (the pointer may snap along it, ^336, ^265 to ^273); drawn above the skeleton on purpose (^482) | ^101, ^265 to ^273, ^482 | unit `snap/snap.test`, `editor/ownCurve.test` |
+| two turquoise snap lines through the end node | its heading line and its normal (`node-heading`, `node-normal`) | ^265 to ^267 | unit `snap/snap.test`, `editor/snapping.test` |
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `LMB` drag on the void | place next node and set heading (^478, operation ^476) | no (next step) |
+| `LMB` click on the void | place the next node (^477) | no (as in step 35, with a segment) |
+| `LMB` or `Esc` | finish road (^412) | no |
+| `LMB` drag on the node, `RMB` | move node, delete node | no |
+
+### extend mode, the button held after placing a node (E7)
+
+Step 36, from (E6): the pointer is moved to the right along the +60° line to a segment length of 34.0 m, `LMB` is pressed and held in place (the first half of control ^477 or ^478). The node is placed at the press: the generated geometry (^90) now reaches the new segment, and the new node is drawn like a selected one (the node being drawn from, bug ^419). Hints, which stay those of where the button was pressed (^499): `LMB`: add node (^477), `LMB` drag: add node and set heading (^478), `Esc` or `RMB`: finish (right here: a segment exists, so it finishes, ^432; the `cancel` of ^438 is only for a road with one node), `S`: pin snap suggestions (bug ^419), `P`: projects. To confirm: the user wrote that *all* scaffold gizmos, snap suggestions or preview are drawn; the sentence reads as if it may mean that none is. Tested: unit `editor/extend.test`, `editor/editor.test`; the held hints: to check (^499).
+
+### extend mode, the heading of the node just placed is dragged (E8)
+
+Step 37, from (E7): the pointer is moved a bit further to the right with the button held (control ^478, operation ^476 in progress). Hints (only about the drag, ^286): `LMB` drag: turn heading, `Esc`: cancel (control ^461), `Ctrl`: no snapping (control ^462). Canvas: the new segment has become a gentle S-curve (the heading no longer matches the single arc, ^6, ^172); an orange heading arrow; a label `45°` left of the arrow tip. The label is the offset of the heading from where it pointed when the node was placed, counter-clockwise (`turningOf`, `drawOffset`, ^341; the code writes a sign, `+45°`), not the compass of the first node (^316); the steps are 45°, 15°, 5°, 1° by distance from the node, relative to that heading (^315, ^457 to ^460). No other gizmo shows. The label is white and should be orange (^498). Tested: unit `editor/editor.test` (dragging the heading of later nodes, ^40), `curves/curves.test` (the S-curve), `hints/dragHints.test`; the label: gap ^500.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| release `LMB` | the node keeps that heading; the segment is an S-curve | no |
+| `Esc`, `Ctrl` held | cancel (^461), no snapping (^462) | no |
+| the other inputs | as in (P) | no |
+
+### view mode (empty map)
+
+Screen: no outline; two icons (the eye now ringed, the pointer white); hints `RMB drag` pan, wheel zoom, `MMB drag` rotate, `P` projects (there is no `Tab` hint: the control counts as visited because it was just used, ^110, which is a bug, ^384); the default cursor. Hats: ^104, ^119, ^110.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `Ctrl+S` | same state, two toasts | yes |
+| `Ctrl+Z`, `Alt+Ctrl+Z` | same state, toast | yes |
+| `Ctrl+Y`, `Ctrl+Shift+Z`, `Alt` variants | same state, toast | yes |
+| `Ctrl+O` | projects modal with the file window open | yes |
+| `Tab` | select mode, but not the first-load state: the `Tab` hint (view mode) is gone, because the control was visited (^110, below) | yes |
+| `P` | projects modal, no file window: the state after *Cancel* of the file window | yes, with that state |
+| `RMB` drag, wheel, `Ctrl` + wheel, `MMB` drag | camera | no |
+| `LMB`, `LMB` drag | probably nothing (view mode edits nothing) | no |
+
+### file window over the projects modal (the browser's file picker, opened by `Ctrl+O` or *Import file…*)
+
+Screen (Brave on Arch Linux): the browser's own window, set to Custom Files; the filter is `.json` (`accept=".json,application/json"`, `ProjectsModal.svelte`). It is not ours, so it has no hints and no tests of its own. Behind it the projects modal (below). Hats: ^223, ^164.
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| Cancel | projects modal (state below); nothing changed; the search field is focused (^178) | yes |
+| Open file | import: the file is read, checked and migrated; on success a new project opens and the modal closes, otherwise an error shows (^164, ^192 to ^209) | no |
+
+### projects modal (no file window)
+
+Screen: the modal sits over everything with a veil of 60% of the background color (`.backdrop`, z-index 1); the map, the mode icons, the compass and the measurements panel are *grayed out only because they lie under that veil* (no code grays them on purpose); the control hints panel and the column of toasts and the recent history panel (both z-index 2) stay above it; the hints are replaced by the modal's own controls (`modalHints`, ^168). The history panel should be grayed too (^387); a modal is not yet a reusable component (^388). Layout and sizes: ^211. From left to right, top to bottom: the title `Projects`; an X (close); the search field (focused when the modal opens, also after the file window was cancelled, so the list can be searched by typing, ^178); the list (an empty one says `No project matches.`, bug ^385); the cards `Import file…`, `Export JSON`, `New project`. `New project` has a blue border because no project is open (`current`, ^171). Hints: `Esc` close always; over the search field and not focused `LMB` search; over a button `LMB` import, export JSON or new project; over the X one merged row `Esc or LMB`: close (rows with the same text become one row, keys before the mouse, `merged` in `modalHints.ts`; tested in e2e `projects.spec`, "one row for inputs that do the same").
+
+While the modal is up only `Esc` is handled by the app (`modalKey` in `App.svelte`); every other key is left to the browser (so `Ctrl+S` may open the browser's save dialog: to check).
+
+| Input | Result | Explored |
+|-------|--------|----------|
+| `Esc` | closes the modal, back to the state before | yes (batch) |
+| click outside the modal | closes it (`requestClose`, ^233: not while a rename is unfinished) | yes (batch: back to the state before, no new transition) |
+| click the X | closes it | yes (batch) |
+| click the search field or type | the *Search* feature (below) | no |
+| `Import file…` | the file window (same state as above) | yes (same state) |
+| `Export JSON` | downloads the project as a file; toast (^163, ^226) | no |
+| `New project` | blank project, closes the modal (^171) | no |
+| `Ctrl+S`, `Tab`, `P`, `Ctrl+Z`, ... | to check what the browser does | no |
+
+## Reusable features
+
+A feature that appears in several states is audited once here and linked from the states that use it.
+
+### Search (`FilterList`, `src/lib/ui/fuzzy.ts`, hat ^178)
+
+Every list has a search field and the search is fuzzy: the characters of the query in order, ranked by how well they match. Transitions: to be walked as its own state when we get to it (typing, `Esc`, empty result text, focus rules, the hint `LMB search`).
+
+## Journey (the user actions in order, from a new browser window on a new machine)
+
+The record of what the audit has pressed, in sequence. `(S)` first-load state, `(V)` view mode, `(M)` projects modal over the state before, `(A)` select mode after a visit of view mode.
+
+| # | State | Input | Result |
+|---|-------|-------|--------|
+| 1 | (S) | `Ctrl+S` | two info toasts |
+| 2 | (S) | `Ctrl+Z` (`Alt` ignored) | toast `nothing to undo` |
+| 3 | (S) | `Ctrl+Y` or `Ctrl+Shift+Z` (`Alt` ignored) | toast `nothing to redo` |
+| 4 | (S) | `Tab` | (V) |
+| 4a to 4c | (V) | `Ctrl+S`, `Ctrl+Z`, `Ctrl+Y` | the same toasts |
+| 5 | (V) | `Ctrl+O` | file window over (M) |
+| 6 | (M) | Cancel in the file window | (M), search focused |
+| 7 | (M) | hover each element | the hints of the modal, one merged row over the X |
+| 8 | (M) | `LMB` in the modal outside the search field, then hover the search field | `LMB: search` shows only while the field is not focused |
+| 9 | (M) | `Esc` | (V) |
+| 10 | (V) | `P` | (M), no file window |
+| 11 | (M) | `LMB` outside the modal | (V) |
+| 12 | (V) | `P` | (M) |
+| 13 | (M) | `LMB` on the X | (V) |
+| 14 | (V) | `Tab` | (A): the `Tab` hint is gone (^110) |
+| 15 | (A) | `LMB` click on the void | (D) draw mode, nothing drawn yet |
+| 16 | (D) | `LMB` click on the void | (E) extend mode, one node placed (operation `place first node`, ^409) |
+| 17 | (E) | `LMB` click on the placed node | (D2) draw mode, nothing drawn, with a batch of two steps in the history (operation `cancel first node`, ^437) |
+| 18 | (D2) | `Ctrl+S` (some seconds later) | the same state; toasts `saved` and `modelcity saves automatically` (^440, ^442) appear at once and go after 3 s; the history panel went away after about 3 s (^107); the project is saved (operation ^428, control ^450) |
+| 19 | (D2) | `Ctrl+Z` (pointer still where the node was) | (E2) the node is back with its heading (operation `undo`, ^453, control ^454) |
+| 20 | (E2) | `Ctrl+Y` | (D2) again: draw mode, nothing drawn, the preview is back; the history shows both steps white; no hints in the panel because `undo` and `redo` were just used (^110); the panel goes after about 3 s (operation `redo`, ^455, control ^456) |
+| 21 | (D2) | `LMB` pressed and held, the pointer moved right to the tip of the heading arrow | (P) placing the first node with its heading: extend mode, hints of the drag, compass icon and the label `270°` (control ^411) |
+| 22 | (P) | the pointer moved up and a little left, staying on the tip | the arrow moves in 45° steps; after one step `315°` |
+| 23 | (P) | the pointer moved farther out: 1.5, 2, then 4 arrow lengths | steps of 15°, 5°, then 1° (^458 to ^460) |
+| 24 | (P) | `Esc` | (D2): back to draw mode with a preview node; the preview heading is the default again (right); the placing is cancelled (control ^461) |
+| 25 | (D2) | release `LMB` (still held) | nothing changes |
+| 26 | (D2) | `LMB` pressed again, dragged up to the orange circle (half an arrow length, `0°`), released | (E3) extend mode, the node placed with its heading up (operation ^420 done, control ^411) |
+| 27 | (E3) | the pointer moved up by 1.5 arrow lengths | (E4) the preview; the node snaps to the heading line of the start node; label `19.0m` |
+| 28 | (E4) | the pointer moved about one arrow length to the left | the dashed curve and heading lines, labels `45°`, `28.0m` and `21.9m`; no snap, so no `Ctrl` or `Shift` hint |
+| 29 | (E4) | the pointer moved a little further left | the node snaps to the extend line at +60° (^337) |
+| 30 | (E4) | `Shift` held | no effect (^473) |
+| 31 | (E4) | `Ctrl` held | no effect until the pointer moves, then the snap and its hints go (^472) |
+| 32 | (E4) | `Ctrl` released | no effect until the pointer moves, then the snap is back |
+| 33 | (E4) | reload the page | (R) select mode, the lone node north, no history (^485, ^484) |
+| 34 | (R) | the pointer on the lone node | (R2) hover ring and the hints of a node in select mode (^488 to ^491) |
+| 35 | (R2) | `LMB` on the void, `LMB` on the lone node, the pointer moved along the +60° extend line, `LMB` at about 30 m | (D) draw mode, then (E5) extend mode on the lone node (controls ^393, ^496), then (E6) extend mode with a segment (control ^477) |
+| 36 | (E6) | the pointer moved right along the +60° line to a segment of 34.0 m, `LMB` pressed and held | (E7) the second node is placed, the hints stay those of the press (^499) |
+| 37 | (E7) | the pointer moved a bit further right, the button still held | (E8) dragging the heading of the new node: hints of the drag, an S-curve, the label `45°` (^341, ^498) |
+
+`(D)` draw mode, nothing drawn yet; `(E)` extend mode, one node placed; `(D2)` draw mode after a cancelled first node; `(E2)` the node brought back by undo. Now: **(E8)** (the button is held, the heading of the second node is dragged). Before: (D2) (as before, except that `undo` and `redo` count as visited, so the history panel shows no hints). Not yet explored in (M): `New project`, `Export JSON`, search, keys while the modal is open, Open file.
