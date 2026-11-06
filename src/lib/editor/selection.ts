@@ -119,3 +119,8 @@ export function afterHandleClick(sel: number[], press: Extract<Press, { kind: 'd
   if (press.click === 'toggle') return withoutNode(sel, press.id);
   return press.click === 'collapse' && press.group.length ? [press.id] : sel;
 }
+
+/** Whether a right click on this node or segment (its nodes) is on the selection, which has several nodes (^290, ^779). */
+export function onSelection(selection: number[], ids: number[]): boolean {
+  return selection.length > 1 && ids.every((id) => isSelected(selection, id));
+}

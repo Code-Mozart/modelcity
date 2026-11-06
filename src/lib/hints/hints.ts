@@ -44,8 +44,16 @@ export interface Hint {
 export type HintTarget =
   | { kind: 'empty' }
   /** `picked`: how many of the curve's two nodes are selected. */
-  | { kind: 'curve'; picked?: number; act?: CurveAction; lane?: boolean }
-  | { kind: 'handle'; type: HandleType; act: NodeAction; selected?: boolean; lane?: boolean };
+  | { kind: 'curve'; picked?: number; act?: CurveAction; lane?: boolean; onSelection?: boolean }
+  | {
+      kind: 'handle';
+      type: HandleType;
+      act: NodeAction;
+      selected?: boolean;
+      lane?: boolean;
+      /** A right click removes the whole selection, which has several nodes (^290, ^779). */
+      onSelection?: boolean;
+    };
 
 export const mouse = (
   button: 'lmb' | 'mmb' | 'rmb',
@@ -97,7 +105,9 @@ function handleHints(target: HandleTarget): Hint[] {
   if (act === 'finish' || act === 'cancel') out.push(hint([mouse('lmb'), ESC], act));
   else if (act) out.push(hint(mouse('lmb'), act));
   out.push(hint(mouse('lmb', true), DRAG_TEXT[type]));
-  if (type === 'node') out.push(hint(mouse('rmb'), 'delete node'));
+  if (type === 'node') {
+    out.push(hint(mouse('rmb'), target.onSelection ? DELETE_SELECTED : 'delete node'));
+  }
   if (type === 'head') out.push(hint(mouse('lmb', false, 'alt'), 'flip arm'));
   return out;
 }
@@ -109,11 +119,14 @@ function curveText(target: HintTarget): string {
   return 'merge';
 }
 
-/** Over a curve a right click removes the segment, with Alt its whole branch (^160). */
-const segmentRemoval = [
-  hint(mouse('rmb'), 'remove segment'),
-  hint(mouse('rmb', false, 'alt'), 'remove branch'),
-];
+/** What a right click on a node or a segment of the selection does, whatever is under the pointer (^290, ^779). */
+const DELETE_SELECTED = 'delete selected nodes';
+
+/** Over a curve a right click removes the segment, with Alt its whole branch (^160); between selected nodes it removes the selection (^779). */
+const segmentRemoval = (target: HintTarget): Hint[] =>
+  target.kind === 'curve' && target.onSelection
+    ? [hint([mouse('rmb'), mouse('rmb', false, 'alt')], DELETE_SELECTED)]
+    : [hint(mouse('rmb'), 'remove segment'), hint(mouse('rmb', false, 'alt'), 'remove branch')];
 
 /** Draw mode: a road is being drawn; the camera works as everywhere (^389). `finish` is `cancel` while only the first node is placed (^438). */
 const drawModeHints = (target: HintTarget, finish: string): Hint[] => [
@@ -133,7 +146,7 @@ function drawRows(target: HintTarget, finish: string): Hint[] {
     hint(mouse('lmb'), curveText(target)),
     hint(mouse('lmb', true), drag),
     ...(target.kind === 'curve'
-      ? [hint(ESC, finish), ...segmentRemoval]
+      ? [hint(ESC, finish), ...segmentRemoval(target)]
       : [hint([ESC, mouse('rmb')], finish)]),
   ];
 }
@@ -200,7 +213,7 @@ function selectModeHints(target: HintTarget, selected: number): Hint[] {
     ...(selected
       ? [hint(ESC, 'deselect all', 'deselect-all'), hint(DEL, 'delete selected', 'delete-selected')]
       : []),
-    ...(target.kind === 'curve' ? segmentRemoval : []),
+    ...(target.kind === 'curve' ? segmentRemoval(target) : []),
     ...CAMERA,
   ];
 }

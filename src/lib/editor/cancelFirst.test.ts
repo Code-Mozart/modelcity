@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Editor } from './editor.svelte';
 import { hintsFor } from '../hints/hints';
 import { show } from '../testing/hintHelpers';
-import { at, click, drawMode } from '../testing/editorHelpers';
+import { at, click, drawMode, roadThenDrawMode } from '../testing/editorHelpers';
 
 const steps = (ed: Editor) => ed.timeline.history.past.map((s) => s.name);
 
@@ -63,5 +63,21 @@ describe('a node without a segment is extended, not split (^494)', () => {
     click(ed, 0, 0);
     expect(ed.active).toBe(0);
     expect(steps(ed).at(-1)).toBe('extend road');
+  });
+});
+
+describe('the hint target knows a right click is on the selection (^779)', () => {
+  it('a node of a selection of several, and a segment between two of them', () => {
+    const ed = roadThenDrawMode([
+      [0, 0],
+      [20, -10],
+      [40, 0],
+    ]);
+    ed.key('Escape', { ctrl: false, shift: false });
+    ed.selection = [...ed.graph.nodes.map((n) => n.id)];
+    ed.pointerMove(at(0, 0));
+    expect(ed.hintTarget).toMatchObject({ kind: 'handle', onSelection: true });
+    ed.selection = [ed.graph.nodes[0]!.id];
+    expect(ed.hintTarget).toMatchObject({ kind: 'handle', onSelection: false });
   });
 });

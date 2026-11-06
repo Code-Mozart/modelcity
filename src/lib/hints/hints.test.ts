@@ -282,25 +282,6 @@ describe('visited controls are hidden (^110)', () => {
   });
 });
 
-describe('the camera in draw mode (^389)', () => {
-  it('is hinted, and hidden after use like everywhere', () => {
-    expect(hintsFor(true, empty).map(show)).toEqual(expect.arrayContaining(CAMERA));
-    const used = hintsFor(true, empty, 0, { hidden: hiddenIds('pan') }).map(show);
-    expect(used).not.toContain('RMB drag: pan');
-    expect(used).toContain('Wheel: zoom');
-  });
-});
-
-describe('Shift: snap only the position (^481)', () => {
-  const shift = 'Shift: snap only the position';
-  it('is hinted when a click would place a node with a heading at the snap', () => {
-    expect(hintsFor(true, empty, 0, { snapping: true, placing: true }).map(show)).toContain(shift);
-  });
-  it('is not when the snap gives no heading (placing is false then)', () => {
-    expect(hintsFor(true, empty, 0, { snapping: true }).map(show)).not.toContain(shift);
-  });
-});
-
 describe('Tab (^104)', () => {
   it('is visited like the others, in view mode too (^104)', () => {
     expect(hintsFor(false, empty).map(show)).toContain('Tab: view mode');

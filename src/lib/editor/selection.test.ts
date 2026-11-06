@@ -154,7 +154,13 @@ describe('selecting by curve (^74)', () => {
   it('LMB selects its two nodes; hovering says how many are selected', () => {
     const ed = roads();
     ed.pointerMove(mid(ed));
-    expect(ed.hintTarget).toEqual({ kind: 'curve', picked: 0, act: null, lane: false });
+    expect(ed.hintTarget).toEqual({
+      kind: 'curve',
+      picked: 0,
+      act: null,
+      lane: false,
+      onSelection: false,
+    });
     press(ed, false);
     expect(ed.selection).toEqual(ed.chains[0]!.nodeIds);
     expect(ed.drawing).toBe(false);
