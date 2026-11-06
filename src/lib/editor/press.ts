@@ -33,9 +33,9 @@ function pressSelection(drawn: Drawn, drawing: boolean, handle: RoadHandle, info
 }
 
 /** What a click on a handle does to the roads in draw mode: on a node, finish, extend, split or merge; on a radius point, split or merge there (^23, ^65, ^278). */
-function actOf(drawn: Drawn, drawing: boolean, handle: RoadHandle, info: PointerInfo) {
+function actOf(drawn: Drawn, drawing: boolean, handle: RoadHandle) {
   if (drawing && handle.type === 'rad') return curveAction(drawn);
-  return handle.type === 'node' && drawing && !info.shift ? nodeAction(drawn, handle.id) : null;
+  return handle.type === 'node' && drawing ? nodeAction(drawn, handle.id) : null;
 }
 
 /**
@@ -59,7 +59,7 @@ export function dragPress(
     drag: startDrag(handle),
     start: info.pt,
     moved: false,
-    act: actOf(drawn, drawing, handle, info),
+    act: actOf(drawn, drawing, handle),
     group: placed(graph, group),
     origin: { x: n?.x ?? 0, y: n?.y ?? 0 },
     click,

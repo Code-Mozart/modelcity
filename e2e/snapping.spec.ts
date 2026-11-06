@@ -64,21 +64,33 @@ const originsOfSnap = (page: Page) =>
     return gifts.map((g) => g.origin?.at);
   });
 
-/** The heading a snap gives (^793, ^794): the heading of the node on its normal line, `Alt` inverts it, the hint says what `Shift` does, and the origin is the node. */
-test('a node on the normal line of a node takes its heading, Alt inverts it', async ({ page }) => {
+/** A road heading north (the first node is placed with a drag), finished, and draw mode again. */
+async function roadNorth(app: App) {
+  await app.click({ x: 40, y: 30 });
+  await app.drag({ x: 0, y: 0 }, { x: 0, y: -15 });
+  await app.click({ x: 0, y: -30 });
+  await app.rightClick({ x: 80, y: 80 });
+}
+
+/** The heading a snap gives (^793, ^794): the heading of the node on its normal line, `Alt` inverts it, `Shift` keeps only the position, and the origin is the node. */
+test('a node on the normal line of a node takes its heading, Alt inverts it, Shift drops it', async ({
+  page,
+}) => {
   const app = new App(page);
-  await road(app);
-  await app.hover({ x: 0.4, y: -25 });
+  await roadNorth(app);
+  await app.hover({ x: -25, y: 0.4 }); // on the line sideways through the first node
   const heading = () =>
     page.evaluate(() => {
       const h = window.__modelcity!.editor.hover;
       return h?.kind === 'preview' ? h.node.th : null;
     });
-  expect(await heading()).toBeCloseTo(0, 3); // the heading of the node at the origin: east
-  const origins = await originsOfSnap(page);
-  expect(origins).toContainEqual({ x: 0, y: 0 });
+  expect(await heading()).toBeCloseTo(-Math.PI / 2, 3); // the heading of the first node: north
+  expect(await originsOfSnap(page)).toContainEqual({ x: 0, y: 0 });
   await page.keyboard.down('Alt'); // at once, with no move of the pointer (^801)
-  expect(Math.abs((await heading())!)).toBeCloseTo(Math.PI, 3);
+  expect(await heading()).toBeCloseTo(Math.PI / 2, 3);
   await page.keyboard.up('Alt');
   await expect(app.hints()).toContainText('snap only the position');
+  await page.keyboard.down('Shift'); // the automatic heading of a first node: east
+  expect(await heading()).toBeCloseTo(0, 3);
+  await page.keyboard.up('Shift');
 });
