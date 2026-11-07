@@ -44,4 +44,5 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #38 | 2026-11-07 | v0.38.0: Controls as data | ^783 | Controls as data |
 | #39 | 2026-11-07 | v0.39.0: History of milestones | ^810 | History of milestones; the hints for a click that narrows the selection (^809) |
 | #40 | 2026-11-07 | | ^811 to ^829 | Docs: towers and derived nodes registered, milestones reshuffled |
-| #41 | | v0.40.0: Concentric snap | ^830 | A radius point snaps to where the curve crosses its line and takes the exact radius of the arc beside it |
+| #41 | closed, not merged | | ^830 | Replaced by #42 (renamed) |
+| #42 | | v0.40.0: Snapping along a line | ^830, ^831 | A radius point snaps only to places on its line and takes the exact radius of the arc beside it (the concentric bug) |

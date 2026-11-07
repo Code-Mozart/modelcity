@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
   "version": "0.40.0",
-  "moniker": "Concentric snap",
+  "moniker": "Snapping along a line",
   "private": true,
   "type": "module",
   "scripts": {

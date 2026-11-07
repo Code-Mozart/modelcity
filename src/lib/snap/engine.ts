@@ -1,5 +1,5 @@
 import { line } from '../curves/piece';
-import { add, angleOf, dist, mul, type Vec } from '../curves/vec';
+import { add, angleOf, dist, dot, mul, sub, type Vec } from '../curves/vec';
 import { crossings, nearestOnPieces } from './geometry';
 import type { SnapCurve, SnapHit, SnapPoint, Suggestion } from './types';
 
@@ -97,9 +97,20 @@ function pointHit(s: SnapPoint, by: Suggestion[]): SnapHit {
  * as one; else the nearest curve; nothing if none is near. Points beat curves, and only the nearest
  * of several curves is used, so no two parallel lines show at once (^102).
  */
-export function snapTo(list: Suggestion[], q: SnapQuery): SnapHit | null {
+export function snapTo(list: Suggestion[], query: SnapQuery): SnapHit | null {
+  const q = onItsLine(query);
   const hit = snapNearest(list, q);
   return hit && { ...hit, reach: reachOf(hit.by, q) };
+}
+
+/**
+ * A point that is tied to a line follows the pointer along it (^830): what it snaps to is judged
+ * from the place on the line that is nearest to the pointer, and it snaps to points on the line only
+ * (a line or a curve that crosses it is a point there, and one that does not cross it is not offered).
+ */
+function onItsLine(q: SnapQuery): SnapQuery {
+  const on = q.reach?.line;
+  return on ? { ...q, pt: add(on.p, mul(on.d, dot(sub(q.pt, on.p), on.d))) } : q;
 }
 
 const reaches = (s: Suggestion, reach?: Reach): boolean =>
@@ -127,7 +138,7 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
     const through = near.map((x) => x.s).filter((c) => touches(c, best.at));
     return pointHit(best, best.rule === 'crossing' ? through : [best, ...through]);
   }
-  const curve = near.sort(byNearness)[0];
+  const curve = q.reach?.line ? undefined : near.sort(byNearness)[0];
   return curve
     ? { pt: curve.n.pt, heading: angleOf({ x: curve.n.tx, y: curve.n.ty }), by: [curve.s] }
     : null;

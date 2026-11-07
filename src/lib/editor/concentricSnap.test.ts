@@ -62,3 +62,27 @@ describe('a radius point snaps to the concentric radius (^830)', () => {
     expect(edgeOfId(ed.graph, 7)!.radius).toBe(18.7);
   });
 });
+
+describe('a radius point snaps only to places on its line (^831)', () => {
+  it('whatever the pointer does, a snap is on the line the point moves along', () => {
+    const ed = new Editor();
+    ed.load(project());
+    const h = chainHandles(ed.chains, 4).find(
+      (x) => x.type === 'rad' && x.id === 7 && x.t === 0.5,
+    )!;
+    // The line through the middle radius point and the center of its arc.
+    const centre = { x: -2.9397241026, y: -38.333 };
+    const d = { x: h.x - centre.x, y: h.y - centre.y };
+    const len = Math.hypot(d.x, d.y);
+    const off = (p: { x: number; y: number }) =>
+      Math.abs((p.x - centre.x) * d.y - (p.y - centre.y) * d.x) / len;
+    ed.pointerDown(snapping(h.x, h.y));
+    ed.pointerMove(snapping(h.x + 0.2, h.y + 0.2));
+    for (let x = -12; x <= 14; x += 1.7) {
+      for (let y = -56; y <= -30; y += 1.9) {
+        ed.pointerMove(snapping(x, y));
+        if (ed.snapped) expect(off(ed.snapped.pt)).toBeLessThan(0.05);
+      }
+    }
+  });
+});
