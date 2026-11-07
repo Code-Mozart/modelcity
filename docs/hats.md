@@ -1,4 +1,4 @@
-next: ^846
+next: ^847
 
 # Hats
 
@@ -58,7 +58,7 @@ An open feature is in at most one planned milestone, and each milestone is a hat
 
 Not assigned to a milestone yet: ^35 (the grid's return), ^104 (view mode on touch devices, waits for ^176), ^169 (validator), ^176 (Supabase), ^179 (project previews), ^182 (showing waiting), ^183 (autosave: the numbers and failure handling), ^184 (saving in the background), ^187 (trackpads), ^219 (history menu), ^220 (highlight what an undo touches), ^221 (persist the history), ^224 (independent ticks, curves that are not circular), ^228 and ^229 (the repairs on load, after the load pipeline of ^151), ^245 (true segment selection, a question), ^293 (toasts stay as long as they take to read).
 
-Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^145, ^146, ^147.
+Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^145, ^146, ^147, ^846.
 
 | Hat | Type | Status | Summary |
 |-----|------|--------|---------|
@@ -608,6 +608,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^843 | decision | decided (user) | **The editor helps, it does not forbid (user):** it is not built so that invalid states cannot be created; at the end the user fixes them by hand. The editor is there to make building large maps less tedious (convenient defaults, things that follow, snaps), and violations are reported (^827), not prevented. |
 | ^844 | chore | done (PR #44, v0.44.0) | **The version is checked in CI (user, after ^367 was broken by #43, which carried v0.40.0):** a job `version` in `ci.yml` fails a PR whose `package.json` version differs from the base's and is not `0.<number of the PR>.0`; a PR that leaves the version alone (docs) passes. A line in `.claude/CLAUDE.md` says to open the PR first and then set the version. |
 | ^845 | feature | done (PR #45, v0.45.0; user) | **On an S-curve of the largest radius the inflection point can be dragged (user):** there the ends of the two arcs, and their two radius points, meet at the inflection point, and the radius point was grabbed. Now a derived node wins over a radius point at the same place (`hoverAt`), so the drag realizes the node (^824); the other radius points of the S-curve (the middle ones) stay. |
+| ^846 | decision | decided (user) | **A rule the user can observe is a feature (user, after ^845):** not because it came as a fix, but because it is a rule, for example on the order of interaction (what is hovered or dragged first where things overlap), what snaps, what shows. It gets a hat of type `feature`, a row in `docs/features.md` with its test, like anything that passes the five tests of the glossary entry *Feature* (the category *rule*). Written in `.claude/CLAUDE.md`. |
 
 ## Rented ranges
 
