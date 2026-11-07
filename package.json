@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.37.0",
-  "moniker": "Controls snapshot",
+  "version": "0.38.0",
+  "moniker": "Controls as data",
   "private": true,
   "type": "module",
   "scripts": {

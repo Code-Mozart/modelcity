@@ -4,7 +4,7 @@
 
 ## Definitions
 
-- **Feature:** anything the app can do or show (a mode, a snap, a rendering, a measurement, an operation). Has a hat of type `feature`, or `operation` (see `docs/hats.md`; features and operations are listed there, not here).
+- **Feature** (README glossary, with the five tests and the categories): anything the app can do or show (a mode, a snap, a rendering, a measurement, an operation). Has a hat of type `feature`, or `operation` (see `docs/hats.md`; features and operations are listed there, not here).
 - **Operation** (^180, ^391): something the user deliberately does that changes the map, the stored project or what is open, or writes an output (edit the map, undo, select, pan, zoom, rotate, export, save, import, create, rename, delete, switch a project). Not a mode change, not opening a modal, not hovering. Every operation is a feature; not every feature is an operation (a snap rule, a gizmo, a label is not).
 - **Hats (^392):** every operation and every control has a hat for just itself. A hat that describes several things stays as the decision, and each thing gets its own hat that points to it.
 - **Control** (README glossary): a user input (key or mouse, with modifiers) in a context. Controls are contextual by design (^45), so every row names its **context**: the mode (view, select, draw, extend), what is under the pointer, and the state of the app (selection, drag, being drawn, touch). The same input in two contexts is two controls.
@@ -26,6 +26,8 @@
 | Tests | Where it is tested: unit (one module), integration (the editor engine with a graph, no browser), e2e (the browser). |
 
 ## Controls by context (the user's table)
+
+All controls that have a hint are rows of tables in code, `src/lib/hints/` (`areaControls.ts` and its parts, `project/modalHints.ts`; ^783): the hint of each is its `says`, and `src/lib/hints/controls.test.ts` checks the rows against the editor. The reference made from the tables is `docs/controls-by-table.md` (generated, a snapshot); this file keeps the context and the decisions.
 
 The review table of the project owner (`docs/please-remove-me.md`, removed), with the hat of each row added: `= ^N` is a control hat that already exists, `^N` a new one. Its columns: the mode or modal; what else must hold; the input; what the hint says (only if displayed); what it does; where it is displayed; whether the hint is *visitable* (hidden for 5 minutes after use, ^110; "yes, but should not be" is the user's wish, see ^756). `Ctrl+O` is an import in this table (the modal opening is a side effect), see ^758. Written in the same detail from now on.
 
