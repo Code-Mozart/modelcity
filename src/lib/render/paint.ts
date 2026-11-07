@@ -50,7 +50,7 @@ export function segment(ctx: CanvasRenderingContext2D, a: Point, b: Point, s: St
   applyStroke(ctx, s);
 }
 
-function applyStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
+export function applyStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
   ctx.strokeStyle = s.color;
   ctx.lineWidth = s.width;
   ctx.setLineDash(s.dash ?? []);

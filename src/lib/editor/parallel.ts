@@ -1,20 +1,21 @@
 import { pointOn, sweeps } from '../curves/piece';
 import type { Piece } from '../curves/types';
 import { LANE_WIDTH_M } from '../curves/lane';
+import { SAME_PLACE_M, SAME_WAY } from '../curves/tolerance';
 import { dist, dot, fromAngle, type Vec } from '../curves/vec';
 import { edgeOfId, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import { curveOfEdge, type Chain } from './chains';
 import type { Focus } from './focus';
 
-const TOL_M = 1e-3;
-
 /** Whether two headings are the same or exactly opposite (^100). */
 const alongOrAgainst = (a: GNode, b: GNode) =>
-  Math.abs(Math.abs(dot(fromAngle(a.th), fromAngle(b.th))) - 1) < 1e-9;
+  Math.abs(Math.abs(dot(fromAngle(a.th), fromAngle(b.th))) - 1) < SAME_WAY;
 
 /** Whether the ends of two segments are one lane width apart, pair by pair, in this order. */
 const apart = (a: [GNode, GNode], b: [GNode, GNode]) =>
-  a.every((n, i) => alongOrAgainst(n, b[i]!) && Math.abs(dist(n, b[i]!) - LANE_WIDTH_M) < TOL_M);
+  a.every(
+    (n, i) => alongOrAgainst(n, b[i]!) && Math.abs(dist(n, b[i]!) - LANE_WIDTH_M) < SAME_PLACE_M,
+  );
 
 /** Whether the nodes of two segments touch at both ends, in either order (^100, ^334 A and B). */
 export function touching(g: Graph, a: GEdge, b: GEdge): boolean {
@@ -26,7 +27,7 @@ export function touching(g: Graph, a: GEdge, b: GEdge): boolean {
 /** Whether the arcs of two curves share their centers, as many and each one (a straight one has none, ^334 C). */
 function sameCenters(a: Piece[], b: Piece[]): boolean {
   const [ca, cb] = [a.filter(sweeps), b.filter(sweeps)];
-  return ca.length === cb.length && ca.every((x) => cb.some((y) => dist(x.c, y.c) < TOL_M));
+  return ca.length === cb.length && ca.every((x) => cb.some((y) => dist(x.c, y.c) < SAME_PLACE_M));
 }
 
 /** Whether two segments are parallel (^100, ^334): their nodes touch at both ends and their curves are concentric. */

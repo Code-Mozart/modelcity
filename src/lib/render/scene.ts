@@ -9,7 +9,7 @@ import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides, drawTowerLine, type TowerShape } from './guides';
-import { drawBars, type BarShape } from './bars';
+import { drawBars, drawCapsules, type BarShape, type TowerCapsule } from './towerGizmo';
 import { drawMeasures } from './measures';
 import { drawCompass, drawOffset, type Turning } from './compass';
 import {
@@ -72,8 +72,12 @@ export interface Scene {
   headingFrom: Origin[];
   /** The nodes whose points or lines the pointer is snapped to: the snap point of the node is shown (^803). */
   snapFrom: Origin[];
-  /** The bars beside the nodes of runs of parallel segments (^350). */
+  /** The bars on the skin of the capsules, along runs of parallel segments (^350, ^820). */
   bars: BarShape[];
+  /** The towers, each drawn as a hollow capsule around its nodes (^820). */
+  towers: TowerCapsule[];
+  /** The derived nodes: hollow circles of the size and colour of a node (^821, ^822, ^823). */
+  derived: Vec[];
   /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
   tower: TowerShape | null;
   /** The heading being set, with the arrow following the cursor, and the compass for the first node of an arm (^314, ^316). */
@@ -285,6 +289,22 @@ function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
   for (const r of roads) strokeChain(f, pieces(r), { color: pal.road, width: px(r) });
 }
 
+/** The nodes, real ones with their state and derived ones as hollow circles, as large and as coloured, no arrow (^821, ^805). */
+function drawAllNodes(f: Frame, scene: Scene, active: boolean[][], pal: Palette) {
+  scene.roads.forEach((road, i) => {
+    const turning = scene.turning?.road === i ? scene.turning : null;
+    const state = {
+      active: active[i]!,
+      selected: selectedIn(scene.selection, i),
+      pinned: selectedIn(scene.pinned, i),
+      turning,
+    };
+    drawNodes(f, road, state, pal);
+  });
+  for (const d of scene.derived)
+    ring(f.ctx, toScreen(f, d), NODE_DOT_PX, { color: pal.ink, width: 2 });
+}
+
 /**
  * Two levels of gizmo (^60): the skeleton (curves and node dots) is always drawn; the scaffold of
  * a segment (everything else) only while it is needed, all or nothing, see `scaffold.ts`.
@@ -310,23 +330,12 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   }
   if (scene.mergePreview) drawPreview(f, scene.mergePreview, pal, true);
   if (scene.band) drawBand(f, scene.band, pal);
-  // The bars of the runs are below the nodes, so that selected nodes stay blue (^350).
-  drawBars(f, scene.bars, NODE_DOT_PX, pal);
+  // The capsules and the bars on their skin are below the nodes, so that selected nodes stay blue (^350, ^820).
+  drawCapsules(f, scene.towers, pal);
+  drawBars(f, scene.bars, pal);
   // The arrows of what the snap takes its heading from are under the dots, the snap points of what it is made of over them (^795, ^803).
   for (const o of scene.headingFrom) drawArrow(f, { ...o.at, th: o.th }, pal.turquoise);
-  scene.roads.forEach((road, i) => {
-    drawNodes(
-      f,
-      road,
-      {
-        active: active[i]!,
-        selected: selectedIn(scene.selection, i),
-        pinned: selectedIn(scene.pinned, i),
-        turning: scene.turning?.road === i ? scene.turning : null,
-      },
-      pal,
-    );
-  });
+  drawAllNodes(f, scene, active, pal);
   for (const o of scene.snapFrom) drawSnapPoint(f, o.at, pal);
   // The outline of the hovered segment (or branch) is on top of everything (^99).
   drawOutlines(f, scene.roads, scene.outline, pal.blue);

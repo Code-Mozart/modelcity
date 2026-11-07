@@ -1,4 +1,5 @@
 import { sweeps } from '../curves/piece';
+import { SAME_PLACE_M } from '../curves/tolerance';
 import { dist, type Vec } from '../curves/vec';
 import type { PathNode } from '../curves/types';
 import { linkTo, type DrawEnd } from '../model/junction';
@@ -8,8 +9,6 @@ import { focusTower, parallel, touching, withParallels, type TowerLine } from '.
 import type { Chain } from './chains';
 import type { Focus } from './focus';
 import { branchEdges, selectedSegments } from './selection';
-
-const TOL_M = 1e-3;
 
 /** The center of the arc of a segment that is a bend (the only shape with one arc). */
 function centerOf(g: Graph, edge: number): Vec | null {
@@ -29,7 +28,7 @@ function maxOf(g: Graph, edge: number): number | null {
  */
 function storedRadius(g: Graph, edge: number, value: number): number | null {
   const max = maxOf(g, edge);
-  return max !== null && Math.abs(value - max) < TOL_M ? null : value;
+  return max !== null && Math.abs(value - max) < SAME_PLACE_M ? null : value;
 }
 
 /** The radius of a segment, the value of auto being its maximum (^332). */
