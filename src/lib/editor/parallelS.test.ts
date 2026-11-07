@@ -22,6 +22,8 @@ const lanes = (n: number, radii?: (i: number, R: number) => number | null): Grap
   return g;
 };
 const edge = (g: Graph, i: number) => g.edges[i]!;
+const idsOf = (tower: { id: number }[]) => tower.map((n) => n.id);
+const isDerivedTower = (ids: number[]) => ids.length === 3 && ids.every((id) => id < 0);
 const radiiOf = (g: Graph, i: number) =>
   curveOfEdge(g, i)!
     .pieces.filter((p) => p.type === 'arc' && Math.abs(p.da) > 1e-3)
@@ -45,8 +47,7 @@ describe('S-curves beside each other are one moved copy of the other (^828)', ()
     const d = derivedNodes(g).filter((n) => n.kind === 'inflection');
     expect(d).toHaveLength(3);
     const towers = towersOf(withDerived(g, derivedNodes(g)));
-    const derivedTower = (ids: number[]) => ids.length === 3 && ids.every((id) => id < 0);
-    expect(towers.some((t) => derivedTower(t.map((n) => n.id)))).toBe(true);
+    expect(towers.map(idsOf).some(isDerivedTower)).toBe(true);
   });
 
   it('three and four lanes follow one another', () => {
