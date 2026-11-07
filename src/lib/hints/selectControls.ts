@@ -52,14 +52,17 @@ export const SELECT_HEAD: C[] = [
 
 /** Selecting nodes and segments, deselecting and deleting what is selected (^490, ^688, ^690, ^691, ^491, ^692, ^689, ^686, ^687). */
 export const SELECT_TAIL: C[] = [
-  // Selecting a node (^490, ^688, ^491, ^689): a click keeps only it; with nothing selected `Shift` would add nothing to the click.
+  // Selecting a node (^490, ^688, ^491, ^689): a click keeps only it (^809); with nothing selected `Shift` would add nothing to the click.
   {
     hat: 490,
     input: lmb,
     id: 'select',
     on: (f) => select(f) && isNode(f),
     listens: (f) => !(nodeSelected(f) && f.selected === 1),
-    says: (f) => (nodeSelected(f) ? null : some(f) ? 'select instead' : 'select'),
+    says: (f) => {
+      if (nodeSelected(f) && f.selected === 1) return null;
+      return some(f) ? 'select instead' : 'select';
+    },
   },
   {
     hat: 688,
@@ -76,7 +79,10 @@ export const SELECT_TAIL: C[] = [
     id: 'select',
     on: (f) => select(f) && onCurve(f),
     listens: (f) => !(picked(f) === 2 && f.selected === 2),
-    says: (f) => (picked(f) === 2 ? null : some(f) ? 'select segment instead' : 'select segment'),
+    says: (f) => {
+      if (picked(f) === 2 && f.selected === 2) return null;
+      return some(f) ? 'select segment instead' : 'select segment';
+    },
   },
   {
     hat: 691,
