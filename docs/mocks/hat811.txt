@@ -1,0 +1,8 @@
+(A)-<-(')-<-(B)
+| |   | |
+(C)->-(D)
+         \
+          \
+          (E)
+
+{A,C} form a tower and {',D} form a tower too. ' is the derived node between A and B

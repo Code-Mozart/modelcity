@@ -1,0 +1,3 @@
+(A)->-(B)->(C)
+
+node B is redundant, because it has no effect. removing it would give the same result.

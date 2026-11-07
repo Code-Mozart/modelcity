@@ -1,0 +1,10 @@
+(A)-<-(i)-<-(j)-<-(B)
+      | |   | |
+(C)-<-(k)-<-(l)-<-(D)
+      | |   | |
+      (E)->-(F)
+     /         \
+    /           \
+  (G)           (H)
+
+{i,k,E} form a tower and {j,l,F} form a tower. i,j,k and l are derived nodes.
