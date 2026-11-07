@@ -37,8 +37,19 @@ export function snappedTo(
     return { pt: info.pt, th: null, aim: { at: hit.pt, away: info.alt } };
   if (turningNode(press) !== null) return { pt: info.pt, th: headingFrom(hit, info.alt) };
   // A click places the node at the snap with its heading; `Shift` keeps only the position (^358).
-  return { pt: hit.pt, th: info.shift ? null : placedHeading(hit, info.alt), line: onLine(hit) };
+  const placed = {
+    pt: hit.pt,
+    th: info.shift ? null : placedHeading(hit, info.alt),
+    line: onLine(hit),
+  };
+  return press?.kind === 'drag' ? { ...placed, radii: arcRadii(hit) } : placed;
 }
+
+/** The radii of the arcs of the curves a hit snapped to (^830). */
+const arcRadii = (hit: SnapHit): number[] =>
+  hit.by.flatMap((s) =>
+    s.kind === 'curve' ? s.pieces.flatMap((p) => (sweeps(p) ? [p.r] : [])) : [],
+  );
 
 /** Where a click places a node: where the pointer snapped, else at the pointer with the automatic heading. */
 export const placedAt = (hit: SnapHit | null, info: PointerInfo): Placement =>
@@ -116,6 +127,7 @@ function reachOf(press: Press | null): Reach | undefined {
   const locus = press && locusOf(press);
   if (!locus) return undefined;
   return {
+    line: locus,
     point: (at) => Math.abs(cross(sub(at, locus.p), locus.d)) <= LOCUS_TOL_M,
     curve: (c) => {
       const s = sides(c, locus);

@@ -15,7 +15,9 @@ import {
   edgesIn,
   edgesOut,
   insertNode,
+  edgeOfId,
   moveNodes,
+  withRadius,
   nodeOf,
   removeNodes,
   roundToMm,
@@ -210,7 +212,21 @@ function snappedDrag(
   const th = to ? headingOf(nodeOf(dragged, handle.id), to) : null;
   if (handle.type === 'node') return withNode(dragged, handle.id, { th: th ?? how.original });
   if (handle.type === 'head' && th !== null) return withNode(dragged, handle.id, { th });
-  return dragged;
+  return handle.type === 'rad' ? withSnappedRadius(dragged, handle.id, to) : dragged;
+}
+
+/** How near (meters) a radius must be to the radius of the arc it snapped to, to take exactly that (^830). */
+const RADIUS_TAKE_M = 0.005;
+
+/**
+ * A radius point that snapped to the offset of another arc has the radius of that arc, not what the
+ * point gives: the point sits where the radius changes little, so the rounding of the nodes to
+ * millimeters becomes a millimeter of radius and the segments are not concentric (^830).
+ */
+function withSnappedRadius(g: Graph, edge: number, to: Placement | null): Graph {
+  const own = edgeOfId(g, edge)?.radius;
+  const exact = own == null ? undefined : to?.radii?.find((r) => Math.abs(r - own) < RADIUS_TAKE_M);
+  return exact === undefined ? g : withRadius(g, edge, exact);
 }
 
 /** The heading a snap gives a node: copied, or aimed at a snap point, or away from it (^313, ^335). Null if none. */

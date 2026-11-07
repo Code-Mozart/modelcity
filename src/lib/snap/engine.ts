@@ -1,4 +1,5 @@
-import { angleOf, dist, type Vec } from '../curves/vec';
+import { line } from '../curves/piece';
+import { add, angleOf, dist, mul, type Vec } from '../curves/vec';
 import { crossings, nearestOnPieces } from './geometry';
 import type { SnapCurve, SnapHit, SnapPoint, Suggestion } from './types';
 
@@ -20,6 +21,8 @@ export interface SnapQuery {
 export interface Reach {
   curve(c: SnapCurve): boolean;
   point(at: Vec): boolean;
+  /** The line the thing moves along, if it does: curves are then reached where they cross it, not where they are nearest to the pointer (^830). */
+  line?: { p: Vec; d: Vec };
 }
 
 /** Reaching this share of the maximum distance, the tip about pinning shows (^294). */
@@ -69,6 +72,22 @@ function crossingPoints(near: { s: SnapCurve }[]): SnapPoint[] {
   return out;
 }
 
+const FAR_M = 1e5;
+
+/** The places where the curves cross the line a control point moves along (^830). */
+function crossingsWithLine(curves: SnapCurve[], on: { p: Vec; d: Vec }): SnapPoint[] {
+  const along = line(add(on.p, mul(on.d, -FAR_M)), add(on.p, mul(on.d, FAR_M)));
+  return curves.flatMap((c) =>
+    crossings(c.pieces, [along]).map((at): SnapPoint => ({
+      kind: 'point',
+      at,
+      heading: null,
+      rule: 'crossing',
+      from: c.from,
+    })),
+  );
+}
+
 function pointHit(s: SnapPoint, by: Suggestion[]): SnapHit {
   return { pt: s.at, heading: s.heading, by };
 }
@@ -92,7 +111,13 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
     here.filter((s): s is SnapCurve => s.kind === 'curve'),
     q,
   );
-  const crossed = crossingPoints(near);
+  const onLine = q.reach?.line
+    ? crossingsWithLine(
+        near.map((x) => x.s),
+        q.reach.line,
+      )
+    : [];
+  const crossed = [...crossingPoints(near), ...onLine];
   const points = [...here.filter((s): s is SnapPoint => s.kind === 'point'), ...crossed]
     .filter((s) => nearPoint(s, q) && (q.reach?.point(s.at) ?? true))
     .sort((a, b) => byPoint(a, b, q.pt));
