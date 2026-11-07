@@ -71,3 +71,22 @@ describe('a derived node in draw mode (^824)', () => {
     expect(ed.hover).not.toMatchObject({ derived: true });
   });
 });
+
+describe('on an S-curve of the largest radius (^824)', () => {
+  it('the inflection point is dragged, not the radius points that are at the same place', () => {
+    const ed = new Editor();
+    ed.load(
+      graphOf(
+        [
+          [0, 0, 0],
+          [40, 10, 0],
+        ],
+        [[0, 1, null]],
+      ),
+    );
+    ed.pointerMove(pointer(20, 5));
+    expect(ed.hover).toMatchObject({ kind: 'candidate', derived: true });
+    ed.pointerMove(pointer(10.3, 1.27));
+    expect(ed.hover).toMatchObject({ kind: 'handle' });
+  });
+});
