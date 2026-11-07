@@ -22,7 +22,7 @@ import { DRAW_HEAD, DRAW_TAIL } from './drawControls';
 const HANDLE_ROWS: C[] = [
   // Dragging a handle (^488, ^697, ^695, ^696), deleting a node (^489), flipping an arm (^466).
   dragRow(488, 'node'),
-  dragRow(697, 'head', 'mid1', 'mid2'),
+  dragRow(697, 'head'),
   dragRow(695, 'ctrl'),
   dragRow(696, 'rad'),
   {

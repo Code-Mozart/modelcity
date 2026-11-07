@@ -14,8 +14,6 @@ export function selectionName(before: number[], after: number[]): string {
 const HANDLE_NAME = {
   node: 'move node',
   head: 'turn heading',
-  mid1: 'turn heading',
-  mid2: 'turn heading',
   ctrl: 'bend curve',
   rad: 'change radius',
 } as const;

@@ -4,7 +4,9 @@ import type { PathNode } from '../curves/types';
 import { linkTo, type DrawEnd } from '../model/junction';
 import { addNode, edgeOfId, nodeOf, withRadius, type GEdge, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
-import { parallel, touching, withParallels } from './parallel';
+import { focusTower, parallel, touching, withParallels, type TowerLine } from './parallel';
+import type { Chain } from './chains';
+import type { Focus } from './focus';
 import { branchEdges, selectedSegments } from './selection';
 
 const TOL_M = 1e-3;
@@ -134,4 +136,25 @@ export function previewRadius(g: Graph, tip: number, node: PathNode, end: DrawEn
   const linked = linkTo(added.graph, tip, end, added.id);
   const e = linked.edges.find((x) => x.start === added.id || x.end === added.id);
   return e ? (edgeOfId(concentricWithParallel(linked, e.id), e.id)?.radius ?? null) : null;
+}
+
+/**
+ * The line through the radius points of the segments that follow the dragged one (^344): the
+ * parallels among the segments that really change with it (`sharedWith`), so the line always shows
+ * what follows, and not at all when nothing does: with only the two nodes of the segment selected
+ * it changes alone (^302), and a selected segment that is not parallel is no point of the line (^832).
+ */
+export function followingTower(
+  g: Graph,
+  chains: Chain[],
+  focus: Focus | null,
+  selection: number[],
+): TowerLine | null {
+  const edge = focus?.type === 'rad' ? chains[focus.road]?.edgeIds[focus.i] : undefined;
+  if (edge === undefined) return null;
+  const parallels = withParallels(g, [edge]);
+  const follow = sharedWith(g, selection, edge).filter(
+    (s) => s.id !== edge && parallels.includes(s.id),
+  );
+  return follow.length ? focusTower(g, chains, focus, [edge, ...follow.map((s) => s.id)]) : null;
 }

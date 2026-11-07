@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.39.0",
-  "moniker": "History of milestones",
+  "version": "0.40.0",
+  "moniker": "Bug fixes",
   "private": true,
   "type": "module",
   "scripts": {

@@ -3,7 +3,7 @@ import { edgeOfId, withRadius, type Graph } from '../model/graph';
 import { bendsBothWays, threeBends, twoBends } from '../testing/graphHelpers';
 import { chainsOf } from './chains';
 import { controlTower } from './parallel';
-import { shareConcentric, sharedWith } from './sharedRadius';
+import { followingTower, shareConcentric, sharedWith } from './sharedRadius';
 
 const lanes = twoBends;
 
@@ -90,5 +90,47 @@ describe('the line through interlocked control points (^344)', () => {
 
   it('none without a parallel segment', () => {
     expect(controlTower(lanes(5, 14), 0, 1, 0.5)).toBeNull();
+  });
+});
+
+describe('the line through the radius points shows only when the parallels follow (^832)', () => {
+  const g = twoBends();
+  const chains = chainsOf(g);
+  const road = chains.findIndex((c) => c.edgeIds.includes(0));
+  const focus = { road, type: 'rad' as const, i: chains[road]!.edgeIds.indexOf(0), k: 1, t: 0.5 };
+
+  it('nothing selected, or other nodes as well: it shows', () => {
+    expect(followingTower(g, chains, focus, [])).not.toBeNull();
+    expect(followingTower(g, chains, focus, [0, 1, 2])).not.toBeNull();
+  });
+
+  it('only the two nodes of its own segment selected: it changes alone, no line', () => {
+    expect(followingTower(g, chains, focus, [0, 1])).toBeNull();
+  });
+
+  it('a segment without parallels has none either way', () => {
+    const lone = twoBends(5, 14);
+    const c = chainsOf(lone);
+    expect(
+      followingTower(lone, c, { ...focus, road: c.findIndex((x) => x.edgeIds.includes(0)) }, []),
+    ).toBeNull();
+  });
+
+  it('a selected segment that is not parallel gets the radius but is no point of the line', () => {
+    const apart = twoBends(5, 14);
+    const c = chainsOf(apart);
+    const road = c.findIndex((x) => x.edgeIds.includes(0));
+    const own = { ...focus, road, i: c[road]!.edgeIds.indexOf(0) };
+    expect(followingTower(apart, c, own, [0, 1, 2, 3])).toBeNull();
+  });
+
+  it('three lanes: the line runs through all that follow, from a selected one or not', () => {
+    const three = threeBends();
+    const c = chainsOf(three);
+    const road = c.findIndex((x) => x.edgeIds.includes(0));
+    const own = { ...focus, road, i: c[road]!.edgeIds.indexOf(0) };
+    const some = followingTower(three, c, own, [])!;
+    expect(some.others).toHaveLength(2);
+    expect(followingTower(three, c, own, [2, 3])!.others).toHaveLength(2);
   });
 });
