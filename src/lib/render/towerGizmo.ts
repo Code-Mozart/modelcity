@@ -1,5 +1,5 @@
 import { add, mul, type Vec } from '../curves/vec';
-import { applyStroke, ring, screenDir, segment, toScreen, type Frame, type Palette } from './paint';
+import { applyStroke, ring, screenDir, toScreen, type Frame, type Palette } from './paint';
 
 /** A bar on the skin of the capsule of a tower, along a run of parallel segments (^350, ^820). */
 export interface BarShape {
@@ -15,8 +15,8 @@ export type TowerCapsule = Vec[];
 export const CAPSULE_PX = 10;
 /** The line of the capsule: the thinnest drawn (the grid), in pixels (^820). */
 const CAPSULE_LINE_PX = 1;
-/** The bars on its skin (^350, ^820): a quarter of the diameter of a node dot, as they were before the capsule (1.4 px and 2.25 px were too thin to see, user). */
-const BAR_PX = 2.75;
+/** A bar is half as wide as the capsule: from the normal line of the tower to its skin (^820). */
+const BAR_PX = CAPSULE_PX;
 
 /**
  * A hollow capsule around the nodes of a tower (^820): a line from the first to the last node, the
@@ -41,13 +41,19 @@ export function drawCapsules(f: Frame, towers: TowerCapsule[], pal: Palette) {
   }
 }
 
-/** The bars, on the skin of the capsules, below the nodes so that selected nodes stay blue (^350, ^820). */
+/**
+ * The bars (^350, ^820): a hollow rectangle with the line of the capsule, inside it, half as wide
+ * as the capsule, from the normal line of the tower to the skin on its side, along a run of
+ * parallel segments. Where segments run parallel on both sides the two lines meet on the normal.
+ */
 export function drawBars(f: Frame, bars: BarShape[], pal: Palette) {
+  const ctx = f.ctx;
   for (const { from, to, side } of bars) {
-    const out = mul(screenDir(f, side), CAPSULE_PX);
-    segment(f.ctx, add(toScreen(f, from), out), add(toScreen(f, to), out), {
-      color: pal.ink,
-      width: BAR_PX,
-    });
+    const [a, b] = [toScreen(f, from), toScreen(f, to)];
+    const out = mul(screenDir(f, side), BAR_PX);
+    ctx.beginPath();
+    for (const p of [a, add(a, out), add(b, out), b]) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    applyStroke(ctx, { color: pal.ink, width: CAPSULE_LINE_PX });
   }
 }
