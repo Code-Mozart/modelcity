@@ -47,3 +47,4 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #41 | closed, not merged | | ^830 | Replaced by #42 (renamed) |
 | #42 | closed, not merged | | ^830 to ^833 | Replaced by #43 (a general bug fix PR) |
 | #43 | | v0.43.0: Bug fixes | ^830 to ^843 | Bug fixes: a radius point snaps only to places on its line and takes the exact radius of the arc beside it (the concentric bug); the orange line shows only when the parallels follow; `Ctrl+Period` shows the mouse coordinates |
+| #44 | | v0.44.0: Version check | ^844 | CI checks that the version is the number of the PR |
