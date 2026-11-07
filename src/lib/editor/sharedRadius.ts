@@ -4,7 +4,9 @@ import type { PathNode } from '../curves/types';
 import { linkTo, type DrawEnd } from '../model/junction';
 import { addNode, edgeOfId, nodeOf, withRadius, type GEdge, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
-import { parallel, touching, withParallels } from './parallel';
+import { focusTower, parallel, touching, withParallels, type TowerLine } from './parallel';
+import type { Chain } from './chains';
+import type { Focus } from './focus';
 import { branchEdges, selectedSegments } from './selection';
 
 const TOL_M = 1e-3;
@@ -134,4 +136,20 @@ export function previewRadius(g: Graph, tip: number, node: PathNode, end: DrawEn
   const linked = linkTo(added.graph, tip, end, added.id);
   const e = linked.edges.find((x) => x.start === added.id || x.end === added.id);
   return e ? (edgeOfId(concentricWithParallel(linked, e.id), e.id)?.radius ?? null) : null;
+}
+
+/**
+ * The line through the radius points of the segments that follow the dragged one (^344): only when
+ * they follow. With only the two nodes of the segment selected it changes alone (^302) and there is
+ * no line (^832).
+ */
+export function followingTower(
+  g: Graph,
+  chains: Chain[],
+  focus: Focus | null,
+  selection: number[],
+): TowerLine | null {
+  const edge = focus?.type === 'rad' ? chains[focus.road]?.edgeIds[focus.i] : undefined;
+  const follows = edge !== undefined && sharedWith(g, selection, edge).some((s) => s.id !== edge);
+  return follows ? focusTower(g, chains, focus) : null;
 }

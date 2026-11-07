@@ -4,7 +4,7 @@
   import { headingSourceOrigins } from './editor/hintState';
   import { snapOrigins } from './snap/heading';
   import { scaffoldHidden } from './editor/phase';
-  import { focusTower } from './editor/parallel';
+  import { followingTower } from './editor/sharedRadius';
   import { barsOf } from './editor/towers';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
@@ -75,7 +75,7 @@
       headingFrom: headingSourceOrigins(editor),
       snapFrom: snapOrigins(editor.snapped),
       bars: bars,
-      tower: focusTower(editor.graph, editor.chains, editor.focus),
+      tower: followingTower(editor.graph, editor.chains, editor.focus, editor.selection),
       turning: turningOf(editor.chains, editor.press),
     };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };

@@ -45,4 +45,4 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #39 | 2026-11-07 | v0.39.0: History of milestones | ^810 | History of milestones; the hints for a click that narrows the selection (^809) |
 | #40 | 2026-11-07 | | ^811 to ^829 | Docs: towers and derived nodes registered, milestones reshuffled |
 | #41 | closed, not merged | | ^830 | Replaced by #42 (renamed) |
-| #42 | | v0.40.0: Snapping along a line | ^830, ^831 | A radius point snaps only to places on its line and takes the exact radius of the arc beside it (the concentric bug) |
+| #42 | | v0.40.0: Snapping along a line | ^830 to ^833 | A radius point snaps only to places on its line and takes the exact radius of the arc beside it (the concentric bug); the orange line shows only when the parallels follow; `Ctrl+Period` shows the mouse coordinates |

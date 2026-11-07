@@ -77,6 +77,7 @@ The review table of the project owner (`docs/please-remove-me.md`, removed), wit
 | = ^688 | select mode | selected node hovered | Shift+LMB | deselect | toggle node selection | control hints panel | yes |
 | = ^689 | select mode | selected node hovered | Alt+Shift+LMB | add branch to selection | toggle branch selection | control hints panel | yes |
 | ^774 | select mode | unselected node hovered & something selected | LMB | select instead | set selected node | control hints panel | yes |
+| = ^833 | every mode | - | Ctrl+Period | (no hint, hidden on purpose) | switch the pointer coordinates on or off | under the version, top center | no |
 
 ## Controls
 
