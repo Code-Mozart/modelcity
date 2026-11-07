@@ -31,6 +31,7 @@
   import VersionText from './lib/hud/VersionText.svelte';
   import PointerCoordinates from './lib/hud/PointerCoordinates.svelte';
   import { DebugTools, isCoordinatesKey } from './lib/hud/debugTools.svelte';
+  import { violationsOf } from './lib/editor/violations';
   import { VersionBanner } from './lib/hud/versionBanner.svelte';
   import { TAB_TITLE } from './lib/version';
 
@@ -141,6 +142,13 @@
     else return false;
     return true;
   }
+
+  /** While the map has violations of the rules of touching nodes, a red message says how many (^827). */
+  $effect(() => {
+    const n = violationsOf(editor.graph).length;
+    const text = n === 1 ? '1 violation' : `${n} violations`;
+    untrack(() => toasts.keep('violations', n ? { kind: 'error', text } : null));
+  });
 
   /** Undo or redo with nothing to undo or redo says so, instead of doing nothing (^242). */
   function noHistory(e: KeyboardEvent) {

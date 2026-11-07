@@ -5,6 +5,8 @@ export interface Toast {
   key: number;
   kind: ToastKind;
   text: string;
+  /** A message that stays while it is true, under this name (^827). */
+  permanent?: string;
 }
 
 /** How long a toast stays (assumed, ^232): confirmations 3 s, like the history panel; warnings and errors 8 s. */
@@ -20,6 +22,21 @@ export class Toasts {
   items = $state.raw<Toast[]>([]);
   private keys = 0;
   private timers: Record<number, ReturnType<typeof setTimeout>> = {};
+
+  /**
+   * A message that does not go by itself, while something is wrong (^827): `null` takes it away.
+   * Showing it again changes its text in place.
+   */
+  keep(name: string, message: { kind: ToastKind; text: string } | null) {
+    const was = this.items.find((t) => t.permanent === name);
+    if (!message) {
+      if (was) this.items = this.items.filter((t) => t !== was);
+      return;
+    }
+    if (was?.kind === message.kind && was.text === message.text) return;
+    const toast = { key: was?.key ?? ++this.keys, ...message, permanent: name };
+    this.items = was ? this.items.map((t) => (t === was ? toast : t)) : [...this.items, toast];
+  }
 
   show(kind: ToastKind, text: string) {
     const same = this.items.find((t) => t.kind === kind && t.text === text);

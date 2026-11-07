@@ -23,7 +23,7 @@ const MAX_ROUNDS = 12;
 const headingOf = (t: { x: number; y: number }) => Math.atan2(t.y, t.x);
 
 /** A box that holds the pieces, to leave the segments that are far from a node out. */
-function boxOf(pieces: Piece[]) {
+export function boxOf(pieces: Piece[]) {
   const xs = pieces.flatMap((p) =>
     p.type === 'arc' ? [p.c.x - p.r, p.c.x + p.r] : [p.P.x, p.Q.x],
   );
@@ -33,17 +33,17 @@ function boxOf(pieces: Piece[]) {
   return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
 }
 
-const near = (box: ReturnType<typeof boxOf>, n: Vec, m: number) =>
+export const near = (box: ReturnType<typeof boxOf>, n: Vec, m: number) =>
   n.x >= box.x0 - m && n.x <= box.x1 + m && n.y >= box.y0 - m && n.y <= box.y1 + m;
 
-interface Placed {
+export interface Placed {
   x: number;
   y: number;
   th: number;
 }
 
 /** Where a node touches a segment (^818): on its offset curve, with the segment running the same way or the opposite way. */
-function touchPoint(pieces: Piece[], n: Placed): Placed | null {
+export function touchPoint(pieces: Piece[], n: Placed): Placed | null {
   const at = nearestOnPieces(pieces, n);
   if (!at || Math.abs(at.d - LANE_WIDTH_M) >= SAME_PLACE_M) return null;
   const along = Math.abs(dot({ x: at.tx, y: at.ty }, fromAngle(n.th)));
@@ -68,6 +68,13 @@ function inflections(g: Graph): { edge: GEdge; at: Placed }[] {
   });
 }
 
+/** The segments of a graph with their pieces and the box that holds them. */
+export const curvesOf = (g: Graph) =>
+  g.edges.flatMap((edge) => {
+    const pieces = curveOfEdge(g, edge.id)?.pieces;
+    return pieces ? [{ edge, pieces, box: boxOf(pieces) }] : [];
+  });
+
 /** The nodes a node derives: one on each segment it touches (^822). */
 function touched(
   curves: { edge: GEdge; pieces: Piece[]; box: ReturnType<typeof boxOf> }[],
@@ -88,10 +95,7 @@ function touched(
  * each other (^812). Derived from the graph, never stored.
  */
 export function derivedNodes(g: Graph): DerivedNode[] {
-  const curves = g.edges.flatMap((edge) => {
-    const pieces = curveOfEdge(g, edge.id)?.pieces;
-    return pieces ? [{ edge, pieces, box: boxOf(pieces) }] : [];
-  });
+  const curves = curvesOf(g);
   const out: DerivedNode[] = [];
   const known = (at: Placed) =>
     g.nodes.some((n) => dist(n, at) < SAME_PLACE_M) || out.some((n) => dist(n, at) < SAME_PLACE_M);
