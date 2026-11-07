@@ -96,6 +96,8 @@ const CHEVRON = { size: 6, spread: 0.7, width: ARROW_STROKE_PX };
 /** Distance between the direction arrows along a curve, and their size (^80). */
 const DIRECTION_SPACING_PX = 72;
 const NODE_DOT_PX = 5.5;
+/** The line of a derived node, thinner than a snap point's 2 px (^821). */
+const DERIVED_LINE_PX = 1.25;
 /** Selected nodes are blue and 150% larger (^70). */
 const SELECTED_DOT_PX = NODE_DOT_PX * 1.5;
 
@@ -302,7 +304,7 @@ function drawAllNodes(f: Frame, scene: Scene, active: boolean[][], pal: Palette)
     drawNodes(f, road, state, pal);
   });
   for (const d of scene.derived)
-    ring(f.ctx, toScreen(f, d), NODE_DOT_PX, { color: pal.ink, width: 2 });
+    ring(f.ctx, toScreen(f, d), NODE_DOT_PX, { color: pal.ink, width: DERIVED_LINE_PX });
 }
 
 /**
