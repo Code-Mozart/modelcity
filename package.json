@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.44.0",
-  "moniker": "Version check",
+  "version": "0.45.0",
+  "moniker": "Towers and derived nodes",
   "private": true,
   "type": "module",
   "scripts": {
