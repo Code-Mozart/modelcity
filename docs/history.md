@@ -42,4 +42,6 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #36 | 2026-11-06 | v0.36.0: Snapping engine part 3 | ^794 | Snapping engine part 3 |
 | #37 | 2026-11-06 | v0.37.0: Controls snapshot | ^784 | Controls snapshot |
 | #38 | 2026-11-07 | v0.38.0: Controls as data | ^783 | Controls as data |
-| #39 | | v0.39.0: History of milestones | ^810 | History of milestones; the hints for a click that narrows the selection (^809) |
+| #39 | 2026-11-07 | v0.39.0: History of milestones | ^810 | History of milestones; the hints for a click that narrows the selection (^809) |
+| #40 | 2026-11-07 | | ^811 to ^829 | Docs: towers and derived nodes registered, milestones reshuffled |
+| #41 | | v0.40.0: Concentric snap | ^830 | A radius point snaps to where the curve crosses its line and takes the exact radius of the arc beside it |
