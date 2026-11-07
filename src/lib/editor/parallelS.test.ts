@@ -154,11 +154,23 @@ describe('any two bends whose nodes touch to the millimeter are parallel (^853)'
 });
 
 describe('bends that were parallel stay parallel as S-curves (^854)', () => {
-  it('radii a lane width apart that are too big for the S-curves are both cut down together', () => {
-    for (const k of [1.5, 3, 10]) {
-      const g = lanes(2, (i, R) => k * R - (i === 0 ? 0 : W));
-      expect(parallel(g, edge(g, 0), edge(g, 1)), `k ${k}`).toBe(true);
-      expect(Math.min(...radiiOf(g, 1))).toBeLessThan(k * 1e3);
-    }
+  const allParallel = (g: Graph, n: number) =>
+    Array.from({ length: n - 1 }, (_, i) => parallel(g, edge(g, i), edge(g, i + 1)));
+
+  it('radii a lane width apart that are too big for the S-curves are cut down together, any number of lanes', () => {
+    for (const n of [2, 3, 8])
+      for (const k of [1.5, 3, 10])
+        for (const way of [1, -1]) {
+          const g = lanes(n, (i, R) => k * R * (way > 0 ? 1 : 2) + way * i * W);
+          expect(allParallel(g, n), `n ${n} k ${k} way ${way}`).toEqual(Array(n - 1).fill(true));
+          const smallest = Array.from({ length: n }, (_, i) => Math.min(...radiiOf(g, i)));
+          // Cut down together: they still differ by a lane width, the same way.
+          smallest.slice(1).forEach((r, i) => expect(Math.abs(r - smallest[i]!)).toBeCloseTo(W, 3));
+        }
+  });
+
+  it('eight lanes with the automatic radius are all parallel', () => {
+    const g = lanes(8, () => null);
+    expect(allParallel(g, 8)).toEqual(Array(7).fill(true));
   });
 });

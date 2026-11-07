@@ -137,89 +137,138 @@ function followers(cx: Context): void {
   }
 }
 
-/** The group of two lanes around the curve between them: its centre line, the radius that fits, and the lanes' offsets from it. */
-interface Pair {
-  a: Lane;
+/** Where a lane of a group is: its nodes in the direction of the first lane, and how far it is from it (to the right of that way). */
+interface Member {
+  lane: Lane;
   at: Place;
-  /** Where the centre line is, as the part of the way from `a` to `b`. */
-  t: number;
-  /** The distance between the lanes. */
-  D: number;
+  x: number;
 }
 
-/** The centre line of a pair as a lane of its own (two equal arcs of the radius `Rs`, null: the widest). */
-function centre({ a, at, t }: Pair, Rs: number | null, Rmax?: number): Lane | null {
+/** Lanes that touch one another in a row, the first one and the others seen in its direction. */
+interface Group {
+  members: Member[];
+  /** The member farthest from the first, and the centre line between them (as a part of the way to it). */
+  far: Member;
+  t: number;
+}
+
+/** The members of a group around a centre line `c` (offsets from the first lane), as one lane of its own with the radius `Rs` (null: the widest). */
+function centre({ members, far, t }: Group, Rs: number | null, Rmax?: number): Lane | null {
+  const first = members[0]!;
   const mix = (u: PathNode, v: PathNode): PathNode => ({
     ...add(u, mul(sub(v, u), t)),
     th: u.th,
   });
-  const [p, q] = [mix(a.p, at.p), mix(a.q, at.q)];
-  const E = reverseEdge({ p, q, Rs }, a.E.s1);
-  return E && { edge: a.edge, p, q, E: Rmax ? { ...E, Rmax } : E };
+  const [p, q] = [mix(first.lane.p, far.at.p), mix(first.lane.q, far.at.q)];
+  const E = reverseEdge({ p, q, Rs }, first.lane.E.s1);
+  return E && { edge: first.lane.edge, p, q, E: Rmax ? { ...E, Rmax } : E };
 }
 
-/** Both lanes of a pair around a centre line of the radius `Rc`, if they fit. */
-function around(pair: Pair, Rc: number | null, Rmax?: number): [TwoArcEdge, TwoArcEdge] | null {
-  const c = centre(pair, Rc, Rmax);
-  const ea = c && besideAt(c, { p: pair.a.p, q: pair.a.q, against: false });
-  const eb = c && besideAt(c, pair.at);
-  return ea && eb ? [ea, eb] : null;
+/** The curves of all the lanes of a group around a centre line of the radius `Rc`, if they all fit. */
+function around(group: Group, Rc: number | null, Rmax?: number): Map<number, TwoArcEdge> | null {
+  const c = centre(group, Rc, Rmax);
+  const shapes = new Map<number, TwoArcEdge>();
+  for (const m of group.members) {
+    const E = c && besideAt(c, m.at);
+    if (!E) return null;
+    shapes.set(m.lane.edge.id, E);
+  }
+  return shapes;
 }
 
-/** The largest radius of the centre line at which both lanes fit (bisection, the fit is monotone). */
-function widest(pair: Pair): number | null {
-  const open = centre(pair, null);
+/** The farthest a lane of the group is from the centre line, as a distance. */
+const reach = ({ members, far, t }: Group) =>
+  Math.max(...members.map((m) => Math.abs(m.x - t * far.x)));
+
+/** The largest radius of the centre line at which all the lanes fit (bisection, the fit is monotone). */
+function widest(group: Group): number | null {
+  const open = centre(group, null);
   if (!open) return null;
-  const lo = RMIN + Math.max(pair.t, 1 - pair.t) * pair.D + SAME_PLACE_M;
-  if (around(pair, open.E.Rmax)) return open.E.Rmax;
-  if (!around(pair, lo)) return null;
+  if (around(group, open.E.Rmax)) return open.E.Rmax;
+  const lo = RMIN + reach(group) + SAME_PLACE_M;
+  if (!around(group, lo)) return null;
   let [fits, over] = [lo, open.E.Rmax];
   for (let i = 0; i < 40; i++) {
     const m = (fits + over) / 2;
-    if (around(pair, m)) fits = m;
+    if (around(group, m)) fits = m;
     else over = m;
   }
   return fits;
 }
 
-/** The pair of two lanes beside each other and where the centre line between them is, from their radii (the smaller arc of each): a lane `x` from the centre has `Rc - |x|`. */
-function pairOf(a: Lane, b: Lane): { pair: Pair; Rc: number | null } | null {
-  const at = inDirectionOf(a, b);
-  const D = Math.abs(dot(sub(at.p, a.p), perp(fromAngle(a.p.th))));
-  const [ra, rb] = [a.edge.radius, b.edge.radius];
-  if (D < SAME_PLACE_M) return null;
-  const diff = ra != null && rb != null ? ra - rb : 0;
-  if (Math.abs(diff) > D + SAME_PLACE_M) return null;
-  const u = Math.min(D, Math.max(0, (D - diff) / 2));
-  const Rc = ra != null ? ra + u : rb != null ? rb + (D - u) : null;
-  return { pair: { a, at, t: ra == null && rb == null ? 0.5 : u / D, D }, Rc };
-}
-
-/** The curves of two lanes around the curve between them, at the radius their own radii give (at most the largest that fits). */
-function around2(a: Lane, b: Lane): [TwoArcEdge, TwoArcEdge] | null {
-  const found = pairOf(a, b);
-  const Rmax = found && widest(found.pair);
-  return found && Rmax ? around(found.pair, Math.min(found.Rc ?? Rmax, Rmax), Rmax) : null;
+/** The lanes of `from` that touch `lane`, with their places in the direction of the first lane. */
+function membersOf(g: Graph, from: Lane[]): Member[] {
+  const first = from[0]!;
+  const dir = perp(fromAngle(first.p.th));
+  const members: Member[] = [{ lane: first, at: { p: first.p, q: first.q, against: false }, x: 0 }];
+  for (const m of members) {
+    for (const lane of from) {
+      if (members.some((o) => o.lane === lane) || !touching(g, m.lane.edge, lane.edge)) continue;
+      const placed = { ...m.lane, p: m.at.p, q: m.at.q };
+      const at = inDirectionOf(placed, lane);
+      members.push({ lane, at, x: dot(sub(at.p, first.p), dir) });
+    }
+  }
+  return members;
 }
 
 /**
- * Two lanes that touch at both ends and are not beside each other as a lane and the curve it
- * follows (the radii differ by more than a lane width, or the bigger does not fit) are the two lanes around one curve between
- * them: the smaller arcs are equal when the radii are (^828). An auto radius is the largest that
- * fits both, a stored one beside an auto one is shared by both, and a radius that is too big is
- * the largest that fits, as for a lone S-curve.
+ * Where the centre line is and its radius, from the stored radii: a lane at the distance `x`
+ * from it has the smaller arc `Rc - |x|` (^828). Null if the stored radii do not fit that.
+ * Without a stored radius the centre line is in the middle and as wide as can be; with one
+ * it is in the middle and the others share the radius; with more it is where they say, and if
+ * they only go up (or down) the biggest lane is the centre line and the biggest one in the group.
+ */
+function centreOf(members: Member[]): { c: number; Rc: number | null } | null {
+  const xs = members.map((m) => m.x);
+  const [lo, hi] = [Math.min(...xs), Math.max(...xs)];
+  const stored = members.filter((m) => m.lane.edge.radius != null).sort((u, v) => u.x - v.x);
+  const [a, b] = [stored[0], stored[stored.length - 1]];
+  if (!a || !b) return { c: (lo + hi) / 2, Rc: null };
+  const mid = (lo + hi) / 2;
+  const raw = a === b ? mid : (a.x + b.x - (a.lane.edge.radius! - b.lane.edge.radius!)) / 2;
+  const c =
+    raw <= a.x + SAME_PLACE_M && a !== b ? lo : raw >= b.x - SAME_PLACE_M && a !== b ? hi : raw;
+  const Rc = a.lane.edge.radius! + Math.abs(a.x - c);
+  const tent = stored.every(
+    (m) => Math.abs(Rc - Math.abs(m.x - c) - m.lane.edge.radius!) < SAME_PLACE_M,
+  );
+  return tent ? { c, Rc } : null;
+}
+
+/** The curves of a row of lanes that touch, around one centre line, at the radius their own radii give (at most the largest that fits). */
+function groupShapes(g: Graph, from: Lane[]): Map<number, TwoArcEdge> | null {
+  const members = membersOf(g, from);
+  const found = members.length > 1 ? centreOf(members) : null;
+  const far = members.reduce((u, v) => (Math.abs(v.x) > Math.abs(u.x) ? v : u));
+  const group = found && { members, far, t: found.c / far.x };
+  const Rmax = group && widest(group);
+  return group && Rmax ? around(group, Math.min(found.Rc ?? Rmax, Rmax), Rmax) : null;
+}
+
+/**
+ * Lanes that touch one another and are not beside each other as a lane and the curve it follows
+ * are the lanes around one curve between or among them (^851): the smaller arcs are equal when
+ * the radii are (also both automatic), an auto radius is the largest that fits all, a stored one
+ * beside an auto one is shared by all, and radii that are too big for the group are cut down
+ * together, as for a lone S-curve (^854, any number of lanes).
  */
 function sharing({ g, lanes, shapes }: Context) {
-  const list = [...lanes.values()];
-  list.forEach((a, i) => {
-    for (const b of list.slice(i + 1)) {
-      const free = !shapes.has(a.edge.id) && !shapes.has(b.edge.id);
-      const E = free && touching(g, a.edge, b.edge) ? around2(a, b) : null;
-      if (!E) continue;
-      shapes.set(a.edge.id, { ...E[0], auto: a.edge.radius == null });
-      shapes.set(b.edge.id, { ...E[1], auto: b.edge.radius == null });
+  const left = [...lanes.values()].filter((l) => !shapes.has(l.edge.id));
+  while (left.length > 1) {
+    const found = groupShapes(g, left);
+    const done = [...(found?.keys() ?? [])];
+    for (const [id, E] of found ?? []) {
+      shapes.set(id, { ...E, auto: lanes.get(id)!.edge.radius == null });
     }
-  });
+    // The lanes of the row are done; if there was none, drop the first lane and look again.
+    const gone = done.length ? done : [left[0]!.edge.id];
+    for (const id of gone)
+      left.splice(
+        left.findIndex((l) => l.edge.id === id),
+        1,
+      );
+  }
 }
 
 /**
