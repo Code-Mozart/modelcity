@@ -1,7 +1,7 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import { nearestParam, sweeps } from '../curves/piece';
 import { SAME_PLACE_M, SAME_WAY } from '../curves/tolerance';
-import type { Piece } from '../curves/types';
+import type { Piece, TwoArcEdge } from '../curves/types';
 import { dist, dot, fromAngle, type Vec } from '../curves/vec';
 import type { GEdge, GNode, Graph } from '../model/graph';
 import { nearestOnPieces } from '../snap/geometry';
@@ -52,19 +52,21 @@ export function touchPoint(pieces: Piece[], n: Placed): Placed | null {
     : null;
 }
 
+/** The way the middle straight of an S-curve or hook runs, also where the arcs meet and it has no length (^823). */
+function middleHeading(E: TwoArcEdge): number | null {
+  if (E.mid) return headingOf({ x: E.mid.ux, y: E.mid.uy });
+  const line = E.pieces.find((p) => p.type === 'line');
+  return line?.type === 'line'
+    ? headingOf({ x: line.Q.x - line.P.x, y: line.Q.y - line.P.y })
+    : null;
+}
+
 /** The inflection points of the S-curves and hooks, with the heading of their middle line (^823). */
 function inflections(g: Graph): { edge: GEdge; at: Placed }[] {
   return g.edges.flatMap((edge) => {
     const E = curveOfEdge(g, edge.id);
-    if (!E || (E.kind !== 'S' && E.kind !== 'H')) return [];
-    const mid = E.pieces.find((p) => p.type === 'line');
-    if (!mid || mid.type !== 'line') return [];
-    return [
-      {
-        edge,
-        at: { x: E.J.x, y: E.J.y, th: headingOf({ x: mid.Q.x - mid.P.x, y: mid.Q.y - mid.P.y }) },
-      },
-    ];
+    const th = E && (E.kind === 'S' || E.kind === 'H') ? middleHeading(E) : null;
+    return E && th !== null && 'J' in E ? [{ edge, at: { x: E.J.x, y: E.J.y, th } }] : [];
   });
 }
 

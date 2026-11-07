@@ -96,11 +96,13 @@ function toChain(g: Graph, list: GEdge[]): Chain {
   };
 }
 
+import { withParallelS } from './parallelS';
+
 const cache = new WeakMap<Graph, Chain[]>();
 
 export function chainsOf(g: Graph): Chain[] {
   let chains = cache.get(g);
-  if (!chains) cache.set(g, (chains = buildChains(g)));
+  if (!chains) cache.set(g, (chains = withParallelS(g, buildChains(g))));
   return chains;
 }
 
