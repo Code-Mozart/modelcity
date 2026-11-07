@@ -39,13 +39,16 @@ export function curveAt(chains: Chain[], { pt, scale, touch }: PointerInfo): Roa
   return hit && !nearNode(hit) ? hit : null;
 }
 
-/** A derived node under the pointer, as a place on its segment, in select mode (^824). */
+/**
+ * A derived node under the pointer, as a place on its segment, in select mode (^824). Not the end
+ * of an arc (`radius`, ^858): that is the radius handle, which is what the pointer takes there.
+ */
 function derivedAt(
   hits: { chains: Chain[]; derived: DerivedNode[] },
   { pt, scale, touch }: PointerInfo,
 ): Extract<Hover, { kind: 'candidate' }> | null {
   const reach = NODE_HIT_PX[touch ? 'touch' : 'mouse'] / scale;
-  const d = hits.derived.find((x) => dist(x, pt) < reach);
+  const d = hits.derived.find((x) => x.kind !== 'radius' && dist(x, pt) < reach);
   const hit = d && nearestOnChains(hits.chains, d, reach);
   return hit ? { kind: 'candidate', hit, derived: true } : null;
 }

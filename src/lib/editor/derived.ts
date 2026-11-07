@@ -1,5 +1,5 @@
 import { LANE_WIDTH_M } from '../curves/lane';
-import { nearestParam, sweeps } from '../curves/piece';
+import { nearestParam, pointOn, sweeps } from '../curves/piece';
 import { SAME_PLACE_M, SAME_WAY } from '../curves/tolerance';
 import type { Piece, TwoArcEdge } from '../curves/types';
 import { dist, dot, fromAngle, type Vec } from '../curves/vec';
@@ -13,8 +13,8 @@ import { curveOfEdge } from './chains';
  */
 export interface DerivedNode extends GNode {
   edge: number;
-  /** `touch`: a node touches the segment there (^822); `inflection`: the inflection point of an S-curve or hook (^823). */
-  kind: 'touch' | 'inflection';
+  /** `touch`: a node touches the segment there (^822); `inflection`: the inflection point of an S-curve or hook (^823); `radius`: an end of an arc that touches something (^858). */
+  kind: 'touch' | 'inflection' | 'radius';
 }
 
 /** The most rounds of the cascade: each one finds the nodes that the nodes of the round before derive (^812). */
@@ -77,6 +77,29 @@ export const curvesOf = (g: Graph) =>
     return pieces ? [{ edge, pieces, box: boxOf(pieces) }] : [];
   });
 
+/** Where a node, real or derived, is touched by a node or a segment (^818). */
+function isTouched(g: Graph, curves: ReturnType<typeof curvesOf>, at: Placed): boolean {
+  const node = (n: Placed) =>
+    Math.abs(dist(n, at) - LANE_WIDTH_M) < SAME_PLACE_M &&
+    Math.abs(dot(fromAngle(n.th), fromAngle(at.th))) > 1 - SAME_WAY;
+  return (
+    g.nodes.some(node) ||
+    curves.some((c) => near(c.box, at, LANE_WIDTH_M + SAME_PLACE_M) && touchPoint(c.pieces, at))
+  );
+}
+
+/** The ends of the arcs of the segments, with the way the segment runs there. */
+function arcEnds(curves: ReturnType<typeof curvesOf>): { edge: GEdge; at: Placed }[] {
+  return curves.flatMap(({ edge, pieces }) =>
+    pieces.filter(sweeps).flatMap((arc) =>
+      [0, 1].map((t) => {
+        const s = pointOn(arc, t);
+        return { edge, at: { x: s.x, y: s.y, th: headingOf({ x: s.tx, y: s.ty }) } };
+      }),
+    ),
+  );
+}
+
 /** The nodes a node derives: one on each segment it touches (^822). */
 function touched(
   curves: { edge: GEdge; pieces: Piece[]; box: ReturnType<typeof boxOf> }[],
@@ -91,7 +114,7 @@ function touched(
 }
 
 /**
- * The derived nodes of a graph (^822, ^823): the inflection points, and wherever a node, real or
+ * The derived nodes of a graph (^822, ^823): the inflection points, the ends of arcs where something touches them (^858), and wherever a node, real or
  * derived, touches a segment, a node on it (it touches that node in turn, so they form a tower,
  * ^819). Derived nodes touch further segments, so the rule cascades to any number of lanes beside
  * each other (^812). Derived from the graph, never stored.
@@ -108,6 +131,7 @@ export function derivedNodes(g: Graph): DerivedNode[] {
     return node;
   };
   inflections(g).forEach(({ edge, at }) => add(edge, at, 'inflection'));
+  arcEnds(curves).forEach(({ edge, at }) => isTouched(g, curves, at) && add(edge, at, 'radius'));
   let frontier: Placed[] = [...g.nodes, ...out];
   for (let round = 0; round < MAX_ROUNDS && frontier.length; round++) {
     frontier = frontier.flatMap((n) => touched(curves, n, add));

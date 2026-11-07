@@ -7,3 +7,10 @@ export const SAME_PLACE_M = 1e-3;
 
 /** How near to 1 the dot product of two directions must be for them to be the same or the opposite way (about 0.003°). */
 export const SAME_WAY = 1e-9;
+
+/**
+ * How near (meters) two radii must be to count as the same, or as a lane width apart: a radius
+ * that was snapped to a curve carries the millimeter of the nodes magnified (by 1 / (1 - cos a)
+ * for a bend of the angle a), so a millimeter is too fine for it (^860). Assumed, not decided.
+ */
+export const SAME_RADIUS_M = 1e-2;
