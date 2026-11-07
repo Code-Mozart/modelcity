@@ -15,8 +15,8 @@ export type TowerCapsule = Vec[];
 export const CAPSULE_PX = 10;
 /** The line of the capsule: the thinnest drawn (the grid), in pixels (^820). */
 const CAPSULE_LINE_PX = 1;
-/** The bars on its skin (^350, ^820): a quarter of the diameter of a node dot, as they were before the capsule (1.4 px and 2.25 px were too thin to see, user). */
-const BAR_PX = 2.75;
+/** The bars on its skin (^820): the diameter of a node dot, twice what a quarter of it was (1.4 px, 2.25 px and 2.75 px were too thin to read, user). */
+const BAR_PX = 5.5;
 
 /**
  * A hollow capsule around the nodes of a tower (^820): a line from the first to the last node, the
