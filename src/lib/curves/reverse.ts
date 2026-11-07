@@ -51,7 +51,11 @@ interface SShape {
 }
 
 /** The S-curve of the corners and the radii: stubs, arcs and the middle line. */
-function sShape(p: PathNode, q: PathNode, M: MidLine, c: Corners, shape: SShape): TwoArcEdge {
+function sShape(
+  on: { p: PathNode; q: PathNode; M: MidLine; c: Corners },
+  shape: SShape,
+): TwoArcEdge {
+  const { p, q, M, c } = on;
   const { s1, R1, R2 } = shape;
   const T1 = fromAngle(p.th);
   const T2 = fromAngle(q.th);
@@ -98,7 +102,7 @@ export function reverseEdge({ p, q, Rs }: EdgeInput, s1: Dir, mid0?: MidLine): T
   const tn2 = Math.tan(Math.abs(k.f2) / 2);
   const Rmax = Math.min(k.c.a1 / tn1, k.c.b2 / tn2, k.c.L / (tn1 + tn2));
   const R = limitRadius(Rs, Rmax);
-  return sShape(p, q, M, k.c, { s1, R1: R, R2: R, Rmax, auto: Rs == null });
+  return sShape({ p, q, M, c: k.c }, { s1, R1: R, R2: R, Rmax, auto: Rs == null });
 }
 
 /**
@@ -116,5 +120,5 @@ export function twoRadiiEdge(
   const t1 = shape.R1 * Math.tan(Math.abs(k.f1) / 2);
   const t2 = shape.R2 * Math.tan(Math.abs(k.f2) / 2);
   const fits = t1 <= k.c.a1 + 1e-6 && t2 <= k.c.b2 + 1e-6 && t1 + t2 <= k.c.L + 1e-6;
-  return fits ? sShape(p, q, on.mid, k.c, { s1: on.s1, ...shape }) : null;
+  return fits ? sShape({ p, q, M: on.mid, c: k.c }, { s1: on.s1, ...shape }) : null;
 }

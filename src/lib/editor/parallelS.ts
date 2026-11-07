@@ -3,7 +3,7 @@ import { RMIN } from '../curves/radius';
 import { twoRadiiEdge } from '../curves/reverse';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import type { Arc, Edge, MidLine, PathNode, TwoArcEdge } from '../curves/types';
-import { add, dist, dot, fromAngle, mul, perp, type Vec } from '../curves/vec';
+import { dist, dot, fromAngle, mul, perp, type Vec } from '../curves/vec';
 import type { GEdge, Graph } from '../model/graph';
 import type { Chain } from './chains';
 import type { EdgeRef } from '../curves/path';
@@ -80,6 +80,43 @@ function beside(a: Lane, b: Lane): TwoArcEdge | null {
 /** The radius a lane has: what is stored, or the largest that fits (auto, ^8). */
 const valueOf = (l: Lane) => l.edge.radius ?? l.E.Rmax;
 
+/** The S-curves of the chains with their end nodes, by edge id. */
+function lanesOf(g: Graph, chains: Chain[]): Map<number, Lane> {
+  const lanes = new Map<number, Lane>();
+  for (const c of chains) {
+    c.edges.forEach((ref, i) => {
+      const edge = g.edges.find((e) => e.id === c.edgeIds[i]);
+      if (edge && isS(ref.E)) lanes.set(edge.id, { edge, p: ref.p, q: ref.q, E: ref.E });
+    });
+  }
+  return lanes;
+}
+
+/** The curve of the lane `b` if it is beside one of the lanes in `shapes` (their current curves, else their own) and its radius fits. */
+function followed(g: Graph, lanes: Map<number, Lane>, shapes: Map<number, TwoArcEdge>, b: Lane) {
+  for (const a of lanes.values()) {
+    if (a.edge.id === b.edge.id || !touching(g, a.edge, b.edge)) continue;
+    const E = beside({ ...a, E: shapes.get(a.edge.id) ?? a.E }, b);
+    if (E && Math.abs(E.R - valueOf(b)) <= SAME_PLACE_M)
+      return { ...E, auto: b.edge.radius == null };
+  }
+  return null;
+}
+
+/** The curves of the lanes that follow another one, found until no lane is left that does (a chain of lanes, in any order). */
+function followers(g: Graph, lanes: Map<number, Lane>): Map<number, TwoArcEdge> {
+  const shapes = new Map<number, TwoArcEdge>();
+  for (let pass = 0, changed = true; changed && pass < lanes.size; pass++) {
+    changed = false;
+    for (const b of lanes.values()) {
+      const E = shapes.has(b.edge.id) ? null : followed(g, lanes, shapes, b);
+      if (E) shapes.set(b.edge.id, E);
+      changed ||= E !== null;
+    }
+  }
+  return shapes;
+}
+
 /**
  * The chains with the S-curves that run beside another one derived from it (^828): a lane that
  * touches another S-curve at both ends (^817) and whose radius is the smaller of the arcs of the
@@ -89,33 +126,8 @@ const valueOf = (l: Lane) => l.edge.radius ?? l.E.Rmax;
  * Only S-curves; the bigger radius is the one the others follow, so no lane follows a smaller one.
  */
 export function withParallelS(g: Graph, chains: Chain[]): Chain[] {
-  const lanes = new Map<number, Lane>();
-  chains.forEach((c) =>
-    c.edges.forEach((ref, i) => {
-      const edge = g.edges.find((e) => e.id === c.edgeIds[i]);
-      if (edge && isS(ref.E)) lanes.set(edge.id, { edge, p: ref.p, q: ref.q, E: ref.E });
-    }),
-  );
-  if (lanes.size < 2) return chains;
-  const shapes = new Map<number, TwoArcEdge>();
-  const current = (id: number): Lane => ({
-    ...lanes.get(id)!,
-    E: shapes.get(id) ?? lanes.get(id)!.E,
-  });
-  for (let pass = 0, changed = true; changed && pass < lanes.size; pass++) {
-    changed = false;
-    for (const b of lanes.values()) {
-      if (shapes.has(b.edge.id)) continue;
-      for (const a of lanes.values()) {
-        if (a.edge.id === b.edge.id || !touching(g, a.edge, b.edge)) continue;
-        const E = beside(current(a.edge.id), b);
-        if (!E || Math.abs(E.R - valueOf(b)) > SAME_PLACE_M) continue;
-        shapes.set(b.edge.id, { ...E, auto: b.edge.radius == null });
-        changed = true;
-        break;
-      }
-    }
-  }
+  const lanes = lanesOf(g, chains);
+  const shapes = lanes.size < 2 ? new Map<number, TwoArcEdge>() : followers(g, lanes);
   if (!shapes.size) return chains;
   return chains.map((c) => ({
     ...c,

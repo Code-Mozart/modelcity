@@ -22,23 +22,22 @@ const lanes = (n: number, radii?: (i: number, R: number) => number | null): Grap
   return g;
 };
 const edge = (g: Graph, i: number) => g.edges[i]!;
-const arcs = (g: Graph, i: number) =>
-  curveOfEdge(g, i)!.pieces.filter((p) => p.type === 'arc' && Math.abs(p.da) > 1e-3);
+const radiiOf = (g: Graph, i: number) =>
+  curveOfEdge(g, i)!
+    .pieces.filter((p) => p.type === 'arc' && Math.abs(p.da) > 1e-3)
+    .map((p) => (p.type === 'arc' ? p.r : 0));
 
 describe('S-curves beside each other are one moved copy of the other (^828)', () => {
   it('two lanes: the second is concentric with the first, so they are parallel', () => {
     const g = lanes(2);
     expect(parallel(g, edge(g, 0), edge(g, 1))).toBe(true);
-    const [a, b] = [arcs(g, 0), arcs(g, 1)];
-    expect(a).toHaveLength(2);
-    expect(b).toHaveLength(2);
+    const [own, beside] = [radiiOf(g, 0), radiiOf(g, 1)];
+    expect(own).toHaveLength(2);
     // The radii differ by one lane width, one bigger and one smaller (R - w and R + w).
-    const radii = b.map((x) => (x.type === 'arc' ? x.r : 0));
-    const own = a.map((x) => (x.type === 'arc' ? x.r : 0));
-    expect(radii.map((r, k) => Math.abs(r - own[k]!)).every((d) => Math.abs(d - W) < 1e-6)).toBe(
-      true,
+    expect(beside.map((r, k) => Math.abs(r - own[k]!))).toEqual(
+      [W, W].map((w) => expect.closeTo(w, 6)),
     );
-    expect(Math.min(...radii)).toBeCloseTo(own[0]! - W, 6);
+    expect(Math.min(...beside)).toBeCloseTo(own[0]! - W, 6);
   });
 
   it('the inflection points are derived nodes that form a tower', () => {
@@ -46,7 +45,8 @@ describe('S-curves beside each other are one moved copy of the other (^828)', ()
     const d = derivedNodes(g).filter((n) => n.kind === 'inflection');
     expect(d).toHaveLength(3);
     const towers = towersOf(withDerived(g, derivedNodes(g)));
-    expect(towers.some((t) => t.length === 3 && t.every((n) => n.id < 0))).toBe(true);
+    const derivedTower = (ids: number[]) => ids.length === 3 && ids.every((id) => id < 0);
+    expect(towers.some((t) => derivedTower(t.map((n) => n.id)))).toBe(true);
   });
 
   it('three and four lanes follow one another', () => {
@@ -59,7 +59,7 @@ describe('S-curves beside each other are one moved copy of the other (^828)', ()
   it('a lane whose radius does not fit is an S-curve of its own with two equal arcs, not parallel', () => {
     const g = lanes(2, (i, R) => (i === 0 ? null : R - W - 1));
     expect(parallel(g, edge(g, 0), edge(g, 1))).toBe(false);
-    const radii = arcs(g, 1).map((x) => (x.type === 'arc' ? x.r : 0));
+    const radii = radiiOf(g, 1);
     expect(radii[0]).toBeCloseTo(radii[1]!, 6);
   });
 });
