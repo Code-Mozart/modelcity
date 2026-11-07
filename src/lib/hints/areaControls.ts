@@ -6,6 +6,7 @@ import {
   key,
   lmb,
   onCurve,
+  onDerived,
   onSelection,
   rmb,
   select,
@@ -25,6 +26,14 @@ const HANDLE_ROWS: C[] = [
   dragRow(697, 'head'),
   dragRow(695, 'ctrl'),
   dragRow(696, 'rad'),
+  // A derived node is made real by dragging it (^824).
+  {
+    hat: 824,
+    input: mouse('lmb', true),
+    on: (f) => select(f) && onDerived(f),
+    listens: always,
+    says: () => 'realize node',
+  },
   {
     hat: 489,
     input: rmb,

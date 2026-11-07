@@ -41,6 +41,8 @@ export interface Hint {
 /** What the pointer is over, for contextual hints. */
 export type HintTarget =
   | { kind: 'empty' }
+  /** A derived node (^824): a drag makes it a real node. */
+  | { kind: 'derived'; lane?: boolean; onSelection?: boolean }
   /** `picked`: how many of the curve's two nodes are selected. */
   | { kind: 'curve'; picked?: number; act?: CurveAction; lane?: boolean; onSelection?: boolean }
   | {

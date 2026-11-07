@@ -84,14 +84,12 @@ export function drawCircles(f: Frame, { E }: EdgeRef, pal: Palette) {
 }
 
 /**
- * Derived construction points, part of the scaffold (^51, ^60): the inflection point of an S or
- * hook. The handles (the bend's point, the corners of a hook or of an S, the radius points) are
+ * Derived construction points, part of the scaffold (^51, ^60): the corners of an S or hook (the
+ * inflection point is a derived node, a skeleton gizmo, ^823). The handles (the bend's point, the corners of a hook or of an S, the radius points) are
  * drawn separately.
  */
 export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   if (E.kind === 'line' || E.kind === 'C') return;
-  // Derived, not draggable: a ring like the corners of a hook (^260).
-  ring(f.ctx, toScreen(f, E.J), 5.5, { color: pal.orange, width: 2 });
   // The corners of an S-curve and of a hook are derived too: rings, not draggable (^105, ^840).
   for (const k of [E.k1, E.k2]) {
     if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.orange, width: 2 });

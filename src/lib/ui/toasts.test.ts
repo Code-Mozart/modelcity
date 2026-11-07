@@ -36,3 +36,21 @@ describe('toasts (^232)', () => {
     expect(t.items).toHaveLength(3);
   });
 });
+
+describe('a message that stays while something is wrong (^827)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('stays, changes its text in place, and goes when it is null', () => {
+    const toasts = new Toasts();
+    toasts.keep('violations', { kind: 'error', text: '2 violations' });
+    vi.advanceTimersByTime(TOAST_LONG_MS * 3);
+    expect(toasts.items.map((t) => t.text)).toEqual(['2 violations']);
+    const key = toasts.items[0]!.key;
+    toasts.keep('violations', { kind: 'error', text: '1 violation' });
+    expect(toasts.items).toHaveLength(1);
+    expect(toasts.items[0]).toMatchObject({ key, text: '1 violation' });
+    toasts.keep('violations', null);
+    expect(toasts.items).toEqual([]);
+  });
+});

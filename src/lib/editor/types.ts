@@ -27,7 +27,8 @@ export interface PointerInfo {
  */
 export type Hover =
   | { kind: 'handle'; handle: RoadHandle }
-  | { kind: 'candidate'; hit: RoadHit }
+  /** `derived`: the pointer is on a derived node, which a drag realizes (^824, select mode only). */
+  | { kind: 'candidate'; hit: RoadHit; derived?: boolean }
   | {
       kind: 'preview';
       node: PathNode;
@@ -91,6 +92,8 @@ export type Press =
       flip: boolean;
       /** A radius point in draw mode: the place on the curve a click splits or merges at (^278). */
       curve: RoadHit | null;
+      /** A derived node was made real by this press (^824): a click without moving takes it back. */
+      realized?: boolean;
       undo: Snapshot;
       target: HintTarget;
     }

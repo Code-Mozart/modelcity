@@ -47,6 +47,15 @@ const MAP = () => {
       [100, -60],
       [160, -20],
     ],
+    // Two roads beside each other: the second one touches the first, so a derived node is on the first, at (230, -120).
+    [
+      [200, -120],
+      [260, -120],
+    ],
+    [
+      [230, -117],
+      [250, -117],
+    ],
   ]);
   // The last road turns: a bend with a bend point and radius points (the nodes 5 and 6, the segment 3).
   return { ...g, nodes: g.nodes.map((n) => (n.id === 6 ? { ...n, th: Math.PI / 2 } : n)) };
@@ -77,6 +86,7 @@ export const SCENARIOS: Scenario[] = [
     selections: [[], [0], [0, 1, 2]],
     box: { x: 35, y: 70 },
   },
+  { name: 'select: a derived node', at: { x: 230, y: -120 }, selections: [[], [1]] },
   { name: 'draw: the void', at: { x: 100, y: 100 }, selections: NONE, draw: {} },
   { name: 'draw: curve B C', at: { x: 45, y: 0 }, selections: NONE, draw: {} },
   { name: 'draw: the end node C', at: { x: 60, y: 0 }, selections: NONE, draw: {} },

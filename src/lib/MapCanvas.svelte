@@ -5,7 +5,8 @@
   import { snapOrigins } from './snap/heading';
   import { scaffoldHidden } from './editor/phase';
   import { followingTower } from './editor/sharedRadius';
-  import { barsOf } from './editor/towers';
+  import { barsOf, towersOf } from './editor/towers';
+  import { withDerived } from './editor/derived';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
@@ -43,8 +44,11 @@
     untrack(() => camera.setAnchors(anchors));
   });
 
-  /** The bars of the runs of parallel segments, derived from the graph (^350). */
-  const bars = $derived(barsOf(editor.graph));
+  /** The derived nodes, the graph with them in it, and the towers and bars of that, all derived from the graph (^350, ^822). */
+  const derivedAll = $derived(editor.derived);
+  const seen = $derived(withDerived(editor.graph, derivedAll));
+  const bars = $derived(barsOf(seen));
+  const towers = $derived(towersOf(seen));
 
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
@@ -75,6 +79,8 @@
       headingFrom: headingSourceOrigins(editor),
       snapFrom: snapOrigins(editor.snapped),
       bars: bars,
+      towers: towers,
+      derived: derivedAll,
       tower: followingTower(editor.graph, editor.chains, editor.focus, editor.selection),
       turning: turningOf(editor.chains, editor.press),
     };
