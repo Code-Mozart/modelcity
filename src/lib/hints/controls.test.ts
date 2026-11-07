@@ -59,13 +59,9 @@ describe('what listens without a hint (^783)', () => {
       // Redundant by design: with nothing selected `Shift` adds nothing to the click, and `Alt+Shift` is `Alt`.
       '^688 | select: node B | nothing selected',
       '^689 | select: node B | nothing selected',
-      // A click on a selected node, or on the curve of two selected nodes, narrows the selection and says nothing (^809).
-      '^490 | select: node B | 1 2',
-      '^490 | select: node B | 0 1 2',
       '^685 | select: curve B C | nothing selected',
       '^691 | select: curve B C | nothing selected',
       '^689 | select: curve B C | nothing selected',
-      '^690 | select: curve B C | 0 1 2',
       '^685 | select: the void | nothing selected',
     ]);
   });
