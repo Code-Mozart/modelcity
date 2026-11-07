@@ -49,11 +49,12 @@ function curveTarget(drawn: Drawn, hit: RoadHit, drawing: boolean): HintTarget {
 /** What the control hints are about (^49). */
 export function targetOf(drawn: Drawn, hover: Hover | null, drawing: boolean): HintTarget {
   if (hover?.kind === 'handle') return handleTarget(drawn, hover.handle, drawing);
+  if (hover?.kind === 'candidate' && hover.derived) return { kind: 'derived' };
   return hover?.kind === 'candidate' ? curveTarget(drawn, hover.hit, drawing) : { kind: 'empty' };
 }
 
 export function cursorOf(hover: Hover | null, drawing: boolean): string {
-  if (hover?.kind === 'handle') return 'grab';
+  if (hover?.kind === 'handle' || (hover?.kind === 'candidate' && hover.derived)) return 'grab';
   if (hover?.kind === 'candidate') return drawing ? 'copy' : 'pointer';
   return drawing ? 'crosshair' : 'default';
 }

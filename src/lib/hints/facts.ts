@@ -32,6 +32,7 @@ export const select = (f: Facts) => !f.viewing && !f.drawing;
 export const draw = (f: Facts) => !f.viewing && f.drawing;
 export const onVoid = (f: Facts) => f.target.kind === 'empty';
 export const onCurve = (f: Facts) => f.target.kind === 'curve';
+export const onDerived = (f: Facts) => f.target.kind === 'derived';
 export const lane = (f: Facts) => f.target.kind !== 'empty' && !!f.target.lane;
 export const always = () => true;
 export const some = (f: Facts) => f.selected > 0;

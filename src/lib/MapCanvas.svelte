@@ -6,7 +6,7 @@
   import { scaffoldHidden } from './editor/phase';
   import { followingTower } from './editor/sharedRadius';
   import { barsOf, towersOf } from './editor/towers';
-  import { derivedNodes, withDerived } from './editor/derived';
+  import { withDerived } from './editor/derived';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
@@ -45,7 +45,7 @@
   });
 
   /** The derived nodes, the graph with them in it, and the towers and bars of that, all derived from the graph (^350, ^822). */
-  const derivedAll = $derived(derivedNodes(editor.graph));
+  const derivedAll = $derived(editor.derived);
   const seen = $derived(withDerived(editor.graph, derivedAll));
   const bars = $derived(barsOf(seen));
   const towers = $derived(towersOf(seen));

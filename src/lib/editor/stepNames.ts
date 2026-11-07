@@ -29,6 +29,7 @@ const ACT_NAME = {
 
 /** What a finished press on a handle did: a move, or a click (^216). */
 function dragName(press: Extract<Press, { kind: 'drag' }>): string {
+  if (press.moved && press.realized) return 'realize node';
   if (press.moved) {
     const group = press.group.length;
     const handle = press.drag.handle.type;

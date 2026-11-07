@@ -1,21 +1,13 @@
 import { dragPress, emptyPress } from './press';
-import {
-  droppedNode,
-  finishedGraph,
-  extendTo,
-  mergeInto,
-  curvePress,
-  placePress,
-  flipArmFrom,
-  splitAt,
-} from './ops';
+import * as ops from './ops';
+import { derivedNodes } from './derived';
 import { dropOf } from './drop';
 import { placedAt, snapBase, snapFor, snapPreview } from './snapping';
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { Pins } from './pins.svelte';
-import { nodesRemoval, rightClickRemoval, underHover, type Removal } from './removal';
+import { nodesRemoval, rightClickRemoval, underHover } from './removal';
 import { Timeline, type Move } from './timeline.svelte';
 import type { ControlId } from '../hints/hints';
 import { pressName } from './stepNames';
@@ -23,27 +15,14 @@ import { controlUsed } from './usage';
 import { pointerOf } from './proximity';
 import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { focusOf, hoverAt } from './hits';
-import {
-  chainHandles,
-  chainSegments,
-  chainsOf,
-  hitOfHandle,
-  type RoadHandle,
-  type RoadHit,
-} from './chains';
+import { chainHandles, chainsOf, hitOfHandle, type RoadHandle, type RoadHit } from './chains';
 import { moveOf } from './moves';
+import { hoveredSegmentsOf, movingGroupOf, selectedSegmentsOf } from './views';
 import { phaseOf } from './phase';
 import { onlyFirstNode } from '../model/junction';
 import { withKeys, type Keys } from './modifiers';
 import { emptyGraph, nodeOf, roundToMm, sameGraph, type Graph } from '../model/graph';
-import {
-  afterEmptyClick,
-  hoveredEdges,
-  selectedSegments,
-  sameSelection,
-  afterHandleClick,
-  type Band,
-} from './selection';
+import { afterEmptyClick, sameSelection, afterHandleClick, type Band } from './selection';
 
 export type { Hover, PointerInfo } from './types';
 
@@ -128,6 +107,8 @@ export class Editor {
   /** The chains of the graph, the shape the curve code and the drawing work on (^106). */
   chains = $derived(chainsOf(this.graph));
   edges = $derived(this.chains.map((c) => c.edges));
+  /** The derived nodes of the graph (^822, ^823), never stored. */
+  derived = $derived(derivedNodes(this.graph));
   /** The skeleton of all roads, for the camera bounds (^37, ^62). */
   anchors = $derived(skeletonAnchors(this.chains));
   cursor = $derived(cursorOf(this.hover, this.drawing));
@@ -200,10 +181,7 @@ export class Editor {
 
   deleteSelected() {
     if (this.selection.length) this.use('delete-selected');
-    this.removal(nodesRemoval(this.selection));
-  }
-
-  private removal(r: Removal | null) {
+    const r = nodesRemoval(this.selection);
     if (r) this.edit(r.name, r.change);
   }
 
@@ -244,7 +222,7 @@ export class Editor {
     if (this.mode === 'select') return;
     const before = this.snapshot();
     // A split on a curve that was finished at once gives the curve back (an inserted node would stay), unless the click was on the inserted node (^276).
-    this.graph = finishedGraph(this.graph, keep ? null : this.splitUndo);
+    this.graph = ops.finishedGraph(this.graph, keep ? null : this.splitUndo);
     this.leaveDrawing(toSelect || this.active === null);
     this.commit(before, onlyFirstNode(before) ? 'cancel first node' : 'finish road');
   }
@@ -255,13 +233,33 @@ export class Editor {
     if (this.viewing) return;
     const h = this.hover;
     if (h?.kind === 'handle') return this.grab(h.handle, info);
-    const hit = h?.kind === 'candidate' ? h.hit : null;
+    if (h?.kind !== 'candidate') return this.pressOn(null, info);
+    if (h.derived) return this.realize(h.hit, info);
+    this.pressOn(h.hit, info);
+  }
+
+  /** A press on a curve, or on the void when `hit` is null: select mode starts a click or a box, draw mode places or inserts a node. */
+  private pressOn(hit: RoadHit | null, info: PointerInfo) {
     if (!this.drawing) {
       this.press = emptyPress(this.snapshot(), info, hit);
       return;
     }
-    const place = () => placePress(this.snapshot(), placedAt(this.snapped, info));
-    this.begin(hit ? curvePress(this.snapshot(), hit) : place());
+    const place = () => ops.placePress(this.snapshot(), placedAt(this.snapped, info));
+    this.begin(hit ? ops.curvePress(this.snapshot(), hit) : place());
+  }
+
+  /**
+   * The left button went down on a derived node (^824): it becomes a real node (the segment is split
+   * there, its curve does not change) and is dragged like any node. Without a move it is taken back
+   * when the button is released.
+   */
+  private realize(hit: RoadHit, info: PointerInfo) {
+    const before = this.snapshot();
+    const made = ops.insertAt(before, hit);
+    this.restore(made.drawn);
+    const handle = this.handles(info.scale).find((h) => h.type === 'node' && h.id === made.id);
+    if (handle) this.grab(handle, info);
+    if (this.press?.kind === 'drag') this.press = { ...this.press, undo: before, realized: true };
   }
 
   private grab(handle: RoadHandle, info: PointerInfo) {
@@ -281,7 +279,7 @@ export class Editor {
   private clickedCurve(press: Extract<Press, { kind: 'place' }>) {
     if (press.moved || !press.then) return;
     if (press.then === 'split') {
-      this.restore(splitAt(this.snapshot(), press.id));
+      this.restore(ops.splitAt(this.snapshot(), press.id));
       this.splitUndo = { before: press.undo.graph, after: this.graph };
     } else this.merge(press.id);
   }
@@ -302,7 +300,7 @@ export class Editor {
   private hoverNow(): Hover | null {
     const info = this.lastInfo;
     if (this.press || !info || this.viewing) return null;
-    const hits = { handles: this.handles(info.scale), chains: this.chains };
+    const hits = { handles: this.handles(info.scale), chains: this.chains, derived: this.derived };
     return hoverAt(this.snapshot(), hits, info, this.drawing);
   }
 
@@ -312,25 +310,15 @@ export class Editor {
   }
 
   /** The segments whose two nodes are selected, as (chain, index) pairs (^133). */
-  get selectedSegments() {
-    return chainSegments(this.chains, selectedSegments(this.graph, this.selection));
-  }
-
+  selectedSegments = $derived(selectedSegmentsOf(this.chains, this.graph, this.selection));
   /** The segments under the pointer that get an outline: the one, or with Alt held the whole branch (^99, ^128). */
-  get hoverSegments() {
-    const edges = hoveredEdges(this.graph, this.hover, this.lastInfo?.alt ?? false);
-    return chainSegments(this.chains, edges);
-  }
-
+  hoverSegments = $derived(
+    hoveredSegmentsOf(this.chains, this.graph, this.hover, this.lastInfo?.alt ?? false),
+  );
   /** The curve a merge into the node or curve under the pointer would add (^123, ^125). */
-  get mergePreview() {
-    return mergePreview(this.snapshot(), this.hover);
-  }
-
+  mergePreview = $derived(mergePreview(this.snapshot(), this.hover));
   /** Moving several nodes hides all scaffolds meanwhile (^78). */
-  get movingGroup() {
-    return this.press?.kind === 'drag' && this.press.moved && this.press.group.length > 0;
-  }
+  movingGroup = $derived(movingGroupOf(this.press));
 
   private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
     const next = afterEmptyClick(this.selection, press);
@@ -342,23 +330,23 @@ export class Editor {
   private clickedHandle(press: Extract<Press, { kind: 'drag' }>) {
     const id = press.id;
     this.selection = afterHandleClick(this.selection, press);
-    if (press.flip) this.restore(flipArmFrom(this.snapshot(), id));
+    if (press.flip) this.restore(ops.flipArmFrom(this.snapshot(), id));
     else if (press.curve) this.clickedRadius(press.curve);
     else if (press.act === 'finish' || press.act === 'cancel') this.finishRoad(false, true);
-    else if (press.act === 'extend') this.edit('extend road', (d) => extendTo(d, id));
-    else if (press.act === 'split') this.restore(splitAt(this.snapshot(), id));
+    else if (press.act === 'extend') this.edit('extend road', (d) => ops.extendTo(d, id));
+    else if (press.act === 'split') this.restore(ops.splitAt(this.snapshot(), id));
     else if (press.act === 'merge' || press.act === 'close') this.merge(id);
   }
 
   /** A click on a radius point splits or merges there, as on the curve (^278). */
   private clickedRadius(hit: RoadHit) {
-    const r = curvePress(this.snapshot(), hit);
+    const r = ops.curvePress(this.snapshot(), hit);
     this.restore(r.drawn);
     this.clickedCurve(r.press);
   }
 
   private merge(id: number) {
-    this.restore(mergeInto(this.snapshot(), id));
+    this.restore(ops.mergeInto(this.snapshot(), id));
     this.finishRoad();
   }
 
@@ -375,13 +363,20 @@ export class Editor {
     const press = this.endPress();
     if (!press) return;
     this.batching = true;
-    if (drop && press.kind === 'drag') this.restore(droppedNode(this.snapshot(), press.id, drop));
-    if (press.kind === 'drag' && !press.moved) this.clickedHandle(press);
+    if (press.kind === 'drag') this.endDrag(press, drop);
     if (press.kind === 'empty' && !press.moved) this.clickedEmpty(press);
     if (press.kind === 'place') this.clickedCurve(press);
     this.batching = false;
     this.commit(press.undo, pressName(press));
     this.use(controlUsed(press));
+  }
+
+  /** A node dropped on a node or a curve merges; a click without moving is a click on the handle, or takes a realized node back (^824). */
+  private endDrag(press: Extract<Press, { kind: 'drag' }>, drop: ReturnType<typeof dropOf>) {
+    if (drop) this.restore(ops.droppedNode(this.snapshot(), press.id, drop));
+    if (press.moved) return;
+    if (press.realized) this.restore(press.undo);
+    else this.clickedHandle(press);
   }
 
   /** Abort what the left button was doing (a second finger came down, or Esc, ^295). */
@@ -396,7 +391,7 @@ export class Editor {
     if (this.viewing) return;
     this.lastInfo = info;
     const r = rightClickRemoval(this.graph, this.selection, underHover(this.hover), info.alt);
-    if (r) this.removal(r);
+    if (r) this.edit(r.name, r.change);
     else this.finishRoad();
   }
 }
