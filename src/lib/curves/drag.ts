@@ -18,9 +18,13 @@ export interface AngleSnap {
   from: number;
 }
 
+/** The curve of the dragged segment at a radius, where it is not the one the curve code builds alone (an S-curve beside another one, ^828); null if there is none. */
+export type BuildAt = (R: number) => Edge | null;
+
 export interface DragModifiers {
   /** Null when snapping is off. */
   angle: AngleSnap | null;
+  build?: BuildAt;
 }
 
 /** Closest the blue point may get to a node, meters. */
@@ -104,10 +108,11 @@ function nearestRadius(Rmax: number, pointAt: (R: number) => Vec | null, pt: Vec
 function handlePoint(
   path: Path,
   at: { i: number; k: number; t: number },
-  R: number,
-  kind: Edge['kind'],
+  how: { R: number; kind: Edge['kind']; build?: BuildAt },
 ): Vec | null {
-  const E = buildEdge(path.nodes[at.i]!, path.nodes[at.i + 1]!, R);
+  const { R, kind } = how;
+  const E = how.build ? how.build(R) : buildEdge(path.nodes[at.i]!, path.nodes[at.i + 1]!, R);
+  if (!E) return null;
   const piece = E.kind === kind ? E.pieces[at.k] : undefined;
   return piece && sweeps(piece) ? pointOn(piece, at.t) : null;
 }
@@ -116,16 +121,23 @@ function handlePoint(
  * The radius at which the handle (an end or the middle of an arc, ^128) is nearest to the pointer,
  * so the handle follows the cursor whichever way the geometry moves it (^17).
  */
-function radiusNearest(path: Path, at: { i: number; k: number; t: number }, pt: Vec) {
-  const E0 = edgeAt(path, at.i);
+function radiusNearest(
+  path: Path,
+  at: { i: number; k: number; t: number },
+  how: { pt: Vec; build?: BuildAt },
+) {
+  const own = edgeAt(path, at.i);
+  const start = path.radii[at.i] ?? (own.kind === 'line' ? 1 : own.Rmax);
+  const E0 = how.build?.(start) ?? own;
   if (E0.kind === 'line') return null;
-  return nearestRadius(E0.Rmax, (R) => handlePoint(path, at, R, E0.kind), pt);
+  const build = how.build;
+  return nearestRadius(E0.Rmax, (R) => handlePoint(path, at, { R, kind: E0.kind, build }), how.pt);
 }
 
-function dragRadius(path: Path, drag: DragState, pt: Vec): Path {
+function dragRadius(path: Path, drag: DragState, how: { pt: Vec; build?: BuildAt }): Path {
   const { i, k = 0, t = 0.5 } = drag.handle;
   const E = edgeAt(path, i);
-  const R = E.kind === 'line' ? null : radiusNearest(path, { i, k, t }, pt);
+  const R = E.kind === 'line' ? null : radiusNearest(path, { i, k, t }, how);
   if (R == null || E.kind === 'line') return path;
   return withRadius(path, i, toRequested(R, E.Rmax));
 }
@@ -141,6 +153,6 @@ export function applyDrag(path: Path, drag: DragState, pt: Vec, mod: DragModifie
     case 'ctrl':
       return dragCorner(path, i, pt);
     case 'rad':
-      return dragRadius(path, drag, pt);
+      return dragRadius(path, drag, { pt, build: mod.build });
   }
 }

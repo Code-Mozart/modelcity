@@ -1,9 +1,9 @@
-import { dragHeading, type AngleSnap } from '../curves/drag';
+import { dragHeading, type AngleSnap, type BuildAt } from '../curves/drag';
 import { dist, type Vec } from '../curves/vec';
 import { mergeNodes } from '../model/merge';
 import type { Drop } from './drop';
 import { withSharedRadius } from './press';
-import { concentricWithParallel } from './sharedRadius';
+import { concentricWithParallel, groupBuilder } from './sharedRadius';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
 import { nodeAtSample, type RoadHandle, type RoadHit } from './chains';
@@ -185,8 +185,9 @@ export function dragStep(
   // The angle steps count from the heading before the drag (^315).
   const from = nodeOf(press.undo.graph, press.id)?.th ?? 0;
   const angle = info.ctrl ? null : { scale: info.scale, from };
+  const build = handle.type === 'rad' ? groupBuilder(press, d.selection) : undefined;
   const next = withSharedRadius(
-    snappedDrag(d.graph, handle, { angle, info, original: from }, to),
+    snappedDrag(d.graph, handle, { angle, info, original: from, build }, to),
     d.selection,
     press,
   );
@@ -204,10 +205,13 @@ export function dragStep(
 function snappedDrag(
   g: Graph,
   handle: RoadHandle,
-  how: { angle: AngleSnap | null; info: PointerInfo; original: number },
+  how: { angle: AngleSnap | null; info: PointerInfo; original: number; build?: BuildAt },
   to: Placement | null,
 ): Graph {
-  const dragged = dragGraph(g, handle, to?.pt ?? how.info.pt, { angle: how.angle });
+  const dragged = dragGraph(g, handle, to?.pt ?? how.info.pt, {
+    angle: how.angle,
+    build: how.build,
+  });
   // A snapped heading is copied (^313); a node that snapped takes the heading of the place (^254).
   const th = to ? headingOf(nodeOf(dragged, handle.id), to) : null;
   if (handle.type === 'node') return withNode(dragged, handle.id, { th: th ?? how.original });

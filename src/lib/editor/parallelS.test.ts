@@ -4,6 +4,7 @@ import { withRadius, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
 import { derivedNodes, withDerived } from './derived';
 import { parallel } from './parallel';
+import { concentricWithParallel } from './sharedRadius';
 import { towersOf } from './towers';
 
 const W = 3;
@@ -62,5 +63,14 @@ describe('S-curves beside each other are one moved copy of the other (^828)', ()
     expect(parallel(g, edge(g, 0), edge(g, 1))).toBe(false);
     const radii = radiiOf(g, 1);
     expect(radii[0]).toBeCloseTo(radii[1]!, 6);
+  });
+});
+
+describe('an S-curve built beside another one is built concentric (^828)', () => {
+  it('its radius is the smaller arc of the other one less a lane width', () => {
+    const g = lanes(2, (i) => (i === 0 ? null : null));
+    expect(parallel(g, edge(g, 0), edge(g, 1))).toBe(false);
+    const built = concentricWithParallel(g, 1);
+    expect(parallel(built, edge(built, 0), edge(built, 1))).toBe(true);
   });
 });
