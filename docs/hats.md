@@ -1,4 +1,4 @@
-next: ^852
+next: ^854
 
 # Hats
 
@@ -614,6 +614,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^849 | feature | done (milestone ^828, PR #46) | **An S-curve built beside another one is built concentric (^281, extended):** its radius is the smaller arc of the S-curve beside it less a lane width (`besideS`), so it is that curve moved at once. |
 | ^850 | image | reference (user) | **Example project "S-curves" (user):** `docs/mocks/hat850.json`: two S-curves between two towers each, both with the automatic radius, so the same radius; they should be parallel (v0.46.0 built them as two shifted copies). |
 | ^851 | feature | done (milestone ^828, PR #46) | **Two S-curves beside each other with the same radius are parallel (user, ^826 corrected):** the stored radius is the smaller arc; two lanes with the same smaller arc (also both automatic) are the two lanes around one curve between them (arcs `R - w/2` and `R + w/2`, the one turning inside is the smaller). Automatic = the largest radius at which both fit; automatic beside a stored radius takes it; radii that differ by up to a lane width give the centre line in between. |
+| ^852 | image | reference (user) | **Example project "parallel nodes test" (user):** `docs/mocks/hat852.json`: two bends with the automatic radius, built by snapping to the offset curve, whose nodes touch at both ends; they were not parallel. |
+| ^853 | bug | fixed (PR #46) | **Curves whose nodes touch were not parallel when the radius is large (user, ^852):** parallel was decided by the arc centers being within 1 mm, but a center is far away (here 123 m) and magnifies the 0.3 mm rounding of the nodes to 2.8 mm. Now decided in the **position domain**: the arcs turn the same way and the curves run one lane width apart along the whole arc, to within 2 mm (1 mm per touching node, ^247). A radius difference would magnify the node error by 1 / (1 - cos a) (here 2.8 mm, for small angles centimeters), a center by the radius over the distance. A rule: **a relation between nodes is decided where the nodes are (positions), never from a quantity derived from them that magnifies their error (a center, a radius, an angle)**; tested with 300 random bends rounded to the millimeter. |
 
 ## Rented ranges
 

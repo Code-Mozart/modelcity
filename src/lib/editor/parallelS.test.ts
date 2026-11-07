@@ -5,7 +5,7 @@ import { graphOf } from '../testing/graphHelpers';
 import { withRadius, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
 import { derivedNodes, withDerived } from './derived';
-import { parallel } from './parallel';
+import { parallel, touching } from './parallel';
 import { concentricWithParallel } from './sharedRadius';
 import { towersOf } from './towers';
 
@@ -110,5 +110,45 @@ describe('S-curves with the same radius are parallel (^851)', () => {
   it('a radius that is too big for the pair is the largest that fits, both stay parallel', () => {
     const g = withRadius(project(), 6, 40);
     expect(sixSeven(g)).toBe(true);
+  });
+});
+
+describe('nodes that touch make parallel segments, however large the radius (^853)', () => {
+  it('the project ^852: two bends of radius 123 m, nodes rounded to the millimeter', () => {
+    const g = fromFile(
+      JSON.parse(readFileSync(new URL('../../../docs/mocks/hat852.json', import.meta.url), 'utf8')),
+    ).graph;
+    expect(parallel(g, g.edges[0]!, g.edges[1]!)).toBe(true);
+  });
+});
+
+describe('any two bends whose nodes touch to the millimeter are parallel (^853)', () => {
+  it('random bends with the nodes rounded to whole millimeters', () => {
+    const bad: number[] = [];
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const mm = (v: number) => Math.round(v * 1000) / 1000;
+    for (let i = 0; i < 300; i++) {
+      const [th0, turn, len] = [rnd() * 6, 0.05 + rnd() * 1.2, 15 + rnd() * 80];
+      const th1 = th0 + turn;
+      const [x1, y1] = [Math.cos(th0 + turn / 2) * len, Math.sin(th0 + turn / 2) * len];
+      const side = (th: number) => [-Math.sin(th) * W, Math.cos(th) * W] as const;
+      const [a, b] = [side(th0), side(th1)];
+      const g = graphOf(
+        [
+          [mm(0), mm(0), th0],
+          [mm(x1), mm(y1), th1],
+          [mm(a[0]), mm(a[1]), th0],
+          [mm(x1 + b[0]), mm(y1 + b[1]), th1],
+        ],
+        [
+          [0, 1, null],
+          [2, 3, null],
+        ],
+      );
+      // The rounding may put the nodes more than a millimeter off: then they do not touch.
+      if (touching(g, edge(g, 0), edge(g, 1)) && !parallel(g, edge(g, 0), edge(g, 1))) bad.push(i);
+    }
+    expect(bad).toEqual([]);
   });
 });
