@@ -1,4 +1,4 @@
-next: ^850
+next: ^852
 
 # Hats
 
@@ -612,6 +612,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^847 | feature | done (milestone ^828, PR #46, v0.46.0; user's idea, ^826 option c) | **S-curves beside each other are one curve moved (user):** an S-curve whose end nodes touch (^817) those of another S-curve, and whose stored radius is the **smaller arc** of the other one moved by one lane width (R minus the lane width), is that curve moved sideways: the same middle line moved, the arcs concentric with radii `R - w` and `R + w`; it is no S-curve of two equal arcs of its own. So such lanes are parallel (^334), and their inflection points (derived nodes, ^823) are one tower (^819), as in the east of ^813. The bigger radius is the one the others follow (`editor/parallelS.ts`, found until no lane is left that follows, in any order); a lane whose radius does not fit is an S-curve of two equal arcs again, so its shape jumps (the price of one stored radius). Hooks are not part of it (out of ^828). |
 | ^848 | feature | done (milestone ^828, PR #46) | **The radius point of an S-curve beside another one follows the pointer (user's ^302, extended):** dragging its radius point moves it along its own (moved) curve while the lanes beside it follow with their offsets (`groupBuilder`, `curves/drag.ts` `BuildAt`), so the point is not looked for on an S-curve of two equal arcs. |
 | ^849 | feature | done (milestone ^828, PR #46) | **An S-curve built beside another one is built concentric (^281, extended):** its radius is the smaller arc of the S-curve beside it less a lane width (`besideS`), so it is that curve moved at once. |
+| ^850 | image | reference (user) | **Example project "S-curves" (user):** `docs/mocks/hat850.json`: two S-curves between two towers each, both with the automatic radius, so the same radius; they should be parallel (v0.46.0 built them as two shifted copies). |
+| ^851 | feature | done (milestone ^828, PR #46) | **Two S-curves beside each other with the same radius are parallel (user, ^826 corrected):** the stored radius is the smaller arc; two lanes with the same smaller arc (also both automatic) are the two lanes around one curve between them (arcs `R - w/2` and `R + w/2`, the one turning inside is the smaller). Automatic = the largest radius at which both fit; automatic beside a stored radius takes it; radii that differ by up to a lane width give the centre line in between. |
 
 ## Rented ranges
 

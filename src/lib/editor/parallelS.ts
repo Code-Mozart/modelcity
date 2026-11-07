@@ -1,9 +1,9 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import { RMIN } from '../curves/radius';
-import { twoRadiiEdge } from '../curves/reverse';
+import { reverseEdge, twoRadiiEdge } from '../curves/reverse';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import type { Arc, Edge, MidLine, PathNode, TwoArcEdge } from '../curves/types';
-import { dist, dot, fromAngle, mul, perp, type Vec } from '../curves/vec';
+import { add, dist, dot, fromAngle, mul, perp, sub, type Vec } from '../curves/vec';
 import type { GEdge, Graph } from '../model/graph';
 import type { Chain } from './chains';
 import type { EdgeRef } from '../curves/path';
@@ -54,15 +54,22 @@ const movedMiddle = (M: MidLine, d: number): MidLine => {
   return { ...M, x: M.x + n.x, y: M.y + n.y };
 };
 
+/** Where a lane runs, in the direction of the lane it is compared with. */
+interface Place {
+  p: PathNode;
+  q: PathNode;
+  against: boolean;
+}
+
 /**
- * The S-curve of the lane `b` if it is the curve of `a` moved sideways (^828): the same middle
- * line moved, the arcs concentric, with the radii `R - d` and `R + d`, so the one that turns inside
- * is the smaller. The lane's own nodes are its ends. Null if it does not fit.
+ * The S-curve at `at` if it is the curve of `a` moved sideways (^828): the same middle line moved,
+ * the arcs concentric, with the radii `R - d` and `R + d`, so the one that turns inside is the
+ * smaller. The nodes of `at` are its ends. Null if it does not fit.
  */
-function beside(a: Lane, b: Lane): TwoArcEdge | null {
+function besideAt(a: Lane, at: Place): TwoArcEdge | null {
   const [arc1, arc2] = [arcOf(a.E, 1), arcOf(a.E, 3)];
   if (!arc1 || !arc2 || !a.E.mid) return null;
-  const { p, q, against } = inDirectionOf(a, b);
+  const { p, q, against } = at;
   const d = dot({ x: p.x - a.p.x, y: p.y - a.p.y }, perp(fromAngle(a.p.th)));
   const R1 = arc1.r - Math.sign(arc1.da) * d;
   const R2 = arc2.r - Math.sign(arc2.da) * d;
@@ -76,6 +83,8 @@ function beside(a: Lane, b: Lane): TwoArcEdge | null {
   );
   return E && (against ? reversed(E) : E);
 }
+
+const beside = (a: Lane, b: Lane) => besideAt(a, inDirectionOf(a, b));
 
 /** The radius a lane has: what is stored, or the largest that fits (auto, ^8). */
 const valueOf = (l: Lane) => l.edge.radius ?? l.E.Rmax;
@@ -92,29 +101,125 @@ function lanesOf(g: Graph, chains: Chain[]): Map<number, Lane> {
   return lanes;
 }
 
+/** What the search for lanes that follow another one works on: the lanes with the curves found so far. */
+interface Context {
+  g: Graph;
+  lanes: Map<number, Lane>;
+  shapes: Map<number, TwoArcEdge>;
+  /** Whether an auto lane takes the radius the group gives it. */
+  lenient: boolean;
+}
+
 /** The curve of the lane `b` if it is beside one of the lanes in `shapes` (their current curves, else their own) and its radius fits. */
-function followed(g: Graph, lanes: Map<number, Lane>, shapes: Map<number, TwoArcEdge>, b: Lane) {
+function followed(cx: Context, b: Lane) {
+  const { g, lanes, shapes, lenient } = cx;
   for (const a of lanes.values()) {
     if (a.edge.id === b.edge.id || !touching(g, a.edge, b.edge)) continue;
     const E = beside({ ...a, E: shapes.get(a.edge.id) ?? a.E }, b);
-    if (E && Math.abs(E.R - valueOf(b)) <= SAME_PLACE_M)
+    // An auto lane takes the radius the group gives it, beside a lane that is in the group already.
+    const takes = lenient && b.edge.radius == null && shapes.has(a.edge.id);
+    if (E && (takes || Math.abs(E.R - valueOf(b)) <= SAME_PLACE_M))
       return { ...E, auto: b.edge.radius == null };
   }
   return null;
 }
 
 /** The curves of the lanes that follow another one, found until no lane is left that does (a chain of lanes, in any order). */
-function followers(g: Graph, lanes: Map<number, Lane>): Map<number, TwoArcEdge> {
-  const shapes = new Map<number, TwoArcEdge>();
+function followers(cx: Context): void {
+  const { lanes, shapes } = cx;
   for (let pass = 0, changed = true; changed && pass < lanes.size; pass++) {
     changed = false;
     for (const b of lanes.values()) {
-      const E = shapes.has(b.edge.id) ? null : followed(g, lanes, shapes, b);
+      const E = shapes.has(b.edge.id) ? null : followed(cx, b);
       if (E) shapes.set(b.edge.id, E);
       changed ||= E !== null;
     }
   }
-  return shapes;
+}
+
+/** The group of two lanes around the curve between them: its centre line, the radius that fits, and the lanes' offsets from it. */
+interface Pair {
+  a: Lane;
+  at: Place;
+  /** Where the centre line is, as the part of the way from `a` to `b`. */
+  t: number;
+  /** The distance between the lanes. */
+  D: number;
+}
+
+/** The centre line of a pair as a lane of its own (two equal arcs of the radius `Rs`, null: the widest). */
+function centre({ a, at, t }: Pair, Rs: number | null, Rmax?: number): Lane | null {
+  const mix = (u: PathNode, v: PathNode): PathNode => ({
+    ...add(u, mul(sub(v, u), t)),
+    th: u.th,
+  });
+  const [p, q] = [mix(a.p, at.p), mix(a.q, at.q)];
+  const E = reverseEdge({ p, q, Rs }, a.E.s1);
+  return E && { edge: a.edge, p, q, E: Rmax ? { ...E, Rmax } : E };
+}
+
+/** Both lanes of a pair around a centre line of the radius `Rc`, if they fit. */
+function around(pair: Pair, Rc: number | null, Rmax?: number): [TwoArcEdge, TwoArcEdge] | null {
+  const c = centre(pair, Rc, Rmax);
+  const ea = c && besideAt(c, { p: pair.a.p, q: pair.a.q, against: false });
+  const eb = c && besideAt(c, pair.at);
+  return ea && eb ? [ea, eb] : null;
+}
+
+/** The largest radius of the centre line at which both lanes fit (bisection, the fit is monotone). */
+function widest(pair: Pair): number | null {
+  const open = centre(pair, null);
+  if (!open) return null;
+  const lo = RMIN + Math.max(pair.t, 1 - pair.t) * pair.D + SAME_PLACE_M;
+  if (around(pair, open.E.Rmax)) return open.E.Rmax;
+  if (!around(pair, lo)) return null;
+  let [fits, over] = [lo, open.E.Rmax];
+  for (let i = 0; i < 40; i++) {
+    const m = (fits + over) / 2;
+    if (around(pair, m)) fits = m;
+    else over = m;
+  }
+  return fits;
+}
+
+/** The pair of two lanes beside each other and where the centre line between them is, from their radii (the smaller arc of each): a lane `x` from the centre has `Rc - |x|`. */
+function pairOf(a: Lane, b: Lane): { pair: Pair; Rc: number | null } | null {
+  const at = inDirectionOf(a, b);
+  const D = Math.abs(dot(sub(at.p, a.p), perp(fromAngle(a.p.th))));
+  const [ra, rb] = [a.edge.radius, b.edge.radius];
+  if (D < SAME_PLACE_M) return null;
+  const diff = ra != null && rb != null ? ra - rb : 0;
+  if (Math.abs(diff) > D - SAME_PLACE_M) return null;
+  const u = (D - diff) / 2;
+  const Rc = ra != null ? ra + u : rb != null ? rb + (D - u) : null;
+  return { pair: { a, at, t: ra == null && rb == null ? 0.5 : u / D, D }, Rc };
+}
+
+/** The curves of two lanes around the curve between them, at the radius their own radii give (at most the largest that fits). */
+function around2(a: Lane, b: Lane): [TwoArcEdge, TwoArcEdge] | null {
+  const found = pairOf(a, b);
+  const Rmax = found && widest(found.pair);
+  return found && Rmax ? around(found.pair, Math.min(found.Rc ?? Rmax, Rmax), Rmax) : null;
+}
+
+/**
+ * Two lanes that touch at both ends and are not beside each other as a lane and the curve it
+ * follows (the radii do not differ by a lane width) are the two lanes around one curve between
+ * them: the smaller arcs are equal when the radii are (^828). An auto radius is the largest that
+ * fits both, a stored one beside an auto one is shared by both, and a radius that is too big is
+ * the largest that fits, as for a lone S-curve.
+ */
+function sharing({ g, lanes, shapes }: Context) {
+  const list = [...lanes.values()];
+  list.forEach((a, i) => {
+    for (const b of list.slice(i + 1)) {
+      const free = !shapes.has(a.edge.id) && !shapes.has(b.edge.id);
+      const E = free && touching(g, a.edge, b.edge) ? around2(a, b) : null;
+      if (!E) continue;
+      shapes.set(a.edge.id, { ...E[0], auto: a.edge.radius == null });
+      shapes.set(b.edge.id, { ...E[1], auto: b.edge.radius == null });
+    }
+  });
 }
 
 /**
@@ -127,7 +232,12 @@ function followers(g: Graph, lanes: Map<number, Lane>): Map<number, TwoArcEdge> 
  */
 export function withParallelS(g: Graph, chains: Chain[]): Chain[] {
   const lanes = lanesOf(g, chains);
-  const shapes = lanes.size < 2 ? new Map<number, TwoArcEdge>() : followers(g, lanes);
+  const shapes = new Map<number, TwoArcEdge>();
+  if (lanes.size >= 2) {
+    followers({ g, lanes, shapes, lenient: false });
+    sharing({ g, lanes, shapes, lenient: false });
+    followers({ g, lanes, shapes, lenient: true });
+  }
   if (!shapes.size) return chains;
   return chains.map((c) => ({
     ...c,

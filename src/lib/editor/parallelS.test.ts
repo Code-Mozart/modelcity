@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { fromFile } from '../project/file';
 import { graphOf } from '../testing/graphHelpers';
 import { withRadius, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
@@ -59,7 +61,7 @@ describe('S-curves beside each other are one moved copy of the other (^828)', ()
   });
 
   it('a lane whose radius does not fit is an S-curve of its own with two equal arcs, not parallel', () => {
-    const g = lanes(2, (i, R) => (i === 0 ? null : R - W - 1));
+    const g = lanes(2, (i, R) => (i === 0 ? R : R - W - 1));
     expect(parallel(g, edge(g, 0), edge(g, 1))).toBe(false);
     const radii = radiiOf(g, 1);
     expect(radii[0]).toBeCloseTo(radii[1]!, 6);
@@ -68,9 +70,45 @@ describe('S-curves beside each other are one moved copy of the other (^828)', ()
 
 describe('an S-curve built beside another one is built concentric (^828)', () => {
   it('its radius is the smaller arc of the other one less a lane width', () => {
-    const g = lanes(2, (i) => (i === 0 ? null : null));
+    const g = lanes(2, (i, R) => (i === 0 ? R : R - 2 * W));
     expect(parallel(g, edge(g, 0), edge(g, 1))).toBe(false);
     const built = concentricWithParallel(g, 1);
     expect(parallel(built, edge(built, 0), edge(built, 1))).toBe(true);
+  });
+});
+
+const sixSeven = (g: Graph) =>
+  parallel(
+    g,
+    g.edges.find((e) => e.id === 6)!,
+    g.edges.find((e) => e.id === 7)!,
+  );
+
+describe('S-curves with the same radius are parallel (^851)', () => {
+  const project = () =>
+    fromFile(
+      JSON.parse(readFileSync(new URL('../../../docs/mocks/hat850.json', import.meta.url), 'utf8')),
+    ).graph;
+
+  it('the project ^850: both pairs, automatic radius, are parallel with one inflection tower', () => {
+    const g = project();
+    expect(sixSeven(g)).toBe(true);
+    const radii = [radiiOf(g, 6), radiiOf(g, 7)].map((r) => Math.min(...r));
+    expect(radii[0]).toBeCloseTo(radii[1]!, 6);
+    const towers = towersOf(withDerived(g, derivedNodes(g)));
+    const derivedIn = (t: { id: number }[]) => t.filter((n) => n.id < 0).length;
+    expect(towers.map(derivedIn)).toContain(2);
+  });
+
+  it('a stored radius is shared by an automatic lane beside it', () => {
+    let g = project();
+    g = withRadius(g, 6, 10);
+    expect(sixSeven(g)).toBe(true);
+    expect(Math.min(...radiiOf(g, 7))).toBeCloseTo(10, 6);
+  });
+
+  it('a radius that is too big for the pair is the largest that fits, both stay parallel', () => {
+    const g = withRadius(project(), 6, 40);
+    expect(sixSeven(g)).toBe(true);
   });
 });
