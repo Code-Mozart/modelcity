@@ -189,8 +189,8 @@ function pairOf(a: Lane, b: Lane): { pair: Pair; Rc: number | null } | null {
   const [ra, rb] = [a.edge.radius, b.edge.radius];
   if (D < SAME_PLACE_M) return null;
   const diff = ra != null && rb != null ? ra - rb : 0;
-  if (Math.abs(diff) > D - SAME_PLACE_M) return null;
-  const u = (D - diff) / 2;
+  if (Math.abs(diff) > D + SAME_PLACE_M) return null;
+  const u = Math.min(D, Math.max(0, (D - diff) / 2));
   const Rc = ra != null ? ra + u : rb != null ? rb + (D - u) : null;
   return { pair: { a, at, t: ra == null && rb == null ? 0.5 : u / D, D }, Rc };
 }
@@ -204,7 +204,7 @@ function around2(a: Lane, b: Lane): [TwoArcEdge, TwoArcEdge] | null {
 
 /**
  * Two lanes that touch at both ends and are not beside each other as a lane and the curve it
- * follows (the radii do not differ by a lane width) are the two lanes around one curve between
+ * follows (the radii differ by more than a lane width, or the bigger does not fit) are the two lanes around one curve between
  * them: the smaller arcs are equal when the radii are (^828). An auto radius is the largest that
  * fits both, a stored one beside an auto one is shared by both, and a radius that is too big is
  * the largest that fits, as for a lone S-curve.

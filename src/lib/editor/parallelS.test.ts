@@ -152,3 +152,13 @@ describe('any two bends whose nodes touch to the millimeter are parallel (^853)'
     expect(bad).toEqual([]);
   });
 });
+
+describe('bends that were parallel stay parallel as S-curves (^854)', () => {
+  it('radii a lane width apart that are too big for the S-curves are both cut down together', () => {
+    for (const k of [1.5, 3, 10]) {
+      const g = lanes(2, (i, R) => k * R - (i === 0 ? 0 : W));
+      expect(parallel(g, edge(g, 0), edge(g, 1)), `k ${k}`).toBe(true);
+      expect(Math.min(...radiiOf(g, 1))).toBeLessThan(k * 1e3);
+    }
+  });
+});
