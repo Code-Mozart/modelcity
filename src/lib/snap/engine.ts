@@ -128,8 +128,12 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
         q.reach.line,
       )
     : [];
-  const crossed = [...crossingPoints(near), ...onLine];
-  const points = [...here.filter((s): s is SnapPoint => s.kind === 'point'), ...crossed]
+  const given = here.filter((s): s is SnapPoint => s.kind === 'point');
+  // A crossing that is the place of a point (a node's side point, say) is that point: no second one (^842).
+  const crossed = [...crossingPoints(near), ...onLine].filter(
+    (c) => !given.some((g) => dist(g.at, c.at) < SAME_PLACE_M),
+  );
+  const points = [...given, ...crossed]
     .filter((s) => nearPoint(s, q) && (q.reach?.point(s.at) ?? true))
     .sort((a, b) => byPoint(a, b, q.pt));
   const best = points[0];
