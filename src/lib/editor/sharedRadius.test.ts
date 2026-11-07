@@ -63,6 +63,31 @@ describe('more than two lanes on top of each other (^302)', () => {
   });
 });
 
+describe('what follows when a radius point is dragged, with any selection (^832)', () => {
+  const g = threeBends();
+  const nodesOf = (edge: number) => [2 * edge, 2 * edge + 1];
+
+  it('only the dragged segment itself selected: it changes alone', () => {
+    for (const own of [0, 1, 2]) expect(ids(sharedWith(g, nodesOf(own), own))).toEqual([own]);
+  });
+
+  it('any other segment selected, one of the middle ones too: all of them change, as with nothing selected', () => {
+    for (const own of [0, 1, 2]) {
+      for (const other of [0, 1, 2].filter((x) => x !== own)) {
+        expect(ids(sharedWith(g, nodesOf(other), own)).sort()).toEqual([0, 1, 2]);
+      }
+      expect(ids(sharedWith(g, [...nodesOf(0), ...nodesOf(2)], own)).sort()).toEqual([0, 1, 2]);
+    }
+  });
+
+  it('after the middle lane (segment 0) changed alone it is not parallel to its neighbours: they are two groups', () => {
+    const own = 0;
+    const alone = shareConcentric(withRadius(g, own, 25), own, sharedWith(g, nodesOf(own), own));
+    expect(ids(sharedWith(alone, [], 1))).toEqual([1]);
+    expect(ids(sharedWith(alone, [], 2))).toEqual([2]);
+  });
+});
+
 describe('the line through interlocked control points (^344)', () => {
   const length = (l: { p: { x: number; y: number }; q: { x: number; y: number } } | null) =>
     Math.hypot(l!.p.x - l!.q.x, l!.p.y - l!.q.y);
