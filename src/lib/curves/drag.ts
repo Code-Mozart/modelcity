@@ -100,18 +100,6 @@ function nearestRadius(Rmax: number, pointAt: (R: number) => Vec | null, pt: Vec
   return cost(R) <= bd ? R : at(best);
 }
 
-/**
- * Dragging a corner of an S-curve, where a heading line meets the middle line (^132, experiment):
- * the heading of the corner's node turns so that its heading line passes through the pointer.
- */
-function dragMiddle(path: Path, i: number, which: 1 | 2, pt: Vec): Path {
-  if (edgeAt(path, i).kind !== 'S') return path;
-  const at = which === 1 ? i : i + 1;
-  const node = path.nodes[at]!;
-  const th = which === 1 ? angleOf(sub(pt, node)) : angleOf(sub(node, pt));
-  return withNode(path, at, { th });
-}
-
 /** Where the radius handle sits on arc k of edge i when the edge has radius R, if it is still an arc of that kind. */
 function handlePoint(
   path: Path,
@@ -152,10 +140,6 @@ export function applyDrag(path: Path, drag: DragState, pt: Vec, mod: DragModifie
       return dragHeading(path, i, pt, mod.angle);
     case 'ctrl':
       return dragCorner(path, i, pt);
-    case 'mid1':
-      return dragMiddle(path, i, 1, pt);
-    case 'mid2':
-      return dragMiddle(path, i, 2, pt);
     case 'rad':
       return dragRadius(path, drag, pt);
   }

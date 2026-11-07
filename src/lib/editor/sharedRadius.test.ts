@@ -115,4 +115,22 @@ describe('the line through the radius points shows only when the parallels follo
       followingTower(lone, c, { ...focus, road: c.findIndex((x) => x.edgeIds.includes(0)) }, []),
     ).toBeNull();
   });
+
+  it('a selected segment that is not parallel gets the radius but is no point of the line', () => {
+    const apart = twoBends(5, 14);
+    const c = chainsOf(apart);
+    const road = c.findIndex((x) => x.edgeIds.includes(0));
+    const own = { ...focus, road, i: c[road]!.edgeIds.indexOf(0) };
+    expect(followingTower(apart, c, own, [0, 1, 2, 3])).toBeNull();
+  });
+
+  it('three lanes: the line runs through all that follow, from a selected one or not', () => {
+    const three = threeBends();
+    const c = chainsOf(three);
+    const road = c.findIndex((x) => x.edgeIds.includes(0));
+    const own = { ...focus, road, i: c[road]!.edgeIds.indexOf(0) };
+    const some = followingTower(three, c, own, [])!;
+    expect(some.others).toHaveLength(2);
+    expect(followingTower(three, c, own, [2, 3])!.others).toHaveLength(2);
+  });
 });

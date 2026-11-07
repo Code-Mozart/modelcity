@@ -1,5 +1,5 @@
 import { sweeps, pointOn } from './piece';
-import type { Edge, Piece } from './types';
+import type { Piece } from './types';
 import type { EdgeRef, Path } from './path';
 import { dist, fromAngle, mul, add, type Vec } from './vec';
 
@@ -7,7 +7,7 @@ import { dist, fromAngle, mul, add, type Vec } from './vec';
  * Draggable handles (^9). `k` is the piece index for radius handles.
  * Sizes are in screen pixels so handles keep their look at any zoom.
  */
-export type HandleType = 'node' | 'head' | 'ctrl' | 'mid1' | 'mid2' | 'rad';
+export type HandleType = 'node' | 'head' | 'ctrl' | 'rad';
 
 export interface Handle extends Vec {
   type: HandleType;
@@ -22,18 +22,9 @@ const HIT_PX = { mouse: 11, touch: 20 };
 /** How near (screen pixels) the pointer must be to a node, and to a curve (^137). */
 export const NODE_HIT_PX = { mouse: 9, touch: 16 };
 
-/** The corner points of an S-curve: they turn the heading of their node. A hook's are derived (^105). */
-function cornerHandles(i: number, E: Exclude<Edge, { kind: 'line' | 'C' }>): Handle[] {
-  if (E.kind !== 'S') return [];
-  return [
-    ...(E.k1 ? [{ type: 'mid1' as const, i, ...E.k1 }] : []),
-    ...(E.k2 ? [{ type: 'mid2' as const, i, ...E.k2 }] : []),
-  ];
-}
-
 function edgeHandles({ i, p, q, E }: EdgeRef, scale: number): Handle[] {
   if (E.kind === 'line') return [];
-  const out: Handle[] = E.kind === 'C' ? [{ type: 'ctrl', i, ...E.C }] : cornerHandles(i, E);
+  const out: Handle[] = E.kind === 'C' ? [{ type: 'ctrl', i, ...E.C }] : [];
   E.pieces.forEach((piece, k) => out.push(...radiusHandles(i, k, piece, { nodes: [p, q], scale })));
   return out;
 }
@@ -71,7 +62,7 @@ export function handlesOf(path: Path, edges: EdgeRef[], scale: number): Handle[]
 }
 
 /** Non-node handles in tie-break order: the earlier type wins when equally near. */
-const PRIORITY: HandleType[] = ['head', 'ctrl', 'mid1', 'mid2', 'rad'];
+const PRIORITY: HandleType[] = ['head', 'ctrl', 'rad'];
 
 function nearest<H extends Handle>(list: H[], pt: Vec, within: number): H | null {
   let best: H | null = null;

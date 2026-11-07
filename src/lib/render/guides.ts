@@ -92,7 +92,7 @@ export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   if (E.kind === 'line' || E.kind === 'C') return;
   // Derived, not draggable: a ring like the corners of a hook (^260).
   ring(f.ctx, toScreen(f, E.J), 5.5, { color: pal.orange, width: 2 });
-  if (E.kind !== 'H') return;
+  // The corners of an S-curve and of a hook are derived too: rings, not draggable (^105, ^840).
   for (const k of [E.k1, E.k2]) {
     if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.orange, width: 2 });
   }

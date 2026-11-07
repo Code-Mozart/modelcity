@@ -125,5 +125,9 @@ export function snapOrigins(hit: SnapHit | null): Origin[] {
  */
 export function headingSources(hit: SnapHit | null, copied: boolean): Origin[] {
   const given = hit && decide(hit, copied ? 'copied' : 'placed');
-  return uniqueOrigins((given?.sources ?? []).map((c) => c.origin));
+  const gave = uniqueOrigins((given?.sources ?? []).map((c) => c.origin));
+  // A point is more specific than the lines through it, but the nodes of those lines that have the
+  // same heading agree with it, and are shown too (^835): three lanes side by side show all three.
+  const agree = snapOrigins(hit).filter((o) => gave.some((g) => same(o.th, g.th)));
+  return uniqueOrigins([...gave, ...agree]);
 }
