@@ -4,7 +4,7 @@
 
 ## Definitions
 
-- **Feature:** anything the app can do or show (a mode, a snap, a rendering, a measurement, an operation). Has a hat of type `feature`, or `operation` (see `docs/hats.md`; features and operations are listed there, not here).
+- **Feature** (README glossary, with the five tests and the categories): anything the app can do or show (a mode, a snap, a rendering, a measurement, an operation). Has a hat of type `feature`, or `operation` (see `docs/hats.md`; features and operations are listed there, not here).
 - **Operation** (^180, ^391): something the user deliberately does that changes the map, the stored project or what is open, or writes an output (edit the map, undo, select, pan, zoom, rotate, export, save, import, create, rename, delete, switch a project). Not a mode change, not opening a modal, not hovering. Every operation is a feature; not every feature is an operation (a snap rule, a gizmo, a label is not).
 - **Hats (^392):** every operation and every control has a hat for just itself. A hat that describes several things stays as the decision, and each thing gets its own hat that points to it.
 - **Control** (README glossary): a user input (key or mouse, with modifiers) in a context. Controls are contextual by design (^45), so every row names its **context**: the mode (view, select, draw, extend), what is under the pointer, and the state of the app (selection, drag, being drawn, touch). The same input in two contexts is two controls.
