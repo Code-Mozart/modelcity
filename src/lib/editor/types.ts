@@ -45,6 +45,8 @@ export interface Placement {
   line?: boolean;
   /** `Shift`: the heading aims at this snap point, or away from it (^335). */
   aim?: { at: Vec; away: boolean };
+  /** The radii of the arcs of the curves it snapped to: a radius point takes one that is within a few millimeters, so a segment is exactly concentric, not off by what the rounding costs (^830). */
+  radii?: number[];
 }
 
 /** Pointer travel (screen pixels) that turns a press into a drag. */

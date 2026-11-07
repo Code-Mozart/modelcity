@@ -1,4 +1,5 @@
-import { angleOf, dist, type Vec } from '../curves/vec';
+import { line } from '../curves/piece';
+import { add, angleOf, dist, dot, mul, sub, type Vec } from '../curves/vec';
 import { crossings, nearestOnPieces } from './geometry';
 import type { SnapCurve, SnapHit, SnapPoint, Suggestion } from './types';
 
@@ -20,6 +21,8 @@ export interface SnapQuery {
 export interface Reach {
   curve(c: SnapCurve): boolean;
   point(at: Vec): boolean;
+  /** The line the thing moves along, if it does: curves are then reached where they cross it, not where they are nearest to the pointer (^830). */
+  line?: { p: Vec; d: Vec };
 }
 
 /** Reaching this share of the maximum distance, the tip about pinning shows (^294). */
@@ -69,6 +72,22 @@ function crossingPoints(near: { s: SnapCurve }[]): SnapPoint[] {
   return out;
 }
 
+const FAR_M = 1e5;
+
+/** The places where the curves cross the line a control point moves along (^830). */
+function crossingsWithLine(curves: SnapCurve[], on: { p: Vec; d: Vec }): SnapPoint[] {
+  const along = line(add(on.p, mul(on.d, -FAR_M)), add(on.p, mul(on.d, FAR_M)));
+  return curves.flatMap((c) =>
+    crossings(c.pieces, [along]).map((at): SnapPoint => ({
+      kind: 'point',
+      at,
+      heading: null,
+      rule: 'crossing',
+      from: c.from,
+    })),
+  );
+}
+
 function pointHit(s: SnapPoint, by: Suggestion[]): SnapHit {
   return { pt: s.at, heading: s.heading, by };
 }
@@ -78,9 +97,20 @@ function pointHit(s: SnapPoint, by: Suggestion[]): SnapHit {
  * as one; else the nearest curve; nothing if none is near. Points beat curves, and only the nearest
  * of several curves is used, so no two parallel lines show at once (^102).
  */
-export function snapTo(list: Suggestion[], q: SnapQuery): SnapHit | null {
+export function snapTo(list: Suggestion[], query: SnapQuery): SnapHit | null {
+  const q = onItsLine(query);
   const hit = snapNearest(list, q);
   return hit && { ...hit, reach: reachOf(hit.by, q) };
+}
+
+/**
+ * A point that is tied to a line follows the pointer along it (^830): what it snaps to is judged
+ * from the place on the line that is nearest to the pointer, and it snaps to points on the line only
+ * (a line or a curve that crosses it is a point there, and one that does not cross it is not offered).
+ */
+function onItsLine(q: SnapQuery): SnapQuery {
+  const on = q.reach?.line;
+  return on ? { ...q, pt: add(on.p, mul(on.d, dot(sub(q.pt, on.p), on.d))) } : q;
 }
 
 const reaches = (s: Suggestion, reach?: Reach): boolean =>
@@ -92,8 +122,18 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
     here.filter((s): s is SnapCurve => s.kind === 'curve'),
     q,
   );
-  const crossed = crossingPoints(near);
-  const points = [...here.filter((s): s is SnapPoint => s.kind === 'point'), ...crossed]
+  const onLine = q.reach?.line
+    ? crossingsWithLine(
+        near.map((x) => x.s),
+        q.reach.line,
+      )
+    : [];
+  const given = here.filter((s): s is SnapPoint => s.kind === 'point');
+  // A crossing that is the place of a point (a node's side point, say) is that point: no second one (^842).
+  const crossed = [...crossingPoints(near), ...onLine].filter(
+    (c) => !given.some((g) => dist(g.at, c.at) < SAME_PLACE_M),
+  );
+  const points = [...given, ...crossed]
     .filter((s) => nearPoint(s, q) && (q.reach?.point(s.at) ?? true))
     .sort((a, b) => byPoint(a, b, q.pt));
   const best = points[0];
@@ -102,7 +142,7 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
     const through = near.map((x) => x.s).filter((c) => touches(c, best.at));
     return pointHit(best, best.rule === 'crossing' ? through : [best, ...through]);
   }
-  const curve = near.sort(byNearness)[0];
+  const curve = q.reach?.line ? undefined : near.sort(byNearness)[0];
   return curve
     ? { pt: curve.n.pt, heading: angleOf({ x: curve.n.tx, y: curve.n.ty }), by: [curve.s] }
     : null;
@@ -116,9 +156,11 @@ const pointRank = (p: SnapPoint) => {
   if (p.rule === 'previous') return -1;
   return p.node !== undefined ? 0 : p.rule === 'crossing' ? 2 : 1;
 };
+/** Points within this distance (meters) are one place: the nodes are whole millimeters, so a crossing and the side point of a node that are the same place differ by a tenth of a millimeter (^841). */
+const SAME_PLACE_M = 1e-3;
 const byPoint = (a: SnapPoint, b: SnapPoint, pt: Vec) => {
   const d = dist(a.at, pt) - dist(b.at, pt);
-  return Math.abs(d) > 1e-6 ? d : pointRank(a) - pointRank(b);
+  return Math.abs(d) > SAME_PLACE_M ? d : pointRank(a) - pointRank(b);
 };
 
 /** The curve of a segment wins a tie with a line on top of it: it is the one a node can join (^268). */

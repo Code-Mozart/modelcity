@@ -77,6 +77,7 @@ The review table of the project owner (`docs/please-remove-me.md`, removed), wit
 | = ^688 | select mode | selected node hovered | Shift+LMB | deselect | toggle node selection | control hints panel | yes |
 | = ^689 | select mode | selected node hovered | Alt+Shift+LMB | add branch to selection | toggle branch selection | control hints panel | yes |
 | ^774 | select mode | unselected node hovered & something selected | LMB | select instead | set selected node | control hints panel | yes |
+| = ^833 | every mode | - | Ctrl+Period | (no hint, hidden on purpose) | switch the pointer coordinates on or off | under the version, top center | no |
 
 ## Controls
 
@@ -146,7 +147,7 @@ Found by the sweep of the code (the hints, the key and pointer dispatch, the mod
 | ^694 | select mode, pointer on a node | `Alt` + `LMB` drag | move branch (^681) | none (exemption not yet decided) | unit `editor/branching.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
 | ^695 | any mode, pointer on a bend point | `LMB` drag | bend curve (^534) | `LMB` drag: bend curve | unit `editor/branching.test` (strong), `curves/continuity.test` (weak), `editor/editor.test` (weak) |
 | ^696 | any mode, pointer on a radius point | `LMB` drag | change radius (^535) | `LMB` drag: change radius | unit `curves/continuity.test` (weak), `editor/branching.test` (weak), `editor/controlSnap.test` (weak) |
-| ^697 | any mode, pointer on a corner point of an S-curve | `LMB` drag | turn heading (^468) | `LMB` drag: turn heading | unit `editor/branching.test` (strong), `editor/inflection.test` (strong), `curves/continuity.test` (weak) |
+| ^697 | any mode, pointer on a corner point of an S-curve (removed with ^840: the corners are derived rings, no handles) | `LMB` drag | turn heading (^468) | `LMB` drag: turn heading | unit `editor/branching.test` (strong), `editor/inflection.test` (strong), `curves/continuity.test` (weak) |
 | ^698 | any mode, pointer on a radius point, a segment whose two nodes are selected | `LMB` drag | change radius (^535) | `LMB` drag: change radius (all selected segments) | unit `editor/selection.test` (strong), `editor/controlSnap.test` (strong), `editor/controls.test` (strong) |
 | ^699 | any mode, several nodes selected, pointer on one of them or on a segment between them | `RMB` click | ^434 | `RMB` (or `Alt+RMB` between selected nodes): `delete selected nodes` (^290, ^779) | unit `editor/rightClickSelected.test` (strong), `editor/controls.test` (strong), `editor/editor.test` (strong) |
 | ^700 | the heading of an existing node is dragged, it snapped to something | `Shift` held | ^335 | `Shift`: aim at snap suggestion | unit `editor/modes.test` (strong), `editor/headingSnap.test` (weak), `editor/branching.test` (weak) |

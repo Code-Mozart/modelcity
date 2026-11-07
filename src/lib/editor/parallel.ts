@@ -71,7 +71,16 @@ function ends(points: Vec[]): [Vec, Vec] {
  * no segment is parallel to it.
  */
 export function controlTower(g: Graph, edge: number, k: number, t: number): TowerLine | null {
-  const ids = withParallels(g, [edge]);
+  return towerThrough(g, withParallels(g, [edge]), edge, { k, t });
+}
+
+/** The same through the radius points of some segments (those that follow, ^832). */
+export function towerThrough(
+  g: Graph,
+  ids: number[],
+  edge: number,
+  { k, t }: { k: number; t: number },
+): TowerLine | null {
   const own = curveOfEdge(g, edge)?.pieces[k];
   const places = ids.flatMap((id) => {
     const piece = curveOfEdge(g, id)?.pieces[k];
@@ -87,7 +96,14 @@ export function controlTower(g: Graph, edge: number, k: number, t: number): Towe
 }
 
 /** The line for the control point that is hovered or dragged, if it is a radius point of a segment with parallel ones (^344). */
-export function focusTower(g: Graph, chains: Chain[], focus: Focus | null): TowerLine | null {
+export function focusTower(
+  g: Graph,
+  chains: Chain[],
+  focus: Focus | null,
+  ids?: number[],
+): TowerLine | null {
   const edge = focus?.type === 'rad' ? chains[focus.road]?.edgeIds[focus.i] : undefined;
-  return edge === undefined ? null : controlTower(g, edge, focus!.k ?? 0, focus!.t ?? 0.5);
+  if (edge === undefined) return null;
+  const place = { k: focus!.k ?? 0, t: focus!.t ?? 0.5 };
+  return ids ? towerThrough(g, ids, edge, place) : controlTower(g, edge, place.k, place.t);
 }

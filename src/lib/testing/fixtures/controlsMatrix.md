@@ -50,8 +50,10 @@
 | select | over a node | selection: only one other node; only the hovered node; other nodes, not the hovered one; parallel segments | Ctrl+RMB or RMB | delete node | step `delete node`; the selection is cleared; nodes -1, segments -1 | control hints panel | no |
 | select | over a node | selection: the hovered node and others; parallel segments | Ctrl+RMB or RMB | delete selected nodes | step `delete N nodes`; the selection is cleared; nodes -4, segments -3 | control hints panel | no |
 | select | over a node | selection: the hovered node and others; straight segment | Ctrl+RMB or RMB | delete selected nodes | step `delete N nodes`; the selection is cleared; nodes -5, segments -3 | control hints panel | no |
-| select | over an end radius point | - | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `change radius` | nowhere | - |
-| select | over an end radius point | - | Ctrl+LMB drag or LMB drag | change radius | step `change radius` | control hints panel | no |
+| select | over an end radius point | selection: something selected | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `change radius` | nowhere | - |
+| select | over an end radius point | - | Ctrl+LMB drag | change radius | step `change radius` | control hints panel | no |
+| select | over an end radius point | selection: nothing selected | LMB drag | change radius | - | control hints panel | no |
+| select | over an end radius point | selection: something selected | LMB drag | change radius | step `change radius` | control hints panel | no |
 | select | over the mid radius point | selection: nothing selected; parallel segments | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `change radius` | nowhere | - |
 | select | over the mid radius point | selection: something selected | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `change radius` | nowhere | - |
 | select | over the mid radius point | selection: nothing selected; no parallel segments | Ctrl+LMB drag or LMB drag | change radius | - | control hints panel | no |
@@ -142,8 +144,8 @@
 | draw | over a node | parallel segments | Ctrl+RMB or RMB | delete node | step `delete node`; nodes -1, segments -1 | control hints panel | no |
 | draw | over an end radius point, over the mid radius point, over a segment | - | Alt+LMB or Alt+Shift+LMB or Shift+LMB | - | step `split road`; goes to extend mode; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
 | draw | over an end radius point, over the mid radius point, over a segment | - | Ctrl+LMB or LMB | split | step `split road`; goes to extend mode; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
-| draw | over an end radius point | - | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `change radius` | nowhere | - |
-| draw | over an end radius point | - | Ctrl+LMB drag or LMB drag | change radius | step `change radius` | control hints panel | no |
+| draw | over an end radius point | - | Ctrl+LMB drag | change radius | step `change radius` | control hints panel | no |
+| draw | over an end radius point | - | LMB drag | change radius | - | control hints panel | no |
 | draw | over the mid radius point | parallel segments | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `change radius` | nowhere | - |
 | draw | over the mid radius point | no parallel segments | Ctrl+LMB drag or LMB drag | change radius | - | control hints panel | no |
 | draw | over the mid radius point | parallel segments | Ctrl+LMB drag or LMB drag | change radius | step `change radius` | control hints panel | no |

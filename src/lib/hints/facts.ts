@@ -51,8 +51,6 @@ export const DRAG_TEXT: Record<HandleType, string> = {
   node: 'move node',
   head: 'turn heading',
   ctrl: 'bend curve',
-  mid1: 'turn heading',
-  mid2: 'turn heading',
   rad: 'change radius',
 };
 

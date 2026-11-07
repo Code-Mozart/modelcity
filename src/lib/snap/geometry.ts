@@ -25,7 +25,9 @@ export function nearestOnPieces(pieces: Piece[], p: Vec): Nearest | null {
   for (const piece of pieces) {
     const s = pointOn(piece, nearestParam(piece, p));
     const d = dist(s, p);
-    if (!best || d < best.d) best = { pt: { x: s.x, y: s.y }, tx: s.tx, ty: s.ty, d };
+    // An arc that does not turn has no distance (NaN), and one NaN would hide the whole curve (^837).
+    if (Number.isFinite(d) && (!best || d < best.d))
+      best = { pt: { x: s.x, y: s.y }, tx: s.tx, ty: s.ty, d };
   }
   return best;
 }

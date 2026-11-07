@@ -29,6 +29,8 @@
   import { IndexedDbStorage } from './lib/project/storage';
   import { installTestHook } from './lib/testHook';
   import VersionText from './lib/hud/VersionText.svelte';
+  import PointerCoordinates from './lib/hud/PointerCoordinates.svelte';
+  import { DebugTools, isCoordinatesKey } from './lib/hud/debugTools.svelte';
   import { VersionBanner } from './lib/hud/versionBanner.svelte';
   import { TAB_TITLE } from './lib/version';
 
@@ -37,6 +39,7 @@
   const toasts = new Toasts();
   // The version and the moniker show at load and after a while without input (^787); the tab says it too (^788).
   const banner = new VersionBanner();
+  const debug = new DebugTools();
   document.title = TAB_TITLE;
   const session = new ProjectSession(editor, camera, new IndexedDbStorage(), {
     notify: (kind, text) => toasts.show(kind, text),
@@ -168,6 +171,10 @@
     editor.modifiers(modsOf(e));
     if (session.modalOpen) return modalKey(e);
     if (e.target instanceof HTMLInputElement) return;
+    if (isCoordinatesKey(e)) {
+      debug.toggleCoordinates();
+      return e.preventDefault();
+    }
     noHistory(e);
     if (projectKey(e) || camera.key(e.key) || editor.key(keyOf(e), modsOf(e))) e.preventDefault();
   }
@@ -189,6 +196,7 @@
   <ModeFrame phase={editor.phase} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
+  {#if debug.coordinates}<PointerCoordinates pt={editor.pointer?.pt} />{/if}
   <div class="right">
     <div class="toasts"><ToastList {toasts} /></div>
     {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}

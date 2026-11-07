@@ -3,7 +3,7 @@ import { edgeOfId, withRadius, type Graph } from '../model/graph';
 import { bendsBothWays, threeBends, twoBends } from '../testing/graphHelpers';
 import { chainsOf } from './chains';
 import { controlTower } from './parallel';
-import { shareConcentric, sharedWith } from './sharedRadius';
+import { followingTower, shareConcentric, sharedWith } from './sharedRadius';
 
 const lanes = twoBends;
 
@@ -63,6 +63,31 @@ describe('more than two lanes on top of each other (^302)', () => {
   });
 });
 
+describe('what follows when a radius point is dragged, with any selection (^832)', () => {
+  const g = threeBends();
+  const nodesOf = (edge: number) => [2 * edge, 2 * edge + 1];
+
+  it('only the dragged segment itself selected: it changes alone', () => {
+    for (const own of [0, 1, 2]) expect(ids(sharedWith(g, nodesOf(own), own))).toEqual([own]);
+  });
+
+  it('any other segment selected, one of the middle ones too: all of them change, as with nothing selected', () => {
+    for (const own of [0, 1, 2]) {
+      for (const other of [0, 1, 2].filter((x) => x !== own)) {
+        expect(ids(sharedWith(g, nodesOf(other), own)).sort()).toEqual([0, 1, 2]);
+      }
+      expect(ids(sharedWith(g, [...nodesOf(0), ...nodesOf(2)], own)).sort()).toEqual([0, 1, 2]);
+    }
+  });
+
+  it('after the middle lane (segment 0) changed alone it is not parallel to its neighbours: they are two groups', () => {
+    const own = 0;
+    const alone = shareConcentric(withRadius(g, own, 25), own, sharedWith(g, nodesOf(own), own));
+    expect(ids(sharedWith(alone, [], 1))).toEqual([1]);
+    expect(ids(sharedWith(alone, [], 2))).toEqual([2]);
+  });
+});
+
 describe('the line through interlocked control points (^344)', () => {
   const length = (l: { p: { x: number; y: number }; q: { x: number; y: number } } | null) =>
     Math.hypot(l!.p.x - l!.q.x, l!.p.y - l!.q.y);
@@ -90,5 +115,47 @@ describe('the line through interlocked control points (^344)', () => {
 
   it('none without a parallel segment', () => {
     expect(controlTower(lanes(5, 14), 0, 1, 0.5)).toBeNull();
+  });
+});
+
+describe('the line through the radius points shows only when the parallels follow (^832)', () => {
+  const g = twoBends();
+  const chains = chainsOf(g);
+  const road = chains.findIndex((c) => c.edgeIds.includes(0));
+  const focus = { road, type: 'rad' as const, i: chains[road]!.edgeIds.indexOf(0), k: 1, t: 0.5 };
+
+  it('nothing selected, or other nodes as well: it shows', () => {
+    expect(followingTower(g, chains, focus, [])).not.toBeNull();
+    expect(followingTower(g, chains, focus, [0, 1, 2])).not.toBeNull();
+  });
+
+  it('only the two nodes of its own segment selected: it changes alone, no line', () => {
+    expect(followingTower(g, chains, focus, [0, 1])).toBeNull();
+  });
+
+  it('a segment without parallels has none either way', () => {
+    const lone = twoBends(5, 14);
+    const c = chainsOf(lone);
+    expect(
+      followingTower(lone, c, { ...focus, road: c.findIndex((x) => x.edgeIds.includes(0)) }, []),
+    ).toBeNull();
+  });
+
+  it('a selected segment that is not parallel gets the radius but is no point of the line', () => {
+    const apart = twoBends(5, 14);
+    const c = chainsOf(apart);
+    const road = c.findIndex((x) => x.edgeIds.includes(0));
+    const own = { ...focus, road, i: c[road]!.edgeIds.indexOf(0) };
+    expect(followingTower(apart, c, own, [0, 1, 2, 3])).toBeNull();
+  });
+
+  it('three lanes: the line runs through all that follow, from a selected one or not', () => {
+    const three = threeBends();
+    const c = chainsOf(three);
+    const road = c.findIndex((x) => x.edgeIds.includes(0));
+    const own = { ...focus, road, i: c[road]!.edgeIds.indexOf(0) };
+    const some = followingTower(three, c, own, [])!;
+    expect(some.others).toHaveLength(2);
+    expect(followingTower(three, c, own, [2, 3])!.others).toHaveLength(2);
   });
 });

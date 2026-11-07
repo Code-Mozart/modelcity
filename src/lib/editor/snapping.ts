@@ -37,8 +37,19 @@ export function snappedTo(
     return { pt: info.pt, th: null, aim: { at: hit.pt, away: info.alt } };
   if (turningNode(press) !== null) return { pt: info.pt, th: headingFrom(hit, info.alt) };
   // A click places the node at the snap with its heading; `Shift` keeps only the position (^358).
-  return { pt: hit.pt, th: info.shift ? null : placedHeading(hit, info.alt), line: onLine(hit) };
+  const placed = {
+    pt: hit.pt,
+    th: info.shift ? null : placedHeading(hit, info.alt),
+    line: onLine(hit),
+  };
+  return press?.kind === 'drag' ? { ...placed, radii: arcRadii(hit) } : placed;
 }
+
+/** The radii of the arcs of the curves a hit snapped to (^830). */
+const arcRadii = (hit: SnapHit): number[] =>
+  hit.by.flatMap((s) =>
+    s.kind === 'curve' ? s.pieces.flatMap((p) => (sweeps(p) ? [p.r] : [])) : [],
+  );
 
 /** Where a click places a node: where the pointer snapped, else at the pointer with the automatic heading. */
 export const placedAt = (hit: SnapHit | null, info: PointerInfo): Placement =>
@@ -63,11 +74,9 @@ export const turningNode = (press: Press | null): number | null =>
     ? press.id
     : null;
 
-/** The control points of a segment that snap like a position: the radius, the bend and the S-curve points (^249). */
+/** The control points of a segment that snap like a position: the radius and the bend points (^249). */
 const controlEdge = (press: Press | null): number | null =>
-  press?.kind === 'drag' && ['rad', 'ctrl', 'mid1', 'mid2'].includes(press.drag.handle.type)
-    ? press.id
-    : null;
+  press?.kind === 'drag' && ['rad', 'ctrl'].includes(press.drag.handle.type) ? press.id : null;
 
 const withoutEdge = (g: Graph, id: number): Graph => ({
   ...g,
@@ -116,6 +125,7 @@ function reachOf(press: Press | null): Reach | undefined {
   const locus = press && locusOf(press);
   if (!locus) return undefined;
   return {
+    line: locus,
     point: (at) => Math.abs(cross(sub(at, locus.p), locus.d)) <= LOCUS_TOL_M,
     curve: (c) => {
       const s = sides(c, locus);
@@ -310,15 +320,22 @@ export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
   if (!info || info.ctrl || !what) return null;
   const query = { pt: info.pt, scale: info.scale, pinned: a.pinned, reach: reachOf(a.press) };
   const hit = what === 'place' ? placeHit(base, a.hover, query) : snapTo(base, query);
-  return hit && withoutExtendAtTip(hit, a);
+  return hit && withoutExtendAtTip(hit, a, base);
 }
 
-/** Snapped to the node being drawn from itself, its extend lines are not shown (^325). */
-function withoutExtendAtTip(hit: SnapHit, a: SnapArgs): SnapHit {
-  const [first, tip] = [hit.by[0], a.drawing ? a.pinned.at(-1) : undefined];
-  if (first?.kind !== 'point' || first.node === undefined || first.node !== tip) return hit;
+/**
+ * Snapped to the place of the node being drawn from, its extend lines are not shown (^325, ^839):
+ * whatever the first suggestion there is (the node itself, or a crossing that is at the same place).
+ */
+export function withoutExtendAtTip(hit: SnapHit, a: SnapArgs, base: Suggestion[]): SnapHit {
+  const tip = a.drawing ? a.pinned.at(-1) : undefined;
+  const at = base.find((s) => s.kind === 'point' && s.node !== undefined && s.node === tip);
+  if (at?.kind !== 'point' || dist(at.at, hit.pt) > TIP_M) return hit;
   return { ...hit, by: hit.by.filter((s) => !s.rule.startsWith('extend')) };
 }
+
+/** How near (meters) the pointer's snap is to the node it extends from, for its extend lines to hide (^839). */
+const TIP_M = 0.02;
 
 /** What a hover is made of for the snapping: the editor state and the chains with the zoom. */
 export interface SnapWorld {
