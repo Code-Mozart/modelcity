@@ -20,7 +20,7 @@
 | select | over a node | selection: only the hovered node; the hovered node and others; parallel segments | Alt+Shift+LMB | add branch to selection | step `select N nodes`; nodes are added to the selection | control hints panel | yes |
 | select | over a node | selection: only one other node; other nodes, not the hovered one | Alt+Shift+LMB | add branch to selection | step `select N nodes`; nodes are added to the selection | control hints panel | yes |
 | select | over a node | selection: nothing | Ctrl+LMB or LMB | select | step `select node`; the selection becomes the hovered node | control hints panel | yes |
-| select | over a node | selection: the hovered node and others | Ctrl+LMB or LMB | select only this | step `deselect N nodes`; the selection becomes the hovered node | control hints panel | yes |
+| select | over a node | selection: the hovered node and others | Ctrl+LMB or LMB | select instead | step `deselect N nodes`; the selection becomes the hovered node | control hints panel | yes |
 | select | over a node | selection: only one other node; other nodes, not the hovered one | Ctrl+LMB or LMB | select instead | step `select node`; the selection becomes the hovered node | control hints panel | yes |
 | select | over a node | selection: nothing | Shift+LMB | - | step `select node`; the selection becomes the hovered node | nowhere | - |
 | select | over a node | selection: only the hovered node | Shift+LMB | deselect | step `deselect all`; the selection is cleared | control hints panel | yes |
@@ -75,7 +75,7 @@
 | select | over a segment | selection: nothing | Ctrl+LMB or LMB | select segment | step `select N nodes`; nodes are added to the selection | control hints panel | yes |
 | select | over a segment | selection: part of the hovered segment (one node) | Ctrl+LMB or LMB | select segment instead | step `select node`; nodes are added to the selection | control hints panel | yes |
 | select | over a segment | selection: other nodes | Ctrl+LMB or LMB | select segment instead | step `select N nodes`; the selection is replaced | control hints panel | yes |
-| select | over a segment | selection: all of the hovered branch; parallel segments | Ctrl+LMB or LMB | select only this segment | step `deselect node`; nodes are removed from the selection | control hints panel | yes |
+| select | over a segment | selection: all of the hovered branch; parallel segments | Ctrl+LMB or LMB | select segment instead | step `deselect node`; nodes are removed from the selection | control hints panel | yes |
 | select | over a segment | selection: all of the hovered branch; straight segment | Shift+LMB | deselect segment | step `deselect all`; the selection is cleared | control hints panel | yes |
 | select | over a segment | selection: all of the hovered branch; both nodes of the hovered segment; no parallel segments | Shift+LMB | deselect segment | step `deselect all`; the selection is cleared | control hints panel | yes |
 | select | over a segment | selection: both nodes of the hovered segment; parallel segments; straight segment | Shift+LMB | deselect segment | step `deselect all`; the selection is cleared | control hints panel | yes |

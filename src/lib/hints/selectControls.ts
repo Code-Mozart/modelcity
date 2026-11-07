@@ -60,7 +60,7 @@ export const SELECT_TAIL: C[] = [
     on: (f) => select(f) && isNode(f),
     listens: (f) => !(nodeSelected(f) && f.selected === 1),
     says: (f) => {
-      if (nodeSelected(f)) return f.selected > 1 ? 'select only this' : null;
+      if (nodeSelected(f) && f.selected === 1) return null;
       return some(f) ? 'select instead' : 'select';
     },
   },
@@ -80,7 +80,7 @@ export const SELECT_TAIL: C[] = [
     on: (f) => select(f) && onCurve(f),
     listens: (f) => !(picked(f) === 2 && f.selected === 2),
     says: (f) => {
-      if (picked(f) === 2) return f.selected > 2 ? 'select only this segment' : null;
+      if (picked(f) === 2 && f.selected === 2) return null;
       return some(f) ? 'select segment instead' : 'select segment';
     },
   },
