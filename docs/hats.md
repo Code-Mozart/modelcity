@@ -1,4 +1,4 @@
-next: ^844
+next: ^845
 
 # Hats
 
@@ -606,6 +606,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^841 | image | reference (user) | **Example project "what happened here" (user):** `docs/mocks/hat841.json`, made with v0.43.0 and the camera exported, so the screenshot ^842 can be recreated pixel for pixel: the same lanes as ^834. |
 | ^842 | image | reference (user); fixed (PR #43) | **Screenshot, draw mode, east of the bottom right node (user, \"what happened here\"):** `docs/mocks/hat842.png`. The ring is where the offset curve of the right lane crosses the line through the three bottom nodes, but none of the three nodes shows its heading arrow (in ^838 one did). **Cause (found):** a crossing and the side point of the node (the same place, 0.08 mm apart, the nodes being whole millimeters) were both snap points; the pointer was nearer to the crossing, so the crossing won and a crossing gives no heading origin. **Fixed:** points within 1 mm are one place, then the more specific one wins (the node's side point, then the crossing, ^673), so all three arrows show; tested (`moreBugs.test.ts`). |
 | ^843 | decision | decided (user) | **The editor helps, it does not forbid (user):** it is not built so that invalid states cannot be created; at the end the user fixes them by hand. The editor is there to make building large maps less tedious (convenient defaults, things that follow, snaps), and violations are reported (^827), not prevented. |
+| ^844 | chore | done (PR #44, v0.44.0) | **The version is checked in CI (user, after ^367 was broken by #43, which carried v0.40.0):** a job `version` in `ci.yml` fails a PR whose `package.json` version differs from the base's and is not `0.<number of the PR>.0`; a PR that leaves the version alone (docs) passes. A line in `.claude/CLAUDE.md` says to open the PR first and then set the version. |
 
 ## Rented ranges
 

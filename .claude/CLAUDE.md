@@ -25,6 +25,7 @@ Two people: the user is product manager and tester, Claude is the developer. Eve
 - Work on topic branches: `feature/`, `bugfix/`, `chore/`, `docs/`, etc. Claude may create, modify, rename and delete any branch except `main`.
 - Open a PR right after creating a branch (it will be merged eventually); the user merges when it is ready to publish as a new version.
 - PR descriptions are the main review surface (the user rarely reads code): always a summary of what and why, what to test, decisions made, open questions. Max half to one page.
+- The version in `package.json` is `0.<number of the PR>.0` (^367), with the PR's name as moniker. Open the PR first, then set the version to its number in the same push; when a PR is replaced by another (renamed branch), set it again. A PR that changes no behaviour (docs) may keep the version. CI checks it (`.github/workflows/ci.yml`, job `version`, ^844).
 - Small, verifiable steps, steady progress, aware of the roadmap (`docs/hats.md`, ^146). Use hats in commit messages where applicable.
 
 ## Roadmap and scope (^146)
