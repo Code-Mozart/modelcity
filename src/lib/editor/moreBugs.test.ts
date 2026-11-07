@@ -47,6 +47,29 @@ describe('the origins of a snap are all the nodes that agree (^835)', () => {
   });
 });
 
+describe('a crossing and a node point at the same place are one (^842)', () => {
+  it('beside the bottom right node, all three origins show, wherever the pointer is nearby', () => {
+    const ed = new Editor();
+    ed.load(
+      fromFile(
+        JSON.parse(
+          readFileSync(new URL('../../../docs/mocks/hat841.json', import.meta.url), 'utf8'),
+        ),
+      ).graph,
+    );
+    ed.enterDrawMode();
+    for (const [x, y] of [
+      [-7.436, 16.79],
+      [-7.6, 16.5],
+      [-7.62, 16.38],
+      [-7.7, 16.3],
+    ] as const) {
+      ed.pointerMove(at(x, y, { ctrl: false, scale: 34.86 }));
+      expect(headingSources(ed.snapped, false)).toHaveLength(3);
+    }
+  });
+});
+
 describe('the extend lines are not shown at the node that is extended (^839)', () => {
   const point = (rule: SnapPoint['rule'], x: number, node?: number): SnapPoint => ({
     kind: 'point',

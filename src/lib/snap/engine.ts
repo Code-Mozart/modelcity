@@ -152,9 +152,11 @@ const pointRank = (p: SnapPoint) => {
   if (p.rule === 'previous') return -1;
   return p.node !== undefined ? 0 : p.rule === 'crossing' ? 2 : 1;
 };
+/** Points within this distance (meters) are one place: the nodes are whole millimeters, so a crossing and the side point of a node that are the same place differ by a tenth of a millimeter (^841). */
+const SAME_PLACE_M = 1e-3;
 const byPoint = (a: SnapPoint, b: SnapPoint, pt: Vec) => {
   const d = dist(a.at, pt) - dist(b.at, pt);
-  return Math.abs(d) > 1e-6 ? d : pointRank(a) - pointRank(b);
+  return Math.abs(d) > SAME_PLACE_M ? d : pointRank(a) - pointRank(b);
 };
 
 /** The curve of a segment wins a tie with a line on top of it: it is the one a node can join (^268). */
