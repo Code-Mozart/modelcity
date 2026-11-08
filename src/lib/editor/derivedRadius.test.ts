@@ -77,7 +77,7 @@ describe('a segment that runs beside part of another one is parallel to that par
     const seen = withDerived(g, derivedNodes(g));
     const pairs = parallelPairs(seen);
     const touches3 = (e: { start: number; end: number }) =>
-      [3, 6].some((n) => e.start === n || e.end === n);
+      [6, 7].some((n) => e.start === n || e.end === n);
     const own = new Set(seen.edges.filter(touches3).map((e) => e.id));
     const beside = pairs.filter((p) => own.has(p[0]!) || own.has(p[1]!));
     expect(beside.length).toBeGreaterThanOrEqual(2);
