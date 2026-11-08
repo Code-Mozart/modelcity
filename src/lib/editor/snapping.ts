@@ -6,7 +6,7 @@ import { cross, dist, sub, unitOr, type Vec } from '../curves/vec';
 import { curvesThrough, snapTo, type Reach, type SnapQuery } from '../snap/engine';
 import { nearestOnPieces } from '../snap/geometry';
 import { extendRules, nodeRules, suggestionsOf, type RuleEdge } from '../snap/rules';
-import type { SnapCurve, SnapHit, Suggestion } from '../snap/types';
+import { RANK, type SnapCurve, type SnapHit, type Suggestion } from '../snap/types';
 import {
   chainHandles,
   chainsOf,
@@ -174,7 +174,11 @@ export function snapBase(
 function baseOf(graph: Graph, press: Press | null): Suggestion[] {
   // A heading snaps to everything but the node itself and its own segments (^313).
   const turning = turningNode(press);
-  if (turning !== null) return suggestionsOfGraph(without(press!.undo.graph, [turning]));
+  // While a heading is turned no offset curve is offered (^878).
+  if (turning !== null)
+    return suggestionsOfGraph(without(press!.undo.graph, [turning])).filter(
+      (s) => !(s.kind === 'curve' && s.rule === 'offset'),
+    );
   const moving = movedIds(press);
   // A control point of a segment snaps to everything but the segment itself, whose shape it changes (^249).
   const control = controlEdge(press);
@@ -189,6 +193,7 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
     heading: n.th,
     rule: 'previous',
     from: [],
+    rank: RANK.previous,
   }));
   // The node that is dragged keeps its snap lines: sideways, or further along its heading (^300).
   const own = were.filter((n) => n.id === press.id).flatMap((n) => nodeRules(n, LANE_WIDTH_M));
@@ -222,7 +227,9 @@ function ownCurves(before: Graph, id: number): Suggestion[] {
 function ownPlace(press: Press): Suggestion[] {
   if (press.kind !== 'drag') return [];
   const { x, y } = press.drag.handle;
-  return [{ kind: 'point', at: { x, y }, heading: null, rule: 'previous', from: [] }];
+  return [
+    { kind: 'point', at: { x, y }, heading: null, rule: 'previous', from: [], rank: RANK.previous },
+  ];
 }
 
 /** Where the moved nodes were, to show them while they move (^113). */
@@ -318,7 +325,13 @@ export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
   const { info } = a;
   const what = snaps(a);
   if (!info || info.ctrl || !what) return null;
-  const query = { pt: info.pt, scale: info.scale, pinned: a.pinned, reach: reachOf(a.press) };
+  const query = {
+    pt: info.pt,
+    scale: info.scale,
+    touch: info.touch,
+    pinned: a.pinned,
+    reach: reachOf(a.press),
+  };
   const hit = what === 'place' ? placeHit(base, a.hover, query) : snapTo(base, query);
   return hit && withoutExtendAtTip(hit, a, base);
 }

@@ -1,21 +1,10 @@
 import type { EdgeRef } from '../curves/path';
 import { pointOn, sweeps } from '../curves/piece';
 import type { Arc, BendEdge, Piece, TwoArcEdge } from '../curves/types';
-import {
-  add,
-  angleOf,
-  dist,
-  dot,
-  fromAngle,
-  mul,
-  perp,
-  sub,
-  unitOr,
-  type Vec,
-} from '../curves/vec';
-import { SAME_PLACE_M, alongOrAgainst } from '../curves/tolerance';
+import { add, angleOf, dist, fromAngle, mul, perp, sub, unitOr, type Vec } from '../curves/vec';
 import { infiniteLine } from './geometry';
-import type { Rule, SnapCurve, SnapPoint, Suggestion } from './types';
+import { dedupe } from './merge';
+import { RANK, type Rule, type SnapCurve, type SnapPoint, type Suggestion } from './types';
 
 /** A node as the rules see it. */
 export interface RuleNode {
@@ -82,10 +71,14 @@ export function nodeRules(n: RuleNode, width: number): Suggestion[] {
     line(n, perp(dir), { rule: 'node-normal', from: [n.id], heading, th: n.th }),
     // A tangent line: a node on it heads along it, away from this node (^793).
     line(n, dir, { rule: 'node-heading', from: [n.id], along: true, th: n.th }),
-    point(n, 'node-points', [n.id], { heading, node: n.id, origin }),
-    point(add(n, side), 'node-points', [n.id], { heading, origin }),
+    point(n, 'node-points', [n.id], { heading, node: n.id, origin, rank: RANK.node }),
+    point(add(n, side), 'node-points', [n.id], { heading, origin, rank: RANK.offset }),
     // Right-hand traffic (^253): on the right the lane runs the same way, on the left the opposite way.
-    point(sub(n, side), 'node-points', [n.id], { heading: heading + Math.PI, origin }),
+    point(sub(n, side), 'node-points', [n.id], {
+      heading: heading + Math.PI,
+      origin,
+      rank: RANK.offset,
+    }),
   ];
 }
 
@@ -160,7 +153,11 @@ function arcRules(e: RuleEdge, arc: Arc): Suggestion[] {
   const points = [0, 0.5, 1].map((t) => {
     const s = at(t);
     const th = angleOf({ x: s.tx, y: s.ty });
-    return point(s, 'radius-point', from, { heading: th, origin: { at: { x: s.x, y: s.y }, th } });
+    return point(s, 'radius-point', from, {
+      heading: th,
+      origin: { at: { x: s.x, y: s.y }, th },
+      rank: t === 0.5 ? RANK.bisector : RANK.derived,
+    });
   });
   const ticks = [0, 1].map((t) => {
     const s = at(t);
@@ -179,6 +176,7 @@ function bendRules(e: RuleEdge, E: BendEdge, arc: Arc): Suggestion[] {
   const there = pointOn(arc, 0.5);
   const th = angleOf({ x: there.tx, y: there.ty });
   return [
+    point(E.C, 'corner', from, { rank: RANK.corner }),
     line(middle, bisector, { rule: 'bend', from, heading: th, th }),
     line(middle, perp(bisector), { rule: 'bend', from, along: true, th }),
   ];
@@ -199,9 +197,11 @@ function inflectionRules(e: RuleEdge, E: TwoArcEdge): Suggestion[] {
   const t = inflectionTangent(E);
   const heading = angleOf(t);
   return [
+    ...[E.k1, E.k2].flatMap((k) => (k ? [point(k, 'corner', from, { rank: RANK.corner })] : [])),
     point(E.J, 'inflection-point', from, {
       heading,
       origin: { at: { x: E.J.x, y: E.J.y }, th: heading },
+      rank: RANK.derived,
     }),
     line(E.J, t, { rule: 'inflection-lines', from, along: true, th: heading }),
     line(E.J, perp(t), { rule: 'inflection-lines', from, heading, th: heading }),
@@ -228,57 +228,6 @@ export function edgeRules(e: RuleEdge): Suggestion[] {
   if (E.kind === 'C' && arcs[0]) out.push(...bendRules(e, E, arcs[0]));
   if (E.kind === 'S' || E.kind === 'H') out.push(...inflectionRules(e, E));
   return out;
-}
-
-/** A straight snap curve as a point on it and its unit direction. */
-function straightOf(c: SnapCurve): { p: Vec; u: Vec } {
-  const piece = c.pieces[0] as { P: Vec; Q: Vec };
-  return { p: piece.P, u: unitOr(sub(piece.Q, piece.P), { x: 1, y: 0 }) };
-}
-
-/** Whether two straight snap curves are the same line, within the tolerance (^247, ^865). */
-function sameLine(a: SnapCurve, b: SnapCurve): boolean {
-  const [x, y] = [straightOf(a), straightOf(b)];
-  const parallel = alongOrAgainst({ th: angleOf(x.u) }, { th: angleOf(y.u) });
-  return parallel && Math.abs(dot(perp(y.u), sub(x.p, y.p))) < SAME_PLACE_M;
-}
-
-/** Two lines that coincide are one suggestion that keeps all origins and all they give (^275, ^792). */
-function mergeLines(list: SnapCurve[]): SnapCurve[] {
-  const out: SnapCurve[] = [];
-  for (const c of list) {
-    const twin = out.find((o) => sameLine(o, c));
-    if (!twin)
-      out.push({ ...c, origins: [...c.origins], from: [...c.from], gives: [...(c.gives ?? [])] });
-    else {
-      twin.origins.push(...c.origins);
-      twin.from = [...new Set([...twin.from, ...c.from])];
-      twin.gives = [...(twin.gives ?? []), ...(c.gives ?? [])];
-    }
-  }
-  return out;
-}
-
-/** Points at the same place (within the tolerance, ^865) are one suggestion (the first one wins, its heading too). */
-function mergePoints(list: SnapPoint[]): SnapPoint[] {
-  const out: SnapPoint[] = [];
-  for (const p of list) {
-    const twin = out.find((o) => dist(o.at, p.at) < SAME_PLACE_M);
-    if (!twin) out.push({ ...p, from: [...p.from] });
-    else {
-      twin.from = [...new Set([...twin.from, ...p.from])];
-      twin.node ??= p.node;
-    }
-  }
-  return out;
-}
-
-/** Deduplicate: coincident snap lines and equal points are one (^275). Curves of segments stay. */
-export function dedupe(list: Suggestion[]): Suggestion[] {
-  const lines = list.filter((s): s is SnapCurve => s.kind === 'curve' && s.straight && s.limited);
-  const points = list.filter((s): s is SnapPoint => s.kind === 'point');
-  const rest = list.filter((s) => s.kind === 'curve' && !(s.straight && s.limited));
-  return [...mergePoints(points), ...mergeLines(lines), ...rest];
 }
 
 /** All snap suggestions of a map: its nodes and its segments (^275). */

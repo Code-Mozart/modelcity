@@ -2,11 +2,13 @@ import { line } from '../curves/piece';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import { add, angleOf, dist, dot, mul, sub, type Vec } from '../curves/vec';
 import { crossings, nearestOnPieces } from './geometry';
-import type { SnapCurve, SnapHit, SnapPoint, Suggestion } from './types';
+import { RANK, type SnapCurve, type SnapHit, type SnapPoint, type Suggestion } from './types';
 
 /** How near (screen pixels) a point must be to a suggestion to be pulled to it, and how far its origins may be (^101). */
 export const SNAP_NEAR_PX = 25;
 export const SNAP_REACH_PX = 300;
+/** Suggestions within these pixels of each other are one place, the one that ranks best wins (^883, ^880): the reach of a node (`NODE_HIT_PX`). */
+export const MERGE_PX = { mouse: 9, touch: 16 };
 
 export interface SnapQuery {
   pt: Vec;
@@ -14,6 +16,8 @@ export interface SnapQuery {
   scale: number;
   /** Nodes whose suggestions are offered at any distance (^258). */
   pinned: readonly number[];
+  /** Whether the pointer is a finger: the pixels within which suggestions merge are more (^883). */
+  touch?: boolean;
   /** What the thing that is moved can reach: only these suggestions are offered, and only these places (^333). */
   reach?: Reach;
 }
@@ -59,6 +63,12 @@ function nearCurves(list: SnapCurve[], q: SnapQuery) {
   });
 }
 
+/** Where an offset curve crosses a line of a node (its normal, say), a node would touch the segment there, in a tower, or a radius point be concentric: an offset snap point (^880); else a crossing is computed and ranks last. */
+const crossingRank = (a: SnapCurve, b: SnapCurve) =>
+  [a, b].some((c) => c.rule === 'offset') && [a, b].some((c) => c.limited && c.straight)
+    ? RANK.offset
+    : RANK.crossing;
+
 /** The places where the near curves cross (^280), as points. */
 function crossingPoints(near: { s: SnapCurve }[]): SnapPoint[] {
   const out: SnapPoint[] = [];
@@ -66,7 +76,14 @@ function crossingPoints(near: { s: SnapCurve }[]): SnapPoint[] {
     for (const { s: b } of near.slice(i + 1)) {
       const from = [...new Set([...a.from, ...b.from])];
       for (const at of crossings(a.pieces, b.pieces)) {
-        out.push({ kind: 'point', at, heading: null, rule: 'crossing', from });
+        out.push({
+          kind: 'point',
+          at,
+          heading: null,
+          rule: 'crossing',
+          from,
+          rank: crossingRank(a, b),
+        });
       }
     }
   });
@@ -85,6 +102,7 @@ function crossingsWithLine(curves: SnapCurve[], on: { p: Vec; d: Vec }): SnapPoi
       heading: null,
       rule: 'crossing',
       from: c.from,
+      rank: RANK.crossing,
     })),
   );
 }
@@ -137,7 +155,7 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
   const points = [...given, ...crossed]
     .filter((s) => nearPoint(s, q) && (q.reach?.point(s.at) ?? true))
     .sort((a, b) => byPoint(a, b, q.pt));
-  const best = points[0];
+  const best = bestOf(points, q);
   if (best) {
     // A point and the curves that cross at it are all shown or all hidden (^289).
     const through = near.map((x) => x.s).filter((c) => touches(c, best.at));
@@ -150,13 +168,23 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
 }
 
 /**
+ * The point that wins: the nearest one, or one that ranks better within `MERGE_PX` of it on the
+ * screen (^883): the suggestions that are that near are one place, whose point is the best ranked.
+ */
+function bestOf(points: SnapPoint[], q: SnapQuery): SnapPoint | undefined {
+  const nearest = points[0];
+  if (!nearest) return undefined;
+  const reach = MERGE_PX[q.touch ? 'touch' : 'mouse'] / q.scale;
+  const here = points.filter((p) => dist(p.at, nearest.at) <= reach);
+  // At the same place (within the tolerance) the first stays: the order of the list is the order of the nearest.
+  return here.sort((a, b) => pointRank(a) - pointRank(b))[0];
+}
+
+/**
  * Where a moved node was picked up comes first when points are at the same place (^800): it is the
  * node itself, with its own heading. Then a node, other points, and a crossing last (a crossing is computed, ^280).
  */
-const pointRank = (p: SnapPoint) => {
-  if (p.rule === 'previous') return -1;
-  return p.node !== undefined ? 0 : p.rule === 'crossing' ? 2 : 1;
-};
+const pointRank = (p: SnapPoint) => p.rank ?? RANK.crossing;
 const byPoint = (a: SnapPoint, b: SnapPoint, pt: Vec) => {
   const d = dist(a.at, pt) - dist(b.at, pt);
   return Math.abs(d) > SAME_PLACE_M ? d : pointRank(a) - pointRank(b);

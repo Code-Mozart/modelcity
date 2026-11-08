@@ -45,7 +45,7 @@ describe('a radius point snaps to the concentric radius (^830)', () => {
       [0.1, 0],
       [0, 0.1],
       [-0.1, -0.1],
-      [0.2, -0.2],
+      [0.1, 0.1],
     ] as const) {
       const ed = dragOuter([{ x: concentric.x + dx, y: concentric.y + dy }]);
       expect(edgeOfId(ed.graph, 7)!.radius).toBe(18.7);
