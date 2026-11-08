@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { fromFile } from '../project/file';
+import { curveOfEdge } from './chains';
 import { edgeOfId } from '../model/graph';
 import { graphOf } from '../testing/graphHelpers';
 import { at } from '../testing/editorHelpers';
@@ -51,5 +54,70 @@ describe('a node dropped beside another one gives its segment the concentric rad
 
   it('a node that is somewhere else leaves the radius as it is', () => {
     expect(edgeOfId(dropAt({ x: 48, y: 30 }, { x: 50, y: 35 }).graph, 1)!.radius).toBe(8);
+  });
+});
+
+const project = () =>
+  fromFile(
+    JSON.parse(readFileSync(new URL('../../../docs/mocks/hat886.json', import.meta.url), 'utf8')),
+  ).graph;
+const arcOf = (g: ReturnType<typeof project>, id: number) =>
+  curveOfEdge(g, id)!.pieces.find((p) => p.type === 'arc') as {
+    c: { x: number; y: number };
+    r: number;
+  };
+
+describe('anywhere on the offset curve, not only at the node of a tower (^877)', () => {
+  const drag = (to: { x: number; y: number }, ctrl = false) => {
+    const ed = new Editor();
+    ed.load(project());
+    const look = (x: number, y: number) => at(x, y, { ctrl, scale: 20 });
+    ed.pointerDown(look(23.13, -38.625));
+    ed.pointerMove(look(30, -36));
+    ed.pointerMove(look(to.x, to.y));
+    ed.pointerUp();
+    return ed;
+  };
+  it('the project ^886: node 3 dragged onto the offset curve of the bend makes its segment concentric', () => {
+    const ed = drag({ x: 52.369, y: -24.895 });
+    const [big, small] = [arcOf(ed.graph, 0), arcOf(ed.graph, 1)];
+    expect(Math.hypot(big.c.x - small.c.x, big.c.y - small.c.y)).toBeLessThan(0.01);
+    expect(Math.abs(big.r - small.r)).toBeCloseTo(3, 2);
+  });
+});
+
+describe('not when several nodes move, and in extend mode (^877)', () => {
+  it('not when several nodes move together', () => {
+    const ed = new Editor();
+    ed.load(project());
+    ed.selection = [2, 3];
+    const look = (x: number, y: number) => at(x, y, { ctrl: true, scale: 20 });
+    ed.pointerDown(look(23.13, -38.625));
+    ed.pointerMove(look(30, -36));
+    ed.pointerMove(look(52.369, -24.895));
+    ed.pointerUp();
+    expect(edgeOfId(ed.graph, 1)!.radius).toBeNull();
+  });
+
+  it('in extend mode: a segment drawn to a place on the offset curve is concentric', () => {
+    const g = project();
+    const lone = {
+      ...g,
+      edges: g.edges.filter((e) => e.id === 0),
+      nodes: g.nodes.filter((n) => n.id !== 3),
+    };
+    const ed = new Editor();
+    ed.load(lone);
+    ed.enterDrawMode();
+    const look = (x: number, y: number) => at(x, y, { ctrl: false, scale: 20 });
+    ed.pointerMove(look(9.232, -38.625));
+    ed.pointerDown(look(9.232, -38.625));
+    ed.pointerUp();
+    ed.pointerMove(look(52.369, -24.895));
+    ed.pointerDown(look(52.369, -24.895));
+    ed.pointerUp();
+    const made = ed.graph.edges.find((e) => e.id !== 0)!;
+    const [big, small] = [arcOf(ed.graph, 0), arcOf(ed.graph, made.id)];
+    expect(Math.hypot(big.c.x - small.c.x, big.c.y - small.c.y)).toBeLessThan(0.01);
   });
 });

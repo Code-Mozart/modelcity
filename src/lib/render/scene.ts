@@ -1,3 +1,4 @@
+import { screenToWorld } from '../camera/view';
 import { samplesAlong } from '../curves/arrows';
 import { outlinePx } from '../curves/lane';
 import { buildEdge } from '../curves/edge';
@@ -198,7 +199,13 @@ function drawHover(f: Frame, hover: Hover | null, drawing: boolean, pal: Palette
 function drawDirection(f: Frame, road: RoadScene, selected: boolean[], pal: Palette) {
   const pieces = road.edges.flatMap((e) => e.E.pieces);
   const owner = road.edges.flatMap((e, k) => e.E.pieces.map(() => k));
-  for (const s of samplesAlong(pieces, DIRECTION_SPACING_PX / f.view.scale)) {
+  // Only what can be on the screen: at the greatest zoom a road is a million pixels long (^864).
+  const half = Math.hypot(f.size.width, f.size.height) / 2 + DIRECTION_SPACING_PX;
+  const within = {
+    c: screenToWorld(f.view, f.size, { x: f.size.width / 2, y: f.size.height / 2 }),
+    r: half / f.view.scale,
+  };
+  for (const s of samplesAlong(pieces, DIRECTION_SPACING_PX / f.view.scale, undefined, within)) {
     const at = toScreen(f, s);
     const t = screenDir(f, { x: s.tx, y: s.ty });
     const color = selected[owner[s.piece]!] ? pal.blue : pal.ink;
