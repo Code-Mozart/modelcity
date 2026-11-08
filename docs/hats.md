@@ -1,4 +1,4 @@
-next: ^874
+next: ^877
 
 # Hats
 
@@ -637,6 +637,9 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^871 | feature | done (PR #46; user, to report bugs more easily; part of the debug tools ^368) | **Debug: what the pointer is on (user):** with the coordinates on (`Ctrl+Period`, ^833) a second line says what is hovered: `node 4`, or `segment 2 (start node 4, end node 5)` for a segment (also for its radius and bend points), `derived node on segment ...` for a derived node, `-` for nothing. Same hidden switch, same style. |
 | ^872 | image | reference (user) | **Example project "Y-shape" with a segment beside the left wing (user):** `docs/mocks/hat872.json`: segment 3 (nodes 6 to 7) runs beside the straight and the arc of segment 1 for its whole span, but they were not parallel. |
 | ^873 | bug | fixed (PR #46; user) | **A segment beside only part of another one was not parallel to that part (user, ^872):** a derived node at the end of an arc did not cut its segment (only the nodes that touch a segment did), so the part of segment 1 beside segment 3 was never a piece of its own. Now every derived node except the inflection point cuts bends and lines, so the pieces are found parallel pairwise (the partially parallel segments of ^363); tested with ^872. |
+| ^874 | image | reference (user) | **Example project "Y-shape" with a straight segment beside the end straight piece of segment 1 (user):** `docs/mocks/hat874.json`: segment 3 (nodes 6 to 7) runs beside the end straight piece of segment 1 and was not parallel. |
+| ^875 | bug | fixed (PR #46; user) | **A node 0.3 mm off the tangent made a hook instead of a straight segment (user, ^874):** node 7 lies 0.3 mm beside the tangent of node 6 (rounding), so the segment was built as a hook with two arcs of no angle (and an inflection point as a derived node in the middle that cut segment 1 half way), not as a straight segment. Now a straight segment is: the same heading and the second node ahead on the tangent of the first within `TWO_NODES_M` (2 mm, the error of two rounded nodes, ^247), so the segment is one straight piece. Tested with ^874. |
+| ^876 | decision | decided (user; wording of the glossary entries: assumed) | **Names of the parts of a curve (user):** a *piece* is a part of the curve of a segment; an *arc* is a curved piece, a *straight piece* a straight one (not "straight", which could be mistaken for a *straight segment*); the *start straight piece* and the *end straight piece* are the ones at the start node and at the end node (they depend on the direction of the segment), the *middle straight piece* is the one between the two arcs of an S-curve or hook. A *straight segment* is a segment between two nodes with the same heading, the second on the tangent of the first (not offside, which would make an S-curve): it has exactly one straight piece. "Stub" is not a term. |
 
 ## Rented ranges
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fromFile } from '../project/file';
 import type { Graph } from '../model/graph';
 import { derivedNodes, withDerived } from './derived';
+import { curveOfEdge } from './chains';
 import { parallel } from './parallel';
 import { barsOf, towersOf } from './towers';
 import { withRadius } from '../model/graph';
@@ -81,5 +82,16 @@ describe('a segment that runs beside part of another one is parallel to that par
     const own = new Set(seen.edges.filter(touches3).map((e) => e.id));
     const beside = pairs.filter((p) => own.has(p[0]!) || own.has(p[1]!));
     expect(beside.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('a node 0.3 mm off the tangent still makes a straight segment (^875)', () => {
+  it('the project ^874: segment 3 is a straight beside the end straight piece of segment 1, so it is parallel to it', () => {
+    const g = mock('hat874');
+    expect(curveOfEdge(g, 3)?.kind).toBe('line');
+    const seen = withDerived(g, derivedNodes(g));
+    const segment3 = seen.edges.find((e) => e.id === 3)!;
+    const pieces = seen.edges.filter((e) => e.id !== 3 && parallel(seen, e, segment3));
+    expect(pieces).toHaveLength(1);
   });
 });
