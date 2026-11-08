@@ -9,6 +9,8 @@ const crossingRank = (a: SnapCurve, b: SnapCurve) =>
     ? RANK.offset
     : RANK.crossing;
 
+const isExtend = (c: SnapCurve) => c.rule.startsWith('extend');
+
 /** The places where the near curves cross (^280), as points. */
 export function crossingPoints(near: { s: SnapCurve }[]): SnapPoint[] {
   const out: SnapPoint[] = [];
@@ -23,6 +25,7 @@ export function crossingPoints(near: { s: SnapCurve }[]): SnapPoint[] {
           rule: 'crossing',
           from,
           rank: crossingRank(a, b),
+          ...(isExtend(a) && isExtend(b) ? { quiet: true } : {}),
         });
       }
     }

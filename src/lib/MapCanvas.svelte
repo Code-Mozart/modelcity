@@ -48,7 +48,9 @@
   const derivedAll = $derived(editor.derived);
   const seen = $derived(withDerived(editor.graph, derivedAll));
   const bars = $derived(barsOf(seen));
-  const towers = $derived(towersOf(seen));
+  const towers = $derived(
+    towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
+  );
 
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {

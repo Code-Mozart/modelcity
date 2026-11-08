@@ -169,6 +169,17 @@ describe('snap points near the pointer are shown (^890)', () => {
     expect(snapTo(list, query(0, 0, 10))?.pt).not.toEqual({ x: 3, y: 3 });
   });
 
+  it('the crossing of two extend lines is not shown, but it is snapped to (^898)', () => {
+    const extend = (c: SnapCurve, rule: SnapCurve['rule']): SnapCurve => ({ ...c, rule });
+    const list = [
+      extend(line([-10, 0.2], [10, 0.2]), 'extend+15'),
+      extend(line([0.2, -10], [0.2, 10]), 'extend-30'),
+    ];
+    expect(nearbyPoints(list, query(0, 0, 10))).toEqual([]);
+    expect(snapTo(list, query(0, 0, 10))?.pt.x).toBeCloseTo(0.2, 6);
+    expect(snapTo(list, query(0, 0, 10))?.pt.y).toBeCloseTo(0.2, 6);
+  });
+
   it('a point farther than SNAP_SHOW_PX is not shown', () => {
     expect(nearbyPoints([pt(6, 0, RANK.node)], query(0, 0, 10))).toEqual([]);
   });

@@ -66,6 +66,7 @@ export function nearbyPoints(list: Suggestion[], query: SnapQuery): SnapPoint[] 
   return around(list, q, SNAP_SHOW_PX).points.filter(
     (s) =>
       s.rule !== 'previous' &&
+      !s.quiet &&
       (q.reach?.point(s.at) ?? true) &&
       dist(s.at, q.pt) * q.scale <= SNAP_SHOW_PX,
   );
