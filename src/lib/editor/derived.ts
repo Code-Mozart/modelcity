@@ -171,7 +171,7 @@ export function withDerived(g: Graph, derived: DerivedNode[]): Graph {
   let next = -1;
   const edges = g.edges.flatMap((e): GEdge[] => {
     const E = curveOfEdge(g, e.id);
-    const mine = derived.filter((d) => d.edge === e.id && d.kind === 'touch');
+    const mine = derived.filter((d) => d.edge === e.id && d.kind !== 'inflection');
     if (!E || !mine.length || (E.kind !== 'line' && E.kind !== 'C')) return [e];
     const arc = E.pieces.find(sweeps);
     const radius = arc?.type === 'arc' ? arc.r : null;

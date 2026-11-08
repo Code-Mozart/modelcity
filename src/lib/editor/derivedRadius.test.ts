@@ -62,3 +62,24 @@ describe('no derived node at the arcs of segments that are parallel all along (^
     expect(edgeKinds(g).length).toBeGreaterThan(0);
   });
 });
+
+const parallelPairs = (g: Graph) => {
+  const pairs: number[][] = [];
+  for (const a of g.edges)
+    for (const b of g.edges) if (a.id < b.id && parallel(g, a, b)) pairs.push([a.id, b.id]);
+  return pairs;
+};
+
+describe('a segment that runs beside part of another one is parallel to that part (^873)', () => {
+  it('the project ^872: segment 3 beside the arc and the straight of segment 1', () => {
+    const g = mock('hat872');
+    expect(parallel(g, g.edges[1]!, g.edges[3]!)).toBe(false);
+    const seen = withDerived(g, derivedNodes(g));
+    const pairs = parallelPairs(seen);
+    const touches3 = (e: { start: number; end: number }) =>
+      [3, 6].some((n) => e.start === n || e.end === n);
+    const own = new Set(seen.edges.filter(touches3).map((e) => e.id));
+    const beside = pairs.filter((p) => own.has(p[0]!) || own.has(p[1]!));
+    expect(beside.length).toBeGreaterThanOrEqual(2);
+  });
+});

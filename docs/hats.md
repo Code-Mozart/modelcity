@@ -1,4 +1,4 @@
-next: ^872
+next: ^874
 
 # Hats
 
@@ -635,6 +635,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^869 | image | reference (user) | **Example project "sometimes-parallel-or-what" (user):** `docs/mocks/hat869.json`: the Y-shape with a third segment; the two segments that turn right are parallel (radii 10.521 and 7.521), but showed no bars on their arcs and the east tower, while a slightly different radius showed them. |
 | ^870 | bug | fixed (PR #46; user's rule from ^858) | **Arc ends of segments that are parallel all along were derived nodes (user, ^869):** the derived nodes at the ends of the arcs of one lane cut only that lane (the nodes that touch a segment cut it, those of the arc ends did not), so the pieces of the two lanes did not line up, were not parallel pairwise, and the bars were missing; it flipped with the radius because of the tolerance window of ^853. Now an arc end is a derived node only where a straight piece of **another, not parallel** segment (or a node of one) runs beside it: where two segments are parallel all along there is none (^858 refined). Tested with ^869. |
 | ^871 | feature | done (PR #46; user, to report bugs more easily; part of the debug tools ^368) | **Debug: what the pointer is on (user):** with the coordinates on (`Ctrl+Period`, ^833) a second line says what is hovered: `node 4`, or `segment 2 (start node 4, end node 5)` for a segment (also for its radius and bend points), `derived node on segment ...` for a derived node, `-` for nothing. Same hidden switch, same style. |
+| ^872 | image | reference (user) | **Example project "Y-shape" with a segment beside the left wing (user):** `docs/mocks/hat872.json`: segment 3 (nodes 6 to 7) runs beside the straight and the arc of segment 1 for its whole span, but they were not parallel. |
+| ^873 | bug | fixed (PR #46; user) | **A segment beside only part of another one was not parallel to that part (user, ^872):** a derived node at the end of an arc did not cut its segment (only the nodes that touch a segment did), so the part of segment 1 beside segment 3 was never a piece of its own. Now every derived node except the inflection point cuts bends and lines, so the pieces are found parallel pairwise (the partially parallel segments of ^363); tested with ^872. |
 
 ## Rented ranges
 
