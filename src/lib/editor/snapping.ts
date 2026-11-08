@@ -20,11 +20,6 @@ import { headingFrom, placedHeading } from '../snap/heading';
 import type { RoadHit } from './chains';
 import type { Hover, Placement, PointerInfo, Press } from './types';
 
-/** How far a snap point may be from the line of a control point and still be reached, meters. */
-const LOCUS_TOL_M = 0.05;
-
-/** A node dropped within this world distance (meters) of another node or of a curve is merged into it, whatever the zoom (^248, ^283). */
-
 /** Where a node goes when the pointer snapped: the place, with the heading it gets there (^254, ^301). */
 export function snappedTo(
   hit: SnapHit | null,
@@ -126,10 +121,10 @@ function reachOf(press: Press | null): Reach | undefined {
   if (!locus) return undefined;
   return {
     line: locus,
-    point: (at) => Math.abs(cross(sub(at, locus.p), locus.d)) <= LOCUS_TOL_M,
+    point: (at) => Math.abs(cross(sub(at, locus.p), locus.d)) <= SAME_PLACE_M,
     curve: (c) => {
       const s = sides(c, locus);
-      return Math.min(...s) <= LOCUS_TOL_M && Math.max(...s) >= -LOCUS_TOL_M;
+      return Math.min(...s) <= SAME_PLACE_M && Math.max(...s) >= -SAME_PLACE_M;
     },
   };
 }
