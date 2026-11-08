@@ -1,4 +1,4 @@
-next: ^888
+next: ^890
 
 # Hats
 
@@ -651,6 +651,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^885 | feature | done (PR #47; user: make it one) | **The corner of a bend (and of a hook or S-curve) is a snap point (user):** the control point at the corner (the orange point of a bend, the corner points of a hook or S-curve, ^9) is a snap point, with the ranking of ^880 after the bisector radius points. Today a bend only makes two snap lines through it (^269). |
 | ^886 | image | reference (user) | **Example project "hat877-test" (user):** `docs/mocks/hat886.json`: a bend and, beside its straight start, a straight segment (nodes 2 to 3); dragging node 3 to (52.369, -24.895), on the offset curve of the bend, should give the segment the concentric radius. |
 | ^887 | bug | fixed (PR #47; user) | **Zooming in was very laggy (user):** the cause: the direction arrows (chevrons, ^80) were made along the whole length of every road at a fixed distance in pixels; with the greatest zoom of ^864 (25 times more than before) a road of 100 m is a million pixels long, so tens of thousands of arrows per road were made and drawn each frame, off the screen too. Now only what can be on the screen is made (`samplesAlong` with `within`, `render/scene.ts drawDirection`): a profile of 40 wheel steps on 96 segments fell from 4.1 s to 2.0 s (3.0 s before this milestone). |
+| ^888 | feature | done (PR #47; user) | **The snapped heading turns the segment the smaller way (user):** of the heading a snap gives a node that is placed or moved (the right-hand traffic rule of ^253 gives the opposite one on the left of a node, and so a hook in the example of a segment that runs beside another one) and the opposite one, the one that turns less from the headings of the nodes its segments run to is suggested (`nearerWay` in `snap/heading.ts`); `Alt` still takes the other one (^301). A node with no segment (a first node) keeps the right-hand rule. Not for the heading control point (the copied heading ^313). In extend mode the preview shows it (the tip of the road is the node). |
+| ^889 | decision | decided (user: agreed; wording assumed) | **Snapped heading and copied heading (user):** the *snapped heading* is the heading a node takes from the snap it is placed or moved on (`placedHeading`); the *copied heading* is the heading that the heading control point takes when it is dragged onto a snap suggestion (`headingFrom`): "copy heading". Glossary entries. |
 
 ## Rented ranges
 

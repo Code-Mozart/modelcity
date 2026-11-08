@@ -3,6 +3,7 @@ import type { Graph } from '../model/graph';
 import type { SnapHit } from '../snap/types';
 import { dragStep, placeStep } from './ops';
 import { snappedTo } from './snapping';
+import { waysOfPress } from './ways';
 import { nodesInBand, withNodes, type Band } from './selection';
 import { DRAG_PX, type Placement, type PointerInfo, type Press, type Snapshot } from './types';
 
@@ -35,7 +36,7 @@ export function moveOf(
   info: PointerInfo,
   hit: SnapHit | null,
 ): Moved | null {
-  const to = snappedTo(hit, info, press);
+  const to = snappedTo(hit, info, press, waysOfPress(snap.graph, press));
   if (press.kind === 'drag') return dragMove(snap, press, info, to);
   if (press.kind === 'place') {
     const graph = placeStep(snap.graph, press, info, to);

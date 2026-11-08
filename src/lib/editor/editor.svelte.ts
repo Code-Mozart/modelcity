@@ -3,6 +3,7 @@ import * as ops from './ops';
 import { derivedNodes } from './derived';
 import { dropOf } from './drop';
 import { placedAt, snapBase, snapFor, snapPreview } from './snapping';
+import { tipWays } from './ways';
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
@@ -246,7 +247,8 @@ export class Editor {
       this.press = emptyPress(this.snapshot(), info, hit);
       return;
     }
-    const place = () => ops.placePress(this.snapshot(), placedAt(this.snapped, info));
+    const place = () =>
+      ops.placePress(this.snapshot(), placedAt(this.snapped, info, tipWays(this.snapshot())));
     this.begin(hit ? ops.curvePress(this.snapshot(), hit) : place());
   }
 

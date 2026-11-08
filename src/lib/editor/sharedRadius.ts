@@ -2,9 +2,7 @@ import { LANE_WIDTH_M } from '../curves/lane';
 import { sweeps } from '../curves/piece';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import { dist, type Vec } from '../curves/vec';
-import type { PathNode } from '../curves/types';
-import { linkTo, type DrawEnd } from '../model/junction';
-import { addNode, edgeOfId, nodeOf, withRadius, type GEdge, type Graph } from '../model/graph';
+import { edgeOfId, nodeOf, withRadius, type GEdge, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
 import { focusTower, parallel, touching, withParallels, type TowerLine } from './parallel';
 import type { Chain } from './chains';
@@ -143,14 +141,6 @@ function parallelGroups(g: Graph, ids: number[]): number[][] {
     groups.push(group);
   }
   return groups;
-}
-
-/** The radius the segment gets that a click would build from the node being drawn from (^331): the same as what is built. */
-export function previewRadius(g: Graph, tip: number, node: PathNode, end: DrawEnd): number | null {
-  const added = addNode(g, node);
-  const linked = linkTo(added.graph, tip, end, added.id);
-  const e = linked.edges.find((x) => x.start === added.id || x.end === added.id);
-  return e ? (edgeOfId(concentricWithParallel(linked, e.id), e.id)?.radius ?? null) : null;
 }
 
 /**

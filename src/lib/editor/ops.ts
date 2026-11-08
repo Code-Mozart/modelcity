@@ -4,6 +4,8 @@ import { mergeNodes } from '../model/merge';
 import type { Drop } from './drop';
 import { withSharedRadius } from './press';
 import { concentricWithParallel, groupBuilder } from './sharedRadius';
+import { followParallels } from './followParallels';
+import { followTowers } from './towerHeading';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
 import { nodeAtSample, type RoadHandle, type RoadHit } from './chains';
@@ -191,11 +193,20 @@ export function dragStep(
     d.selection,
     press,
   );
-  const node = nodeOf(next, press.id);
-  const group = handle.type === 'node' && node ? press.group : [];
-  if (!node || !group.length) return next;
-  return moveNodes(next, group, { x: node.x - press.origin.x, y: node.y - press.origin.y });
+  const moved = handle.type === 'node' ? withGroup(next, press) : next;
+  return handle.type === 'node' ? followMoved(press.undo.graph, moved) : moved;
 }
+
+/** The nodes that move with the dragged one go by as much as it did (^264). */
+function withGroup(g: Graph, press: Extract<Press, { kind: 'drag' }>): Graph {
+  const node = nodeOf(g, press.id);
+  if (!node || !press.group.length) return g;
+  return moveNodes(g, press.group, { x: node.x - press.origin.x, y: node.y - press.origin.y });
+}
+
+/** What the drop would make of the moved node: the heading of a tower and the concentric radius, shown while it is dragged (^867, ^877). */
+const followMoved = (before: Graph, moved: Graph) =>
+  followParallels(before, followTowers(before, moved));
 
 /**
  * The handle dragged to the pointer, or where it snapped: a node takes the heading of a snap (^254), and goes back

@@ -16,45 +16,46 @@ import {
   type RoadHandle,
 } from './chains';
 import { previewOf, type Drawn } from './targets';
+import { tipWays } from './ways';
+import { arcRadii, onLine } from './snapHit';
 import { headingFrom, placedHeading } from '../snap/heading';
 import type { RoadHit } from './chains';
 import type { Hover, Placement, PointerInfo, Press } from './types';
 
-/** Where a node goes when the pointer snapped: the place, with the heading it gets there (^254, ^301). */
+/** The heading control point on a snap: it copies the heading, the pointer stays (^313); `Shift` aims at it, for an existing node (^335). */
+function turnedTo(hit: SnapHit, info: PointerInfo, press: Press | null): Placement | null {
+  if (turningNode(press) === null) return null;
+  if (press?.kind === 'drag' && info.shift)
+    return { pt: info.pt, th: null, aim: { at: hit.pt, away: info.alt } };
+  return { pt: info.pt, th: headingFrom(hit, info.alt) };
+}
+
+/**
+ * Where a node goes when the pointer snapped: the place, with the heading it gets there (^254,
+ * ^301). `near` are the headings of the nodes its segments run to: of the heading the snap gives
+ * and the opposite one it takes the one that turns them less (^888).
+ */
 export function snappedTo(
   hit: SnapHit | null,
   info: PointerInfo,
   press: Press | null,
+  near: number[] = [],
 ): Placement | null {
   if (!hit) return null;
-  // A heading takes the heading of what it snapped to, the pointer stays where it is (^313); `Shift` aims at it, for an existing node (^335).
-  if (press?.kind === 'drag' && turningNode(press) !== null && info.shift)
-    return { pt: info.pt, th: null, aim: { at: hit.pt, away: info.alt } };
-  if (turningNode(press) !== null) return { pt: info.pt, th: headingFrom(hit, info.alt) };
+  const turned = turnedTo(hit, info, press);
+  if (turned) return turned;
   // A click places the node at the snap with its heading; `Shift` keeps only the position (^358).
   const placed = {
     pt: hit.pt,
-    th: info.shift ? null : placedHeading(hit, info.alt),
+    th: info.shift ? null : placedHeading(hit, info.alt, near),
     line: onLine(hit),
   };
   return press?.kind === 'drag' ? { ...placed, radii: arcRadii(hit) } : placed;
 }
 
-/** The radii of the arcs of the curves a hit snapped to (^830). */
-const arcRadii = (hit: SnapHit): number[] =>
-  hit.by.flatMap((s) =>
-    s.kind === 'curve' ? s.pieces.flatMap((p) => (sweeps(p) ? [p.r] : [])) : [],
-  );
-
 /** Where a click places a node: where the pointer snapped, else at the pointer with the automatic heading. */
-export const placedAt = (hit: SnapHit | null, info: PointerInfo): Placement =>
-  snappedTo(hit, info, null) ?? { pt: info.pt, th: null };
-
-/** Whether the snap is a snap line, not the curve of a segment or its offset (^319). */
-const onLine = (hit: SnapHit): boolean => {
-  const s = hit.by[0];
-  return s?.kind === 'curve' && s.straight && s.rule !== 'curve' && s.rule !== 'offset';
-};
+export const placedAt = (hit: SnapHit | null, info: PointerInfo, near: number[] = []): Placement =>
+  snappedTo(hit, info, null, near) ?? { pt: info.pt, th: null };
 
 /** The nodes that move with a press: the dragged one and its group (^264). */
 export function movedIds(press: Press | null): number[] {
@@ -370,16 +371,20 @@ export function snapPreview(
 ): Hover | null {
   if (!snap || !placesAt(hover)) return hover;
   const w = world();
-  return nodeHover(snap, w) ?? curveHover(snap, w) ?? previewOf(w.drawn, placement(snap, w.info));
+  return (
+    nodeHover(snap, w) ??
+    curveHover(snap, w) ??
+    previewOf(w.drawn, placement(snap, w.info, tipWays(w.drawn)))
+  );
 }
 
 /** Whether a click would place a node where the pointer is: on the empty canvas or on a curve (^802). */
 const placesAt = (hover: Hover | null) => hover?.kind === 'preview' || hover?.kind === 'candidate';
 
 /** Where the node goes at the snap and with what heading: `Shift` keeps only the position, `Alt` inverts (^358, ^301). */
-const placement = (snap: SnapHit, info: PointerInfo | null) => ({
+const placement = (snap: SnapHit, info: PointerInfo | null, tip: number[]) => ({
   pt: snap.pt,
-  th: info?.shift ? null : placedHeading(snap, info?.alt ?? false),
+  th: info?.shift ? null : placedHeading(snap, info?.alt ?? false, tip),
 });
 
 /** The node the pointer snapped to, as a hovered handle. */

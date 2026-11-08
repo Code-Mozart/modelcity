@@ -2,11 +2,22 @@ import { LANE_WIDTH_M } from '../curves/lane';
 import { sweeps } from '../curves/piece';
 import { SAME_PLACE_M, alongOrAgainst } from '../curves/tolerance';
 import { cross, dist, dot, fromAngle, sub } from '../curves/vec';
-import { edgesAt, nodeOf, withRadius, type GEdge, type GNode, type Graph } from '../model/graph';
+import type { PathNode } from '../curves/types';
+import { linkTo, type DrawEnd } from '../model/junction';
+import {
+  addNode,
+  edgesAt,
+  nodeOf,
+  withRadius,
+  type GEdge,
+  type GNode,
+  type Graph,
+} from '../model/graph';
 import { curveOfEdge } from './chains';
 import { touchPoint } from './derived';
 import { parallel, touching } from './parallel';
 import { concentricWithParallel } from './sharedRadius';
+import { followTowers } from './towerHeading';
 
 /** Whether the node `n` is where a node of `s` touches it: a lane width away on its normal. */
 const besideNode = (g: Graph, n: GNode, s: GEdge) =>
@@ -78,4 +89,26 @@ export function followParallels(before: Graph, after: Graph): Graph {
   let g = after;
   for (const e of edgesAt(after, moved[0]!.id)) g = concentricFor(g, e);
   return g;
+}
+
+/**
+ * The node a click would add to the road drawn from `tip` and the radius its segment would get
+ * (^331, ^877): what is built, so the preview shows it and the click builds what was shown. The
+ * node takes the heading of a tower it is in (^867), the segment the concentric radius.
+ */
+export function previewPlaced(
+  g: Graph,
+  tip: number,
+  node: PathNode,
+  end: DrawEnd,
+): { th: number; radius: number | null } | null {
+  const added = addNode(g, node);
+  const linked = linkTo(added.graph, tip, end, added.id);
+  const e = linked.edges.find((x) => x.start === added.id || x.end === added.id);
+  if (!e) return null;
+  const after = followParallels(g, followTowers(g, concentricWithParallel(linked, e.id)));
+  return {
+    th: nodeOf(after, added.id)?.th ?? node.th,
+    radius: after.edges.find((x) => x.id === e.id)?.radius ?? null,
+  };
 }

@@ -121,3 +121,39 @@ describe('not when several nodes move, and in extend mode (^877)', () => {
     expect(Math.hypot(big.c.x - small.c.x, big.c.y - small.c.y)).toBeLessThan(0.01);
   });
 });
+
+describe('the preview shows it (^877)', () => {
+  it('while a node is dragged onto the offset curve, the segment already has the concentric arc', () => {
+    const ed = new Editor();
+    ed.load(project());
+    const look = (x: number, y: number) => at(x, y, { ctrl: false, scale: 20 });
+    ed.pointerDown(look(23.13, -38.625));
+    ed.pointerMove(look(30, -36));
+    ed.pointerMove(look(52.369, -24.895));
+    const [big, small] = [arcOf(ed.graph, 0), arcOf(ed.graph, 1)];
+    expect(Math.hypot(big.c.x - small.c.x, big.c.y - small.c.y)).toBeLessThan(0.01);
+  });
+
+  it('in extend mode, the preview has the radius that is built', () => {
+    const g = project();
+    const lone = {
+      ...g,
+      edges: g.edges.filter((e) => e.id === 0),
+      nodes: g.nodes.filter((n) => n.id !== 3),
+    };
+    const ed = new Editor();
+    ed.load(lone);
+    ed.enterDrawMode();
+    const look = (x: number, y: number) => at(x, y, { ctrl: false, scale: 20 });
+    ed.pointerMove(look(9.232, -38.625));
+    ed.pointerDown(look(9.232, -38.625));
+    ed.pointerUp();
+    ed.pointerMove(look(52.369, -24.895));
+    const shown = ed.hover?.kind === 'preview' ? ed.hover.radius : undefined;
+    ed.pointerDown(look(52.369, -24.895));
+    ed.pointerUp();
+    const made = ed.graph.edges.find((e) => e.id !== 0)!;
+    expect(shown).not.toBeNull();
+    expect(shown).toBeCloseTo(made.radius!, 6);
+  });
+});

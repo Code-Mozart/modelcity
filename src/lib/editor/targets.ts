@@ -1,4 +1,4 @@
-import { previewRadius } from './sharedRadius';
+import { previewPlaced } from './followParallels';
 import type { PathNode } from '../curves/types';
 import { nodeAtSample, type RoadHandle, type RoadHit } from './chains';
 import { edgeOfId, nodeOf } from '../model/graph';
@@ -87,11 +87,16 @@ export function mergePreview(
     : null;
 }
 
-/** The preview of the node a click would add: where, its heading, and the node it attaches to. */
-export function previewOf({ graph, active, end }: Drawn, at: Placement): Hover {
-  const ref = (active === null ? undefined : nodeOf(graph, active)) ?? null;
+/** The node a click would add: where, its heading (that of a tower it is in, ^867), and the radius of its segment (^877). */
+function placedPreview({ graph, active, end }: Drawn, at: Placement, ref: PathNode | null) {
   const th = at.th ?? (ref ? autoHeadingFor(end)(ref, at.pt) : 0);
   const node = { x: at.pt.x, y: at.pt.y, th };
-  const radius = ref && active !== null ? previewRadius(graph, active, node, end) : null;
-  return { kind: 'preview', ref, end, node, radius };
+  const placed = ref && active !== null ? previewPlaced(graph, active, node, end) : null;
+  return { node: { ...node, th: placed?.th ?? th }, radius: placed?.radius ?? null };
+}
+
+/** The preview of the node a click would add: where, its heading, and the node it attaches to. */
+export function previewOf(d: Drawn, at: Placement): Hover {
+  const ref = (d.active === null ? undefined : nodeOf(d.graph, d.active)) ?? null;
+  return { kind: 'preview', ref, end: d.end, ...placedPreview(d, at, ref) };
 }

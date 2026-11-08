@@ -44,14 +44,25 @@ describe('a node beside another touches it and gets a heading (^254, ^253, ^301)
     ed.pointerUp();
     expect(Math.abs(heading(ed.graph.nodes.at(-1)!.th))).toBeCloseTo(Math.PI);
   });
+});
 
-  it('a node that is moved there takes the heading too', () => {
+describe('a node that is moved there (^254, ^888)', () => {
+  it('takes the heading too, the way that turns its segment less (^888), Alt the other one', () => {
     const ed = new Editor();
     ed.load(two());
     drag(ed, [30, 30], [0.4, -3.3]);
     const moved = nodeOf(ed.graph, 2)!;
     expect(moved).toMatchObject({ x: 0, y: -3 });
-    expect(Math.abs(heading(moved.th))).toBeCloseTo(Math.PI);
+    // Its segment runs east to a node that heads east: the oncoming lane of the rule would make a hook.
+    expect(heading(moved.th)).toBeCloseTo(0);
+    const flipped = new Editor();
+    flipped.load(two());
+    flipped.modifiers({ alt: true, shift: false });
+    flipped.pointerDown({ ...snapping(30, 30), alt: true });
+    flipped.pointerMove({ ...snapping(20, 20), alt: true });
+    flipped.pointerMove({ ...snapping(0.4, -3.3), alt: true });
+    flipped.pointerUp();
+    expect(Math.abs(heading(nodeOf(flipped.graph, 2)!.th))).toBeCloseTo(Math.PI);
   });
 
   it('Ctrl: no snap, no heading', () => {
