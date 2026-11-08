@@ -2,11 +2,11 @@
   import type { Vec } from '../curves/vec';
   import { coordinatesText } from './debugTools.svelte';
 
-  /** The mouse coordinates under the version at the top center, in the same style (^833). */
-  let { pt }: { pt: Vec | null | undefined } = $props();
+  /** The mouse coordinates under the version at the top center, in the same style (^833), and what the pointer is on (^871). */
+  let { pt, over }: { pt: Vec | null | undefined; over: string } = $props();
 </script>
 
-<div class="coordinates">{coordinatesText(pt)}</div>
+<div class="coordinates">{coordinatesText(pt)}<br />{over}</div>
 
 <style>
   .coordinates {

@@ -1,4 +1,4 @@
-next: ^871
+next: ^872
 
 # Hats
 
@@ -634,6 +634,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^868 | feature | planned (milestone ^863; user: title to be reconsidered) | **The same as a repair on load (user, ^229):** a project loaded with such a node is repaired by the same rule, only when the position is within the tolerances (not by a wide capture range), with a warning once, details in the console and a save-back (^229); needs the load pipeline of ^229 (read, migrate, check, repair, convert), not built yet. |
 | ^869 | image | reference (user) | **Example project "sometimes-parallel-or-what" (user):** `docs/mocks/hat869.json`: the Y-shape with a third segment; the two segments that turn right are parallel (radii 10.521 and 7.521), but showed no bars on their arcs and the east tower, while a slightly different radius showed them. |
 | ^870 | bug | fixed (PR #46; user's rule from ^858) | **Arc ends of segments that are parallel all along were derived nodes (user, ^869):** the derived nodes at the ends of the arcs of one lane cut only that lane (the nodes that touch a segment cut it, those of the arc ends did not), so the pieces of the two lanes did not line up, were not parallel pairwise, and the bars were missing; it flipped with the radius because of the tolerance window of ^853. Now an arc end is a derived node only where a straight piece of **another, not parallel** segment (or a node of one) runs beside it: where two segments are parallel all along there is none (^858 refined). Tested with ^869. |
+| ^871 | feature | done (PR #46; user, to report bugs more easily; part of the debug tools ^368) | **Debug: what the pointer is on (user):** with the coordinates on (`Ctrl+Period`, ^833) a second line says what is hovered: `node 4`, or `segment 2 (start node 4, end node 5)` for a segment (also for its radius and bend points), `derived node on segment ...` for a derived node, `-` for nothing. Same hidden switch, same style. |
 
 ## Rented ranges
 
