@@ -3,10 +3,16 @@
   import { coordinatesText } from './debugTools.svelte';
 
   /** The mouse coordinates under the version at the top center, in the same style (^833), and what the pointer is on (^871). */
-  let { pt, over }: { pt: Vec | null | undefined; over: string } = $props();
+  let {
+    pt,
+    over,
+    misses = [],
+  }: { pt: Vec | null | undefined; over: string; misses?: string[] } = $props();
 </script>
 
-<div class="coordinates">{coordinatesText(pt)}<br />{over}</div>
+<div class="coordinates">
+  {coordinatesText(pt)}<br />{over}{#each misses as line (line)}<br />near miss, {line}{/each}
+</div>
 
 <style>
   .coordinates {

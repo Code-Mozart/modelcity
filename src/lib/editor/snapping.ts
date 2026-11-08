@@ -204,10 +204,15 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
       from: [],
       gives: s.gives?.map((g) => ({ ...g, from: [], origin: undefined })),
     }));
+  // And the places one lane width to either side of where it was: to move it over by a lane (^882).
+  const sides = own.flatMap((s) =>
+    s.kind === 'point' && s.node === undefined ? [{ ...s, from: [], origin: undefined }] : [],
+  );
   return [
     ...suggestionsOfGraph(without(before, moving)),
     ...places,
     ...lines,
+    ...sides,
     ...ownCurves(before, press.id),
   ];
 }

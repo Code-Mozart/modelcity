@@ -31,3 +31,9 @@ export const sameWay = (a: { th: number }, b: { th: number }) =>
  */
 export const radiusTolerance = (da: number) =>
   SAME_PLACE_M / (1 - Math.cos(Math.max(Math.abs(da), 0.1) / 2));
+
+/**
+ * How far (meters) a relation may miss and still be shown as a near miss (^884): only for showing,
+ * never what decides; 100 mm (assumed, to be judged by the user).
+ */
+export const NEAR_MISS_M = 0.1;

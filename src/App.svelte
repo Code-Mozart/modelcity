@@ -30,7 +30,12 @@
   import { installTestHook } from './lib/testHook';
   import VersionText from './lib/hud/VersionText.svelte';
   import PointerCoordinates from './lib/hud/PointerCoordinates.svelte';
-  import { DebugTools, hoverText, isCoordinatesKey } from './lib/hud/debugTools.svelte';
+  import {
+    DebugTools,
+    hoverText,
+    isCoordinatesKey,
+    nearMissLines,
+  } from './lib/hud/debugTools.svelte';
   import { violationsOf } from './lib/editor/violations';
   import { VersionBanner } from './lib/hud/versionBanner.svelte';
   import { TAB_TITLE } from './lib/version';
@@ -207,6 +212,7 @@
   {#if debug.coordinates}<PointerCoordinates
       pt={editor.pointer?.pt}
       over={hoverText(editor.graph, editor.hover)}
+      misses={nearMissLines(editor.graph, editor.hover)}
     />{/if}
   <div class="right">
     <div class="toasts"><ToastList {toasts} /></div>

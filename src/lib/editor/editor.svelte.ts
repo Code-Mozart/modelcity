@@ -15,6 +15,8 @@ import { controlUsed } from './usage';
 import { pointerOf } from './proximity';
 import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { focusOf, hoverAt } from './hits';
+import { followTowers } from './towerHeading';
+import { followParallels } from './followParallels';
 import { chainHandles, chainsOf, hitOfHandle, type RoadHandle, type RoadHit } from './chains';
 import { moveOf } from './moves';
 import { hoveredSegmentsOf, movingGroupOf, selectedSegmentsOf } from './views';
@@ -164,7 +166,7 @@ export class Editor {
   /** Make a step undoable if it changed the graph or the selection (^88), and round it to the millimeter (^170). Inside a press only its end commits. */
   private commit(before: Snapshot, name: string) {
     if (this.batching) return;
-    this.graph = roundToMm(this.graph);
+    this.graph = followParallels(before.graph, followTowers(before.graph, roundToMm(this.graph)));
     // A graph with the same content stays the object it was (a drag back to where it began), so nothing else sees a change.
     if (sameGraph(before.graph, this.graph)) this.graph = before.graph;
     if (before.graph === this.graph && sameSelection(before.selection, this.selection)) return;

@@ -2,6 +2,7 @@ import { FEATURES } from '../features';
 import type { Vec } from '../curves/vec';
 import type { Hover } from '../editor/types';
 import type { Graph } from '../model/graph';
+import { nearMisses } from '../editor/nearMisses';
 
 /** The debug aids (^833, ^368): hidden, off by default, switched on with a key that has no hint. */
 export class DebugTools {
@@ -40,4 +41,11 @@ export function hoverText(graph: Graph, hover: Hover | null): string {
     return derived + segment(hover.hit.edge);
   }
   return '-';
+}
+
+/** The nodes that the hovered node almost touches (^884), one line each: what it is off by. */
+export function nearMissLines(graph: Graph, hover: Hover | null): string[] {
+  if (hover?.kind !== 'handle') return [];
+  const { type, id } = hover.handle;
+  return type === 'node' || type === 'head' ? nearMisses(graph, id) : [];
 }
