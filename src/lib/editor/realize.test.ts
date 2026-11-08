@@ -72,8 +72,8 @@ describe('a derived node in draw mode (^824)', () => {
   });
 });
 
-describe('on an S-curve of the largest radius (^824)', () => {
-  it('the inflection point is dragged, not the radius points that are at the same place', () => {
+describe('a control point wins over a derived node at the same place (^862)', () => {
+  it('on an S-curve of the largest radius the radius point is taken, not the inflection point', () => {
     const ed = new Editor();
     ed.load(
       graphOf(
@@ -84,9 +84,12 @@ describe('on an S-curve of the largest radius (^824)', () => {
         [[0, 1, null]],
       ),
     );
+    // The ends of its arcs meet at the inflection point (20, 5): the radius points are there.
+    const ends = ed
+      .handles(30)
+      .filter((h) => h.type === 'rad' && Math.hypot(h.x - 20, h.y - 5) < 0.01);
+    expect(ends.length).toBeGreaterThan(0);
     ed.pointerMove(pointer(20, 5));
-    expect(ed.hover).toMatchObject({ kind: 'candidate', derived: true });
-    ed.pointerMove(pointer(10.3, 1.27));
     expect(ed.hover).toMatchObject({ kind: 'handle' });
   });
 });

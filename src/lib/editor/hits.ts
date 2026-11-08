@@ -39,16 +39,13 @@ export function curveAt(chains: Chain[], { pt, scale, touch }: PointerInfo): Roa
   return hit && !nearNode(hit) ? hit : null;
 }
 
-/**
- * A derived node under the pointer, as a place on its segment, in select mode (^824). Not the end
- * of an arc (`radius`, ^858): that is the radius handle, which is what the pointer takes there.
- */
+/** A derived node under the pointer, as a place on its segment, in select mode (^824). */
 function derivedAt(
   hits: { chains: Chain[]; derived: DerivedNode[] },
   { pt, scale, touch }: PointerInfo,
 ): Extract<Hover, { kind: 'candidate' }> | null {
   const reach = NODE_HIT_PX[touch ? 'touch' : 'mouse'] / scale;
-  const d = hits.derived.find((x) => x.kind !== 'radius' && dist(x, pt) < reach);
+  const d = hits.derived.find((x) => dist(x, pt) < reach);
   const hit = d && nearestOnChains(hits.chains, d, reach);
   return hit ? { kind: 'candidate', hit, derived: true } : null;
 }
@@ -61,8 +58,8 @@ export function hoverAt(
 ): Hover | null {
   const handle = handleAt(hits.handles, info);
   const derived = drawing ? null : derivedAt(hits, info);
-  // On an S-curve of the largest radius the ends of its two arcs meet at the inflection point: a drag there takes the derived node (^824).
-  if (handle && !(derived && handle.type === 'rad')) return { kind: 'handle', handle };
+  // A control point always wins over a derived node at the same place (^862): the derived node can still be reached another way.
+  if (handle) return { kind: 'handle', handle };
   if (derived) return derived;
   const hit = curveAt(hits.chains, info);
   if (hit) return { kind: 'candidate', hit };
