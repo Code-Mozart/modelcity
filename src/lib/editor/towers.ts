@@ -1,5 +1,5 @@
 import { LANE_WIDTH_M } from '../curves/lane';
-import { SAME_PLACE_M, SAME_WAY } from '../curves/tolerance';
+import { SAME_PLACE_M, alongOrAgainst } from '../curves/tolerance';
 import { dist, dot, fromAngle, mul, perp, sub, type Vec } from '../curves/vec';
 import { edgesAt, type GEdge, type GNode, type Graph } from '../model/graph';
 import { parallel } from './parallel';
@@ -20,7 +20,7 @@ export interface Bar {
 /** Whether two nodes touch (^254, ^352): side by side, one lane width apart, the same or the opposite heading. */
 function touches(a: GNode, b: GNode): boolean {
   const t = fromAngle(a.th);
-  const parallel = Math.abs(Math.abs(dot(t, fromAngle(b.th))) - 1) < SAME_WAY;
+  const parallel = alongOrAgainst(a, b);
   return (
     parallel &&
     Math.abs(dist(a, b) - LANE_WIDTH_M) < SAME_PLACE_M &&

@@ -1,7 +1,7 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import { RMIN } from '../curves/radius';
 import { reverseEdge, twoRadiiEdge } from '../curves/reverse';
-import { SAME_PLACE_M, SAME_RADIUS_M } from '../curves/tolerance';
+import { SAME_PLACE_M, radiusTolerance } from '../curves/tolerance';
 import type { Arc, Edge, MidLine, PathNode, TwoArcEdge } from '../curves/types';
 import { add, dist, dot, fromAngle, mul, perp, sub, type Vec } from '../curves/vec';
 import type { GEdge, Graph } from '../model/graph';
@@ -16,6 +16,9 @@ interface Lane {
   q: PathNode;
   E: TwoArcEdge;
 }
+
+/** The angle one arc of an S-curve sweeps. */
+const sweepOf = (E: TwoArcEdge) => arcOf(E, 1)?.da ?? 0;
 
 const isS = (E: Edge): E is TwoArcEdge => E.kind === 'S';
 const arcOf = (E: TwoArcEdge, i: 1 | 3): Arc | null => {
@@ -118,7 +121,7 @@ function followed(cx: Context, b: Lane) {
     const E = beside({ ...a, E: shapes.get(a.edge.id) ?? a.E }, b);
     // An auto lane takes the radius the group gives it, beside a lane that is in the group already.
     const takes = lenient && b.edge.radius == null && shapes.has(a.edge.id);
-    if (E && (takes || Math.abs(E.R - valueOf(b)) <= SAME_RADIUS_M))
+    if (E && (takes || Math.abs(E.R - valueOf(b)) <= radiusTolerance(sweepOf(E))))
       return { ...E, auto: b.edge.radius == null };
   }
   return null;
@@ -228,10 +231,11 @@ function centreOf(members: Member[]): { c: number; Rc: number | null } | null {
   const mid = (lo + hi) / 2;
   const raw = a === b ? mid : (a.x + b.x - (a.lane.edge.radius! - b.lane.edge.radius!)) / 2;
   const c =
-    raw <= a.x + SAME_RADIUS_M && a !== b ? lo : raw >= b.x - SAME_RADIUS_M && a !== b ? hi : raw;
+    raw <= a.x + SAME_PLACE_M && a !== b ? lo : raw >= b.x - SAME_PLACE_M && a !== b ? hi : raw;
   const Rc = a.lane.edge.radius! + Math.abs(a.x - c);
   const tent = stored.every(
-    (m) => Math.abs(Rc - Math.abs(m.x - c) - m.lane.edge.radius!) < SAME_RADIUS_M,
+    (m) =>
+      Math.abs(Rc - Math.abs(m.x - c) - m.lane.edge.radius!) < radiusTolerance(sweepOf(m.lane.E)),
   );
   return tent ? { c, Rc } : null;
 }

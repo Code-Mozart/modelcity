@@ -1,6 +1,6 @@
 import { LANE_WIDTH_M } from '../curves/lane';
-import { SAME_PLACE_M, SAME_WAY } from '../curves/tolerance';
-import { dist, dot, fromAngle } from '../curves/vec';
+import { SAME_PLACE_M, alongOrAgainst } from '../curves/tolerance';
+import { dist } from '../curves/vec';
 import type { Graph } from '../model/graph';
 import { nearestOnPieces } from '../snap/geometry';
 import { curvesOf, near } from './derived';
@@ -16,9 +16,6 @@ export interface Violation {
   /** The other node, or the segment. */
   other: number;
 }
-
-const alongOrAgainst = (a: { th: number }, b: { th: number }) =>
-  Math.abs(dot(fromAngle(a.th), fromAngle(b.th))) > 1 - SAME_WAY;
 
 /** Touching nodes that do not head the same or the opposite way (^254, ^817). */
 function touchingNodes(g: Graph): Violation[] {

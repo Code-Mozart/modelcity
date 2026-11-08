@@ -1,11 +1,12 @@
 import { LANE_WIDTH_M } from '../curves/lane';
+import { SAME_PLACE_M } from '../curves/tolerance';
 import { pointOn, sweeps } from '../curves/piece';
 import { edgesAt, nodeOf, type Graph } from '../model/graph';
 import { cross, dist, sub, unitOr, type Vec } from '../curves/vec';
 import { curvesThrough, snapTo, type Reach, type SnapQuery } from '../snap/engine';
 import { nearestOnPieces } from '../snap/geometry';
 import { extendRules, nodeRules, suggestionsOf, type RuleEdge } from '../snap/rules';
-import type { SnapCurve, SnapHit, Suggestion } from '../snap/types';
+import { RANK, type SnapCurve, type SnapHit, type Suggestion } from '../snap/types';
 import {
   chainHandles,
   chainsOf,
@@ -15,51 +16,46 @@ import {
   type RoadHandle,
 } from './chains';
 import { previewOf, type Drawn } from './targets';
+import { tipWays } from './ways';
+import { arcRadii, onLine } from './snapHit';
 import { headingFrom, placedHeading } from '../snap/heading';
 import type { RoadHit } from './chains';
 import type { Hover, Placement, PointerInfo, Press } from './types';
 
-/** How far a snap point may be from the line of a control point and still be reached, meters. */
-const LOCUS_TOL_M = 0.05;
+/** The heading control point on a snap: it copies the heading, the pointer stays (^313); `Shift` aims at it, for an existing node (^335). */
+function turnedTo(hit: SnapHit, info: PointerInfo, press: Press | null): Placement | null {
+  if (turningNode(press) === null) return null;
+  if (press?.kind === 'drag' && info.shift)
+    return { pt: info.pt, th: null, aim: { at: hit.pt, away: info.alt } };
+  return { pt: info.pt, th: headingFrom(hit, info.alt) };
+}
 
-/** A node dropped within this world distance (meters) of another node or of a curve is merged into it, whatever the zoom (^248, ^283). */
-export const MERGE_WORLD_M = 0.1;
-
-/** Where a node goes when the pointer snapped: the place, with the heading it gets there (^254, ^301). */
+/**
+ * Where a node goes when the pointer snapped: the place, with the heading it gets there (^254,
+ * ^301). `near` are the headings of the nodes its segments run to: of the heading the snap gives
+ * and the opposite one it takes the one that turns them less (^888).
+ */
 export function snappedTo(
   hit: SnapHit | null,
   info: PointerInfo,
   press: Press | null,
+  near: number[] = [],
 ): Placement | null {
   if (!hit) return null;
-  // A heading takes the heading of what it snapped to, the pointer stays where it is (^313); `Shift` aims at it, for an existing node (^335).
-  if (press?.kind === 'drag' && turningNode(press) !== null && info.shift)
-    return { pt: info.pt, th: null, aim: { at: hit.pt, away: info.alt } };
-  if (turningNode(press) !== null) return { pt: info.pt, th: headingFrom(hit, info.alt) };
+  const turned = turnedTo(hit, info, press);
+  if (turned) return turned;
   // A click places the node at the snap with its heading; `Shift` keeps only the position (^358).
   const placed = {
     pt: hit.pt,
-    th: info.shift ? null : placedHeading(hit, info.alt),
+    th: info.shift ? null : placedHeading(hit, info.alt, near),
     line: onLine(hit),
   };
   return press?.kind === 'drag' ? { ...placed, radii: arcRadii(hit) } : placed;
 }
 
-/** The radii of the arcs of the curves a hit snapped to (^830). */
-const arcRadii = (hit: SnapHit): number[] =>
-  hit.by.flatMap((s) =>
-    s.kind === 'curve' ? s.pieces.flatMap((p) => (sweeps(p) ? [p.r] : [])) : [],
-  );
-
 /** Where a click places a node: where the pointer snapped, else at the pointer with the automatic heading. */
-export const placedAt = (hit: SnapHit | null, info: PointerInfo): Placement =>
-  snappedTo(hit, info, null) ?? { pt: info.pt, th: null };
-
-/** Whether the snap is a snap line, not the curve of a segment or its offset (^319). */
-const onLine = (hit: SnapHit): boolean => {
-  const s = hit.by[0];
-  return s?.kind === 'curve' && s.straight && s.rule !== 'curve' && s.rule !== 'offset';
-};
+export const placedAt = (hit: SnapHit | null, info: PointerInfo, near: number[] = []): Placement =>
+  snappedTo(hit, info, null, near) ?? { pt: info.pt, th: null };
 
 /** The nodes that move with a press: the dragged one and its group (^264). */
 export function movedIds(press: Press | null): number[] {
@@ -121,15 +117,15 @@ function sides(c: SnapCurve, locus: { p: Vec; d: Vec }): number[] {
  * curves that cross it. Everything else is not offered and not shown. Undefined for control points
  * that are not tied to a line.
  */
-function reachOf(press: Press | null): Reach | undefined {
+export function reachOf(press: Press | null): Reach | undefined {
   const locus = press && locusOf(press);
   if (!locus) return undefined;
   return {
     line: locus,
-    point: (at) => Math.abs(cross(sub(at, locus.p), locus.d)) <= LOCUS_TOL_M,
+    point: (at) => Math.abs(cross(sub(at, locus.p), locus.d)) <= SAME_PLACE_M,
     curve: (c) => {
       const s = sides(c, locus);
-      return Math.min(...s) <= LOCUS_TOL_M && Math.max(...s) >= -LOCUS_TOL_M;
+      return Math.min(...s) <= SAME_PLACE_M && Math.max(...s) >= -SAME_PLACE_M;
     },
   };
 }
@@ -174,7 +170,11 @@ export function snapBase(
 function baseOf(graph: Graph, press: Press | null): Suggestion[] {
   // A heading snaps to everything but the node itself and its own segments (^313).
   const turning = turningNode(press);
-  if (turning !== null) return suggestionsOfGraph(without(press!.undo.graph, [turning]));
+  // While a heading is turned no offset curve is offered (^878).
+  if (turning !== null)
+    return suggestionsOfGraph(without(press!.undo.graph, [turning])).filter(
+      (s) => !(s.kind === 'curve' && s.rule === 'offset'),
+    );
   const moving = movedIds(press);
   // A control point of a segment snaps to everything but the segment itself, whose shape it changes (^249).
   const control = controlEdge(press);
@@ -189,6 +189,7 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
     heading: n.th,
     rule: 'previous',
     from: [],
+    rank: RANK.previous,
   }));
   // The node that is dragged keeps its snap lines: sideways, or further along its heading (^300).
   const own = were.filter((n) => n.id === press.id).flatMap((n) => nodeRules(n, LANE_WIDTH_M));
@@ -199,10 +200,15 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
       from: [],
       gives: s.gives?.map((g) => ({ ...g, from: [], origin: undefined })),
     }));
+  // And the places one lane width to either side of where it was: to move it over by a lane (^882).
+  const sides = own.flatMap((s) =>
+    s.kind === 'point' && s.node === undefined ? [{ ...s, from: [], origin: undefined }] : [],
+  );
   return [
     ...suggestionsOfGraph(without(before, moving)),
     ...places,
     ...lines,
+    ...sides,
     ...ownCurves(before, press.id),
   ];
 }
@@ -222,7 +228,9 @@ function ownCurves(before: Graph, id: number): Suggestion[] {
 function ownPlace(press: Press): Suggestion[] {
   if (press.kind !== 'drag') return [];
   const { x, y } = press.drag.handle;
-  return [{ kind: 'point', at: { x, y }, heading: null, rule: 'previous', from: [] }];
+  return [
+    { kind: 'point', at: { x, y }, heading: null, rule: 'previous', from: [], rank: RANK.previous },
+  ];
 }
 
 /** Where the moved nodes were, to show them while they move (^113). */
@@ -249,7 +257,7 @@ const placing = (hover: Hover | null) =>
   (hover?.kind === 'handle' && ['node', 'rad'].includes(hover.handle.type));
 
 /** Whether the pointer places or moves a node now: in draw mode, or dragging a node. */
-function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | 'turn' | null {
+export function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | 'turn' | null {
   if (turningNode(press) !== null) return press!.moved ? 'turn' : null;
   if (press) return movedIds(press).length || controlEdge(press) !== null ? 'move' : null;
   return drawing && placing(hover) ? 'place' : null;
@@ -318,7 +326,13 @@ export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
   const { info } = a;
   const what = snaps(a);
   if (!info || info.ctrl || !what) return null;
-  const query = { pt: info.pt, scale: info.scale, pinned: a.pinned, reach: reachOf(a.press) };
+  const query = {
+    pt: info.pt,
+    scale: info.scale,
+    touch: info.touch,
+    pinned: a.pinned,
+    reach: reachOf(a.press),
+  };
   const hit = what === 'place' ? placeHit(base, a.hover, query) : snapTo(base, query);
   return hit && withoutExtendAtTip(hit, a, base);
 }
@@ -357,22 +371,26 @@ export function snapPreview(
 ): Hover | null {
   if (!snap || !placesAt(hover)) return hover;
   const w = world();
-  return nodeHover(snap, w) ?? curveHover(snap, w) ?? previewOf(w.drawn, placement(snap, w.info));
+  return (
+    nodeHover(snap, w) ??
+    curveHover(snap, w) ??
+    previewOf(w.drawn, placement(snap, w.info, tipWays(w.drawn)))
+  );
 }
 
 /** Whether a click would place a node where the pointer is: on the empty canvas or on a curve (^802). */
 const placesAt = (hover: Hover | null) => hover?.kind === 'preview' || hover?.kind === 'candidate';
 
 /** Where the node goes at the snap and with what heading: `Shift` keeps only the position, `Alt` inverts (^358, ^301). */
-const placement = (snap: SnapHit, info: PointerInfo | null) => ({
+const placement = (snap: SnapHit, info: PointerInfo | null, tip: number[]) => ({
   pt: snap.pt,
-  th: info?.shift ? null : placedHeading(snap, info?.alt ?? false),
+  th: info?.shift ? null : placedHeading(snap, info?.alt ?? false, tip),
 });
 
 /** The node the pointer snapped to, as a hovered handle. */
 function nodeHover(snap: SnapHit, w: SnapWorld): Hover | null {
   // Wherever a node is, it is that node: never a second one on top of it (^248, ^296).
-  const at = (h: RoadHandle) => h.type === 'node' && dist(h, snap.pt) < MERGE_WORLD_M;
+  const at = (h: RoadHandle) => h.type === 'node' && dist(h, snap.pt) < SAME_PLACE_M;
   const handle = chainHandles(w.chains, w.info?.scale ?? 1).find(at);
   return handle ? { kind: 'handle', handle } : null;
 }
@@ -385,6 +403,6 @@ function curveHover(snap: SnapHit, w: SnapWorld): Hover | null {
     by?.kind === 'curve'
       ? by.rule === 'curve'
       : by?.rule === 'radius-point' || by?.rule === 'inflection-point';
-  const hit = onCurve ? nearestOnChains(w.chains, snap.pt, MERGE_WORLD_M) : null;
+  const hit = onCurve ? nearestOnChains(w.chains, snap.pt, SAME_PLACE_M) : null;
   return hit && !nearNode(hit) ? { kind: 'candidate', hit } : null;
 }

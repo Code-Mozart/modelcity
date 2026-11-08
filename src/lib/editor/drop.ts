@@ -1,11 +1,12 @@
 import { buildEdge } from '../curves/edge';
+import { SAME_PLACE_M } from '../curves/tolerance';
 import type { Piece } from '../curves/types';
 import { dist, type Vec } from '../curves/vec';
 import { edgesAt, nodeOf, type Graph } from '../model/graph';
 import type { SnapHit } from '../snap/types';
 import { chainsOf, nearestOnChains, type Chain } from './chains';
 import type { Press } from './types';
-import { MERGE_WORLD_M, movedIds, without } from './snapping';
+import { movedIds, without } from './snapping';
 
 /** Where a dragged node is merged: into a node, or into a curve at a place with its tangent (^248, ^268). */
 export type Drop = { node?: number; edge?: number; at: Vec; th: number } | null;
@@ -14,7 +15,7 @@ export type Drop = { node?: number; edge?: number; at: Vec; th: number } | null;
 function nodeUnder(graph: Graph, moving: number[], hit: SnapHit | null, at: Vec): Drop {
   const by = hit?.by[0];
   const snapped = by?.kind === 'point' && by.rule === 'node-points' ? by.node : undefined;
-  const near = graph.nodes.find((n) => !moving.includes(n.id) && dist(n, at) < MERGE_WORLD_M)?.id;
+  const near = graph.nodes.find((n) => !moving.includes(n.id) && dist(n, at) < SAME_PLACE_M)?.id;
   const n = nodeOf(graph, snapped ?? near ?? -1);
   return n ? { node: n.id, at: { x: n.x, y: n.y }, th: n.th } : null;
 }
@@ -25,7 +26,7 @@ function curveUnder(before: Graph, moving: number[], hit: SnapHit | null, at: Ve
   if (by?.kind === 'curve' && by.rule === 'curve' && by.edge !== undefined) {
     return { edge: by.edge, at: hit!.pt, th: hit!.heading ?? 0 };
   }
-  const near = nearestOnChains(chainsOf(without(before, moving)), at, MERGE_WORLD_M);
+  const near = nearestOnChains(chainsOf(without(before, moving)), at, SAME_PLACE_M);
   const th = near ? Math.atan2(near.at.ty, near.at.tx) : 0;
   return near ? { edge: near.edge, at: { x: near.at.x, y: near.at.y }, th } : null;
 }

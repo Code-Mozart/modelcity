@@ -85,6 +85,7 @@ The user entrusts the details to Claude. Principles:
 - Design principle (^251): precision grows with distance: the farther the pointer is from the point it controls, the finer the steps (angles, snapping), wherever that is feasible and sensible.
 - Design principle (^259): prefer an explicit control (a key, a click) to anything that needs the pointer to stay exactly on a thin target, to hover for a while, or in a nested menu that vanishes when the pointer leaves it by a pixel.
 - Design principle (^805): no new colour for a new meaning. Grey is only for what is grayed out (the generated geometry has its own shade); a new feedback reuses the glyph of the thing it is (a snap point is the turquoise ring wherever it is shown, ^803).
+- Design principle (^879): as few tolerances as possible. Positions share one tolerance (^865); a snap distance in pixels (^883); never a new number for a new case: reuse these, and ask the user before adding one. Judge a relation where the points are (the position domain, ^853), not by a derived number (an angle, a radius, a center) that magnifies the error.
 - Say *operation* for something the user can do, not *action* (^180).
 - Two levels of gizmo (^60): the *skeleton* (curves and node dots, always shown) and the *scaffold* (all other gizmos of a segment, shown by need). A *segment* is the curve between two nodes.
 

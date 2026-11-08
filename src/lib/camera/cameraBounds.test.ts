@@ -8,8 +8,8 @@ import { worldToScreen } from './view';
 /** Screen points that stand for an anchor: its center, or samples along the piece. */
 function samples(c: Camera, a: Anchor): { x: number; y: number }[] {
   if (a.kind === 'point') return [worldToScreen(c.view, c.size, a)];
-  return Array.from({ length: 201 }, (_, i) =>
-    worldToScreen(c.view, c.size, pointOn(a.piece, i / 200)),
+  return Array.from({ length: 2001 }, (_, i) =>
+    worldToScreen(c.view, c.size, pointOn(a.piece, i / 2000)),
   );
 }
 
@@ -17,7 +17,7 @@ function samples(c: Camera, a: Anchor): { x: number; y: number }[] {
 function onScreen(c: Camera, anchors: Anchor[]) {
   const pts = anchors.flatMap((a) => samples(c, a).map((p) => ({ p, r: a.r })));
   const { width, height } = c.size;
-  // Samples of an arc fall slightly inside its true extent (at most about half a pixel at 400 px/m).
+  // Samples of an arc fall slightly inside its true extent (at most about a tenth of a pixel at 10000 px/m).
   const near = (v: number) => v - 12 >= -1;
   return (
     near(Math.max(...pts.map(({ p, r }) => p.x + r))) &&

@@ -1,3 +1,4 @@
+import { screenToWorld } from '../camera/view';
 import { samplesAlong } from '../curves/arrows';
 import { outlinePx } from '../curves/lane';
 import { buildEdge } from '../curves/edge';
@@ -84,6 +85,8 @@ export interface Scene {
   turning: Turning | null;
   /** Where the nodes that are moved were, shown as snap points while they move (^113). */
   previous: Vec[];
+  /** The snap points near the pointer while a node is placed or moved (^890). */
+  nearby: Vec[];
   /** The curves a dragged node's segments would have if it were dropped now: dashed, like the curve of an extend (^284). */
   dropPreview: Piece[][];
 }
@@ -198,7 +201,13 @@ function drawHover(f: Frame, hover: Hover | null, drawing: boolean, pal: Palette
 function drawDirection(f: Frame, road: RoadScene, selected: boolean[], pal: Palette) {
   const pieces = road.edges.flatMap((e) => e.E.pieces);
   const owner = road.edges.flatMap((e, k) => e.E.pieces.map(() => k));
-  for (const s of samplesAlong(pieces, DIRECTION_SPACING_PX / f.view.scale)) {
+  // Only what can be on the screen: at the greatest zoom a road is a million pixels long (^864).
+  const half = Math.hypot(f.size.width, f.size.height) / 2 + DIRECTION_SPACING_PX;
+  const within = {
+    c: screenToWorld(f.view, f.size, { x: f.size.width / 2, y: f.size.height / 2 }),
+    r: half / f.view.scale,
+  };
+  for (const s of samplesAlong(pieces, DIRECTION_SPACING_PX / f.view.scale, undefined, within)) {
     const at = toScreen(f, s);
     const t = screenDir(f, { x: s.tx, y: s.ty });
     const color = selected[owner[s.piece]!] ? pal.blue : pal.ink;
@@ -307,6 +316,14 @@ function drawAllNodes(f: Frame, scene: Scene, active: boolean[][], pal: Palette)
     ring(f.ctx, toScreen(f, d), NODE_DOT_PX, { color: pal.ink, width: DERIVED_LINE_PX });
 }
 
+/** The snap points shown apart from the snap itself: near the pointer (^890), where the moved nodes were (^113), and the curves a drop would make (^284). */
+function drawSnapPoints(f: Frame, scene: Scene, pal: Palette) {
+  for (const at of [...scene.nearby, ...scene.previous]) drawSnapPoint(f, at, pal);
+  for (const pieces of scene.dropPreview) {
+    for (const piece of pieces) strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
+  }
+}
+
 /**
  * Two levels of gizmo (^60): the skeleton (curves and node dots) is always drawn; the scaffold of
  * a segment (everything else) only while it is needed, all or nothing, see `scaffold.ts`.
@@ -326,10 +343,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   drawHover(f, scene.hover, scene.drawing, pal);
   if (scene.tower) drawTowerLine(f, scene.tower, pal);
   drawSnap(f, scene.snap, pal);
-  for (const at of scene.previous) drawSnapPoint(f, at, pal);
-  for (const pieces of scene.dropPreview) {
-    for (const piece of pieces) strokePiece(f, piece, { color: pal.ink, width: 1.5, dash: [6, 6] });
-  }
+  drawSnapPoints(f, scene, pal);
   if (scene.mergePreview) drawPreview(f, scene.mergePreview, pal, true);
   if (scene.band) drawBand(f, scene.band, pal);
   // The capsules and the bars on their skin are below the nodes, so that selected nodes stay blue (^350, ^820).

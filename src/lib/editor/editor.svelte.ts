@@ -3,6 +3,8 @@ import * as ops from './ops';
 import { derivedNodes } from './derived';
 import { dropOf } from './drop';
 import { placedAt, snapBase, snapFor, snapPreview } from './snapping';
+import { pointsAround } from './nearby';
+import { tipWays } from './ways';
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
@@ -15,6 +17,8 @@ import { controlUsed } from './usage';
 import { pointerOf } from './proximity';
 import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { focusOf, hoverAt } from './hits';
+import { followTowers } from './towerHeading';
+import { followParallels } from './followParallels';
 import { chainHandles, chainsOf, hitOfHandle, type RoadHandle, type RoadHit } from './chains';
 import { moveOf } from './moves';
 import { hoveredSegmentsOf, movingGroupOf, selectedSegmentsOf } from './views';
@@ -86,15 +90,16 @@ export class Editor {
     ),
   );
   /** What the pointer is pulled to while it places or moves a node (^101): derived like the hover. */
-  snapped = $derived(
-    snapFor(this.base, {
-      info: this.lastInfo,
-      press: this.press,
-      hover: this.hoverRaw,
-      drawing: this.drawing,
-      pinned: this.active === null ? this.pins.list : [...this.pins.list, this.active],
-    }),
-  );
+  private snapArgs = $derived({
+    info: this.lastInfo,
+    press: this.press,
+    hover: this.hoverRaw,
+    drawing: this.drawing,
+    pinned: this.active === null ? this.pins.list : [...this.pins.list, this.active],
+  });
+  snapped = $derived(snapFor(this.base, this.snapArgs));
+  /** The snap points near the pointer, shown while it places or moves a node (^890). */
+  nearbyPoints = $derived(pointsAround(this.base, this.snapArgs, this.snapped));
   hover = $derived<Hover | null>(
     snapPreview(this.hoverRaw, this.snapped, () => ({
       info: this.lastInfo,
@@ -164,7 +169,7 @@ export class Editor {
   /** Make a step undoable if it changed the graph or the selection (^88), and round it to the millimeter (^170). Inside a press only its end commits. */
   private commit(before: Snapshot, name: string) {
     if (this.batching) return;
-    this.graph = roundToMm(this.graph);
+    this.graph = followParallels(before.graph, followTowers(before.graph, roundToMm(this.graph)));
     // A graph with the same content stays the object it was (a drag back to where it began), so nothing else sees a change.
     if (sameGraph(before.graph, this.graph)) this.graph = before.graph;
     if (before.graph === this.graph && sameSelection(before.selection, this.selection)) return;
@@ -244,7 +249,8 @@ export class Editor {
       this.press = emptyPress(this.snapshot(), info, hit);
       return;
     }
-    const place = () => ops.placePress(this.snapshot(), placedAt(this.snapped, info));
+    const place = () =>
+      ops.placePress(this.snapshot(), placedAt(this.snapped, info, tipWays(this.snapshot())));
     this.begin(hit ? ops.curvePress(this.snapshot(), hit) : place());
   }
 

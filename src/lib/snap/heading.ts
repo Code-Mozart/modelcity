@@ -5,6 +5,20 @@ import type { Gift, Origin, SnapCurve, SnapHit, SnapPoint, Suggestion } from './
 
 const flip = (th: number, on: boolean) => (on ? th + Math.PI : th);
 
+const turnBetween = (a: number, b: number) =>
+  Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+
+/**
+ * Of a heading and the opposite one the one that turns less from the headings of the nodes the
+ * segments of the node run to (^888): the right-hand traffic rule suggests the opposite on the left
+ * of a node, and a segment to a node that way round would be a hook. `Alt` still flips it (^301).
+ */
+export function nearerWay(th: number, near: number[]): number {
+  if (!near.length) return th;
+  const cost = (t: number) => near.reduce((sum, h) => sum + turnBetween(t, h), 0);
+  return cost(th) <= cost(th + Math.PI) ? th : th + Math.PI;
+}
+
 /** The direction of a snap line pointing away from the point `base` that made it (^313). */
 function awayFrom(c: SnapCurve, base: Vec, pt: Vec): number | null {
   const piece = c.pieces[0];
@@ -98,9 +112,13 @@ export function headingFrom(hit: SnapHit | null, alt: boolean): number | null {
  * line the direction of its normal, on a tangent line the direction along it, away from its base;
  * back where it was picked up, its own. `Alt` takes the other one (^301). Null elsewhere.
  */
-export function placedHeading(hit: SnapHit | null, alt: boolean): number | null {
+export function placedHeading(
+  hit: SnapHit | null,
+  alt: boolean,
+  near: number[] = [],
+): number | null {
   const th = hit ? decide(hit, 'placed')?.th : undefined;
-  return th === undefined ? null : flip(th, alt);
+  return th === undefined ? null : flip(nearerWay(th, near), alt);
 }
 
 /** The places in a list once: two within a millimeter are one. */

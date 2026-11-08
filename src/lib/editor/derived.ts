@@ -1,8 +1,8 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import { nearestParam, pointOn, sweeps } from '../curves/piece';
-import { SAME_PLACE_M, SAME_WAY } from '../curves/tolerance';
+import { SAME_PLACE_M, alongOrAgainst } from '../curves/tolerance';
 import type { Piece, TwoArcEdge } from '../curves/types';
-import { dist, dot, fromAngle, type Vec } from '../curves/vec';
+import { dist, type Vec } from '../curves/vec';
 import { edgesAt, type GEdge, type GNode, type Graph } from '../model/graph';
 import { parallel } from './parallel';
 import { nearestOnPieces } from '../snap/geometry';
@@ -47,10 +47,8 @@ export interface Placed {
 export function touchPoint(pieces: Piece[], n: Placed): Placed | null {
   const at = nearestOnPieces(pieces, n);
   if (!at || Math.abs(at.d - LANE_WIDTH_M) >= SAME_PLACE_M) return null;
-  const along = Math.abs(dot({ x: at.tx, y: at.ty }, fromAngle(n.th)));
-  return along > 1 - SAME_WAY
-    ? { x: at.pt.x, y: at.pt.y, th: headingOf({ x: at.tx, y: at.ty }) }
-    : null;
+  const th = headingOf({ x: at.tx, y: at.ty });
+  return alongOrAgainst(n, { th }) ? { x: at.pt.x, y: at.pt.y, th } : null;
 }
 
 /** The way the middle straight of an S-curve or hook runs, also where the arcs meet and it has no length (^823). */
@@ -86,7 +84,7 @@ export const curvesOf = (g: Graph) =>
 function isTouched(g: Graph, curves: ReturnType<typeof curvesOf>, edge: GEdge, at: Placed) {
   const node = (n: GNode) =>
     Math.abs(dist(n, at) - LANE_WIDTH_M) < SAME_PLACE_M &&
-    Math.abs(dot(fromAngle(n.th), fromAngle(at.th))) > 1 - SAME_WAY &&
+    alongOrAgainst(n, at) &&
     !edgesAt(g, n.id).some((e) => parallel(g, edge, e));
   const segment = (c: ReturnType<typeof curvesOf>[number]) =>
     near(c.box, at, LANE_WIDTH_M + SAME_PLACE_M) &&

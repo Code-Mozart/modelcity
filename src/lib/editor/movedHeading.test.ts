@@ -1,31 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { nodeOf } from '../model/graph';
+import { graphOf } from '../testing/graphHelpers';
 import { mapOf, snapping } from '../testing/snapHelpers';
 import { Editor } from './editor.svelte';
 
 const norm = (a: number) => ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 const keys = (shift = false) => ({ alt: false, shift, ctrl: false });
 
-/** Two roads with the same heading, 60 m apart, and the node at their end picked up. */
+/** A road, and a node of its own 60 m away, with the same heading, picked up. A node alone has no segment whose way it would follow (^888). */
 function pickedUp() {
   const ed = new Editor();
   ed.load(
-    mapOf([
+    graphOf(
       [
-        [0, 0],
-        [40, 0],
+        [0, 0, 0],
+        [40, 0, 0],
+        [40, -60, 0],
       ],
-      [
-        [0, -60],
-        [40, -60],
-      ],
-    ]),
+      [[0, 1, null]],
+    ),
   );
   ed.pointerDown(snapping(40, -60));
   ed.pointerMove(snapping(30, -50));
   return ed;
 }
-const heading = (ed: Editor, id = 3) => norm(nodeOf(ed.graph, id)!.th);
+const heading = (ed: Editor, id = 2) => norm(nodeOf(ed.graph, id)!.th);
 
 describe('a moved node and the heading of a snap (^801, ^794)', () => {
   /** Next to the node at the origin, on the side where the lane runs the other way (^253). */
@@ -56,9 +55,9 @@ describe('a moved node and the heading of a snap (^801, ^794)', () => {
   it('keeps the position of the snap while `Shift` is held', () => {
     const ed = pickedUp();
     oncoming(ed);
-    const at = { x: nodeOf(ed.graph, 3)!.x, y: nodeOf(ed.graph, 3)!.y };
+    const at = { x: nodeOf(ed.graph, 2)!.x, y: nodeOf(ed.graph, 2)!.y };
     ed.modifiers(keys(true));
-    expect(nodeOf(ed.graph, 3)).toMatchObject(at);
+    expect(nodeOf(ed.graph, 2)).toMatchObject(at);
   });
 });
 
