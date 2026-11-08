@@ -111,3 +111,26 @@ describe('turning a heading offers no offset curve (^878)', () => {
     expect(rules(snapBase(ed.graph, ed.press, null)).has('offset')).toBe(false);
   });
 });
+
+describe('the offset curve wins on its near side (^866)', () => {
+  const g = graphOf(
+    [
+      [0, 0, 0],
+      [40, 0, 0],
+      [20, 2.4, 0],
+    ],
+    [[0, 1, null]],
+  );
+  const list = suggestionsOfGraph(g);
+  const rule = (y: number) =>
+    snapTo(list, { pt: { x: 10, y }, scale: 10, pinned: [] })?.by[0]?.rule;
+
+  it('between the segment and its offset curve the offset curve is taken, though a line of a node is nearer', () => {
+    expect(rule(2.45)).toBe('offset');
+  });
+
+  it('on the segment its own curve is taken, and a node line beyond the offset curve stays a line', () => {
+    expect(rule(0.05)).toBe('curve');
+    expect(rule(2.9)).toBe('offset');
+  });
+});

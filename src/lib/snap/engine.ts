@@ -1,3 +1,4 @@
+import { LANE_WIDTH_M } from '../curves/lane';
 import { line } from '../curves/piece';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import { add, angleOf, dist, dot, mul, sub, type Vec } from '../curves/vec';
@@ -161,7 +162,7 @@ function snapNearest(list: Suggestion[], q: SnapQuery): SnapHit | null {
     const through = near.map((x) => x.s).filter((c) => touches(c, best.at));
     return pointHit(best, best.rule === 'crossing' ? through : [best, ...through]);
   }
-  const curve = q.reach?.line ? undefined : near.sort(byNearness)[0];
+  const curve = q.reach?.line ? undefined : bestCurve(near, here, q);
   return curve
     ? { pt: curve.n.pt, heading: angleOf({ x: curve.n.tx, y: curve.n.ty }), by: [curve.s] }
     : null;
@@ -190,10 +191,34 @@ const byPoint = (a: SnapPoint, b: SnapPoint, pt: Vec) => {
   return Math.abs(d) > SAME_PLACE_M ? d : pointRank(a) - pointRank(b);
 };
 
-/** The curve of a segment wins a tie with a line on top of it: it is the one a node can join (^268). */
-const rank = (c: SnapCurve) => (c.rule === 'curve' ? 0 : c.rule === 'offset' ? 1 : 2);
-const byNearness = (a: { s: SnapCurve; n: { d: number } }, b: typeof a) =>
-  Math.abs(a.n.d - b.n.d) > SAME_PLACE_M ? a.n.d - b.n.d : rank(a.s) - rank(b.s);
+/**
+ * The rank of a curve (^880): the curve of a segment, then an offset curve, then a snap line. An
+ * offset curve whose segment is nearer to the pointer than a lane width, so the pointer is on the
+ * side of the offset curve where the segment lies, ranks first of all (^866): a node there is too
+ * close to the segment anyway.
+ */
+function curveRank(c: SnapCurve, q: SnapQuery, list: Suggestion[]): number {
+  if (c.rule === 'curve') return 0;
+  if (c.rule !== 'offset') return 2;
+  const own = list.find((s) => s.kind === 'curve' && s.rule === 'curve' && s.edge === c.edge);
+  const d = own?.kind === 'curve' ? nearestOnPieces(own.pieces, q.pt)?.d : undefined;
+  return d !== undefined && d < LANE_WIDTH_M ? -1 : 1;
+}
+
+type Near = ReturnType<typeof nearCurves>[number];
+
+/**
+ * The curve that wins: the nearest, or one that ranks better within `MERGE_PX` of it on the screen
+ * (^883): suggestions that near are one place, shown as the best ranked.
+ */
+function bestCurve(near: Near[], list: Suggestion[], q: SnapQuery): Near | undefined {
+  const sorted = [...near].sort((a, b) => a.n.d - b.n.d);
+  const nearest = sorted[0];
+  if (!nearest) return undefined;
+  const reach = MERGE_PX[q.touch ? 'touch' : 'mouse'] / q.scale;
+  const here = sorted.filter((x) => x.n.d - nearest.n.d <= reach);
+  return here.sort((a, b) => curveRank(a.s, q, list) - curveRank(b.s, q, list))[0];
+}
 
 /** The curves that are offered and pass through a place, whatever the pointer: shown with the point there (^289). */
 export function curvesThrough(list: Suggestion[], at: Vec, q: SnapQuery): SnapCurve[] {
