@@ -51,7 +51,7 @@ describe('dissolving in the editor (^893)', () => {
     click(ed, 80, 0);
     expect(ed.graph.nodes).toHaveLength(2);
     expect(ed.graph.edges).toHaveLength(1);
-    ed.key('z', { ctrl: true });
+    ed.key('z', { ctrl: true, shift: false });
     expect(ed.graph.nodes).toHaveLength(2);
     expect(ed.graph.edges).toHaveLength(1);
     expect(ed.graph.nodes.some((n) => n.x === 40)).toBe(true);
