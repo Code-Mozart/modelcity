@@ -1,4 +1,4 @@
-next: ^861
+next: ^862
 
 # Hats
 
@@ -623,6 +623,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^858 | feature | done (PR #46) | **The end of an arc that something touches is a derived node (user, ^856, ^857):** the points where an arc meets a straight (the end radius points) are derived nodes (kind `radius`) when a node or a segment touches them (^818); the node they derive on the other segment makes a tower of two derived nodes. Without a touch there is none. It is not hovered or selected as a derived node: at its place the radius handle is what the pointer takes (dragging the radius in a stack of lanes stays possible, ^343, ^360). |
 | ^859 | bug | fixed (PR #46) | **Three parallel bends moved into S-curves were not parallel, in the project ^855 (user):** the stored radii of the lanes differ by 2.998 m, not 3 m (snapped, so carrying the millimeters of the nodes magnified), and the check for a consistent group allowed 1 mm only, so the group was refused. See ^860. |
 | ^860 | decision | assumed | **Tolerance for radii (`SAME_RADIUS_M`, 1 cm):** two radii count as the same, or a lane width apart, within 1 cm; a millimeter is too fine because a snapped radius magnifies the nodes' millimeter (1 / (1 - cos a) for a bend of the angle a). Distinct from the 1 mm of places (^247). |
+| ^861 | image | reference (user) | **Example project "three bends, nodes 0.4 mm and 3 mm off" (user):** `docs/mocks/hat861.json`: three bends whose east tower was dragged by snapping; the outer two show a bar on both sides of the tower, the innermost is not parallel although both its ends are in towers. Found: node 26 heads 0.0054° off the others (more than `SAME_WAY`, so 15 and 16 do not touch) and sits 3 mm along the road from node 28 (the tower rule allows 1 mm); the derived nodes land 1 to 3 mm from the real ones and are not merged (1 mm), so a 3 mm sliver of a segment makes a bar on the empty side. |
 
 ## Rented ranges
 
