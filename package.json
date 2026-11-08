@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.46.0",
-  "moniker": "Parallel S-curves",
+  "version": "0.47.0",
+  "moniker": "Tolerance and snapping",
   "private": true,
   "type": "module",
   "scripts": {

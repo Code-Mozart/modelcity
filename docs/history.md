@@ -49,4 +49,5 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #43 | | v0.43.0: Bug fixes | ^830 to ^843 | Bug fixes: a radius point snaps only to places on its line and takes the exact radius of the arc beside it (the concentric bug); the orange line shows only when the parallels follow; `Ctrl+Period` shows the mouse coordinates |
 | #44 | | v0.44.0: Version check | ^844 | CI checks that the version is the number of the PR |
 | #45 | | v0.45.0: Towers and derived nodes | ^816 to ^825, ^827 | Touch, towers and derived nodes: the rules of parallel segments |
-| #46 | | v0.46.0: Parallel S-curves | ^828, ^847 to ^849 | S-curves beside each other: derived from the neighbour, one tower of inflection nodes |
+| #46 | | v0.46.0: Parallel S-curves | ^828, ^847 to ^849, ^850 to ^876 (found on the way: the tolerance of parallel, derived nodes at arc ends, the debug line, the glossary of the pieces of a curve) | S-curves beside each other: derived from the neighbour, one tower of inflection nodes |
+| #47 | | v0.47.0: Tolerance and snapping | ^863 to ^868, ^877 to ^884 | One tolerance, the ranking and merging of snap suggestions, the heading follows the tower |
