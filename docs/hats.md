@@ -1,4 +1,4 @@
-next: ^877
+next: ^878
 
 # Hats
 
@@ -43,7 +43,7 @@ An open feature is in at most one planned milestone, and each milestone is a hat
 | Snapping engine, part 1: node positions | ^153 | ^101 snap suggestions, ^112 nodes subject to snapping, ^113 previous positions, ^248 merging nodes (resolves ^228), ^102 only the closest parallel line, ^263 snap curves, ^264 the dragged node snaps, the snap rules ^265 to ^273, ^279, ^280, ^282 to ^291, ^275 the design of the engine, ^258 pinning, ^260 the inflection ring, ^278 radius points in draw mode | ^100 (the tolerance predicate), ^247 (precision), ^258 (pinning snap suggestions) | ^149 (parallel segments need the lane width) |
 | Snapping engine, part 2: all control points | ^255 | ^249 all control points, ^251 angle steps, ^253 suggested heading, ^254 touching nodes, ^301 Alt inverts, ^141 radius snap, ^281, ^302, ^303, ^306, ^277, ^313 to ^319, ^321, ^322, ^323 | ^252 (answered), ^250 (out, later) | ^153 (done) |
 | Towers and derived nodes | ^816 | ^817 to ^825, ^827, ^363 (partially parallel segments), ^759 (interlocked bend points), ^247 (closed) | ^100, ^254 | ^255 (done) |
-| Tolerance and snapping (bug fixes, after ^828) | ^863 | ^864 zoom and tolerances, ^865 one tolerance and the distance of derived nodes, ^866 snapping rules, ^867 heading follows the tower, ^868 the same as a repair on load | ^861 (example), ^229 | ^828 |
+| Tolerance and snapping (bug fixes, after ^828) | ^863 | ^864 zoom and tolerances, ^865 one tolerance and the distance of derived nodes, ^866 snapping rules, ^867 heading follows the tower, ^868 the same as a repair on load, ^877 snapping a node to an offset curve snaps the radius | ^861 (example), ^229 | ^828 |
 | Parallel S-curves and hooks | ^828 | ^366, ^826 | none | ^816 |
 | Nodes without an effect dissolve | ^829 | ^299 (^365 duplicate) | ^814 (figure) | ^816, ^828 |
 | Parallel road tools (road tools, part 2) | ^309 | ^310 fill in a segment, ^311 multi-extend from a tower, ^751 `join road`, ^760 multi-split, ^357 turning a whole tower | none | ^816, after ^156 and ^157 (user: these may become one) |
@@ -640,6 +640,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^874 | image | reference (user) | **Example project "Y-shape" with a straight segment beside the end straight piece of segment 1 (user):** `docs/mocks/hat874.json`: segment 3 (nodes 6 to 7) runs beside the end straight piece of segment 1 and was not parallel. |
 | ^875 | bug | fixed (PR #46; user) | **A node 0.3 mm off the tangent made a hook instead of a straight segment (user, ^874):** node 7 lies 0.3 mm beside the tangent of node 6 (rounding), so the segment was built as a hook with two arcs of no angle (and an inflection point as a derived node in the middle that cut segment 1 half way), not as a straight segment. Now a straight segment is: the same heading and the second node ahead on the tangent of the first within `TWO_NODES_M` (2 mm, the error of two rounded nodes, ^247), so the segment is one straight piece. Tested with ^874. |
 | ^876 | decision | decided (user; wording of the glossary entries: assumed) | **Names of the parts of a curve (user):** a *piece* is a part of the curve of a segment; an *arc* is a curved piece, a *straight piece* a straight one (not "straight", which could be mistaken for a *straight segment*); the *start straight piece* and the *end straight piece* are the ones at the start node and at the end node (they depend on the direction of the segment), the *middle straight piece* is the one between the two arcs of an S-curve or hook. A *straight segment* is a segment between two nodes with the same heading, the second on the tangent of the first (not offside, which would make an S-curve): it has exactly one straight piece. "Stub" is not a term. |
+| ^877 | feature | planned (milestone ^863; user, unsure) | **Snapping to an offset curve also snaps the radius (user's idea):** when a node is moved onto an offset curve so that its segment would touch another one at both ends, the radius of the segment is set so that it is concentric at once (now only a segment that is built does it, ^281, and the user snaps the radius by hand otherwise). Open (Claude): only when the segment would become parallel by this snap; the radius changes in the same history step; what if the radius is stored (explicit) and differs; a radius that does not fit; the interlocked lanes of the selection (^324); the preview must show it (^331); a hint says it. To decide when the milestone starts. |
 
 ## Rented ranges
 
