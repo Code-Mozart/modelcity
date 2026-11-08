@@ -74,6 +74,7 @@
       pointer: editor.pointer,
       snap: editor.snapped,
       previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
+      nearby: editor.nearbyPoints,
       dropPreview: dropPreview(editor.graph, editor.press, drop),
       pinned: chainSelection(editor.chains, editor.pins.list),
       headingFrom: headingSourceOrigins(editor),

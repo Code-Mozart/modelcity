@@ -54,6 +54,21 @@ function offered(s: Suggestion, q: SnapQuery): boolean {
   return origins.some((o) => dist(o, q.pt) * q.scale <= SNAP_REACH_PX);
 }
 
+/**
+ * The snap points near the pointer, to show them (^890, ^804): those that are offered, that the
+ * pointer can reach, and within the distance at which suggestions are offered at all, `SNAP_REACH_PX`
+ * (the distance that was already there, larger than the 25 px from which it snaps).
+ */
+export function nearbyPoints(list: Suggestion[], q: SnapQuery): SnapPoint[] {
+  return list.filter(
+    (s): s is SnapPoint =>
+      s.kind === 'point' &&
+      offered(s, q) &&
+      reaches(s, q.reach) &&
+      dist(s.at, q.pt) * q.scale <= SNAP_REACH_PX,
+  );
+}
+
 const nearPoint = (s: SnapPoint, q: SnapQuery) => dist(s.at, q.pt) * q.scale <= SNAP_NEAR_PX;
 
 /** The curves within reach of the pointer, with their nearest point. */

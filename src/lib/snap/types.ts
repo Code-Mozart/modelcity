@@ -96,17 +96,17 @@ export interface SnapHit {
 }
 
 /**
- * The ranks of snap points (^880, user): the previous position of a moved node, then the offset
- * snap points (where a node would touch: beside a node, and the crossing of an offset curve with
- * the normal of a node), the nodes, the derived nodes (inflection points, end radius points), the
- * bisector radius points, the corners of bends and hooks, and what is computed (crossings).
+ * The ranks of snap points (^880, user): the offset snap points (where a node would touch: beside
+ * a node, and the crossing of an offset curve with the normal of a node), the nodes, the derived
+ * nodes (inflection points, end radius points), the bisector radius points, the corners of bends
+ * and hooks, what is computed (crossings), and last the previous position of a moved node.
  */
 export const RANK = {
-  previous: -1,
   offset: 0,
   node: 1,
   derived: 2,
   bisector: 3,
   corner: 4,
   crossing: 5,
+  previous: 6,
 } as const;

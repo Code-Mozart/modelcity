@@ -4,7 +4,7 @@ import { chainHandles } from '../editor/chains';
 import { snapBase, suggestionsOfGraph } from '../editor/snapping';
 import { graphOf } from '../testing/graphHelpers';
 import { at } from '../testing/editorHelpers';
-import { snapTo, MERGE_PX } from './engine';
+import { MERGE_PX, SNAP_NEAR_PX, SNAP_REACH_PX, nearbyPoints, snapTo } from './engine';
 import { RANK, type SnapCurve, type SnapPoint } from './types';
 
 const pt = (x: number, y: number, rank: number): SnapPoint => ({
@@ -132,5 +132,29 @@ describe('the offset curve wins on its near side (^866)', () => {
   it('on the segment its own curve is taken, and a node line beyond the offset curve stays a line', () => {
     expect(rule(0.05)).toBe('curve');
     expect(rule(2.9)).toBe('offset');
+  });
+});
+
+describe('the previous position ranks last (^880)', () => {
+  it('at one place anything else wins over where a moved node was', () => {
+    const previous = { ...pt(0, 0, RANK.previous), rule: 'previous' as const };
+    const list = [previous, pt(0.0004, 0, RANK.crossing)];
+    expect(snapTo(list, query(0, 0, 10))?.pt).toEqual({ x: 0.0004, y: 0 });
+    expect(snapTo([previous], query(0, 0, 10))?.pt).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('snap points near the pointer are shown (^890)', () => {
+  const list = [pt(0, 0, RANK.node), pt(10, 0, RANK.node), pt(1000, 0, RANK.node)];
+  it('those within the distance at which suggestions are offered, which is more than the one from which they snap', () => {
+    const near = nearbyPoints(list, query(0, 0, 10)).map((p) => p.at.x);
+    expect(near).toContain(0);
+    expect(near).toContain(10);
+    expect(near).not.toContain(1000);
+    expect(SNAP_REACH_PX).toBeGreaterThan(SNAP_NEAR_PX);
+  });
+
+  it('a point farther than the reach is not shown', () => {
+    expect(nearbyPoints([pt(40, 0, RANK.node)], query(0, 0, 10))).toEqual([]);
   });
 });

@@ -117,7 +117,7 @@ function sides(c: SnapCurve, locus: { p: Vec; d: Vec }): number[] {
  * curves that cross it. Everything else is not offered and not shown. Undefined for control points
  * that are not tied to a line.
  */
-function reachOf(press: Press | null): Reach | undefined {
+export function reachOf(press: Press | null): Reach | undefined {
   const locus = press && locusOf(press);
   if (!locus) return undefined;
   return {
@@ -257,7 +257,7 @@ const placing = (hover: Hover | null) =>
   (hover?.kind === 'handle' && ['node', 'rad'].includes(hover.handle.type));
 
 /** Whether the pointer places or moves a node now: in draw mode, or dragging a node. */
-function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | 'turn' | null {
+export function snaps({ press, hover, drawing }: SnapArgs): 'place' | 'move' | 'turn' | null {
   if (turningNode(press) !== null) return press!.moved ? 'turn' : null;
   if (press) return movedIds(press).length || controlEdge(press) !== null ? 'move' : null;
   return drawing && placing(hover) ? 'place' : null;

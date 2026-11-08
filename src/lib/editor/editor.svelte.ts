@@ -3,6 +3,7 @@ import * as ops from './ops';
 import { derivedNodes } from './derived';
 import { dropOf } from './drop';
 import { placedAt, snapBase, snapFor, snapPreview } from './snapping';
+import { pointsAround } from './nearby';
 import { tipWays } from './ways';
 import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
@@ -89,15 +90,16 @@ export class Editor {
     ),
   );
   /** What the pointer is pulled to while it places or moves a node (^101): derived like the hover. */
-  snapped = $derived(
-    snapFor(this.base, {
-      info: this.lastInfo,
-      press: this.press,
-      hover: this.hoverRaw,
-      drawing: this.drawing,
-      pinned: this.active === null ? this.pins.list : [...this.pins.list, this.active],
-    }),
-  );
+  private snapArgs = $derived({
+    info: this.lastInfo,
+    press: this.press,
+    hover: this.hoverRaw,
+    drawing: this.drawing,
+    pinned: this.active === null ? this.pins.list : [...this.pins.list, this.active],
+  });
+  snapped = $derived(snapFor(this.base, this.snapArgs));
+  /** The snap points near the pointer, shown while it places or moves a node (^890). */
+  nearbyPoints = $derived(pointsAround(this.base, this.snapArgs, this.snapped));
   hover = $derived<Hover | null>(
     snapPreview(this.hoverRaw, this.snapped, () => ({
       info: this.lastInfo,
