@@ -1,3 +1,4 @@
+import { LANE_WIDTH_M } from '../curves/lane';
 import { sweeps } from '../curves/piece';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import { dist, type Vec } from '../curves/vec';
@@ -9,6 +10,8 @@ import { focusTower, parallel, touching, withParallels, type TowerLine } from '.
 import type { Chain } from './chains';
 import type { Focus } from './focus';
 import { branchEdges, selectedSegments } from './selection';
+import type { BuildAt } from '../curves/drag';
+import type { Press } from './types';
 
 /** The center of the arc of a segment that is a bend (the only shape with one arc). */
 function centerOf(g: Graph, edge: number): Vec | null {
@@ -71,7 +74,20 @@ export function concentricWithParallel(g: Graph, edge: number): Graph {
     const center = s.id !== e.id && touching(g, s, e) ? centerOf(g, s.id) : null;
     if (center) return withRadius(g, e.id, dist(center, start));
   }
-  return g;
+  return besideS(g, e);
+}
+
+/**
+ * An S-curve built between the nodes beside another S-curve gets the radius that makes it that
+ * curve moved: the smaller arc of the one beside it less a lane width (^828, ^826).
+ */
+function besideS(g: Graph, e: GEdge): Graph {
+  if (curveOfEdge(g, e.id)?.kind !== 'S') return g;
+  const radii = g.edges.flatMap((s) => {
+    const E = s.id !== e.id && touching(g, s, e) ? curveOfEdge(g, s.id) : undefined;
+    return E?.kind === 'S' ? [E.R] : [];
+  });
+  return radii.length ? withRadius(g, e.id, Math.max(...radii) - LANE_WIDTH_M) : g;
 }
 
 /** The radius a segment has now: the one of its first arc, null for a straight one. */
@@ -156,4 +172,22 @@ export function followingTower(
     (s) => s.id !== edge && parallels.includes(s.id),
   );
   return follow.length ? focusTower(g, chains, focus, [edge, ...follow.map((s) => s.id)]) : null;
+}
+
+/**
+ * The curve of a dragged S-curve at a radius while the lanes beside it follow (^828, ^302): the
+ * radius point of a lane beside another one moves along its own curve, which is the other one moved,
+ * so the point has to be looked for there, not on an S-curve with two equal arcs. Only for an
+ * S-curve with parallel lanes; it is built on those lanes alone.
+ */
+export function groupBuilder(
+  press: Extract<Press, { kind: 'drag' }>,
+  selection: number[],
+): BuildAt | undefined {
+  const [g, own] = [press.undo.graph, press.id];
+  const ids = curveOfEdge(g, own)?.kind === 'S' ? withParallels(g, [own]) : [];
+  if (ids.length < 2) return undefined;
+  const plan = sharedWith(g, selection, own).filter((p) => ids.includes(p.id));
+  const lanes = { ...g, edges: g.edges.filter((e) => ids.includes(e.id)) };
+  return (R) => curveOfEdge(shareConcentric(withRadius(lanes, own, R), own, plan), own) ?? null;
 }

@@ -1,9 +1,10 @@
 import { LANE_WIDTH_M } from '../curves/lane';
-import { nearestParam, sweeps } from '../curves/piece';
+import { nearestParam, pointOn, sweeps } from '../curves/piece';
 import { SAME_PLACE_M, SAME_WAY } from '../curves/tolerance';
-import type { Piece } from '../curves/types';
+import type { Piece, TwoArcEdge } from '../curves/types';
 import { dist, dot, fromAngle, type Vec } from '../curves/vec';
-import type { GEdge, GNode, Graph } from '../model/graph';
+import { edgesAt, type GEdge, type GNode, type Graph } from '../model/graph';
+import { parallel } from './parallel';
 import { nearestOnPieces } from '../snap/geometry';
 import { curveOfEdge } from './chains';
 
@@ -13,8 +14,8 @@ import { curveOfEdge } from './chains';
  */
 export interface DerivedNode extends GNode {
   edge: number;
-  /** `touch`: a node touches the segment there (^822); `inflection`: the inflection point of an S-curve or hook (^823). */
-  kind: 'touch' | 'inflection';
+  /** `touch`: a node touches the segment there (^822); `inflection`: the inflection point of an S-curve or hook (^823); `radius`: an end of an arc that touches something (^858). */
+  kind: 'touch' | 'inflection' | 'radius';
 }
 
 /** The most rounds of the cascade: each one finds the nodes that the nodes of the round before derive (^812). */
@@ -52,19 +53,21 @@ export function touchPoint(pieces: Piece[], n: Placed): Placed | null {
     : null;
 }
 
+/** The way the middle straight of an S-curve or hook runs, also where the arcs meet and it has no length (^823). */
+function middleHeading(E: TwoArcEdge): number | null {
+  if (E.mid) return headingOf({ x: E.mid.ux, y: E.mid.uy });
+  const line = E.pieces.find((p) => p.type === 'line');
+  return line?.type === 'line'
+    ? headingOf({ x: line.Q.x - line.P.x, y: line.Q.y - line.P.y })
+    : null;
+}
+
 /** The inflection points of the S-curves and hooks, with the heading of their middle line (^823). */
 function inflections(g: Graph): { edge: GEdge; at: Placed }[] {
   return g.edges.flatMap((edge) => {
     const E = curveOfEdge(g, edge.id);
-    if (!E || (E.kind !== 'S' && E.kind !== 'H')) return [];
-    const mid = E.pieces.find((p) => p.type === 'line');
-    if (!mid || mid.type !== 'line') return [];
-    return [
-      {
-        edge,
-        at: { x: E.J.x, y: E.J.y, th: headingOf({ x: mid.Q.x - mid.P.x, y: mid.Q.y - mid.P.y }) },
-      },
-    ];
+    const th = E && (E.kind === 'S' || E.kind === 'H') ? middleHeading(E) : null;
+    return E && th !== null && 'J' in E ? [{ edge, at: { x: E.J.x, y: E.J.y, th } }] : [];
   });
 }
 
@@ -74,6 +77,35 @@ export const curvesOf = (g: Graph) =>
     const pieces = curveOfEdge(g, edge.id)?.pieces;
     return pieces ? [{ edge, pieces, box: boxOf(pieces) }] : [];
   });
+
+/**
+ * Whether `edge` is touched at `at` by a node or a segment that does not run parallel to it
+ * (^818): an end of an arc is a derived node where a straight piece of another segment runs beside
+ * it, not where the two segments are parallel all along anyway (^858, user).
+ */
+function isTouched(g: Graph, curves: ReturnType<typeof curvesOf>, edge: GEdge, at: Placed) {
+  const node = (n: GNode) =>
+    Math.abs(dist(n, at) - LANE_WIDTH_M) < SAME_PLACE_M &&
+    Math.abs(dot(fromAngle(n.th), fromAngle(at.th))) > 1 - SAME_WAY &&
+    !edgesAt(g, n.id).some((e) => parallel(g, edge, e));
+  const segment = (c: ReturnType<typeof curvesOf>[number]) =>
+    near(c.box, at, LANE_WIDTH_M + SAME_PLACE_M) &&
+    touchPoint(c.pieces, at) &&
+    !parallel(g, edge, c.edge);
+  return g.nodes.some(node) || curves.some(segment);
+}
+
+/** The ends of the arcs of the segments, with the way the segment runs there. */
+function arcEnds(curves: ReturnType<typeof curvesOf>): { edge: GEdge; at: Placed }[] {
+  return curves.flatMap(({ edge, pieces }) =>
+    pieces.filter(sweeps).flatMap((arc) =>
+      [0, 1].map((t) => {
+        const s = pointOn(arc, t);
+        return { edge, at: { x: s.x, y: s.y, th: headingOf({ x: s.tx, y: s.ty }) } };
+      }),
+    ),
+  );
+}
 
 /** The nodes a node derives: one on each segment it touches (^822). */
 function touched(
@@ -89,7 +121,7 @@ function touched(
 }
 
 /**
- * The derived nodes of a graph (^822, ^823): the inflection points, and wherever a node, real or
+ * The derived nodes of a graph (^822, ^823): the inflection points, the ends of arcs where something touches them (^858), and wherever a node, real or
  * derived, touches a segment, a node on it (it touches that node in turn, so they form a tower,
  * ^819). Derived nodes touch further segments, so the rule cascades to any number of lanes beside
  * each other (^812). Derived from the graph, never stored.
@@ -106,6 +138,9 @@ export function derivedNodes(g: Graph): DerivedNode[] {
     return node;
   };
   inflections(g).forEach(({ edge, at }) => add(edge, at, 'inflection'));
+  arcEnds(curves).forEach(
+    ({ edge, at }) => isTouched(g, curves, edge, at) && add(edge, at, 'radius'),
+  );
   let frontier: Placed[] = [...g.nodes, ...out];
   for (let round = 0; round < MAX_ROUNDS && frontier.length; round++) {
     frontier = frontier.flatMap((n) => touched(curves, n, add));
@@ -136,7 +171,7 @@ export function withDerived(g: Graph, derived: DerivedNode[]): Graph {
   let next = -1;
   const edges = g.edges.flatMap((e): GEdge[] => {
     const E = curveOfEdge(g, e.id);
-    const mine = derived.filter((d) => d.edge === e.id && d.kind === 'touch');
+    const mine = derived.filter((d) => d.edge === e.id && d.kind !== 'inflection');
     if (!E || !mine.length || (E.kind !== 'line' && E.kind !== 'C')) return [e];
     const arc = E.pieces.find(sweeps);
     const radius = arc?.type === 'arc' ? arc.r : null;

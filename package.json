@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.45.0",
-  "moniker": "Towers and derived nodes",
+  "version": "0.46.0",
+  "moniker": "Parallel S-curves",
   "private": true,
   "type": "module",
   "scripts": {

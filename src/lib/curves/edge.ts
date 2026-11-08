@@ -3,6 +3,8 @@ import { bendEdge } from './bend';
 import { biarc } from './biarc';
 import { classify, type Classification } from './classify';
 import { line } from './piece';
+import { TWO_NODES_M, SAME_WAY } from './tolerance';
+import { cross, dot, fromAngle, sub } from './vec';
 import { reverseEdge } from './reverse';
 import type { Dir, Edge, EdgeInput, PathNode, Piece } from './types';
 
@@ -21,9 +23,25 @@ function twoArc(inp: EdgeInput, kind: 'S' | 'H', s: Dir) {
   return (kind === 'S' && reverseEdge(inp, s)) || anchoredEdge(inp, kind, s);
 }
 
+/**
+ * Whether `q` lies ahead of `p` on the tangent of its heading, and heads the same way (a straight
+ * segment, ^875): within the error of two rounded nodes, else a node 0.3 mm off the tangent would
+ * make a hook with arcs of no angle.
+ */
+function isStraight(p: PathNode, q: PathNode): boolean {
+  const t = fromAngle(p.th);
+  const d = sub(q, p);
+  return (
+    dot(t, fromAngle(q.th)) > 1 - SAME_WAY &&
+    dot(d, t) > TWO_NODES_M &&
+    Math.abs(cross(t, d)) < TWO_NODES_M
+  );
+}
+
 /** Pick the shape without a stored tag: a bend if possible, else an S, else a hook. */
 function autoEdge(inp: EdgeInput, cls: Classification): Edge {
   const { p, q } = inp;
+  if (isStraight(p, q)) return { kind: 'line', pieces: [line(p, q)] };
   const pieces = biarc(p, q);
   const [f0, f1] = [sweepOf(pieces[0]), sweepOf(pieces[1])];
   const inflect = isInflection(f0, f1);

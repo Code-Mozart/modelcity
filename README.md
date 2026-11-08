@@ -40,10 +40,14 @@ The words we use the same way in the chat, the docs and the code (`docs/hats.md`
 | **Void** | The part of the map under the pointer where there is no node, no control point and no segment (not "empty canvas": something can be selected, and the canvas is never empty) | decided (user) | ^754 |
 | **Selected segment** | A segment whose two nodes are both selected (`selectedSegments` in the code); it is drawn in the color of selected nodes, and its scaffold is shown together with those of the other selected segments | decided | ^133, ^231 |
 | **Leaf node** | A node at either end of a road, also the only node of a road | decided | ^65 |
-| **Bend** (L-curve) | A segment with one turn: straight, arc, straight | decided; assumed (that "L-curve" and "bend" are one thing) | ^6 |
+| **Bend** (L-curve) | A segment with one turn: start straight piece, arc, end straight piece | decided; assumed (that "L-curve" and "bend" are one thing) | ^6 |
 | **S-curve** | A segment that turns one way, then the other; both arcs share one radius | decided | ^6 |
 | **Hook** | A segment whose two arcs turn the same way, up to about 285 degrees; provisional | decided | ^6 |
 | **Radius** | One per segment: automatic (the largest that fits) or explicit. The general minimum is 0.5 m for now | decided; assumed (0.5 m) | ^8, ^57 |
+| **Piece** | A part of the curve of a segment: an arc or a straight piece (`pieces` in the code) | decided (user); assumed (wording) | ^876 |
+| **Arc** | A curved piece | decided (user); assumed (wording) | ^876 |
+| **Straight piece** | A straight piece of a curve. At the start node the *start straight piece*, at the end node the *end straight piece* (they depend on the direction of the segment); between the two arcs of an S-curve or hook the *middle straight piece* | decided (user) | ^876 |
+| **Straight segment** | A segment between two nodes with the same heading, the second on the tangent of the first (a node offside the tangent would make an S-curve); it has exactly one straight piece. On the tangent means within the error of two rounded nodes (2 mm) | decided (user); assumed (the 2 mm) | ^876, ^875 |
 | **Control point** | Something you can drag to edit: a node, a heading control point (on the stem of the heading arrow), a bend's orange point, orange radius points (at the ends of an arc), the corner points of a hook or S-curve (`handle` in the code) | decided; assumed (the code word) | ^9 |
 | **Gizmo** | Any drawn aid on the canvas that is not map content: the skeleton and the scaffolds | decided | ^60 |
 | **Skeleton** | The gizmos that are always shown: the curves (with their direction arrows) and the node dots | decided | ^60 |

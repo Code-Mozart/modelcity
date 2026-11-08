@@ -7,3 +7,18 @@ export const SAME_PLACE_M = 1e-3;
 
 /** How near to 1 the dot product of two directions must be for them to be the same or the opposite way (about 0.003°). */
 export const SAME_WAY = 1e-9;
+
+/**
+ * How near (meters) two radii must be to count as the same, or as a lane width apart: a radius
+ * that was snapped to a curve carries the millimeter of the nodes magnified (by 1 / (1 - cos a)
+ * for a bend of the angle a), so a millimeter is too fine for it (^860). Assumed, not decided.
+ */
+export const SAME_RADIUS_M = 1e-2;
+
+/**
+ * How far (meters) a relation between two rounded nodes may be off: each is off by up to 0.71 mm
+ * (^247), so 1.41 mm together, 2 mm to be safe. Used where two nodes are compared with each other
+ * in a direction (whether two segments run a lane width apart, whether a node lies on the
+ * tangent of another, ^875).
+ */
+export const TWO_NODES_M = 2 * SAME_PLACE_M;

@@ -30,7 +30,7 @@
   import { installTestHook } from './lib/testHook';
   import VersionText from './lib/hud/VersionText.svelte';
   import PointerCoordinates from './lib/hud/PointerCoordinates.svelte';
-  import { DebugTools, isCoordinatesKey } from './lib/hud/debugTools.svelte';
+  import { DebugTools, hoverText, isCoordinatesKey } from './lib/hud/debugTools.svelte';
   import { violationsOf } from './lib/editor/violations';
   import { VersionBanner } from './lib/hud/versionBanner.svelte';
   import { TAB_TITLE } from './lib/version';
@@ -204,7 +204,10 @@
   <ModeFrame phase={editor.phase} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
-  {#if debug.coordinates}<PointerCoordinates pt={editor.pointer?.pt} />{/if}
+  {#if debug.coordinates}<PointerCoordinates
+      pt={editor.pointer?.pt}
+      over={hoverText(editor.graph, editor.hover)}
+    />{/if}
   <div class="right">
     <div class="toasts"><ToastList {toasts} /></div>
     {#if panelShown}<HistoryPanel groups={panel} hints={historyRows} />{/if}

@@ -58,8 +58,8 @@ export function hoverAt(
 ): Hover | null {
   const handle = handleAt(hits.handles, info);
   const derived = drawing ? null : derivedAt(hits, info);
-  // On an S-curve of the largest radius the ends of its two arcs meet at the inflection point: a drag there takes the derived node (^824).
-  if (handle && !(derived && handle.type === 'rad')) return { kind: 'handle', handle };
+  // A control point always wins over a derived node at the same place (^862): the derived node can still be reached another way.
+  if (handle) return { kind: 'handle', handle };
   if (derived) return derived;
   const hit = curveAt(hits.chains, info);
   if (hit) return { kind: 'candidate', hit };
