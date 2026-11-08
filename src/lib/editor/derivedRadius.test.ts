@@ -4,7 +4,8 @@ import { fromFile } from '../project/file';
 import type { Graph } from '../model/graph';
 import { derivedNodes, withDerived } from './derived';
 import { parallel } from './parallel';
-import { towersOf } from './towers';
+import { barsOf, towersOf } from './towers';
+import { withRadius } from '../model/graph';
 
 const mock = (name: string): Graph =>
   fromFile(
@@ -41,5 +42,23 @@ describe('three parallel bends moved into S-curves stay parallel (^859)', () => 
       const [a, b, c] = g.edges;
       expect([parallel(g, a!, b!), parallel(g, b!, c!)], `dy ${dy}`).toEqual([true, true]);
     }
+  });
+});
+
+describe('no derived node at the arcs of segments that are parallel all along (^869)', () => {
+  const edgeKinds = (g: Graph) =>
+    derivedNodes(g).filter((d) => d.kind === 'radius' && d.edge !== 1);
+
+  it('the project ^869: the two right-hand bends are parallel, so no arc end is a derived node and the east tower has its bar', () => {
+    const g = mock('hat869');
+    expect(edgeKinds(g)).toEqual([]);
+    const seen = withDerived(g, derivedNodes(g));
+    const east = barsOf(seen).filter((b) => b.from.y < 40 && b.to.y < 40);
+    expect(east).toHaveLength(1);
+  });
+
+  it('a little off in radius they are no longer parallel, and the arc ends show where the straights run side by side', () => {
+    const g = withRadius(mock('hat869'), 2, 7.4);
+    expect(edgeKinds(g).length).toBeGreaterThan(0);
   });
 });

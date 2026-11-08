@@ -3,7 +3,8 @@ import { nearestParam, pointOn, sweeps } from '../curves/piece';
 import { SAME_PLACE_M, SAME_WAY } from '../curves/tolerance';
 import type { Piece, TwoArcEdge } from '../curves/types';
 import { dist, dot, fromAngle, type Vec } from '../curves/vec';
-import type { GEdge, GNode, Graph } from '../model/graph';
+import { edgesAt, type GEdge, type GNode, type Graph } from '../model/graph';
+import { parallel } from './parallel';
 import { nearestOnPieces } from '../snap/geometry';
 import { curveOfEdge } from './chains';
 
@@ -77,15 +78,21 @@ export const curvesOf = (g: Graph) =>
     return pieces ? [{ edge, pieces, box: boxOf(pieces) }] : [];
   });
 
-/** Where a node, real or derived, is touched by a node or a segment (^818). */
-function isTouched(g: Graph, curves: ReturnType<typeof curvesOf>, at: Placed): boolean {
-  const node = (n: Placed) =>
+/**
+ * Whether `edge` is touched at `at` by a node or a segment that does not run parallel to it
+ * (^818): an end of an arc is a derived node where a straight piece of another segment runs beside
+ * it, not where the two segments are parallel all along anyway (^858, user).
+ */
+function isTouched(g: Graph, curves: ReturnType<typeof curvesOf>, edge: GEdge, at: Placed) {
+  const node = (n: GNode) =>
     Math.abs(dist(n, at) - LANE_WIDTH_M) < SAME_PLACE_M &&
-    Math.abs(dot(fromAngle(n.th), fromAngle(at.th))) > 1 - SAME_WAY;
-  return (
-    g.nodes.some(node) ||
-    curves.some((c) => near(c.box, at, LANE_WIDTH_M + SAME_PLACE_M) && touchPoint(c.pieces, at))
-  );
+    Math.abs(dot(fromAngle(n.th), fromAngle(at.th))) > 1 - SAME_WAY &&
+    !edgesAt(g, n.id).some((e) => parallel(g, edge, e));
+  const segment = (c: ReturnType<typeof curvesOf>[number]) =>
+    near(c.box, at, LANE_WIDTH_M + SAME_PLACE_M) &&
+    touchPoint(c.pieces, at) &&
+    !parallel(g, edge, c.edge);
+  return g.nodes.some(node) || curves.some(segment);
 }
 
 /** The ends of the arcs of the segments, with the way the segment runs there. */
@@ -131,7 +138,9 @@ export function derivedNodes(g: Graph): DerivedNode[] {
     return node;
   };
   inflections(g).forEach(({ edge, at }) => add(edge, at, 'inflection'));
-  arcEnds(curves).forEach(({ edge, at }) => isTouched(g, curves, at) && add(edge, at, 'radius'));
+  arcEnds(curves).forEach(
+    ({ edge, at }) => isTouched(g, curves, edge, at) && add(edge, at, 'radius'),
+  );
   let frontier: Placed[] = [...g.nodes, ...out];
   for (let round = 0; round < MAX_ROUNDS && frontier.length; round++) {
     frontier = frontier.flatMap((n) => touched(curves, n, add));
