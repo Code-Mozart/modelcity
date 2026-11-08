@@ -25,7 +25,7 @@ export function crossingPoints(near: { s: SnapCurve }[]): SnapPoint[] {
           rule: 'crossing',
           from,
           rank: crossingRank(a, b),
-          ...(isExtend(a) && isExtend(b) ? { quiet: true } : {}),
+          ...(isExtend(a) || isExtend(b) ? { quiet: true } : {}),
         });
       }
     }

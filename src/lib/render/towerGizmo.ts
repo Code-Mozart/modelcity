@@ -42,6 +42,18 @@ const overlap = (a: Line2, b: Line2) =>
   Math.min(...a.map((p) => pointToLine(p, b)), ...b.map((p) => pointToLine(p, a))) < 2 * CAPSULE_PX;
 
 /**
+ * The derived nodes to draw (^899): one whose circle overlaps the circle of a real node on the screen is
+ * left out, as the real node is there (the circles are `radius` px, that of the node dot).
+ */
+export function shownDerived(f: Frame, derived: Vec[], real: Vec[], radius: number): Vec[] {
+  const dots = real.map((n) => toScreen(f, n));
+  return derived.filter((d) => {
+    const p = toScreen(f, d);
+    return !dots.some((q) => Math.hypot(p.x - q.x, p.y - q.y) < 2 * radius);
+  });
+}
+
+/**
  * The towers to draw (^897): a tower of derived nodes only is left
  * out where a tower with a real node overlaps it on the screen, so it depends on the zoom (a bend
  * with a short straight piece before the arc has the derived nodes of its arc ends close to the real ones).

@@ -14,6 +14,7 @@ import {
   drawBars,
   drawCapsules,
   barsOn,
+  shownDerived,
   shownTowers,
   type BarShape,
   type TowerCapsule,
@@ -319,7 +320,8 @@ function drawAllNodes(f: Frame, scene: Scene, active: boolean[][], pal: Palette)
     };
     drawNodes(f, road, state, pal);
   });
-  for (const d of scene.derived)
+  const real = scene.roads.flatMap((r) => r.path.nodes);
+  for (const d of shownDerived(f, scene.derived, real, NODE_DOT_PX))
     ring(f.ctx, toScreen(f, d), NODE_DOT_PX, { color: pal.ink, width: DERIVED_LINE_PX });
 }
 

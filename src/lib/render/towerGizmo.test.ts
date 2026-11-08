@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Frame } from './paint';
-import { barsOn, shownTowers, type TowerCapsule } from './towerGizmo';
+import { barsOn, shownDerived, shownTowers, type TowerCapsule } from './towerGizmo';
 
 const frame = (scale: number) =>
   ({
@@ -41,5 +41,17 @@ describe('a tower of derived nodes is hidden where a tower with a real node over
     ];
     const all = [real, derived];
     expect(barsOn(bars, all, shownTowers(frame(2), all))).toEqual([bars[1]]);
+  });
+});
+
+describe('a derived node under a real one is hidden (^899)', () => {
+  const real = [{ x: 0, y: 0 }];
+  const derived = [
+    { x: 0.5, y: 0 },
+    { x: 5, y: 0 },
+  ];
+  it('when their circles overlap on the screen, which depends on the zoom', () => {
+    expect(shownDerived(frame(10), derived, real, 5.5)).toEqual([derived[1]]);
+    expect(shownDerived(frame(100), derived, real, 5.5)).toEqual(derived);
   });
 });
