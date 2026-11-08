@@ -51,3 +51,4 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #45 | | v0.45.0: Towers and derived nodes | ^816 to ^825, ^827 | Touch, towers and derived nodes: the rules of parallel segments |
 | #46 | | v0.46.0: Parallel S-curves | ^828, ^847 to ^849, ^850 to ^876 (found on the way: the tolerance of parallel, derived nodes at arc ends, the debug line, the glossary of the pieces of a curve) | S-curves beside each other: derived from the neighbour, one tower of inflection nodes |
 | #47 | | v0.47.0: Tolerance and snapping | ^863 to ^868, ^877 to ^884 | One tolerance, the ranking and merging of snap suggestions, the heading follows the tower |
+| #48 | | v0.48.0: Nodes without an effect dissolve | ^829, ^891 to ^896 | A node that changes nothing is removed after the operation that made it so |
