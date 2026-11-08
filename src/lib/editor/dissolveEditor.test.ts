@@ -5,6 +5,7 @@ import { graphOf } from '../testing/graphHelpers';
 import { dissolveNodes } from './dissolve';
 import { emptyGraph, type Graph } from '../model/graph';
 import { parallel } from './parallel';
+import { derivedNodes } from './derived';
 
 /** Lanes of straight segments, 3 m apart, each cut in the middle at x = 10. */
 const lanes = (n: number, cut = true): Graph =>
@@ -26,18 +27,19 @@ const lanes = (n: number, cut = true): Graph =>
 
 describe('nodes that parallel segments need (^894)', () => {
   it('a tower of nodes without an effect dissolves together, the lanes stay parallel', () => {
-    const g = dissolveNodes(emptyGraph(), lanes(3), []);
+    const g = dissolveNodes(emptyGraph(), lanes(3));
     expect(g.nodes).toHaveLength(6);
     expect(g.edges).toHaveLength(3);
     expect(parallel(g, g.edges[0]!, g.edges[1]!)).toBe(true);
   });
 
-  it('a node of one lane that the lane beside it still needs stays', () => {
+  it('a node a node beside it touches becomes a derived node: the lane stays parallel (^822)', () => {
     const g = lanes(2);
+    // The lane beside has an effect at x = 10 (another lane configuration), so only the first dissolves.
     const other = { ...g, edges: g.edges.map((e) => (e.id === 3 ? { ...e, lane: 2 } : e)) };
-    const after = dissolveNodes(emptyGraph(), other, []);
-    expect(after.nodes).toHaveLength(6);
-    expect(after.nodes.map((n) => n.id)).toContain(1);
+    const after = dissolveNodes(emptyGraph(), other);
+    expect(after.nodes).toHaveLength(5);
+    expect(derivedNodes(after).some((d) => Math.abs(d.x - 10) < 0.01)).toBe(true);
   });
 });
 

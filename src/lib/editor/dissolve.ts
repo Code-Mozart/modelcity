@@ -1,12 +1,16 @@
 import { buildEdge } from '../curves/edge';
 import { samplesAlong } from '../curves/arrows';
+import { pieceLength } from '../curves/piece';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import type { Piece } from '../curves/types';
 import { edgesAt, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import { nearestOnPieces } from '../snap/geometry';
 import { parallel } from './parallel';
+import { derivedNodes, withDerived } from './derived';
+import { curveOfEdge } from './chains';
 import { towersOf } from './towers';
 import { violationsOf } from './violations';
+import type { Snapshot } from './types';
 
 const SPACING_M = 0.5;
 
@@ -94,31 +98,28 @@ function touched(before: Graph, after: Graph): Set<number> {
 
 type Join = { into: GEdge; other: GEdge };
 
-/** The pairs of segments of the graph that are parallel, one of them a segment of a join (^100). */
-const parallelPairs = (g: Graph, ids: Set<number>) =>
-  g.edges.flatMap((a) =>
-    ids.has(a.id)
-      ? g.edges.filter((b) => b.id !== a.id && parallel(g, a, b)).map((b) => [a.id, b.id] as const)
-      : [],
-  );
+/** How much road runs parallel to another segment, derived nodes included (the partially parallel segments, ^822): the length of the segments that have a partner. */
+function parallelLength(g: Graph): number {
+  const d = withDerived(g, derivedNodes(g));
+  return d.edges
+    .filter((a) => d.edges.some((b) => b.id !== a.id && parallel(d, a, b)))
+    .reduce(
+      (sum, e) =>
+        sum + (curveOfEdge(d, e.id)?.pieces ?? []).reduce((l, p) => l + pieceLength(p), 0),
+      0,
+    );
+}
 
-/** Whether the graph keeps what the segments beside it need: no new violation, and what was parallel stays parallel (^894). */
-function keepsParallels(g: Graph, next: Graph, joins: Join[]): boolean {
-  if (violationsOf(next).length > violationsOf(g).length) return false;
-  const into = new Map(
-    joins.flatMap(
-      (j) =>
-        [
-          [j.into.id, j.into.id],
-          [j.other.id, j.into.id],
-        ] as const,
-    ),
+/**
+ * Whether the graph keeps what the segments beside it need: no new violation, and no less road
+ * that runs parallel (^894). A node of a lane that a node beside it touches then becomes a derived
+ * node of the segment (^822), and the road stays parallel.
+ */
+function keepsParallels(g: Graph, next: Graph): boolean {
+  return (
+    violationsOf(next).length <= violationsOf(g).length &&
+    parallelLength(next) >= parallelLength(g) - SAME_PLACE_M
   );
-  return parallelPairs(g, new Set(into.keys())).every(([a, b]) => {
-    const [x, y] = [into.get(a)!, into.get(b) ?? b];
-    const [ea, eb] = [next.edges.find((e) => e.id === x), next.edges.find((e) => e.id === y)];
-    return x === y || (!!ea && !!eb && parallel(next, ea, eb));
-  });
 }
 
 /** The nodes that dissolve together with `b`: those of its tower that have no effect either (^894). */
@@ -127,29 +128,58 @@ function groupOf(g: Graph, b: GNode, can: (n: GNode) => boolean): GNode[] {
   return tower.filter(can);
 }
 
+export interface Dissolve {
+  /** Nodes that stay: the one being drawn from (^893). */
+  keep: number[];
+  /** Selected nodes: they stay unless this operation moved them. */
+  selected: number[];
+  /** Nodes that were drawn from and are not any more: this operation looked at them too. */
+  leaving: number[];
+}
+
+const NONE: Dissolve = { keep: [], selected: [], leaving: [] };
+
 /**
  * Nodes without an effect dissolve (^829, ^891): a node with two segments that one segment from
  * neighbour to neighbour would replace without changing the curve, in the position domain. Only
- * nodes this operation touched, and not `keep` (selected, being drawn); never on load (^893). The
- * nodes of a tower dissolve together or not at all, so the lanes stay parallel (^894).
+ * nodes this operation touched, and not the ones drawn from or selected and not moved; never on
+ * load (^893). The nodes of a tower dissolve together or not at all, so the lanes stay parallel (^894).
  */
-export function dissolveNodes(before: Graph, after: Graph, keep: number[]): Graph {
+export function dissolveNodes(before: Graph, after: Graph, stay: Dissolve = NONE): Graph {
+  const was = new Map(before.nodes.map((n) => [n.id, n]));
+  const kept = (id: number) =>
+    stay.keep.includes(id) ||
+    (stay.selected.includes(id) && !movedNode(was.get(id), nodeOf(after, id)!));
   let g = after;
   const done = new Set<number>();
-  for (const id of touched(before, after)) {
+  for (const id of [...touched(before, after), ...stay.leaving]) {
     const b = nodeOf(g, id);
-    if (!b || done.has(id) || keep.includes(id) || !joined(g, b)) continue;
-    const members = groupOf(g, b, (n) => !keep.includes(n.id) && joined(g, n) !== null);
+    if (!b || done.has(id) || kept(id) || !joined(g, b)) continue;
+    const members = groupOf(g, b, (n) => !kept(n.id) && joined(g, n) !== null);
     members.forEach((n) => done.add(n.id));
-    let next = g;
-    const joins: Join[] = [];
-    for (const n of members) {
-      const join = joined(next, n);
-      if (!join) continue;
-      joins.push(join);
-      next = without(next, n.id, join);
-    }
-    if (joins.length && keepsParallels(g, next, joins)) g = next;
+    g = dissolvedTogether(g, members);
   }
   return g;
+}
+
+/** The graph without these nodes, if that keeps what the segments beside it need (^894), else as it was. */
+function dissolvedTogether(g: Graph, members: GNode[]): Graph {
+  let next = g;
+  for (const n of members) {
+    const join = joined(next, n);
+    if (join) next = without(next, n.id, join);
+  }
+  return next !== g && keepsParallels(g, next) ? next : g;
+}
+
+/** The state after an operation with its nodes without an effect dissolved (^829): the drawing and the selection decide which stay (^893). */
+export function dissolveStep(before: Snapshot, now: Snapshot): Snapshot {
+  const ids = (s: Snapshot) => [s.active, s.origin].filter((id) => id !== null);
+  const keep = ids(now);
+  const graph = dissolveNodes(before.graph, now.graph, {
+    keep,
+    selected: now.selection,
+    leaving: ids(before).filter((id) => !keep.includes(id)),
+  });
+  return { ...now, graph, selection: now.selection.filter((id) => nodeOf(graph, id)) };
 }

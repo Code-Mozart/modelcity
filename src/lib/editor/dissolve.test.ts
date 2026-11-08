@@ -32,7 +32,8 @@ const straight = (y = 0, th = 0): Graph =>
     ],
   );
 
-const run = (g: Graph, keep: number[] = []) => dissolveNodes(emptyGraph(), g, keep);
+const run = (g: Graph, keep: number[] = []) =>
+  dissolveNodes(emptyGraph(), g, { keep, selected: [], leaving: [] });
 
 describe('nodes without an effect dissolve (^829)', () => {
   it('a node straight on dissolves (^891, figure ^814)', () => {
@@ -55,7 +56,9 @@ describe('nodes without an effect dissolve (^829)', () => {
     expect(g.nodes).toHaveLength(2);
     expect(g.edges[0]!.radius).toBe(R);
   });
+});
 
+describe('what is the same curve (^891, ^892)', () => {
   it('a stored radius that changes nothing about the shape is no effect (^891)', () => {
     expect(run(circle(R, 20)).nodes).toHaveLength(2);
   });
@@ -68,15 +71,30 @@ describe('nodes without an effect dissolve (^829)', () => {
 });
 
 describe('when and which nodes dissolve (^893, ^892)', () => {
-  it('a kept node (selected, being drawn) stays (^893)', () => {
+  it('a node drawn from stays (^893)', () => {
     expect(run(straight(), [1]).nodes).toHaveLength(3);
+  });
+
+  it('a selected node stays unless the operation moved it (^893)', () => {
+    const g = straight();
+    const stay = { keep: [], selected: [1], leaving: [] };
+    expect(dissolveNodes(g, g, { ...stay, leaving: [1] }).nodes).toHaveLength(3);
+    const moved = { ...g, nodes: g.nodes.map((n) => (n.id === 1 ? { ...n, y: 0.001 } : n)) };
+    expect(dissolveNodes(g, moved, stay).nodes).toHaveLength(2);
+  });
+
+  it('a node that was drawn from and is not any more is looked at, though nothing changed (^893)', () => {
+    const g = straight();
+    expect(dissolveNodes(g, g, { keep: [], selected: [], leaving: [1] }).nodes).toHaveLength(2);
   });
 
   it('a node the operation did not touch stays: nothing dissolves on load (^893)', () => {
     const g = straight();
-    expect(dissolveNodes(g, g, [])).toBe(g);
+    expect(dissolveNodes(g, g)).toBe(g);
   });
+});
 
+describe('which nodes are not looked at (^892)', () => {
   it('a leaf and a split stay (^892)', () => {
     const split = graphOf(
       [
