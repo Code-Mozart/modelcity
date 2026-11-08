@@ -3,7 +3,7 @@ import { bendEdge } from './bend';
 import { biarc } from './biarc';
 import { classify, type Classification } from './classify';
 import { line } from './piece';
-import { TWO_NODES_M, SAME_WAY } from './tolerance';
+import { SAME_PLACE_M, sameWay } from './tolerance';
 import { cross, dot, fromAngle, sub } from './vec';
 import { reverseEdge } from './reverse';
 import type { Dir, Edge, EdgeInput, PathNode, Piece } from './types';
@@ -31,11 +31,7 @@ function twoArc(inp: EdgeInput, kind: 'S' | 'H', s: Dir) {
 function isStraight(p: PathNode, q: PathNode): boolean {
   const t = fromAngle(p.th);
   const d = sub(q, p);
-  return (
-    dot(t, fromAngle(q.th)) > 1 - SAME_WAY &&
-    dot(d, t) > TWO_NODES_M &&
-    Math.abs(cross(t, d)) < TWO_NODES_M
-  );
+  return sameWay(p, q) && dot(d, t) > SAME_PLACE_M && Math.abs(cross(t, d)) < SAME_PLACE_M;
 }
 
 /** Pick the shape without a stored tag: a bend if possible, else an S, else a hook. */

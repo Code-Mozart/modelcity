@@ -1,15 +1,14 @@
 import { pointOn, sweeps } from '../curves/piece';
 import type { Piece } from '../curves/types';
 import { LANE_WIDTH_M } from '../curves/lane';
-import { SAME_PLACE_M, SAME_WAY, TWO_NODES_M } from '../curves/tolerance';
-import { dist, dot, fromAngle, type Vec } from '../curves/vec';
+import { SAME_PLACE_M, alongOrAgainst as headsAlongOrAgainst } from '../curves/tolerance';
+import { dist, type Vec } from '../curves/vec';
 import { edgeOfId, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import { curveOfEdge, type Chain } from './chains';
 import type { Focus } from './focus';
 
 /** Whether two headings are the same or exactly opposite (^100). */
-const alongOrAgainst = (a: GNode, b: GNode) =>
-  Math.abs(Math.abs(dot(fromAngle(a.th), fromAngle(b.th))) - 1) < SAME_WAY;
+const alongOrAgainst = headsAlongOrAgainst;
 
 /** Whether the ends of two segments are one lane width apart, pair by pair, in this order. */
 const apart = (a: [GNode, GNode], b: [GNode, GNode]) =>
@@ -29,7 +28,7 @@ type Sweep = Extract<Piece, { type: 'arc' }>;
 /** How far (meters) from one lane width apart two curves may be, anywhere: the nodes touch within `SAME_PLACE_M` at each end of the curve. */
 
 /**
- * Whether the arc `y` runs one lane width from the arc `x` along all of `x`, to within `TWO_NODES_M`,
+ * Whether the arc `y` runs one lane width from the arc `x` along all of `x`, to within `SAME_PLACE_M`,
  * and turns the same way (`sense` 1) or the other (-1). Measured as a distance between the curves
  * at points of `x`, a position, not as the distance of two centers (far away, they magnify the
  * millimeter of the nodes by the radius over the distance) or the difference of two radii (the
@@ -42,7 +41,7 @@ function nestedArcs(x: Sweep, y: Sweep, sense: number): boolean {
   };
   return (
     Math.sign(x.da) === sense * Math.sign(y.da) &&
-    [0, 0.25, 0.5, 0.75, 1].every((t) => gap(t) < TWO_NODES_M)
+    [0, 0.25, 0.5, 0.75, 1].every((t) => gap(t) < SAME_PLACE_M)
   );
 }
 

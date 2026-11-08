@@ -13,6 +13,7 @@ import {
   unitOr,
   type Vec,
 } from '../curves/vec';
+import { SAME_PLACE_M, alongOrAgainst } from '../curves/tolerance';
 import { infiniteLine } from './geometry';
 import type { Rule, SnapCurve, SnapPoint, Suggestion } from './types';
 
@@ -235,11 +236,11 @@ function straightOf(c: SnapCurve): { p: Vec; u: Vec } {
   return { p: piece.P, u: unitOr(sub(piece.Q, piece.P), { x: 1, y: 0 }) };
 }
 
-/** Whether two straight snap curves are the same line, within a millimeter (^247). */
+/** Whether two straight snap curves are the same line, within the tolerance (^247, ^865). */
 function sameLine(a: SnapCurve, b: SnapCurve): boolean {
   const [x, y] = [straightOf(a), straightOf(b)];
-  const parallel = Math.abs(x.u.x * y.u.y - x.u.y * y.u.x) < 1e-9;
-  return parallel && Math.abs(dot(perp(y.u), sub(x.p, y.p))) <= 1e-3;
+  const parallel = alongOrAgainst({ th: angleOf(x.u) }, { th: angleOf(y.u) });
+  return parallel && Math.abs(dot(perp(y.u), sub(x.p, y.p))) < SAME_PLACE_M;
 }
 
 /** Two lines that coincide are one suggestion that keeps all origins and all they give (^275, ^792). */
@@ -258,19 +259,18 @@ function mergeLines(list: SnapCurve[]): SnapCurve[] {
   return out;
 }
 
-/** Points at the same place (within a millimeter) are one suggestion (the first one wins, its heading too). */
+/** Points at the same place (within the tolerance, ^865) are one suggestion (the first one wins, its heading too). */
 function mergePoints(list: SnapPoint[]): SnapPoint[] {
-  const seen = new Map<string, SnapPoint>();
+  const out: SnapPoint[] = [];
   for (const p of list) {
-    const key = `${Math.round(p.at.x * 1000)},${Math.round(p.at.y * 1000)}`;
-    const twin = seen.get(key);
-    if (!twin) seen.set(key, { ...p, from: [...p.from] });
+    const twin = out.find((o) => dist(o.at, p.at) < SAME_PLACE_M);
+    if (!twin) out.push({ ...p, from: [...p.from] });
     else {
       twin.from = [...new Set([...twin.from, ...p.from])];
       twin.node ??= p.node;
     }
   }
-  return [...seen.values()];
+  return out;
 }
 
 /** Deduplicate: coincident snap lines and equal points are one (^275). Curves of segments stay. */

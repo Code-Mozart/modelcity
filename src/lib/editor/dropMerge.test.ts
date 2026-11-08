@@ -27,14 +27,14 @@ function dropNextToCurve(y: number) {
 }
 
 describe('merging near a curve (^283)', () => {
-  it('a node within 0.1 m of a curve is merged into it, even with snapping off', () => {
-    const ed = dropNextToCurve(0.05);
+  it('a node within 2 mm of a curve is merged into it, even with snapping off', () => {
+    const ed = dropNextToCurve(0.001);
     expect(ed.graph.edges).toHaveLength(3);
     expect(ed.graph.nodes.some((n) => n.x === 20 && n.y === 0)).toBe(true);
   });
 
-  it('farther than 0.1 m it is not, with snapping off', () => {
-    expect(dropNextToCurve(0.5).graph.edges).toHaveLength(2);
+  it('farther than 2 mm it is not, with snapping off', () => {
+    expect(dropNextToCurve(0.01).graph.edges).toHaveLength(2);
   });
 });
 
@@ -52,7 +52,7 @@ describe('showing the merge (^284, ^285)', () => {
     );
     ed.pointerDown(plain(40, 0));
     ed.pointerMove(plain(30, 10));
-    ed.pointerMove(plain(0.05, 0.05));
+    ed.pointerMove(plain(0.001, 0.001));
     const drop = dropOf(ed.graph, ed.press, ed.snapped);
     expect(drop).toMatchObject({ node: 0 });
     expect(dropPreview(ed.graph, ed.press, drop)).toHaveLength(2);
@@ -70,7 +70,7 @@ describe('showing the merge (^284, ^285)', () => {
         ],
       ]),
     );
-    drag(ed, [40, 0], [0.05, 0.05]);
+    drag(ed, [40, 0], [0.001, 0.001]);
     expect(ed.graph.nodes).toEqual([]);
     expect(ed.graph.edges).toEqual([]);
   });
@@ -84,7 +84,7 @@ describe('merging in extend mode (^285)', () => {
     ]);
     ed.pointerDown(plain(40, 0));
     ed.pointerMove(plain(30, 8));
-    ed.pointerMove(plain(0.05, 0.05));
+    ed.pointerMove(plain(0.001, 0.001));
     ed.pointerUp();
     expect(ed.graph.edges).toEqual([]);
     expect(ed.graph.nodes).toHaveLength(1);

@@ -1,4 +1,5 @@
 import { LANE_WIDTH_M } from '../curves/lane';
+import { SAME_PLACE_M } from '../curves/tolerance';
 import { pointOn, sweeps } from '../curves/piece';
 import { edgesAt, nodeOf, type Graph } from '../model/graph';
 import { cross, dist, sub, unitOr, type Vec } from '../curves/vec';
@@ -23,7 +24,6 @@ import type { Hover, Placement, PointerInfo, Press } from './types';
 const LOCUS_TOL_M = 0.05;
 
 /** A node dropped within this world distance (meters) of another node or of a curve is merged into it, whatever the zoom (^248, ^283). */
-export const MERGE_WORLD_M = 0.1;
 
 /** Where a node goes when the pointer snapped: the place, with the heading it gets there (^254, ^301). */
 export function snappedTo(
@@ -372,7 +372,7 @@ const placement = (snap: SnapHit, info: PointerInfo | null) => ({
 /** The node the pointer snapped to, as a hovered handle. */
 function nodeHover(snap: SnapHit, w: SnapWorld): Hover | null {
   // Wherever a node is, it is that node: never a second one on top of it (^248, ^296).
-  const at = (h: RoadHandle) => h.type === 'node' && dist(h, snap.pt) < MERGE_WORLD_M;
+  const at = (h: RoadHandle) => h.type === 'node' && dist(h, snap.pt) < SAME_PLACE_M;
   const handle = chainHandles(w.chains, w.info?.scale ?? 1).find(at);
   return handle ? { kind: 'handle', handle } : null;
 }
@@ -385,6 +385,6 @@ function curveHover(snap: SnapHit, w: SnapWorld): Hover | null {
     by?.kind === 'curve'
       ? by.rule === 'curve'
       : by?.rule === 'radius-point' || by?.rule === 'inflection-point';
-  const hit = onCurve ? nearestOnChains(w.chains, snap.pt, MERGE_WORLD_M) : null;
+  const hit = onCurve ? nearestOnChains(w.chains, snap.pt, SAME_PLACE_M) : null;
   return hit && !nearNode(hit) ? { kind: 'candidate', hit } : null;
 }

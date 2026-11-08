@@ -165,7 +165,7 @@ const byPoint = (a: SnapPoint, b: SnapPoint, pt: Vec) => {
 /** The curve of a segment wins a tie with a line on top of it: it is the one a node can join (^268). */
 const rank = (c: SnapCurve) => (c.rule === 'curve' ? 0 : c.rule === 'offset' ? 1 : 2);
 const byNearness = (a: { s: SnapCurve; n: { d: number } }, b: typeof a) =>
-  Math.abs(a.n.d - b.n.d) > 1e-6 ? a.n.d - b.n.d : rank(a.s) - rank(b.s);
+  Math.abs(a.n.d - b.n.d) > SAME_PLACE_M ? a.n.d - b.n.d : rank(a.s) - rank(b.s);
 
 /** The curves that are offered and pass through a place, whatever the pointer: shown with the point there (^289). */
 export function curvesThrough(list: Suggestion[], at: Vec, q: SnapQuery): SnapCurve[] {
