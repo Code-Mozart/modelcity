@@ -29,9 +29,9 @@ export interface Size {
   height: number;
 }
 
-/** Pixels per meter: 0.02 shows ~50 km across 1000 px, 400 shows 2.5 m across 1000 px. */
+/** Pixels per meter: 0.02 shows ~50 km across 1000 px, 10000 shows 10 cm across 1000 px, so that 1 mm is 10 px and the tolerance of 2 mm (^865) is 20 px wide (^864). */
 export const MIN_SCALE = 0.02;
-export const MAX_SCALE = 400;
+export const MAX_SCALE = 10000;
 
 export const initialView = (): View => ({ cx: 0, cy: 0, scale: 4, rot: 0, gx: 0, gy: 0 });
 
