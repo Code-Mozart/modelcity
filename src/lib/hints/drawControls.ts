@@ -13,22 +13,32 @@ import {
   actRow,
   nodeAct,
   type C,
+  type Facts,
 } from './facts';
 import { ESC, mouse } from './inputs';
+
+/** The way a click on a leaf node extends (^916). */
+const way = (f: Facts) => handle(f)?.way;
+
+/** `Alt`+`LMB` over something, with what it says. */
+const altRow = (hat: number, text: string, on: (f: Facts) => boolean): C => ({
+  hat,
+  input: mouse('lmb', false, 'alt'),
+  on,
+  listens: always,
+  says: () => text,
+});
 
 /** A click and a drag in draw and extend mode: what a click on a node does, on the void, on a curve (^412 to ^716, ^410, ^411, ^707, ^715, ^708). */
 export const DRAW_HEAD: C[] = [
   // What a click on a node does in draw and extend mode (^412, ^436, ^496, ^706, ^714, ^716, ^711).
   { ...actRow(412, 'finish', nodeAct('finish')), input: [lmb, ESC] },
   { ...actRow(436, 'cancel', nodeAct('cancel')), input: [lmb, ESC] },
-  actRow(496, 'extend', nodeAct('extend')),
-  {
-    hat: 915,
-    input: mouse('lmb', false, 'alt'),
-    on: nodeAct('extend'),
-    listens: always,
-    says: () => 'extend from end',
-  },
+  // Extend a leaf node: a click goes the way the branch grows, `Alt` the other way (^496, ^916, ^915, ^917).
+  actRow(496, 'extend forwards', (f) => nodeAct('extend')(f) && way(f) === 'forwards'),
+  actRow(916, 'extend backwards', (f) => nodeAct('extend')(f) && way(f) === 'backwards'),
+  altRow(915, 'extend backwards', (f) => nodeAct('extend')(f) && way(f) === 'forwards'),
+  altRow(917, 'extend forwards', (f) => nodeAct('extend')(f) && way(f) === 'backwards'),
   actRow(706, 'split', nodeAct('split')),
   actRow(714, 'merge', nodeAct('merge')),
   actRow(716, 'close', nodeAct('close')),
@@ -42,8 +52,9 @@ export const DRAW_HEAD: C[] = [
     input: lmb,
     on: (f) => draw(f) && onVoid(f),
     listens: always,
-    says: () => 'place node',
+    says: (f) => (f.state.extending ? 'place node' : 'place first node'),
   },
+  altRow(918, 'place last node', (f) => draw(f) && onVoid(f) && !f.state.extending),
   {
     hat: 707,
     input: lmb,
@@ -63,7 +74,15 @@ export const DRAW_HEAD: C[] = [
     input: mouse('lmb', true),
     on: (f) => draw(f) && onVoid(f),
     listens: always,
-    says: () => 'place node and set heading',
+    says: (f) =>
+      f.state.extending ? 'place node and set heading' : 'place first node and set heading',
+  },
+  {
+    hat: 919,
+    input: mouse('lmb', true, 'alt'),
+    on: (f) => draw(f) && onVoid(f) && !f.state.extending,
+    listens: always,
+    says: () => 'place last node and set heading',
   },
   {
     hat: 708,

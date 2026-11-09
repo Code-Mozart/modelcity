@@ -1,20 +1,22 @@
 # The palette (^900 to ^913, milestone ^914)
 
-The colours of the map, after Google Maps. **Light mode** is measured from the user's screenshot (the most frequent pixel of each area, an outline from the pixel row across an edge); **dark mode** is made up (not important, ^914). One hat per colour. Status `assumed`: Claude read the value from the image and the user has not confirmed it.
+The colours of the map, after Google Maps. **The values live in one place only: `src/app.css`** (the CSS variable named in the table, with its light value in `:root` and its dark value in `@media (prefers-color-scheme: dark)`), so that this file cannot drift from the code. Light mode was measured from the user's screenshot of Google Maps (the most frequent pixel of each area, an outline from the pixel row across an edge); dark mode from the user's screenshot of Google Maps in dark mode (an outline that the image does not show distinctly was taken from the darkest pixel at the edge: `--building-edge`, `--road-edge`). One hat per colour; status `assumed` until the user confirms the values.
 
-| Hat | Token | Light | Dark | Where it is in the image |
-| --- | --- | --- | --- | --- |
-| ^900 | `bg` (the land, the background of the map) | `#d3f8e2` | `#1f2b26` | the light green of the open land |
-| ^901 | `city` fill (built-up area) | `#f8f7f7` | `#2a2d33` | the off-white of the built-up area |
-| ^902 | `city` stroke | none | none | no outline in the image (user: none) |
-| ^903 | `park` fill (parks, sports fields) | `#a9eac2` | `#254033` | the darker green of the sports field |
-| ^904 | `park` stroke | none | none | no outline in the image (user: none) |
-| ^905 | `building` fill | `#e8e9ed` | `#333844` | the footprints |
-| ^906 | `building` stroke | `#d7dae7` | `#3d4350` | the thin edge of a footprint |
-| ^907 | `road` fill (not a highway) | `#abbac9` | `#55657a` | the grey-blue roads (used for now) |
-| ^908 | `road` stroke | `#9dadbd` | `#3f4c5e` | the outer edge of such a road |
-| ^909 | `highway` fill | `#8ba5c1` | `#4a6285` | the blue carriageways |
-| ^910 | `highway` stroke | `#6780b0` | `#354a6b` | the edge of the carriageways |
-| ^911 | `marking-white` | `#ffffff` | `#e8eaf0` | the dashed lane lines |
-| ^912 | `marking-yellow` | `#ffdc36` | `#d9b72a` | the line between the carriageways |
-| ^913 | `sand` (other land use, extra) | `#f5f0e5` | `#2f2c26` | the beige area at the top; extracted for later |
+| Hat | CSS variable | What it is | Notes |
+| --- | --- | --- | --- |
+| ^900 | `--bg` | the land, the background of the map | |
+| ^901 | `--city` | fill of the built-up area | not drawn yet |
+| ^902 | (none) | stroke of the built-up area | decided: no outline |
+| ^903 | `--park` | fill of parks and sports fields | not drawn yet |
+| ^904 | (none) | stroke of parks and sports fields | decided: no outline |
+| ^905 | `--building` | fill of a building footprint | not drawn yet |
+| ^906 | `--building-edge` | stroke of a building footprint | not drawn yet |
+| ^907 | `--road` | fill of a road that is not a highway | used for the road surface |
+| ^908 | `--road-edge` | stroke of a road that is not a highway | used for the road outline |
+| ^909 | `--highway` | fill of a highway | not drawn yet |
+| ^910 | `--highway-edge` | stroke of a highway (blue in light mode, green in dark mode) | not drawn yet |
+| ^911 | `--marking-white` | white lane marking | not drawn yet (lanes and markings, ^156) |
+| ^912 | `--marking-yellow` | yellow lane marking | not drawn yet (lanes and markings, ^156) |
+| ^913 | `--sand` | other land use (the beige area in light mode) | not drawn yet; extra |
+
+Not part of the palette: `--glow`, the halo behind text and icons on the map, which is white in light mode and black in dark mode whatever the land colour is.

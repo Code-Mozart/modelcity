@@ -53,6 +53,8 @@ export type HintTarget =
       lane?: boolean;
       /** A right click removes the whole selection, which has several nodes (^290, ^779). */
       onSelection?: boolean;
+      /** A click on a leaf node extends this way: from a branch start node backwards, else forwards (^916). */
+      way?: 'forwards' | 'backwards';
     };
 
 /** Whether the user used a control lately, so that its hint is hidden (^110). */
@@ -109,6 +111,8 @@ export interface HintState {
   touching?: boolean;
   /** A click would place a node at the snap *with a heading*: `Shift` keeps only the position (^358, ^481). */
   placing?: boolean;
+  /** A road is being drawn from a node (extend mode), not just a first node placed next (^916). */
+  extending?: boolean;
   /** The middle button is held: the compass uses `S` and the other letters. */
   rotating?: boolean;
   /** Only the first node of the road is placed: finishing takes it away, which is `cancel` (^438). */

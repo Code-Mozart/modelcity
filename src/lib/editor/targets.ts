@@ -7,7 +7,7 @@ import {
   branchOfEdge,
   branchOfNode,
   curveAction,
-  mergeEnd,
+  leafWay,
   nodeAction,
 } from '../model/junction';
 import { allSelected, isSelected, onSelection, pickedCount } from './selection';
@@ -31,6 +31,7 @@ function handleTarget(drawn: Drawn, handle: RoadHandle, drawing: boolean): HintT
     selected: (node || handle.type === 'head') && isSelected(selection, handle.id),
     lane: node && !drawing && allSelected(selection, branchOfNode(graph, handle.id)),
     onSelection: node && onSelection(selection, [handle.id]),
+    way: node && drawing ? leafWay(graph, handle.id) : undefined,
   };
 }
 
@@ -81,10 +82,7 @@ export function mergePreview(
 ): Extract<Hover, { kind: 'preview' }> | null {
   const from = d.active === null ? undefined : nodeOf(d.graph, d.active);
   const node = from && hover ? mergeTarget(d, hover) : null;
-  const target = hover?.kind === 'handle' ? hover.handle.id : null;
-  return from && node
-    ? { kind: 'preview', ref: from, end: mergeEnd(d.end, target, d.origin), node }
-    : null;
+  return from && node ? { kind: 'preview', ref: from, end: d.end, node } : null;
 }
 
 /** The node a click would add: where, its heading (that of a tower it is in, ^867), and the radius of its segment (^877). */

@@ -19,6 +19,6 @@
       sans-serif;
     white-space: nowrap;
     pointer-events: none;
-    filter: drop-shadow(0 0 2px var(--bg)) drop-shadow(0 0 2px var(--bg));
+    filter: drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 2px var(--glow));
   }
 </style>

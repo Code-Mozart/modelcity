@@ -90,6 +90,7 @@ export const SCENARIOS: Scenario[] = [
   { name: 'draw: the void', at: { x: 100, y: 100 }, selections: NONE, draw: {} },
   { name: 'draw: curve B C', at: { x: 45, y: 0 }, selections: NONE, draw: {} },
   { name: 'draw: the end node C', at: { x: 60, y: 0 }, selections: NONE, draw: {} },
+  { name: 'draw: the start node A', at: { x: 0, y: 0 }, selections: NONE, draw: {} },
   { name: 'draw: node B', at: { x: 30, y: 0 }, selections: NONE, draw: {} },
   { name: 'select: the heading point of B', at: handleAt('head', 1), selections: [[], [1]] },
   { name: 'select: the bend point', at: handleAt('ctrl', 3), selections: [[], [5, 6]] },

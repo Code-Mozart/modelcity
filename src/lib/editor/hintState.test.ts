@@ -15,6 +15,7 @@ describe('what the hints know about the snap (^481, ^473)', () => {
       touching: false,
       placing: false,
       firstNodeOnly: false,
+      extending: false,
     });
   });
 

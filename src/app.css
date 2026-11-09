@@ -1,6 +1,8 @@
 :root {
   /* The map, after Google Maps (docs/palette.md, ^900 to ^913): the land is the background. */
   --bg: #d3f8e2;
+  /* The glow behind text and icons on the map: white in light mode, black in dark mode, whatever the land colour is. */
+  --glow: #ffffff;
   --panel: #ffffff;
   --ink: #15171c;
   /* The road surface and its outline, after Google Maps (^90). */
@@ -46,20 +48,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1f2b26;
+    --bg: #133848;
+    --glow: #000000;
     --panel: #171a20;
     --ink: #f1f2f5;
-    --road: #55657a;
-    --road-edge: #3f4c5e;
-    --city: #2a2d33;
-    --park: #254033;
-    --building: #333844;
-    --building-edge: #3d4350;
-    --highway: #4a6285;
-    --highway-edge: #354a6b;
-    --marking-white: #e8eaf0;
-    --marking-yellow: #d9b72a;
-    --sand: #2f2c26;
+    --road: #3f5a77;
+    --road-edge: #3b5673;
+    --city: #1b2a3f;
+    --park: #1a4953;
+    --building: #213e6a;
+    --building-edge: #1a2d4d;
+    --highway: #405977;
+    --highway-edge: #398e3d;
+    --marking-white: #c5ced7;
+    --marking-yellow: #cebc56;
+    --sand: #32384e;
     --muted: #a3aab7;
     --line: #2b303a;
     --grid-minor: #181b22;

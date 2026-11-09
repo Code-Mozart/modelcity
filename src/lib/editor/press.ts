@@ -66,7 +66,7 @@ export function dragPress(
     click,
     use,
     flip: handle.type === 'head' && info.alt,
-    back: act === 'extend' && info.alt,
+    reverse: act === 'extend' && info.alt,
     curve: null,
     undo: drawn,
     target: targetOf(drawn, { kind: 'handle', handle }, drawing),

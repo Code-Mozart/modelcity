@@ -23,8 +23,10 @@ const CAMERA = ['RMB drag: pan', 'Wheel: zoom', 'MMB drag: rotate'];
 describe('control hints (^49)', () => {
   it('draw mode on empty canvas: add a node, with a heading, or finish', () => {
     expect(rows(true, empty)).toEqual([
-      'LMB: place node',
-      'LMB drag: place node and set heading',
+      'LMB: place first node',
+      'Alt+LMB: place last node',
+      'LMB drag: place first node and set heading',
+      'Alt+LMB drag: place last node and set heading',
       'Esc or RMB: finish',
       ...CAMERA,
     ]);
@@ -35,8 +37,8 @@ describe('control hints (^49)', () => {
       'LMB: merge',
       'LMB drag: insert and set heading',
       'Esc: finish',
-      'RMB: remove segment',
-      'Alt+RMB: remove branch',
+      'RMB: delete segment',
+      'Alt+RMB: delete branch',
       ...CAMERA,
     ]);
   });
@@ -64,12 +66,19 @@ describe('control hints over nodes and handles (^49)', () => {
 
   it('over another leaf node a click extends the road from it (^65)', () => {
     expect(rows(true, node(false, true))).toEqual([
-      'LMB: extend',
-      'Alt+LMB: extend from end',
+      'LMB: extend forwards',
+      'Alt+LMB: extend backwards',
       'LMB drag: move node',
       'RMB: delete node',
       'Esc: finish',
       ...CAMERA,
+    ]);
+  });
+
+  it('over a branch start node a click extends backwards, Alt forwards (^916, ^917)', () => {
+    expect(rows(true, node(false, true, 'backwards')).slice(0, 2)).toEqual([
+      'LMB: extend backwards',
+      'Alt+LMB: extend forwards',
     ]);
   });
 });
@@ -137,8 +146,8 @@ describe('select mode hints over curves and nodes (^74)', () => {
       'Alt+Shift+LMB: add branch to selection',
       'Esc: deselect all',
       'Del: delete selected',
-      'RMB: remove segment',
-      'Alt+RMB: remove branch',
+      'RMB: delete segment',
+      'Alt+RMB: delete branch',
       ...camera,
     ]);
     expect(rows(false, { kind: 'curve', picked: 2 }, 2)).toEqual([
@@ -149,8 +158,8 @@ describe('select mode hints over curves and nodes (^74)', () => {
       'Alt+Shift+LMB: add branch to selection',
       'Esc: deselect all',
       'Del: delete selected',
-      'RMB: remove segment',
-      'Alt+RMB: remove branch',
+      'RMB: delete segment',
+      'Alt+RMB: delete branch',
       ...camera,
     ]);
   });
@@ -160,10 +169,9 @@ describe('select mode hints over nodes (^74, ^75)', () => {
   it('select mode over a node: move, delete, select or deselect it, plus the camera controls', () => {
     expect(rows(false, node(false))).toEqual([
       'LMB drag: move node',
-      'RMB: delete node',
+      'RMB or Del: delete node',
       'LMB: select',
       'Alt+LMB: select branch',
-      'Del: delete node',
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',

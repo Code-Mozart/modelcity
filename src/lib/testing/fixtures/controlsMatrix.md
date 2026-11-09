@@ -99,26 +99,26 @@
 | select | over a segment | selection: all of the hovered branch; both nodes of the hovered segment; straight segment | Shift+LMB drag | add to selection | - | control hints panel | yes |
 | select | over a segment | selection: all of the hovered branch; both nodes of the hovered segment; other nodes; part of the hovered segment (one node); no parallel segments; parallel segments | Shift+LMB drag | add to selection | - | control hints panel | yes |
 | select | over a segment | selection: other nodes; part of the hovered segment (one node); straight segment | Shift+LMB drag | add to selection | step `select node`; nodes are added to the selection | control hints panel | yes |
-| select | over a segment | selection: nothing; no parallel segments; straight segment | Alt+RMB | remove branch | step `remove branch`; nodes -2, segments -1 | control hints panel | no |
-| select | over a segment | selection: other nodes; part of the hovered segment (one node); no parallel segments; straight segment | Alt+RMB | remove branch | step `remove branch`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
-| select | over a segment | selection: nothing; parallel segments | Alt+RMB | remove branch | step `remove branch`; nodes -3, segments -2 | control hints panel | no |
-| select | over a segment | selection: other nodes; part of the hovered segment (one node); parallel segments | Alt+RMB | remove branch | step `remove branch`; the selection is cleared; nodes -3, segments -2 | control hints panel | no |
+| select | over a segment | selection: nothing; no parallel segments; straight segment | Alt+RMB | delete branch | step `delete branch`; nodes -2, segments -1 | control hints panel | no |
+| select | over a segment | selection: other nodes; part of the hovered segment (one node); no parallel segments; straight segment | Alt+RMB | delete branch | step `delete branch`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
+| select | over a segment | selection: nothing; parallel segments | Alt+RMB | delete branch | step `delete branch`; nodes -3, segments -2 | control hints panel | no |
+| select | over a segment | selection: other nodes; part of the hovered segment (one node); parallel segments | Alt+RMB | delete branch | step `delete branch`; the selection is cleared; nodes -3, segments -2 | control hints panel | no |
 | select | over a segment | selection: all of the hovered branch; both nodes of the hovered segment; no parallel segments; straight segment | Alt+RMB or Ctrl+RMB or RMB | delete selected nodes | step `delete N nodes`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
 | select | over a segment | selection: all of the hovered branch; both nodes of the hovered segment; parallel segments | Alt+RMB or Ctrl+RMB or RMB | delete selected nodes | step `delete N nodes`; the selection is cleared; nodes -3, segments -2 | control hints panel | no |
-| select | over a segment | selection: nothing; no parallel segments; straight segment | Alt+Shift+RMB | - | step `remove branch`; nodes -2, segments -1 | nowhere | - |
-| select | over a segment | selection: other nodes; part of the hovered segment (one node); no parallel segments; straight segment | Alt+Shift+RMB | - | step `remove branch`; the selection is cleared; nodes -2, segments -1 | nowhere | - |
-| select | over a segment | selection: nothing; parallel segments | Alt+Shift+RMB | - | step `remove branch`; nodes -3, segments -2 | nowhere | - |
-| select | over a segment | selection: other nodes; part of the hovered segment (one node); parallel segments | Alt+Shift+RMB | - | step `remove branch`; the selection is cleared; nodes -3, segments -2 | nowhere | - |
+| select | over a segment | selection: nothing; no parallel segments; straight segment | Alt+Shift+RMB | - | step `delete branch`; nodes -2, segments -1 | nowhere | - |
+| select | over a segment | selection: other nodes; part of the hovered segment (one node); no parallel segments; straight segment | Alt+Shift+RMB | - | step `delete branch`; the selection is cleared; nodes -2, segments -1 | nowhere | - |
+| select | over a segment | selection: nothing; parallel segments | Alt+Shift+RMB | - | step `delete branch`; nodes -3, segments -2 | nowhere | - |
+| select | over a segment | selection: other nodes; part of the hovered segment (one node); parallel segments | Alt+Shift+RMB | - | step `delete branch`; the selection is cleared; nodes -3, segments -2 | nowhere | - |
 | select | over a segment | selection: all of the hovered branch; both nodes of the hovered segment; no parallel segments; straight segment | Alt+Shift+RMB or Shift+RMB | - | step `delete N nodes`; the selection is cleared; nodes -2, segments -1 | nowhere | - |
 | select | over a segment | selection: all of the hovered branch; both nodes of the hovered segment; parallel segments | Alt+Shift+RMB or Shift+RMB | - | step `delete N nodes`; the selection is cleared; nodes -3, segments -2 | nowhere | - |
-| select | over a segment | selection: nothing; no parallel segments; straight segment | Ctrl+RMB or RMB | remove segment | step `remove segment`; nodes -2, segments -1 | control hints panel | no |
-| select | over a segment | selection: other nodes; part of the hovered segment (one node); no parallel segments; straight segment | Ctrl+RMB or RMB | remove segment | step `remove segment`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
-| select | over a segment | selection: nothing; parallel segments | Ctrl+RMB or RMB | remove segment | step `remove segment`; nodes -1, segments -1 | control hints panel | no |
-| select | over a segment | selection: other nodes; part of the hovered segment (one node); parallel segments | Ctrl+RMB or RMB | remove segment | step `remove segment`; the selection is cleared; nodes -1, segments -1 | control hints panel | no |
-| select | over a segment | selection: nothing; no parallel segments; straight segment | Shift+RMB | - | step `remove segment`; nodes -2, segments -1 | nowhere | - |
-| select | over a segment | selection: other nodes; part of the hovered segment (one node); no parallel segments; straight segment | Shift+RMB | - | step `remove segment`; the selection is cleared; nodes -2, segments -1 | nowhere | - |
-| select | over a segment | selection: nothing; parallel segments | Shift+RMB | - | step `remove segment`; nodes -1, segments -1 | nowhere | - |
-| select | over a segment | selection: other nodes; part of the hovered segment (one node); parallel segments | Shift+RMB | - | step `remove segment`; the selection is cleared; nodes -1, segments -1 | nowhere | - |
+| select | over a segment | selection: nothing; no parallel segments; straight segment | Ctrl+RMB or RMB | delete segment | step `delete segment`; nodes -2, segments -1 | control hints panel | no |
+| select | over a segment | selection: other nodes; part of the hovered segment (one node); no parallel segments; straight segment | Ctrl+RMB or RMB | delete segment | step `delete segment`; the selection is cleared; nodes -2, segments -1 | control hints panel | no |
+| select | over a segment | selection: nothing; parallel segments | Ctrl+RMB or RMB | delete segment | step `delete segment`; nodes -1, segments -1 | control hints panel | no |
+| select | over a segment | selection: other nodes; part of the hovered segment (one node); parallel segments | Ctrl+RMB or RMB | delete segment | step `delete segment`; the selection is cleared; nodes -1, segments -1 | control hints panel | no |
+| select | over a segment | selection: nothing; no parallel segments; straight segment | Shift+RMB | - | step `delete segment`; nodes -2, segments -1 | nowhere | - |
+| select | over a segment | selection: other nodes; part of the hovered segment (one node); no parallel segments; straight segment | Shift+RMB | - | step `delete segment`; the selection is cleared; nodes -2, segments -1 | nowhere | - |
+| select | over a segment | selection: nothing; parallel segments | Shift+RMB | - | step `delete segment`; nodes -1, segments -1 | nowhere | - |
+| select | over a segment | selection: other nodes; part of the hovered segment (one node); parallel segments | Shift+RMB | - | step `delete segment`; the selection is cleared; nodes -1, segments -1 | nowhere | - |
 | select | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | selection: nothing selected | Alt+LMB | - | goes to draw mode | nowhere | - |
 | select | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | selection: something selected | Alt+LMB | - | step `deselect all`; the selection is cleared | nowhere | - |
 | select | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | selection: nothing selected | Ctrl+LMB or LMB | draw mode | goes to draw mode | control hints panel | no |
@@ -134,11 +134,13 @@
 | draw | over a heading control point | - | Alt+Shift+LMB | - | step `flip arm` | nowhere | - |
 | draw | over a heading control point | - | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `turn heading` | nowhere | - |
 | draw | over a heading control point | - | Ctrl+LMB drag or LMB drag | turn heading | step `turn heading` | control hints panel | no |
-| draw | over a node | no parallel segments; straight segment | Alt+LMB | extend from end | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
+| draw | over a node, over a segment | no parallel segments | Alt+LMB | extend forwards | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
+| draw | over a node | straight segment | Alt+LMB | extend backwards | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
 | draw | over a node | parallel segments | Alt+LMB or Alt+Shift+LMB or Shift+LMB | - | step `split road`; goes to extend mode; the selection becomes the hovered node | nowhere | - |
 | draw | over a node | no parallel segments; straight segment | Alt+Shift+LMB or Shift+LMB | - | step `extend road`; goes to extend mode; the selection becomes the hovered node | nowhere | - |
-| draw | over a node | no parallel segments; straight segment | Ctrl+LMB or LMB | extend | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
+| draw | over a node | no parallel segments | Ctrl+LMB or LMB | extend backwards | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
 | draw | over a node | parallel segments | Ctrl+LMB or LMB | split | step `split road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
+| draw | over a node | straight segment | Ctrl+LMB or LMB | extend forwards | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
 | draw | over a node | - | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `move node` | nowhere | - |
 | draw | over a node | - | Ctrl+LMB drag or LMB drag | move node | step `move node` | control hints panel | no |
 | draw | over a node, over a segment | - | Esc | finish | goes to select mode | control hints panel | no |
@@ -153,30 +155,31 @@
 | draw | over the mid radius point | parallel segments | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `change radius` | nowhere | - |
 | draw | over the mid radius point | no parallel segments | Ctrl+LMB drag or LMB drag | change radius | - | control hints panel | no |
 | draw | over the mid radius point | parallel segments | Ctrl+LMB drag or LMB drag | change radius | step `change radius` | control hints panel | no |
-| draw | over a segment | no parallel segments | Alt+LMB | extend from end | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
-| draw | over a segment | straight segment | Alt+LMB | extend from end | step `extend road`; goes to extend mode; nodes are added to the selection | control hints panel | no |
+| draw | over a segment | straight segment | Alt+LMB | extend forwards | step `extend road`; goes to extend mode; nodes are added to the selection | control hints panel | no |
 | draw | over a segment | parallel segments | Alt+LMB or Alt+Shift+LMB or Shift+LMB | - | step `split road`; goes to extend mode; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
 | draw | over a segment | no parallel segments | Alt+Shift+LMB or Shift+LMB | - | step `extend road`; goes to extend mode; the selection becomes the hovered node | nowhere | - |
 | draw | over a segment | straight segment | Alt+Shift+LMB or Shift+LMB | - | step `extend road`; goes to extend mode; nodes are added to the selection | nowhere | - |
 | draw | over a segment | - | Ctrl+LMB | split | step `split road`; goes to extend mode; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
-| draw | over a segment | no parallel segments | LMB | extend | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
+| draw | over a segment | no parallel segments | LMB | extend backwards | step `extend road`; goes to extend mode; the selection becomes the hovered node | control hints panel | no |
 | draw | over a segment | parallel segments | LMB | split | step `split road`; goes to extend mode; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
-| draw | over a segment | straight segment | LMB | extend | step `extend road`; goes to extend mode; nodes are added to the selection | control hints panel | no |
+| draw | over a segment | straight segment | LMB | extend backwards | step `extend road`; goes to extend mode; nodes are added to the selection | control hints panel | no |
 | draw | over a segment | no parallel segments; straight segment | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `move node` | nowhere | - |
 | draw | over a segment | parallel segments | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `insert node`; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
 | draw | over a segment | - | Ctrl+LMB drag | insert and set heading | step `insert node`; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
 | draw | over a segment | no parallel segments; straight segment | LMB drag | move node | step `move node` | control hints panel | no |
 | draw | over a segment | parallel segments | LMB drag | insert and set heading | step `insert node`; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
-| draw | over a segment | parallel segments | Alt+RMB | remove branch | step `remove branch`; nodes -3, segments -2 | control hints panel | no |
-| draw | over a segment | parallel segments | Alt+Shift+RMB | - | step `remove branch`; nodes -3, segments -2 | nowhere | - |
-| draw | over a segment | no parallel segments; straight segment | Ctrl+RMB | remove segment | step `remove segment`; nodes -2, segments -1 | control hints panel | no |
-| draw | over a segment | parallel segments | Ctrl+RMB or RMB | remove segment | step `remove segment`; nodes -1, segments -1 | control hints panel | no |
+| draw | over a segment | parallel segments | Alt+RMB | delete branch | step `delete branch`; nodes -3, segments -2 | control hints panel | no |
+| draw | over a segment | parallel segments | Alt+Shift+RMB | - | step `delete branch`; nodes -3, segments -2 | nowhere | - |
+| draw | over a segment | no parallel segments; straight segment | Ctrl+RMB | delete segment | step `delete segment`; nodes -2, segments -1 | control hints panel | no |
+| draw | over a segment | parallel segments | Ctrl+RMB or RMB | delete segment | step `delete segment`; nodes -1, segments -1 | control hints panel | no |
 | draw | over a segment | no parallel segments; straight segment | RMB | delete node | step `delete node`; nodes -2, segments -1 | control hints panel | no |
-| draw | over a segment | parallel segments | Shift+RMB | - | step `remove segment`; nodes -1, segments -1 | nowhere | - |
-| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Alt+LMB or Alt+Shift+LMB or Shift+LMB | - | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | nowhere | - |
-| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Ctrl+LMB or LMB | place node | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | control hints panel | no |
-| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | nowhere | - |
-| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Ctrl+LMB drag or LMB drag | place node and set heading | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | control hints panel | no |
+| draw | over a segment | parallel segments | Shift+RMB | - | step `delete segment`; nodes -1, segments -1 | nowhere | - |
+| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Alt+LMB | place last node | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | control hints panel | no |
+| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Alt+Shift+LMB or Shift+LMB | - | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | nowhere | - |
+| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Ctrl+LMB or LMB | place first node | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | control hints panel | no |
+| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Alt+LMB drag | place last node and set heading | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | control hints panel | no |
+| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Alt+Shift+LMB drag or Shift+LMB drag | - | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | nowhere | - |
+| draw | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Ctrl+LMB drag or LMB drag | place first node and set heading | step `place node`; goes to extend mode; nodes are added to the selection; nodes +1, segments 0 | control hints panel | no |
 | draw | over the void, over a heading control point, over an end radius point, over the mid radius point, over a bend point, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Esc | finish | goes to select mode | control hints panel | no |
 | draw | over the void, over a heading control point, over an end radius point, over the mid radius point, over a bend point, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Alt+RMB or Alt+Shift+RMB or Shift+RMB | - | goes to select mode | nowhere | - |
 | draw | over the void, over a heading control point, over an end radius point, over the mid radius point, over a bend point, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Ctrl+RMB or RMB | finish | goes to select mode | control hints panel | no |
@@ -215,15 +218,15 @@
 | extend | over a segment | - | Ctrl+LMB drag | insert and set heading | step `insert node`; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
 | extend | over a segment | no parallel segments; straight segment | LMB drag | move node | step `move node` | control hints panel | no |
 | extend | over a segment | parallel segments | LMB drag | insert and set heading | step `insert node`; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
-| extend | over a segment | parallel segments | Alt+RMB | remove branch | step `remove branch`; nodes -3, segments -2 | control hints panel | no |
+| extend | over a segment | parallel segments | Alt+RMB | delete branch | step `delete branch`; nodes -3, segments -2 | control hints panel | no |
 | extend | over a segment | no parallel segments | Alt+RMB or Alt+Shift+RMB or Shift+RMB | - | step `delete node`; nodes -1, segments -1 | nowhere | - |
-| extend | over a segment | parallel segments | Alt+Shift+RMB | - | step `remove branch`; nodes -3, segments -2 | nowhere | - |
-| extend | over a segment | no parallel segments; parallel segments | Ctrl+RMB | remove segment | step `remove segment`; nodes -1, segments -1 | control hints panel | no |
-| extend | over a segment | straight segment | Ctrl+RMB | remove segment | step `remove segment`; nodes -2, segments -1 | control hints panel | no |
+| extend | over a segment | parallel segments | Alt+Shift+RMB | - | step `delete branch`; nodes -3, segments -2 | nowhere | - |
+| extend | over a segment | no parallel segments; parallel segments | Ctrl+RMB | delete segment | step `delete segment`; nodes -1, segments -1 | control hints panel | no |
+| extend | over a segment | straight segment | Ctrl+RMB | delete segment | step `delete segment`; nodes -2, segments -1 | control hints panel | no |
 | extend | over a segment | no parallel segments | RMB | delete node | step `delete node`; nodes -1, segments -1 | control hints panel | no |
-| extend | over a segment | parallel segments | RMB | remove segment | step `remove segment`; nodes -1, segments -1 | control hints panel | no |
+| extend | over a segment | parallel segments | RMB | delete segment | step `delete segment`; nodes -1, segments -1 | control hints panel | no |
 | extend | over a segment | straight segment | RMB | delete node | step `delete node`; nodes -2, segments -1 | control hints panel | no |
-| extend | over a segment | parallel segments | Shift+RMB | - | step `remove segment`; nodes -1, segments -1 | nowhere | - |
+| extend | over a segment | parallel segments | Shift+RMB | - | step `delete segment`; nodes -1, segments -1 | nowhere | - |
 | extend | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Alt+LMB or Alt+Shift+LMB or Shift+LMB | - | step `place node`; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |
 | extend | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Ctrl+LMB or LMB | place node | step `place node`; nodes are added to the selection; nodes +1, segments +1 | control hints panel | no |
 | extend | over the void, over the void (not snapped), over the void (on a snap line without a heading), over the void (on a snap line with a heading) | - | Alt+LMB drag or Alt+Shift+LMB drag or Shift+LMB drag | - | step `place node`; nodes are added to the selection; nodes +1, segments +1 | nowhere | - |

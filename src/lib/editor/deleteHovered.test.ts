@@ -46,3 +46,24 @@ describe('Del deletes the hovered node when nothing is selected (^757)', () => {
     expect(ed.graph.nodes).toHaveLength(5);
   });
 });
+
+describe('Del deletes the hovered segment when nothing is selected (^920)', () => {
+  it('the segment goes, in one step named delete segment, with Alt+RMB the branch is delete branch', () => {
+    const ed = new Editor();
+    ed.load(map());
+    ed.pointerMove(at(20, 50));
+    ed.key('Delete');
+    expect(ed.graph.edges).toHaveLength(2);
+    expect(ed.timeline.history.past.at(-1)?.name).toBe('delete segment');
+  });
+
+  it('with a selection Del deletes the selection, not the segment under the pointer', () => {
+    const ed = new Editor();
+    ed.load(map());
+    click(ed, 0, 0);
+    ed.pointerMove(at(20, 50));
+    ed.key('Delete');
+    expect(ed.graph.edges).toHaveLength(2);
+    expect(ed.graph.nodes.some((n) => n.x === 0 && n.y === 0)).toBe(false);
+  });
+});

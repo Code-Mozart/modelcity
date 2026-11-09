@@ -90,8 +90,8 @@ export type Press =
       use: ControlId | null;
       /** Alt on a heading control point: a click flips the arm (^234). */
       flip: boolean;
-      /** Alt on a node that is extended: the road is drawn backwards from it, the node is the end of the new segment (^915). */
-      back: boolean;
+      /** Alt on a node that is extended: it extends the other way than a click does (^915). */
+      reverse: boolean;
       /** A radius point in draw mode: the place on the curve a click splits or merges at (^278). */
       curve: RoadHit | null;
       /** A derived node was made real by this press (^824): a click without moving takes it back. */

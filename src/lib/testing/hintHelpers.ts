@@ -15,8 +15,13 @@ export const show = (h: Hint) =>
     .join(' or ')}: ${h.text}${h.note ? ` (${h.note.key} ${h.note.text})` : ''}`;
 
 /** A node under the pointer: the last one of the road being drawn, a leaf, or any. */
-export const node = (last: boolean, leaf = last): HintTarget => ({
+export const node = (
+  last: boolean,
+  leaf = last,
+  way: 'forwards' | 'backwards' = 'forwards',
+): HintTarget => ({
   kind: 'handle',
   type: 'node',
   act: last ? 'finish' : leaf ? 'extend' : null,
+  way,
 });

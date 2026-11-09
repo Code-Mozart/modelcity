@@ -47,6 +47,6 @@ describe('a right click on the selection (^779)', () => {
     const r = rows(false, between, 3);
     expect(r).toContain('RMB or Alt+RMB: delete selected nodes');
     expect(r.filter((x) => x.includes('remove'))).toEqual([]);
-    expect(rows(false, { kind: 'curve', picked: 1 }, 3)).toContain('RMB: remove segment');
+    expect(rows(false, { kind: 'curve', picked: 1 }, 3)).toContain('RMB: delete segment');
   });
 });

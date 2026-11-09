@@ -9,7 +9,7 @@ import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { Pins } from './pins.svelte';
-import { nodesRemoval, rightClickRemoval, underHover } from './removal';
+import { deleteRemoval, rightClickRemoval, underHover } from './removal';
 import { Timeline, type Move } from './timeline.svelte';
 import type { ControlId } from '../hints/hints';
 import { pressName } from './stepNames';
@@ -188,12 +188,7 @@ export class Editor {
 
   deleteSelected() {
     if (this.selection.length) this.use('delete-selected');
-    // Nothing selected, a node hovered: that node (^757).
-    const hovered =
-      this.mode === 'select' && this.hover?.kind === 'handle' && this.hover.handle.type === 'node'
-        ? this.hover.handle.id
-        : null;
-    const r = nodesRemoval(this.selection.length || hovered === null ? this.selection : [hovered]);
+    const r = deleteRemoval(this.graph, this.selection, this.mode === 'select' ? this.hover : null);
     if (r) this.edit(r.name, r.change);
   }
 
@@ -257,7 +252,11 @@ export class Editor {
       return;
     }
     const place = () =>
-      ops.placePress(this.snapshot(), placedAt(this.snapped, info, tipWays(this.snapshot())));
+      ops.placePress(
+        this.snapshot(),
+        placedAt(this.snapped, info, tipWays(this.snapshot())),
+        info.alt && this.active === null,
+      );
     this.begin(hit ? ops.curvePress(this.snapshot(), hit) : place());
   }
 
@@ -347,7 +346,7 @@ export class Editor {
     else if (press.curve) this.clickedRadius(press.curve);
     else if (press.act === 'finish' || press.act === 'cancel') this.finishRoad(false, true);
     else if (press.act === 'extend')
-      this.edit('extend road', (d) => ops.extendTo(d, id, press.back));
+      this.edit('extend road', (d) => ops.extendTo(d, id, press.reverse));
     else if (press.act === 'split') this.restore(ops.splitAt(this.snapshot(), id));
     else if (press.act === 'merge' || press.act === 'close') this.merge(id);
   }

@@ -95,15 +95,18 @@ export function branchOfNode(g: Graph, id: number): number[] {
 
 /**
  * Which way the next edge of the road being drawn runs (^65): `end`, out of the node being drawn
- * from; `start`, into it (the road is drawn backwards). `first`: the road was just extended from
- * its first node and nothing is placed yet: a node placed next still goes before it (like
- * `start`), but a merge runs out of the node, in the order of the clicks (^239).
+ * from (extend forwards); `start`, into it (extend backwards). It stays so until drawing ends, also
+ * for a merge into another node: going forwards that is a merge, going backwards a split (^916).
  */
-export type DrawEnd = 'start' | 'end' | 'first';
+export type DrawEnd = 'start' | 'end';
 
-/** The way a merge into `target` runs: in the order of the clicks right after the first node was clicked, except closing the loop. */
-export const mergeEnd = (end: DrawEnd, target: number | null, origin: number | null): DrawEnd =>
-  end === 'first' && target !== origin ? 'end' : end;
+/**
+ * The way a click on a leaf node (a node with one segment, or none) extends by default (^916): from
+ * a branch start node, where its segment starts, backwards; from a branch end node or a node with
+ * no segment, forwards.
+ */
+export const leafWay = (g: Graph, id: number): 'forwards' | 'backwards' =>
+  edgesOut(g, id).length > 0 ? 'backwards' : 'forwards';
 
 /** The heading a node placed at `pt` gets so that the edge to the node `tip` is one arc (^65). */
 export const autoHeadingFor = (end: DrawEnd) => (end === 'end' ? autoHeading : autoHeadingBefore);

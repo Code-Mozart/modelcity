@@ -42,7 +42,7 @@ describe('a right click on a segment removes it (^160)', () => {
     ed.rightClick(at(m.x, m.y));
     expect(ed.graph.edges).toHaveLength(1);
     expect(ed.graph.nodes).toHaveLength(2);
-    expect(ed.timeline.history.past.at(-1)!.name).toBe('remove segment');
+    expect(ed.timeline.history.past.at(-1)!.name).toBe('delete segment');
   });
 
   it('a segment in the middle of a road splits the road in two', () => {
@@ -143,7 +143,7 @@ describe('Alt and a right click remove the whole branch (^160)', () => {
     ed.rightClick(at(m.x, m.y, { alt: true }));
     expect(ed.graph.edges).toHaveLength(0);
     expect(ed.graph.nodes).toHaveLength(0);
-    expect(ed.timeline.history.past.at(-1)!.name).toBe('remove branch');
+    expect(ed.timeline.history.past.at(-1)!.name).toBe('delete branch');
   });
 
   it('a branch ends where another road meets it, and that road stays', () => {
