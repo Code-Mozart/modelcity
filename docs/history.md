@@ -53,3 +53,4 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #47 | | v0.47.0: Tolerance and snapping | ^863 to ^868, ^877 to ^884 | One tolerance, the ranking and merging of snap suggestions, the heading follows the tower |
 | #48 | | v0.48.0: Nodes without an effect dissolve | ^829, ^891 to ^899 | A node that changes nothing is removed after the operation that made it so |
 | #49 | | v0.49.0: Google Maps palette and extend from end | ^900 to ^920 | The colours after Google Maps, `Alt`+`LMB` extend from end, and six minor items (^421, ^474, ^418, ^757, ^746, ^745) |
+| #50 | | v0.50.0: Lanes, part 1: hulls and corners | ^921 to ^941 | Scope of the hulls and corners and of the performance milestone |

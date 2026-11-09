@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.49.0",
-  "moniker": "Google Maps palette and extend from end",
+  "version": "0.50.0",
+  "moniker": "Lanes, part 1: hulls and corners",
   "private": true,
   "type": "module",
   "scripts": {
