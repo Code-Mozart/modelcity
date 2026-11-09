@@ -20,6 +20,8 @@ const PALETTE_KEYS = [
   'grid-major',
   'ink',
   'muted',
+  'road',
+  'road-edge',
   'debug',
   'blue',
   'red',
@@ -109,6 +111,40 @@ function tracePiece(f: Frame, piece: Piece) {
     const a0 = piece.a0 + f.view.rot;
     ctx.arc(c.x, c.y, piece.r * f.view.scale, a0, a0 + piece.da, piece.da < 0);
   }
+}
+
+/** A closed path of pieces that follow each other, added to the current canvas path. */
+function traceLoop(f: Frame, loop: Piece[]) {
+  const first = loop[0];
+  if (!first) return;
+  const a = toScreen(f, first.P);
+  f.ctx.moveTo(a.x, a.y);
+  for (const piece of loop) {
+    if (piece.type === 'line') {
+      const b = toScreen(f, piece.Q);
+      f.ctx.lineTo(b.x, b.y);
+    } else {
+      const c = toScreen(f, piece.c);
+      const a0 = piece.a0 + f.view.rot;
+      f.ctx.arc(c.x, c.y, piece.r * f.view.scale, a0, a0 + piece.da, piece.da < 0);
+    }
+  }
+  f.ctx.closePath();
+}
+
+/**
+ * Closed loops filled with the even-odd rule (a loop in a loop is a hole) and an outline round them
+ * (^945, ^946): the outline is stroked first, centred on the loop and twice as wide as it shows, then
+ * the fill covers the inner half, so only the outer half is seen and no draw order of roads is needed.
+ */
+export function fillLoops(f: Frame, loops: Piece[][], fill: string, edge: Stroke) {
+  const { ctx } = f;
+  ctx.beginPath();
+  for (const loop of loops) traceLoop(f, loop);
+  ctx.lineJoin = 'round';
+  applyStroke(ctx, { color: edge.color, width: 2 * edge.width });
+  ctx.fillStyle = fill;
+  ctx.fill('evenodd');
 }
 
 /** Stroke one piece. */

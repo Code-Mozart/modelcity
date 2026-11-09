@@ -11,8 +11,8 @@ The colours of the map, after Google Maps. **The values live in one place only: 
 | ^904 | (none) | stroke of parks and sports fields | decided: no outline |
 | ^905 | `--building` | fill of a building footprint | not drawn yet |
 | ^906 | `--building-edge` | stroke of a building footprint | not drawn yet |
-| ^907 | `--road` | fill of a road that is not a highway | not drawn yet (the surface was removed, ^922) |
-| ^908 | `--road-edge` | stroke of a road that is not a highway | not drawn yet (^922) |
+| ^907 | `--road` | fill of a road that is not a highway | used for the road surface (^946) |
+| ^908 | `--road-edge` | stroke of a road that is not a highway | used for the road outline (^946) |
 | ^909 | `--highway` | fill of a highway | not drawn yet |
 | ^910 | `--highway-edge` | stroke of a highway (blue in light mode, green in dark mode) | not drawn yet |
 | ^911 | `--marking-white` | white lane marking | not drawn yet (lanes and markings, ^156) |

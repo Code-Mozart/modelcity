@@ -9,6 +9,8 @@ import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides, drawTowerLine, type TowerShape } from './guides';
+import { LANE_WIDTH_M, outlinePx } from '../curves/lane';
+import type { Loop } from '../curves/union';
 import { drawHulls, type HullScene } from './hullGizmo';
 import {
   drawBars,
@@ -27,7 +29,7 @@ import {
   barbs,
   screenDir,
   segment,
-  strokeChain,
+  fillLoops,
   strokePiece,
   toScreen,
   type Frame,
@@ -87,6 +89,8 @@ export interface Scene {
   towers: TowerCapsule[];
   /** The derived nodes: hollow circles of the size and colour of a node (^821, ^822, ^823). */
   derived: Vec[];
+  /** The road surface: closed loops round all roads (^945). */
+  surface: Loop[];
   /** The hulls and corners of the debug layer, while it is on (^925). */
   hulls: HullScene | null;
   /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
@@ -296,14 +300,10 @@ function shownFlags(scene: Scene): boolean[][] {
   return flags.map((row) => row.map((on) => on && !scene.hideScaffold));
 }
 
-/** View mode shows only the roads: their centre lines, until the surface is generated from the hulls (^922, ^921). */
-function drawCentreLines(f: Frame, roads: RoadScene[], pal: Palette) {
-  for (const r of roads)
-    strokeChain(
-      f,
-      r.edges.flatMap((e) => e.E.pieces),
-      { color: pal.ink, width: CURVE_PX },
-    );
+/** The road surface: the one polygon round all roads, with its outline (^945, ^946). */
+function drawSurface(f: Frame, loops: Loop[], pal: Palette) {
+  const edge = { color: pal['road-edge'], width: outlinePx(LANE_WIDTH_M * f.view.scale) };
+  fillLoops(f, loops, pal.road, edge);
 }
 
 /** The nodes, real ones with their state and derived ones as hollow circles, as large and as coloured, no arrow (^821, ^805). */
@@ -340,7 +340,8 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const selected = scene.roads.map((r, road) =>
     r.edges.map((_, k) => scene.selectedSegments.some((s) => s.road === road && s.i === k)),
   );
-  if (scene.viewing) return drawCentreLines(f, scene.roads, pal);
+  drawSurface(f, scene.surface, pal);
+  if (scene.viewing) return;
   scene.roads.forEach((road, i) => {
     const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;
     drawRoad(f, road, { active: active[i]!, selected: selected[i]!, rad }, pal);
