@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cornersOf, hullsOf } from './editor/corners';
-  import { surfaceFrom } from './editor/surface';
+  import { dotsOf, surfaceFrom } from './editor/surface';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
   import { headingSourceOrigins } from './editor/hintState';
@@ -24,12 +24,15 @@
     camera,
     onUse,
     debug = false,
+    walk = 0,
   }: {
     editor: Editor;
     camera: Camera;
     onUse: (id: ControlId) => void;
     /** The debug layer is on: the hulls and corners are drawn (^925). */
     debug?: boolean;
+    /** How far the dots of the debug layer have walked along their polygons, in meters (^948). */
+    walk?: number;
   } = $props();
 
   const LINE_PX = 16;
@@ -62,7 +65,11 @@
   const surface = $derived(surfaceFrom(allHulls));
   const hulls = $derived(
     debug
-      ? { hulls: allHulls.map((h) => h.hull), corners: cornersOf(allHulls).map((c) => c.at) }
+      ? {
+          hulls: allHulls.map((h) => h.hull),
+          corners: cornersOf(allHulls).map((c) => c.at),
+          dots: dotsOf(surface, walk),
+        }
       : null,
   );
   const towers = $derived(

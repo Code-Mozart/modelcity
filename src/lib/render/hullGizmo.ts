@@ -6,6 +6,8 @@ import { dot, segment, strokePiece, toScreen, type Frame, type Palette } from '.
 export interface HullScene {
   hulls: Hull[];
   corners: Vec[];
+  /** One dot on the skin of each polygon of the surface (^948). */
+  dots: Vec[];
 }
 
 const HULL_LINE_PX = 1;
@@ -13,6 +15,7 @@ const HULL_LINE_PX = 1;
 const VERTEX_PX = 2.5;
 const CROSS_ARM_PX = 6;
 const CROSS_LINE_PX = 2;
+const WALKER_PX = 6;
 
 /**
  * The hull of every segment as a thin outline, its vertices as dots, and the corners of the
@@ -31,4 +34,5 @@ export function drawHulls(f: Frame, scene: HullScene, pal: Palette) {
     segment(f.ctx, { x: p.x - arm, y: p.y - arm }, { x: p.x + arm, y: p.y + arm }, cross);
     segment(f.ctx, { x: p.x - arm, y: p.y + arm }, { x: p.x + arm, y: p.y - arm }, cross);
   }
+  for (const d of scene.dots) dot(f.ctx, toScreen(f, d), WALKER_PX, pal.debug);
 }

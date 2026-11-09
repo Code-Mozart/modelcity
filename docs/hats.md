@@ -1,4 +1,4 @@
-next: ^948
+next: ^949
 
 # Hats
 
@@ -689,6 +689,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^945 | feature | done (milestone ^156, part 2, PR #51; user) | **The road surface is generated as one curvilinear polygon (user):** the outline of the union of the hulls of all segments (^923), wrapped around everything: only the vertices and pieces of the hulls that lie on the outside count, those inside another hull (the caps between segments, the sides of lanes side by side, the tails of a bend tighter than half the width, ^942) are left out. Pure geometry in `curves/union.ts` (`unionOutline`): pieces (lines and arcs), cut at all crossings and at the ends of each other, kept where one side is inside the union and the other outside, chained into closed loops; filled with the even-odd rule, so holes (a ring road) work. No draw-order trick (^90 drew the outlines of all roads first, then all surfaces). Tests: a straight segment, a bend, two segments in a row, a crossing, a T, a split, lanes side by side, a ring, and the example of ^944. |
 | ^946 | decision | decided (user: the same fill and stroke as before, the Google Maps colours); done (PR #51) | **Colours and outline of the surface:** the fill is `--road` and the stroke `--road-edge` (^907, ^908), the outline 2 px outside the polygon, scaling down on roads narrower than 20 px (^91); all of it from the one polygon: the stroke is drawn first, 4 px wide and centred, and the fill over it, so that only 2 px of it show outside. View mode shows the surface. |
 | ^947 | decision | decided (user); done (PR #51) | **The debug overlay stays as an option (user):** `Ctrl+Period` still draws the hulls, their vertices and the corners (^925) on top of the surface. |
+| ^948 | feature | done (milestone ^156, PR #51; user) | **Walking dots in the debug layer (user):** to show that the generated polygons are proper (closed, joined end to start, no jumps), the debug layer (`Ctrl+Period`, ^833) draws one dot on the skin of each polygon of the surface. While the hidden controls `.` (forward) and `,` (back) are held (no hint, only while the layer is shown) all dots walk along their polygon at 6 m/s; at the end of a loop they go round. Asked for "one per road": a polygon is one connected area, so a crossing of two roads is one polygon and one dot, a ring has a dot on its outer and one on its inner loop (assumed). |
 
 ## Rented ranges
 
