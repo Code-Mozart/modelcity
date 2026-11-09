@@ -1,10 +1,20 @@
 :root {
-  --bg: #f2efe9;
+  /* The map, after Google Maps (docs/palette.md, ^900 to ^913): the land is the background. */
+  --bg: #d3f8e2;
   --panel: #ffffff;
   --ink: #15171c;
   /* The road surface and its outline, after Google Maps (^90). */
-  --road: #ffffff;
-  --road-edge: #c9cdd3;
+  --road: #abbac9;
+  --road-edge: #9dadbd;
+  --city: #f8f7f7;
+  --park: #a9eac2;
+  --building: #e8e9ed;
+  --building-edge: #d7dae7;
+  --highway: #8ba5c1;
+  --highway-edge: #6780b0;
+  --marking-white: #ffffff;
+  --marking-yellow: #ffdc36;
+  --sand: #f5f0e5;
   --muted: #5d6472;
   --line: #d8dbe2;
   --grid-minor: #eceef2;
@@ -36,11 +46,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #242f3e;
+    --bg: #1f2b26;
     --panel: #171a20;
     --ink: #f1f2f5;
-    --road: #38414e;
-    --road-edge: #212a37;
+    --road: #55657a;
+    --road-edge: #3f4c5e;
+    --city: #2a2d33;
+    --park: #254033;
+    --building: #333844;
+    --building-edge: #3d4350;
+    --highway: #4a6285;
+    --highway-edge: #354a6b;
+    --marking-white: #e8eaf0;
+    --marking-yellow: #d9b72a;
+    --sand: #2f2c26;
     --muted: #a3aab7;
     --line: #2b303a;
     --grid-minor: #181b22;

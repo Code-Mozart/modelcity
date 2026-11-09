@@ -109,6 +109,7 @@ const TARGETS: ModalTarget[] = [
   'import',
   'export',
   'search',
+  'typing',
 ];
 const MODAL_PROBES: [string, ModalFacts][] = MODALS.flatMap((mode) =>
   [null, ...TARGETS].map((over): [string, ModalFacts] => [

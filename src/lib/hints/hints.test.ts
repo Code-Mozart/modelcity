@@ -23,8 +23,8 @@ const CAMERA = ['RMB drag: pan', 'Wheel: zoom', 'MMB drag: rotate'];
 describe('control hints (^49)', () => {
   it('draw mode on empty canvas: add a node, with a heading, or finish', () => {
     expect(rows(true, empty)).toEqual([
-      'LMB: add node',
-      'LMB drag: add node and set heading',
+      'LMB: place node',
+      'LMB drag: place node and set heading',
       'Esc or RMB: finish',
       ...CAMERA,
     ]);
@@ -65,6 +65,7 @@ describe('control hints over nodes and handles (^49)', () => {
   it('over another leaf node a click extends the road from it (^65)', () => {
     expect(rows(true, node(false, true))).toEqual([
       'LMB: extend',
+      'Alt+LMB: extend from end',
       'LMB drag: move node',
       'RMB: delete node',
       'Esc: finish',
@@ -162,6 +163,7 @@ describe('select mode hints over nodes (^74, ^75)', () => {
       'RMB: delete node',
       'LMB: select',
       'Alt+LMB: select branch',
+      'Del: delete node',
       'RMB drag: pan',
       'Wheel: zoom',
       'MMB drag: rotate',
@@ -195,9 +197,22 @@ describe('undo and redo hints (^81, ^103, ^109)', () => {
 
   it('only for what can be undone or redone; holding Alt does it by batch', () => {
     expect(history(false, false)).toEqual([]);
-    expect(history(true, false)).toEqual(['Ctrl+Z: undo (Alt to undo batch)']);
-    expect(history(false, true)).toEqual(['Ctrl+Y or Ctrl+Shift+Z: redo (Alt to redo batch)']);
+    expect(history(true, false)).toEqual(['Ctrl+Z: undo']);
+    expect(history(false, true)).toEqual(['Ctrl+Y or Ctrl+Shift+Z: redo']);
     expect(history(true, true)).toHaveLength(2);
+  });
+
+  it('the Alt note is there only when the step belongs to a batch of more than one (^418)', () => {
+    const batched = (undoBatch: boolean, redoBatch: boolean) =>
+      historyHints({ undo: true, redo: true, undoBatch, redoBatch }).map(show);
+    expect(batched(true, false)).toEqual([
+      'Ctrl+Z: undo (Alt to undo batch)',
+      'Ctrl+Y or Ctrl+Shift+Z: redo',
+    ]);
+    expect(batched(false, true)).toEqual([
+      'Ctrl+Z: undo',
+      'Ctrl+Y or Ctrl+Shift+Z: redo (Alt to redo batch)',
+    ]);
   });
 });
 
@@ -234,6 +249,10 @@ describe('the projects modal hints say what an input does right now (^181)', () 
     expect(rows('list', 'rename')).toEqual(['LMB: rename', 'Esc: close']);
     expect(rows('list', 'delete')).toEqual(['LMB: delete', 'Esc: close']);
     expect(rows('list', 'export')).toEqual(['LMB: export JSON', 'Esc: close']);
+  });
+
+  it('typing in the search field: Enter opens the first result (^745)', () => {
+    expect(rows('list', 'typing')).toEqual(['Enter: open first result', 'Esc: close']);
   });
 
   it('inputs that do the same are one row: Esc or LMB closes over the cross', () => {
@@ -301,7 +320,7 @@ describe('Tab (^104)', () => {
 
   it('undo and redo can be visited, too', () => {
     const rowsOf = (...ids: string[]) =>
-      historyHints({ undo: true, redo: true }, hiddenIds(...ids)).map(show);
+      historyHints({ undo: true, redo: true, redoBatch: true }, hiddenIds(...ids)).map(show);
     expect(rowsOf()).toHaveLength(2);
     expect(rowsOf('undo')).toEqual(['Ctrl+Y or Ctrl+Shift+Z: redo (Alt to redo batch)']);
   });

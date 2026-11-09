@@ -43,15 +43,15 @@ describe('a node and a snap with a heading (^358, ^796)', () => {
       'Esc: cancel',
       'Ctrl: no snapping',
       'Alt: opposite heading',
-      'Shift: snap only the position', // (^796)
+      'Shift: snap only position', // (^796)
     ]);
   });
 
   it('placing a node at a snap: Shift keeps only its position (^358)', () => {
     const rows = hintsFor(true, { kind: 'empty' }, 0, { snapping: true, placing: true }).map(show);
-    expect(rows).toContain('Shift: snap only the position');
+    expect(rows).toContain('Shift: snap only position');
     expect(hintsFor(true, { kind: 'empty' }, 0, { placing: true }).map(show)).not.toContain(
-      'Shift: snap only the position',
+      'Shift: snap only position',
     );
   });
 });

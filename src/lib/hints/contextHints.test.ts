@@ -20,8 +20,8 @@ describe('the camera in draw mode (^389)', () => {
   });
 });
 
-describe('Shift: snap only the position (^481)', () => {
-  const shift = 'Shift: snap only the position';
+describe('Shift: snap only position (^481)', () => {
+  const shift = 'Shift: snap only position';
   it('is hinted when a click would place a node with a heading at the snap', () => {
     expect(hintsFor(true, empty, 0, { snapping: true, placing: true }).map(show)).toContain(shift);
   });

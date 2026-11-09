@@ -18,6 +18,7 @@
     empty = 'Nothing here yet.',
     query = $bindable(''),
     searchAttrs = {},
+    onpick,
   }: {
     items: T[];
     key: (item: T) => string | number;
@@ -29,6 +30,8 @@
     empty?: string;
     query?: string;
     searchAttrs?: Record<string, unknown>;
+    /** `Enter` in the search field acts on the first item found, as a click on it would (^745). */
+    onpick?: (item: T) => void;
   } = $props();
 
   let search = $state<HTMLInputElement>();
@@ -48,6 +51,7 @@
     aria-label={label}
     bind:this={search}
     bind:value={query}
+    onkeydown={(e) => e.key === 'Enter' && shown[0] !== undefined && onpick?.(shown[0])}
     {...searchAttrs}
   />
   <ul>

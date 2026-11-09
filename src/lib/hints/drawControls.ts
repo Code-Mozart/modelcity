@@ -22,6 +22,13 @@ export const DRAW_HEAD: C[] = [
   { ...actRow(412, 'finish', nodeAct('finish')), input: [lmb, ESC] },
   { ...actRow(436, 'cancel', nodeAct('cancel')), input: [lmb, ESC] },
   actRow(496, 'extend', nodeAct('extend')),
+  {
+    hat: 915,
+    input: mouse('lmb', false, 'alt'),
+    on: nodeAct('extend'),
+    listens: always,
+    says: () => 'extend from end',
+  },
   actRow(706, 'split', nodeAct('split')),
   actRow(714, 'merge', nodeAct('merge')),
   actRow(716, 'close', nodeAct('close')),
@@ -35,7 +42,7 @@ export const DRAW_HEAD: C[] = [
     input: lmb,
     on: (f) => draw(f) && onVoid(f),
     listens: always,
-    says: () => 'add node',
+    says: () => 'place node',
   },
   {
     hat: 707,
@@ -56,7 +63,7 @@ export const DRAW_HEAD: C[] = [
     input: mouse('lmb', true),
     on: (f) => draw(f) && onVoid(f),
     listens: always,
-    says: () => 'add node and set heading',
+    says: () => 'place node and set heading',
   },
   {
     hat: 708,

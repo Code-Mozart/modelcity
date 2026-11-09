@@ -16,7 +16,9 @@ export type ModalTarget =
   | 'new'
   | 'import'
   | 'export'
-  | 'search';
+  | 'search'
+  /** The search field has the focus: what is typed searches, `Enter` opens the first result (^745). */
+  | 'typing';
 
 /** What the projects modal is doing and what the pointer is over: the facts its controls depend on. */
 export interface ModalFacts {
@@ -53,6 +55,13 @@ export const MODAL_CONTROLS: ModalControl[] = [
   click(404, 'import', () => 'import'),
   click(405, 'export', () => 'export JSON'),
   click(407, 'search', () => 'search'),
+  {
+    hat: 745,
+    input: ENTER,
+    on: (f) => f.mode === 'list' && f.over === 'typing',
+    listens: () => true,
+    says: () => 'open first result',
+  },
   {
     hat: 773,
     input: ENTER,

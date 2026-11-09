@@ -135,7 +135,7 @@ const SNAP_CONTROLS: C[] = [
     input: key('Shift'),
     on: (f) => !f.viewing && !!f.state.snapping && !!f.state.placing,
     listens: always,
-    says: () => 'snap only the position',
+    says: () => 'snap only position',
   },
   {
     hat: 702,
@@ -217,7 +217,7 @@ export const DRAG_CONTROLS: C[] = [
     input: key('Shift'),
     on: (f) => dragging(f) && dragType(f) === 'node' && !!f.state.touching,
     listens: always,
-    says: () => 'snap only the position',
+    says: () => 'snap only position',
   },
   // Aiming (^335) is for the heading of an existing node; not while one that was just placed is set (^358).
   {

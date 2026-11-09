@@ -64,6 +64,9 @@ const visited = (row: Hint, hidden: Hidden) => row.id !== undefined && hidden(ro
 export interface HistoryState {
   undo: boolean;
   redo: boolean;
+  /** The last step to undo, or the next to redo, is part of a batch of more than one step: `Alt` does more than a step (^418). */
+  undoBatch?: boolean;
+  redoBatch?: boolean;
 }
 
 const BATCH = (text: string) => ({ key: 'Alt', text });
@@ -74,7 +77,7 @@ export const HISTORY_CONTROLS: Control<HistoryState>[] = [
     hat: 454,
     input: keys('Ctrl', 'Z'),
     id: 'undo',
-    note: BATCH('to undo batch'),
+    note: (f) => (f.undoBatch ? BATCH('to undo batch') : null),
     on: (f) => f.undo,
     listens: (f) => f.undo,
     says: () => 'undo',
@@ -83,7 +86,7 @@ export const HISTORY_CONTROLS: Control<HistoryState>[] = [
     hat: 456,
     input: [keys('Ctrl', 'Y'), keys('Ctrl', 'Shift', 'Z')],
     id: 'redo',
-    note: BATCH('to redo batch'),
+    note: (f) => (f.redoBatch ? BATCH('to redo batch') : null),
     on: (f) => f.redo,
     listens: (f) => f.redo,
     says: () => 'redo',

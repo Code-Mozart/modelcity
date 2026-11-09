@@ -56,6 +56,7 @@ The review table of the project owner (`docs/please-remove-me.md`, removed), wit
 | = ^736 | project modal | while renaming a project & checkmark icon hovered | Esc | cancel | cancel rename | control hints panel | no |
 | = ^736 | project modal | while renaming a project & cancel icon hovered | Esc or LMB | cancel | cancel rename | control hints panel | no |
 | ^773 | project modal | while renaming a project & cancel icon hovered | Enter | rename | rename project | control hints panel | no |
+| = ^745 | projects modal, the search field has the focus | `Enter` | open the first project that was found, as a click on it would (milestone ^914) | `Enter`: open first result | n/a | the modal closes as after a click | unit `hints/hints.test`, `ui/fuzzy` |
 | = ^737 | project modal | bin icon hovered on project card | LMB | delete | goes to delete confirmation | control hints panel | no |
 | = ^738 | project modal | while confirmation to delete a project & checkmark icon hovered | LMB | delete | delete project | control hints panel | no |
 | = ^739 | project modal | while confirmation to delete a project & checkmark icon hovered | Esc | cancel | cancel project deletion | control hints panel | no |
@@ -128,6 +129,7 @@ Each row is one control (^392): an input, or alternative inputs that do the same
 | ^491 | select mode, pointer on a node | `Alt` + `LMB` click | select branch (operation ^487); not pressed yet | `Alt`+`LMB`: select branch (or deselect branch) | n/a | hidden once visited (^110); with `Alt` held the hovered branch gets its outline (^99) | unit `editor/branchSelect.test`, `editor/hoverFresh.test` |
 | ^495 | select mode, the void, nothing selected | `LMB` drag | select by box (operation ^492); not pressed yet | `LMB` drag: select (hidden once visited, ^110) | n/a | the nodes inside are selected live | unit `editor/selection.test`, `editor/controls.test` |
 | ^496 | draw mode, nothing drawn, pointer on a node without a segment | `LMB` click | extend road (operation ^493): the node becomes the node being drawn from; extend mode | `LMB`: extend (^494, fixed) | n/a | the history step is `extend road` | unit `editor/cancelFirst.test`; gap before ^494: no test for a node without a segment |
+| = ^915 | draw mode, nothing drawn, pointer on a node without a segment or the end of a road | `Alt` + `LMB` click | extend from end (milestone ^914): the node becomes the node being drawn from, as the *end* of the new segment; the road is drawn backwards until extend mode is left (`Alt` need not be held afterwards) | `Alt`+`LMB`: extend from end | n/a | the history step is `extend road` | unit `editor/extendFromEnd.test` |
 
 ## Controls found in the code, not walked yet (^684–^741)
 
@@ -139,6 +141,7 @@ Found by the sweep of the code (the hints, the key and pointer dispatch, the mod
 | ^685 | select mode, the void, something selected | `Shift` + `LMB` drag | add to selection (^682) | `Shift`+`LMB` drag: add to selection | unit `editor/selection.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
 | ^686 | select mode, something selected | `Esc` | deselect all (^557) | `Esc`: deselect all (^218) | unit `editor/branchSelect.test` (weak), `editor/controls.test` (weak), `editor/editor.test` (weak) |
 | ^687 | any mode, something selected | `Del` or `Backspace` | ^434 | `Del`: delete selected | unit `editor/controls.test` (weak), `editor/editor.test` (weak), `editor/modes.test` (weak) |
+| = ^757 | select mode, nothing selected, pointer on a node | `Del` | delete the hovered node (operation ^434; milestone ^914) | `Del`: delete node | n/a | the history step is `delete node` | unit `editor/deleteHovered.test` |
 | ^688 | select mode, pointer on a node, something selected | `Shift` + `LMB` click | add to selection (^682); deselect (^683) | `Shift`+`LMB`: select or deselect | unit `editor/controls.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
 | ^689 | select mode, pointer on a node, something selected | `Alt` + `Shift` + `LMB` click | select branch (^487); deselect (^683) | `Alt`+`Shift`+`LMB`: add branch to selection (or deselect branch) | unit `editor/branchSelect.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
 | ^690 | select mode, pointer on a curve | `LMB` click | select segment (^555) | `LMB`: select segment | unit `editor/editor.test` (strong), `editor/controls.test` (strong), `editor/extend.test` (strong) |

@@ -1,4 +1,4 @@
-import type { History, Step } from '../editor/history';
+import { batchSizes, type History, type Step } from '../editor/history';
 import { historyHints, type Hidden, type Hint } from '../hints/hints';
 import { sameSelection } from '../editor/selection';
 import { selectionName } from '../editor/stepNames';
@@ -94,5 +94,12 @@ function describe(h: History, group: PanelRow[]): PanelGroup {
  */
 export function panelHints(h: History, hidden: Hidden): Hint[] {
   if (!panelView(h).length) return [];
-  return historyHints({ undo: h.past.length > 0, redo: h.future.length > 0 }, hidden);
+  const size = batchSizes(h);
+  const state = {
+    undo: h.past.length > 0,
+    redo: h.future.length > 0,
+    undoBatch: size.undo > 1,
+    redoBatch: size.redo > 1,
+  };
+  return historyHints(state, hidden);
 }

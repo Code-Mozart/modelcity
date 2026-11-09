@@ -103,10 +103,11 @@ export function insertAt(d: Drawn, hit: RoadHit): { drawn: Drawn; id: number } {
  * Make an end node, of any road when none is drawn, the one the next node attaches to (^65): the
  * road becomes the road being drawn, at that end, and it started at its other end.
  */
-export function extendTo(drawn: Drawn, id: number): Drawn {
+export function extendTo(drawn: Drawn, id: number, back = false): Drawn {
   const { graph } = drawn;
   const start = edgesOut(graph, id).length > 0 && edgesIn(graph, id).length === 0;
-  const end = start ? 'first' : 'end';
+  // `Alt`: the node is the end of the new segment, and the road is drawn backwards until extend mode is left (^915).
+  const end = back ? 'start' : start ? 'first' : 'end';
   return { ...drawn, active: id, end, origin: farEnd(graph, id), selection: [id] };
 }
 
