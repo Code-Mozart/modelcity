@@ -1,6 +1,6 @@
 # Lane markings (^949, rented hats ^950 to ^958)
 
-The rules of the markings that are drawn on the road surface (^21, milestone ^949, part of ^156). **This file is the specification; the code follows it.** One hat per rule; status `decided` = the user's words, `assumed` = a detail Claude filled in. Nothing here is built yet. When the markings are built, every rule gets its row in `docs/features.md` with the test that covers it (and the scope of the milestone is in its PR description).
+The rules of the markings that are drawn on the road surface (^21, milestone ^949, part of ^156). **This file is the specification; the code follows it.** One hat per rule; status `decided` = the user's words, `assumed` = a detail Claude filled in. Built in PR #52 (`editor/markings.ts`, `render/markings.ts`). When the markings are built, every rule gets its row in `docs/features.md` with the test that covers it (and the scope of the milestone is in its PR description).
 
 ## Words (README glossary)
 
@@ -46,7 +46,7 @@ The rules of the markings that are drawn on the road surface (^21, milestone ^94
 | two segments parallel only over the middle 50 m of 100 m | 2 over the 50 m | one dashed line over those 50 m only | ^950: partly parallel |
 | a lone lane | 1 | none | no pair |
 
-## How to build it (the plan, to be written into the scope of the milestone)
+## How it is built
 
 1. `editor/markings.ts` (pure, no drawing): `markingsOf(graph)` returns a list of `{ piece(s) along the centerline, kind: 'dashed' | 'solid' }`. For each tower and side, for each run of nodes (as `barsOf` finds them), for each neighbouring pair `(a, b)` of the run, the parallel segments `ea`, `eb` of `a`, `b` (the test `parallel(g, ea, eb)` exists) give one centerline: the offset of either curve by half the lane width towards the other (`offsetPiece`, as the hulls do), its direction and the group size at that place.
 2. The partly parallel stretches come out of the derived nodes (`withDerived`): the run is cut at every node of the tower, so every stretch has a constant group size.

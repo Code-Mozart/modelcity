@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.51.0",
-  "moniker": "Road surface",
+  "version": "0.52.0",
+  "moniker": "Lane markings",
   "private": true,
   "type": "module",
   "scripts": {

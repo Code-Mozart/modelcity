@@ -12,6 +12,8 @@ import { drawCircles, drawCorners, drawGuides, drawTowerLine, type TowerShape } 
 import { LANE_WIDTH_M, outlinePx } from '../curves/lane';
 import type { Loop } from '../curves/union';
 import { drawHulls, type HullScene } from './hullGizmo';
+import type { Marking } from '../editor/markings';
+import { drawMarkings } from './markings';
 import {
   drawBars,
   drawCapsules,
@@ -91,6 +93,8 @@ export interface Scene {
   derived: Vec[];
   /** The road surface: closed loops round all roads (^945). */
   surface: Loop[];
+  /** The lane markings on the surface (^949). */
+  markings: Marking[];
   /** The hulls and corners of the debug layer, while it is on (^925). */
   hulls: HullScene | null;
   /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
@@ -300,10 +304,11 @@ function shownFlags(scene: Scene): boolean[][] {
   return flags.map((row) => row.map((on) => on && !scene.hideScaffold));
 }
 
-/** The road surface: the one polygon round all roads, with its outline (^945, ^946). */
-function drawSurface(f: Frame, loops: Loop[], pal: Palette) {
+/** The road surface: the one polygon round all roads, with its outline (^945, ^946), and the lane markings on it (^949). */
+function drawSurface(f: Frame, scene: Scene, pal: Palette) {
   const edge = { color: pal['road-edge'], width: outlinePx(LANE_WIDTH_M * f.view.scale) };
-  fillLoops(f, loops, pal.road, edge);
+  fillLoops(f, scene.surface, pal.road, edge);
+  drawMarkings(f, scene.markings, pal);
 }
 
 /** The nodes, real ones with their state and derived ones as hollow circles, as large and as coloured, no arrow (^821, ^805). */
@@ -340,7 +345,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const selected = scene.roads.map((r, road) =>
     r.edges.map((_, k) => scene.selectedSegments.some((s) => s.road === road && s.i === k)),
   );
-  drawSurface(f, scene.surface, pal);
+  drawSurface(f, scene, pal);
   if (scene.viewing) return;
   scene.roads.forEach((road, i) => {
     const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;

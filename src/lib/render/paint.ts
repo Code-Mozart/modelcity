@@ -22,6 +22,7 @@ const PALETTE_KEYS = [
   'muted',
   'road',
   'road-edge',
+  'marking-white',
   'debug',
   'blue',
   'red',
@@ -98,28 +99,13 @@ export function text(ctx: CanvasRenderingContext2D, s: string, p: Point, t: Text
   ctx.fillText(s, p.x, p.y);
 }
 
-/** Add a piece to the current canvas path (screen space); an arc is joined to the point before it. */
-function tracePiece(f: Frame, piece: Piece) {
-  const { ctx } = f;
-  if (piece.type === 'line') {
-    const a = toScreen(f, piece.P);
-    const b = toScreen(f, piece.Q);
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-  } else {
-    const c = toScreen(f, piece.c);
-    const a0 = piece.a0 + f.view.rot;
-    ctx.arc(c.x, c.y, piece.r * f.view.scale, a0, a0 + piece.da, piece.da < 0);
-  }
-}
-
-/** A closed path of pieces that follow each other, added to the current canvas path. */
-function traceLoop(f: Frame, loop: Piece[]) {
-  const first = loop[0];
+/** A path of pieces that follow each other, added to the current canvas path as one subpath. */
+function traceChain(f: Frame, chain: Piece[]) {
+  const first = chain[0];
   if (!first) return;
   const a = toScreen(f, first.P);
   f.ctx.moveTo(a.x, a.y);
-  for (const piece of loop) {
+  for (const piece of chain) {
     if (piece.type === 'line') {
       const b = toScreen(f, piece.Q);
       f.ctx.lineTo(b.x, b.y);
@@ -129,6 +115,11 @@ function traceLoop(f: Frame, loop: Piece[]) {
       f.ctx.arc(c.x, c.y, piece.r * f.view.scale, a0, a0 + piece.da, piece.da < 0);
     }
   }
+}
+
+/** A closed path of pieces that follow each other, added to the current canvas path. */
+function traceLoop(f: Frame, loop: Piece[]) {
+  traceChain(f, loop);
   f.ctx.closePath();
 }
 
@@ -150,11 +141,11 @@ export function fillLoops(f: Frame, loops: Piece[][], fill: string, edge: Stroke
 /** Stroke one piece. */
 export const strokePiece = (f: Frame, piece: Piece, s: Stroke) => strokeChain(f, [piece], s);
 
-/** Stroke pieces that follow each other as one path: round ends and joins (^21, ^91). */
+/** Stroke pieces that follow each other as one path, so a dash pattern runs on across the joints (^954): round ends and joins, square ends for dashes (^21, ^91). */
 export function strokeChain(f: Frame, pieces: Piece[], s: Stroke) {
   f.ctx.beginPath();
-  for (const piece of pieces) tracePiece(f, piece);
-  f.ctx.lineCap = 'round';
+  traceChain(f, pieces);
+  f.ctx.lineCap = s.dash ? 'butt' : 'round';
   f.ctx.lineJoin = 'round';
   applyStroke(f.ctx, s);
 }
