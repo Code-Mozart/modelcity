@@ -24,9 +24,7 @@ describe('control hints (^49)', () => {
   it('draw mode on empty canvas: add a node, with a heading, or finish', () => {
     expect(rows(true, empty)).toEqual([
       'LMB: place first node',
-      'Alt+LMB: place last node',
       'LMB drag: place first node and set heading',
-      'Alt+LMB drag: place last node and set heading',
       'Esc or RMB: finish',
       ...CAMERA,
     ]);
@@ -50,6 +48,21 @@ describe('control hints (^49)', () => {
       'Esc: finish',
       ...CAMERA,
     ]);
+  });
+});
+
+describe('reaching a node or curve says what it does (^916)', () => {
+  const state = (backwards: boolean) => ({ backwards, extending: true });
+  const text = (target: HintTarget, backwards: boolean) =>
+    hintsFor(true, target, 0, state(backwards))
+      .map(show)
+      .filter((r) => r.startsWith('LMB: '));
+
+  it('a merge going forwards, a split going backwards', () => {
+    const merge: HintTarget = { kind: 'handle', type: 'node', act: 'merge' };
+    expect(text(merge, false)).toEqual(['LMB: merge']);
+    expect(text(merge, true)).toEqual(['LMB: split']);
+    expect(text({ kind: 'curve', act: 'merge' }, true)).toEqual(['LMB: split']);
   });
 });
 

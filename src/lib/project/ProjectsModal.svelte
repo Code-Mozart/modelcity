@@ -137,7 +137,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
   }
   /* Wide, and as tall as the content up to three quarters of the screen (^211); only the list scrolls. */
   .dialog {

@@ -17,6 +17,9 @@ import {
 } from './facts';
 import { ESC, mouse } from './inputs';
 
+/** Reaching a node or curve while drawing: a merge going forwards, a split going backwards (^916). */
+const joinWord = (f: Facts) => (f.state.backwards ? 'split' : 'merge');
+
 /** The way a click on a leaf node extends (^916). */
 const way = (f: Facts) => handle(f)?.way;
 
@@ -40,11 +43,11 @@ export const DRAW_HEAD: C[] = [
   altRow(915, 'extend backwards', (f) => nodeAct('extend')(f) && way(f) === 'forwards'),
   altRow(917, 'extend forwards', (f) => nodeAct('extend')(f) && way(f) === 'backwards'),
   actRow(706, 'split', nodeAct('split')),
-  actRow(714, 'merge', nodeAct('merge')),
+  { ...actRow(714, '', nodeAct('merge')), says: joinWord },
   actRow(716, 'close', nodeAct('close')),
   {
     ...actRow(711, '', (f) => draw(f) && handle(f)?.type === 'rad' && act(f) !== null),
-    says: (f) => act(f),
+    says: (f) => (act(f) === 'merge' ? joinWord(f) : act(f)),
   },
   // A click and a drag on the void and on a curve in draw and extend mode (^410, ^411, ^707, ^715, ^708).
   {
@@ -54,7 +57,6 @@ export const DRAW_HEAD: C[] = [
     listens: always,
     says: (f) => (f.state.extending ? 'place node' : 'place first node'),
   },
-  altRow(918, 'place last node', (f) => draw(f) && onVoid(f) && !f.state.extending),
   {
     hat: 707,
     input: lmb,
@@ -67,7 +69,7 @@ export const DRAW_HEAD: C[] = [
     input: lmb,
     on: (f) => draw(f) && onCurve(f) && curveAct(f) !== 'split',
     listens: always,
-    says: () => 'merge',
+    says: joinWord,
   },
   {
     hat: 411,
@@ -76,13 +78,6 @@ export const DRAW_HEAD: C[] = [
     listens: always,
     says: (f) =>
       f.state.extending ? 'place node and set heading' : 'place first node and set heading',
-  },
-  {
-    hat: 919,
-    input: mouse('lmb', true, 'alt'),
-    on: (f) => draw(f) && onVoid(f) && !f.state.extending,
-    listens: always,
-    says: () => 'place last node and set heading',
   },
   {
     hat: 708,

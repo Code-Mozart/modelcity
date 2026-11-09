@@ -77,7 +77,7 @@
     margin-bottom: 0.8em;
     padding: 0.5em 0.7em;
     color: var(--ink);
-    background: var(--bg);
+    background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 0.4em;
     font: inherit;

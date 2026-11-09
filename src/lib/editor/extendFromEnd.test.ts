@@ -97,28 +97,15 @@ describe('a merge or split on the way (^916)', () => {
   });
 });
 
-describe('Alt+LMB on the void places the last node (^918)', () => {
-  it('the road is drawn backwards from it: the next node is the start of a segment that ends at the first', () => {
-    const ed = new Editor();
-    ed.enterDrawMode();
-    click(ed, alt(0, 0));
-    expect(ed.end).toBe('start');
-    click(ed, plain(30, 20));
-    expect(edgesOf(ed)).toEqual([[1, 0]]);
-  });
-
-  it('LMB places the first node and goes forwards', () => {
-    const ed = new Editor();
-    ed.enterDrawMode();
-    click(ed, plain(0, 0));
-    click(ed, plain(30, 20));
-    expect(edgesOf(ed)).toEqual([[0, 1]]);
-  });
-
-  it('with a road being drawn, Alt+LMB is just a node placed with Alt (the opposite heading)', () => {
-    const ed = road();
-    click(ed, plain(20, 0));
-    click(ed, alt(50, 20));
-    expect(ed.end).toBe('end');
+describe('placing the first node (^918 and ^919 were withdrawn)', () => {
+  it('LMB places the first node and goes forwards, and so does Alt+LMB, whose Alt inverts a snapped heading (^301)', () => {
+    for (const press of [plain, alt]) {
+      const ed = new Editor();
+      ed.enterDrawMode();
+      click(ed, press(0, 0));
+      expect(ed.end).toBe('end');
+      click(ed, plain(30, 20));
+      expect(edgesOf(ed)).toEqual([[0, 1]]);
+    }
   });
 });

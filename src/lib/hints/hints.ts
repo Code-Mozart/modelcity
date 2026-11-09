@@ -113,6 +113,8 @@ export interface HintState {
   placing?: boolean;
   /** A road is being drawn from a node (extend mode), not just a first node placed next (^916). */
   extending?: boolean;
+  /** The road is drawn backwards: reaching a node is a split there, not a merge (^916). */
+  backwards?: boolean;
   /** The middle button is held: the compass uses `S` and the other letters. */
   rotating?: boolean;
   /** Only the first node of the road is placed: finishing takes it away, which is `cancel` (^438). */

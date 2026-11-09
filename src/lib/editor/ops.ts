@@ -58,8 +58,8 @@ export function curvePress(
 }
 
 /** A press on empty canvas in draw mode: a node is placed (^40). */
-export function placePress(d: Drawn, at: Placement, last = false): { drawn: Drawn; press: Press } {
-  const r = placeNode(d, at, last);
+export function placePress(d: Drawn, at: Placement): { drawn: Drawn; press: Press } {
+  const r = placeNode(d, at);
   const target = { kind: 'empty' } as const;
   // The first node of a new arm snaps to the compass directions, the others to steps from where they point (^315, ^316).
   const compass = d.active === null;
@@ -74,7 +74,7 @@ export function placePress(d: Drawn, at: Placement, last = false): { drawn: Draw
 }
 
 /** A node at the end of the road being drawn, or the first node of a new road (^40). */
-export function placeNode(d: Drawn, at: Placement, last = false): { drawn: Drawn; id: number } {
+export function placeNode(d: Drawn, at: Placement): { drawn: Drawn; id: number } {
   const tip = d.active === null ? undefined : nodeOf(d.graph, d.active);
   if (!tip) {
     const r = addNode(d.graph, { x: at.pt.x, y: at.pt.y, th: at.th ?? 0 });
@@ -83,7 +83,7 @@ export function placeNode(d: Drawn, at: Placement, last = false): { drawn: Drawn
         ...d,
         graph: r.graph,
         active: r.id,
-        end: last ? 'start' : 'end',
+        end: 'end',
         origin: r.id,
         selection: [r.id],
       },

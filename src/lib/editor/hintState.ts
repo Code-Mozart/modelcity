@@ -12,6 +12,7 @@ export function hintStateOf(e: {
   press: Press | null;
   graph: Graph;
   active: number | null;
+  end: 'start' | 'end';
 }) {
   const heading = placedHeading(e.snapped, false) !== null;
   return {
@@ -22,6 +23,7 @@ export function hintStateOf(e: {
     placing: e.drawing && heading,
     firstNodeOnly: onlyFirstNode(e),
     extending: e.active !== null,
+    backwards: e.active !== null && e.end === 'start',
   };
 }
 

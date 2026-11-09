@@ -32,6 +32,8 @@ const ratio = (a: string, b: string) => {
 /** [foreground, background, minimum ratio]: 4.5 for text, 3 for graphics and component edges. */
 const PAIRS: [string, string, number][] = [
   ['ink', 'bg', 4.5],
+  ['ink', 'surface', 4.5],
+  ['muted', 'surface', 4.5],
   ['muted', 'bg', 4.5],
   ['muted', 'panel', 4.5],
   ['ink', 'panel', 4.5],

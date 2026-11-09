@@ -19,4 +19,4 @@ The colours of the map, after Google Maps. **The values live in one place only: 
 | ^912 | `--marking-yellow` | yellow lane marking | not drawn yet (lanes and markings, ^156) |
 | ^913 | `--sand` | other land use (the beige area in light mode) | not drawn yet; extra |
 
-Not part of the palette: `--glow`, the halo behind text and icons on the map, which is white in light mode and black in dark mode whatever the land colour is.
+Not part of the palette: `--surface`, the colour of the interface on top of the map (the search field, the cards, the glow behind text and icons), unchanged by the palette: it is what `--bg` was before.

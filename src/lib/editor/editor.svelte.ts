@@ -252,11 +252,7 @@ export class Editor {
       return;
     }
     const place = () =>
-      ops.placePress(
-        this.snapshot(),
-        placedAt(this.snapped, info, tipWays(this.snapshot())),
-        info.alt && this.active === null,
-      );
+      ops.placePress(this.snapshot(), placedAt(this.snapped, info, tipWays(this.snapshot())));
     this.begin(hit ? ops.curvePress(this.snapshot(), hit) : place());
   }
 
