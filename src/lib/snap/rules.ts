@@ -1,4 +1,5 @@
 import type { EdgeRef } from '../curves/path';
+import { offsetPiece } from '../curves/offset';
 import { pointOn, sweeps } from '../curves/piece';
 import type { Arc, BendEdge, Piece, TwoArcEdge } from '../curves/types';
 import { add, angleOf, dist, fromAngle, mul, perp, sub, unitOr, type Vec } from '../curves/vec';
@@ -121,18 +122,6 @@ function curveOf(e: RuleEdge, pieces: Piece[], rule: Rule, side?: 1 | -1): SnapC
     edge: e.id,
     ...(side === undefined ? {} : { side }),
   };
-}
-
-/** A piece moved sideways by `d` to its left (negative: right), or null where an arc would turn inside out. */
-function offsetPiece(p: Piece, d: number): Piece | null {
-  if (p.type === 'line') {
-    const n = mul(perp(unitOr(sub(p.Q, p.P), { x: 1, y: 0 })), d);
-    return { type: 'line', P: add(p.P, n), Q: add(p.Q, n) };
-  }
-  const r = p.r - Math.sign(p.da) * d;
-  if (r < 0.05) return null;
-  const at = (a: number): Vec => add(p.c, mul(fromAngle(a), r));
-  return { ...p, r, P: at(p.a0), Q: at(p.a0 + p.da) };
 }
 
 /** The curve of a segment (^268) and its two offsets, one lane width to each side (^279). */

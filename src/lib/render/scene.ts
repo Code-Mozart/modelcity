@@ -1,6 +1,5 @@
 import { screenToWorld } from '../camera/view';
 import { samplesAlong } from '../curves/arrows';
-import { outlinePx } from '../curves/lane';
 import { buildEdge } from '../curves/edge';
 import { ARROW_PX } from '../curves/handles';
 import type { EdgeRef, Path } from '../curves/path';
@@ -10,6 +9,7 @@ import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides, drawTowerLine, type TowerShape } from './guides';
+import { drawHulls, type HullScene } from './hullGizmo';
 import {
   drawBars,
   drawCapsules,
@@ -87,6 +87,8 @@ export interface Scene {
   towers: TowerCapsule[];
   /** The derived nodes: hollow circles of the size and colour of a node (^821, ^822, ^823). */
   derived: Vec[];
+  /** The hulls and corners of the debug layer, while it is on (^925). */
+  hulls: HullScene | null;
   /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
   tower: TowerShape | null;
   /** The heading being set, with the arrow following the cursor, and the compass for the first node of an arm (^314, ^316). */
@@ -294,18 +296,14 @@ function shownFlags(scene: Scene): boolean[][] {
   return flags.map((row) => row.map((on) => on && !scene.hideScaffold));
 }
 
-/**
- * The surface of all roads, 3 m wide with an outline (^90): all outlines first, then all surfaces,
- * so that roads that cross or touch merge into one shape.
- */
-function drawLanes(f: Frame, roads: RoadScene[], pal: Palette) {
-  const px = (r: RoadScene) => r.width * f.view.scale;
-  const pieces = (r: RoadScene) => r.edges.flatMap((e) => e.E.pieces);
-  for (const r of roads) {
-    const edge = { color: pal['road-edge'], width: px(r) + 2 * outlinePx(px(r)) };
-    strokeChain(f, pieces(r), edge);
-  }
-  for (const r of roads) strokeChain(f, pieces(r), { color: pal.road, width: px(r) });
+/** View mode shows only the roads: their centre lines, until the surface is generated from the hulls (^922, ^921). */
+function drawCentreLines(f: Frame, roads: RoadScene[], pal: Palette) {
+  for (const r of roads)
+    strokeChain(
+      f,
+      r.edges.flatMap((e) => e.E.pieces),
+      { color: pal.ink, width: CURVE_PX },
+    );
 }
 
 /** The nodes, real ones with their state and derived ones as hollow circles, as large and as coloured, no arrow (^821, ^805). */
@@ -342,8 +340,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   const selected = scene.roads.map((r, road) =>
     r.edges.map((_, k) => scene.selectedSegments.some((s) => s.road === road && s.i === k)),
   );
-  drawLanes(f, scene.roads, pal);
-  if (scene.viewing) return;
+  if (scene.viewing) return drawCentreLines(f, scene.roads, pal);
   scene.roads.forEach((road, i) => {
     const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;
     drawRoad(f, road, { active: active[i]!, selected: selected[i]!, rad }, pal);
@@ -362,6 +359,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   // The arrows of what the snap takes its heading from are under the dots, the snap points of what it is made of over them (^795, ^803).
   for (const o of scene.headingFrom) drawArrow(f, { ...o.at, th: o.th }, pal.turquoise);
   drawAllNodes(f, scene, active, pal);
+  if (scene.hulls) drawHulls(f, scene.hulls, pal);
   for (const o of scene.snapFrom) drawSnapPoint(f, o.at, pal);
   // The outline of the hovered segment (or branch) is on top of everything (^99).
   drawOutlines(f, scene.roads, scene.outline, pal.blue);

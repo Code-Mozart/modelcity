@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cornersOf, hullsOf } from './editor/corners';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
   import { headingSourceOrigins } from './editor/hintState';
@@ -21,7 +22,14 @@
     editor,
     camera,
     onUse,
-  }: { editor: Editor; camera: Camera; onUse: (id: ControlId) => void } = $props();
+    debug = false,
+  }: {
+    editor: Editor;
+    camera: Camera;
+    onUse: (id: ControlId) => void;
+    /** The debug layer is on: the hulls and corners are drawn (^925). */
+    debug?: boolean;
+  } = $props();
 
   const LINE_PX = 16;
   const PAGE_PX = 400;
@@ -48,6 +56,12 @@
   const derivedAll = $derived(editor.derived);
   const seen = $derived(withDerived(editor.graph, derivedAll));
   const bars = $derived(barsOf(seen));
+  /** The hulls and corners, computed only while the debug layer is on (^925). */
+  const hulls = $derived.by(() => {
+    if (!debug) return null;
+    const all = hullsOf(editor.graph);
+    return { hulls: all.map((h) => h.hull), corners: cornersOf(all).map((c) => c.at) };
+  });
   const towers = $derived(
     towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
   );
@@ -84,6 +98,7 @@
       bars: bars,
       towers: towers,
       derived: derivedAll,
+      hulls,
       tower: followingTower(editor.graph, editor.chains, editor.focus, editor.selection),
       turning: turningOf(editor.chains, editor.press),
     };

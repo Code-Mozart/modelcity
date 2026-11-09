@@ -6,6 +6,8 @@
   --panel: #ffffff;
   --ink: #15171c;
   /* The road surface and its outline, after Google Maps (^90). */
+  /* The debug layer (Ctrl+Period): an intense red in light and dark mode (^926). */
+  --debug: #ff1a1a;
   --road: #abbac9;
   --road-edge: #9dadbd;
   --city: #f8f7f7;

@@ -204,7 +204,7 @@
 />
 
 <main>
-  <MapCanvas {editor} {camera} onUse={(id) => usage.mark(id)} />
+  <MapCanvas {editor} {camera} debug={debug.coordinates} onUse={(id) => usage.mark(id)} />
   <ModeFrame phase={editor.phase} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
