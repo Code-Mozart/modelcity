@@ -21,7 +21,7 @@ export function nodesRemoval(ids: number[]): Removal | null {
 function segmentsRemoval(g: Graph, edge: number, branch: boolean): Removal {
   const ids = branch ? branchEdges(g, edge) : [edge];
   return {
-    name: branch ? 'remove branch' : 'remove segment',
+    name: branch ? 'delete branch' : 'delete segment',
     change: (d) => removeSegmentsFrom(d, ids),
   };
 }
@@ -54,3 +54,13 @@ export const underHover = (
   handle: h?.kind === 'handle' ? h.handle : null,
   hit: h?.kind === 'candidate' ? h.hit : null,
 });
+
+/**
+ * What `Del` deletes (^757, ^920): the selection; with nothing selected, in select mode (`hover` is
+ * null in others), the node or segment under the pointer, as a right click does.
+ */
+export function deleteRemoval(g: Graph, selection: number[], hover: Hover | null): Removal | null {
+  if (selection.length) return nodesRemoval(selection);
+  const derived = hover?.kind === 'candidate' && hover.derived;
+  return hover && !derived ? rightClickRemoval(g, [], underHover(hover), false) : null;
+}

@@ -6,7 +6,13 @@ import type { SnapHit } from '../snap/types';
 const hit = (curve: object): SnapHit =>
   ({ pt: { x: 0, y: 0 }, heading: null, by: [{ kind: 'curve', ...curve }] }) as unknown as SnapHit;
 
-const base = { drawing: true, press: null, graph: emptyGraph(), active: null };
+const base = {
+  drawing: true,
+  press: null,
+  graph: emptyGraph(),
+  active: null,
+  end: 'end' as const,
+};
 
 describe('what the hints know about the snap (^481, ^473)', () => {
   it('nothing snapped: nothing', () => {
@@ -15,6 +21,8 @@ describe('what the hints know about the snap (^481, ^473)', () => {
       touching: false,
       placing: false,
       firstNodeOnly: false,
+      extending: false,
+      backwards: false,
     });
   });
 
@@ -41,5 +49,15 @@ describe('what the hints know about the snap (^481, ^473)', () => {
       gives: [{ at: { x: 0, y: -5 }, from: [], heading: 1 }],
     });
     expect(hintStateOf({ ...base, drawing: false, snapped }).placing).toBe(false);
+  });
+});
+
+describe('what the hints know about the road being drawn (^916)', () => {
+  it('backwards only while a road is drawn backwards', () => {
+    expect(hintStateOf({ ...base, snapped: null, active: 3, end: 'start' }).backwards).toBe(true);
+    expect(hintStateOf({ ...base, snapped: null, active: 3, end: 'end' }).backwards).toBe(false);
+    expect(hintStateOf({ ...base, snapped: null, active: null, end: 'start' }).backwards).toBe(
+      false,
+    );
   });
 });

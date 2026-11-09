@@ -14,7 +14,7 @@ import {
   dragRow,
   type C,
 } from './facts';
-import { ESC, mouse } from './inputs';
+import { DEL, ESC, mouse } from './inputs';
 import { DRAG_TEXT, type Facts } from './facts';
 import { SELECT_HEAD, SELECT_TAIL } from './selectControls';
 import { DRAW_HEAD, DRAW_TAIL } from './drawControls';
@@ -37,9 +37,17 @@ const HANDLE_ROWS: C[] = [
   {
     hat: 489,
     input: rmb,
-    on: (f) => !f.viewing && isNode(f),
+    on: (f) => !f.viewing && isNode(f) && (f.drawing || some(f)),
     listens: always,
     says: (f) => (onSelection(f) ? 'delete selected nodes' : 'delete node'),
+  },
+  // Nothing selected: `Del` deletes what the pointer is on, as `RMB` does (^757).
+  {
+    hat: 757,
+    input: [rmb, DEL],
+    on: (f) => select(f) && isNode(f) && !some(f),
+    listens: always,
+    says: () => 'delete node',
   },
   {
     hat: 466,
@@ -63,16 +71,23 @@ const REMOVAL_ROWS: C[] = [
   {
     hat: 709,
     input: rmb,
-    on: (f) => !f.viewing && onCurve(f) && !onSelection(f),
+    on: (f) => !f.viewing && onCurve(f) && !onSelection(f) && (f.drawing || some(f)),
     listens: always,
-    says: () => 'remove segment',
+    says: () => 'delete segment',
+  },
+  {
+    hat: 920,
+    input: [rmb, DEL],
+    on: (f) => select(f) && onCurve(f) && !some(f),
+    listens: always,
+    says: () => 'delete segment',
   },
   {
     hat: 710,
     input: mouse('rmb', false, 'alt'),
     on: (f) => !f.viewing && onCurve(f) && !onSelection(f),
     listens: always,
-    says: () => 'remove branch',
+    says: () => 'delete branch',
   },
 ];
 
@@ -135,7 +150,7 @@ const SNAP_CONTROLS: C[] = [
     input: key('Shift'),
     on: (f) => !f.viewing && !!f.state.snapping && !!f.state.placing,
     listens: always,
-    says: () => 'snap only the position',
+    says: () => 'snap only position',
   },
   {
     hat: 702,
@@ -217,7 +232,7 @@ export const DRAG_CONTROLS: C[] = [
     input: key('Shift'),
     on: (f) => dragging(f) && dragType(f) === 'node' && !!f.state.touching,
     listens: always,
-    says: () => 'snap only the position',
+    says: () => 'snap only position',
   },
   // Aiming (^335) is for the heading of an existing node; not while one that was just placed is set (^358).
   {

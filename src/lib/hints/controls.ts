@@ -22,7 +22,7 @@ export interface Control<F> {
   /** What the hint says, or null where there is none. */
   says: (f: F) => string | null;
   /** What a held key changes, shown after the hint (`(Alt to undo batch)`). */
-  note?: { key: string; text: string };
+  note?: { key: string; text: string } | ((f: F) => { key: string; text: string } | null);
 }
 
 /** The hints of the controls that exist in a state and have one, in the order of the table. */
@@ -30,6 +30,7 @@ export function hintsOf<F>(controls: Control<F>[], f: F): Hint[] {
   return controls.flatMap((c) => {
     const text = c.on(f) ? c.says(f) : null;
     if (text === null) return [];
-    return [{ ...hint(c.input, text, c.id), ...(c.note ? { note: c.note } : {}) }];
+    const note = typeof c.note === 'function' ? c.note(f) : c.note;
+    return [{ ...hint(c.input, text, c.id), ...(note ? { note } : {}) }];
   });
 }

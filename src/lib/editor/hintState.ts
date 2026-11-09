@@ -12,6 +12,7 @@ export function hintStateOf(e: {
   press: Press | null;
   graph: Graph;
   active: number | null;
+  end: 'start' | 'end';
 }) {
   const heading = placedHeading(e.snapped, false) !== null;
   return {
@@ -21,6 +22,8 @@ export function hintStateOf(e: {
     /** A click would place a node at the snap with a heading: only then `Shift` has something to drop. */
     placing: e.drawing && heading,
     firstNodeOnly: onlyFirstNode(e),
+    extending: e.active !== null,
+    backwards: e.active !== null && e.end === 'start',
   };
 }
 

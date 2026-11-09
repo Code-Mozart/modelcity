@@ -20,8 +20,8 @@ describe('the camera in draw mode (^389)', () => {
   });
 });
 
-describe('Shift: snap only the position (^481)', () => {
-  const shift = 'Shift: snap only the position';
+describe('Shift: snap only position (^481)', () => {
+  const shift = 'Shift: snap only position';
   it('is hinted when a click would place a node with a heading at the snap', () => {
     expect(hintsFor(true, empty, 0, { snapping: true, placing: true }).map(show)).toContain(shift);
   });
@@ -47,6 +47,6 @@ describe('a right click on the selection (^779)', () => {
     const r = rows(false, between, 3);
     expect(r).toContain('RMB or Alt+RMB: delete selected nodes');
     expect(r.filter((x) => x.includes('remove'))).toEqual([]);
-    expect(rows(false, { kind: 'curve', picked: 1 }, 3)).toContain('RMB: remove segment');
+    expect(rows(false, { kind: 'curve', picked: 1 }, 3)).toContain('RMB: delete segment');
   });
 });

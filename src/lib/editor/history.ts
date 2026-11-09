@@ -43,6 +43,12 @@ function lastBatch(steps: Step[]): Step[] {
   return steps.slice(from);
 }
 
+/** How many steps `Alt` would undo and redo at once: the batch at the end of the past and of the future (^418). */
+export const batchSizes = (h: History) => ({
+  undo: lastBatch(h.past).length,
+  redo: lastBatch(h.future).length,
+});
+
 /** A new step was taken; what was undone can no longer be redone. */
 export function record(
   h: History,

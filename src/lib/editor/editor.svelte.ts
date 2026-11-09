@@ -9,7 +9,7 @@ import { skeletonAnchors } from '../camera/skeletonAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { Pins } from './pins.svelte';
-import { nodesRemoval, rightClickRemoval, underHover } from './removal';
+import { deleteRemoval, rightClickRemoval, underHover } from './removal';
 import { Timeline, type Move } from './timeline.svelte';
 import type { ControlId } from '../hints/hints';
 import { pressName } from './stepNames';
@@ -188,7 +188,7 @@ export class Editor {
 
   deleteSelected() {
     if (this.selection.length) this.use('delete-selected');
-    const r = nodesRemoval(this.selection);
+    const r = deleteRemoval(this.graph, this.selection, this.mode === 'select' ? this.hover : null);
     if (r) this.edit(r.name, r.change);
   }
 
@@ -341,7 +341,8 @@ export class Editor {
     if (press.flip) this.restore(ops.flipArmFrom(this.snapshot(), id));
     else if (press.curve) this.clickedRadius(press.curve);
     else if (press.act === 'finish' || press.act === 'cancel') this.finishRoad(false, true);
-    else if (press.act === 'extend') this.edit('extend road', (d) => ops.extendTo(d, id));
+    else if (press.act === 'extend')
+      this.edit('extend road', (d) => ops.extendTo(d, id, press.reverse));
     else if (press.act === 'split') this.restore(ops.splitAt(this.snapshot(), id));
     else if (press.act === 'merge' || press.act === 'close') this.merge(id);
   }

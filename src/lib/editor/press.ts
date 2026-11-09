@@ -52,6 +52,7 @@ export function dragPress(
   const id = handle.id;
   const { selection, group, click, use } = pressSelection(drawn, drawing, handle, info);
   const n = nodeOf(graph, id);
+  const act = actOf(drawn, drawing, handle);
   const press: DragPress = {
     kind: 'drag',
     road: handle.road,
@@ -59,12 +60,13 @@ export function dragPress(
     drag: startDrag(handle),
     start: info.pt,
     moved: false,
-    act: actOf(drawn, drawing, handle),
+    act,
     group: placed(graph, group),
     origin: { x: n?.x ?? 0, y: n?.y ?? 0 },
     click,
     use,
     flip: handle.type === 'head' && info.alt,
+    reverse: act === 'extend' && info.alt,
     curve: null,
     undo: drawn,
     target: targetOf(drawn, { kind: 'handle', handle }, drawing),

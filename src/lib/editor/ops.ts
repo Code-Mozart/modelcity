@@ -9,7 +9,7 @@ import { followTowers } from './towerHeading';
 import { targetOf, type Drawn } from './targets';
 import type { Placement, PointerInfo, Press } from './types';
 import { nodeAtSample, type RoadHandle, type RoadHit } from './chains';
-import { armOf, autoHeadingFor, farEnd, linkTo, mergeEnd } from '../model/junction';
+import { armOf, autoHeadingFor, farEnd, leafWay, linkTo } from '../model/junction';
 import { dragGraph } from '../model/dragGraph';
 import {
   addNode,
@@ -79,7 +79,14 @@ export function placeNode(d: Drawn, at: Placement): { drawn: Drawn; id: number }
   if (!tip) {
     const r = addNode(d.graph, { x: at.pt.x, y: at.pt.y, th: at.th ?? 0 });
     return {
-      drawn: { ...d, graph: r.graph, active: r.id, end: 'end', origin: r.id, selection: [r.id] },
+      drawn: {
+        ...d,
+        graph: r.graph,
+        active: r.id,
+        end: 'end',
+        origin: r.id,
+        selection: [r.id],
+      },
       id: r.id,
     };
   }
@@ -88,8 +95,7 @@ export function placeNode(d: Drawn, at: Placement): { drawn: Drawn; id: number }
   const linked = linkTo(r.graph, tip.id, d.end, r.id);
   const built = linked.edges.find((e) => [e.start, e.end].includes(r.id));
   const graph = built ? concentricWithParallel(linked, built.id) : linked;
-  const end = d.end === 'first' ? 'start' : d.end;
-  return { drawn: { ...d, graph, active: r.id, end, selection: [r.id] }, id: r.id };
+  return { drawn: { ...d, graph, active: r.id, selection: [r.id] }, id: r.id };
 }
 
 /** Insert a node on a curve; the curve does not change (^10). */
@@ -103,10 +109,11 @@ export function insertAt(d: Drawn, hit: RoadHit): { drawn: Drawn; id: number } {
  * Make an end node, of any road when none is drawn, the one the next node attaches to (^65): the
  * road becomes the road being drawn, at that end, and it started at its other end.
  */
-export function extendTo(drawn: Drawn, id: number): Drawn {
+export function extendTo(drawn: Drawn, id: number, reverse = false): Drawn {
   const { graph } = drawn;
-  const start = edgesOut(graph, id).length > 0 && edgesIn(graph, id).length === 0;
-  const end = start ? 'first' : 'end';
+  // From a branch start node backwards, from a branch end node forwards; `Alt` turns it round (^916, ^915).
+  const backwards = (leafWay(graph, id) === 'backwards') !== reverse;
+  const end = backwards ? 'start' : 'end';
   return { ...drawn, active: id, end, origin: farEnd(graph, id), selection: [id] };
 }
 
@@ -169,8 +176,7 @@ export const splitAt = (d: Drawn, id: number): Drawn => ({
 /** End the road being drawn at an existing node: a merge, or a loop at its first node (^23, ^162). */
 export function mergeInto(d: Drawn, id: number): Drawn {
   if (d.active === null) return d;
-  const end = mergeEnd(d.end, id, d.origin);
-  return { ...d, graph: linkTo(d.graph, d.active, end, id), selection: [id] };
+  return { ...d, graph: linkTo(d.graph, d.active, d.end, id), selection: [id] };
 }
 
 /**

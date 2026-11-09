@@ -89,7 +89,7 @@ test('a node on the normal line of a node takes its heading, Alt inverts it, Shi
   await page.keyboard.down('Alt'); // at once, with no move of the pointer (^801)
   expect(await heading()).toBeCloseTo(Math.PI / 2, 3);
   await page.keyboard.up('Alt');
-  await expect(app.hints()).toContainText('snap only the position');
+  await expect(app.hints()).toContainText('snap only position');
   await page.keyboard.down('Shift'); // the automatic heading of a first node: east
   expect(await heading()).toBeCloseTo(0, 3);
   await page.keyboard.up('Shift');

@@ -133,7 +133,7 @@ export const SELECT_TAIL: C[] = [
     input: DEL,
     id: 'delete-selected',
     on: select,
-    listens: some,
+    listens: (f) => some(f) || isNode(f) || onCurve(f),
     says: (f) => (some(f) ? 'delete selected' : null),
   },
 ];

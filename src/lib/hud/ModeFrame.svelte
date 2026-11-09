@@ -32,7 +32,7 @@
     gap: 0.5em;
     color: var(--ink);
     pointer-events: none;
-    filter: drop-shadow(0 0 2px var(--bg)) drop-shadow(0 0 2px var(--bg));
+    filter: drop-shadow(0 0 2px var(--surface)) drop-shadow(0 0 2px var(--surface));
   }
   /* The current mode: its icon in the mode's color, in a ring of that color. */
   .mode {

@@ -58,12 +58,15 @@
   /** The search field says "search" while the pointer is over it and it is not the one that is typed in. */
   const searchAttrs = {
     onpointerenter: () => !searching && (session.over = 'search'),
-    onpointerleave: () => (session.over = null),
+    onpointerleave: () => (session.over = searching ? 'typing' : null),
     onfocus: () => {
       searching = true;
+      session.over = 'typing';
+    },
+    onblur: () => {
+      searching = false;
       session.over = null;
     },
-    onblur: () => (searching = false),
   };
 </script>
 
@@ -100,6 +103,7 @@
         none="No project matches."
         empty="No project yet."
         {searchAttrs}
+        onpick={(p) => session.open(p.id)}
       >
         {#snippet item(project)}
           <ProjectCard {session} {project} {over} />
@@ -133,7 +137,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
   }
   /* Wide, and as tall as the content up to three quarters of the screen (^211); only the list scrolls. */
   .dialog {

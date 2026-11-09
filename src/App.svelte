@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { projectKeyOf } from './lib/project/projectKeys';
   import { onMount, untrack } from 'svelte';
   import { Camera } from './lib/camera/camera.svelte';
   import ModeFrame from './lib/hud/ModeFrame.svelte';
@@ -136,16 +137,14 @@
     session.changed();
   });
 
-  /** `Ctrl+S` saves; `P` opens the projects, `Ctrl+O` with the file window (^168, ^222, ^223, ^226). */
+  /** The keys of the projects: `Ctrl+S` saves, `Ctrl+Shift+S` exports, `P` and `Ctrl+O` open (^168, ^222, ^223, ^226, ^746). */
   function projectKey(e: KeyboardEvent): boolean {
-    if (e.shiftKey || e.altKey) return false;
-    const ctrl = e.ctrlKey || e.metaKey;
-    const key = e.key.toLowerCase();
-    if (ctrl && key === 's') void session.saveNow();
-    else if (ctrl && key === 'o') void session.openModal(true);
-    else if (!ctrl && key === 'p') void session.openModal();
-    else return false;
-    return true;
+    const action = projectKeyOf(e);
+    if (action === 'save') void session.saveNow();
+    else if (action === 'export') session.exportJson();
+    else if (action === 'open') void session.openModal(true);
+    else if (action === 'projects') void session.openModal();
+    return action !== null;
   }
 
   /** While the map has violations of the rules of touching nodes, a red message says how many (^827). */

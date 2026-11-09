@@ -59,9 +59,12 @@ describe('what listens without a hint (^783)', () => {
       // Redundant by design: with nothing selected `Shift` adds nothing to the click, and `Alt+Shift` is `Alt`.
       '^688 | select: node B | nothing selected',
       '^689 | select: node B | nothing selected',
+      // Redundant by design: with nothing selected `Del` deletes the hovered node or segment, and ^757 and ^920 say so.
+      '^687 | select: node B | nothing selected',
       '^685 | select: curve B C | nothing selected',
       '^691 | select: curve B C | nothing selected',
       '^689 | select: curve B C | nothing selected',
+      '^687 | select: curve B C | nothing selected',
       '^685 | select: the void | nothing selected',
     ]);
   });

@@ -46,7 +46,7 @@
     /* Above the backdrop of the projects modal, whose controls it shows (^168). */
     z-index: 2;
     /* No background; a halo keeps the text readable over the map. */
-    filter: drop-shadow(0 0 2px var(--bg)) drop-shadow(0 0 2px var(--bg));
+    filter: drop-shadow(0 0 2px var(--surface)) drop-shadow(0 0 2px var(--surface));
   }
   /* In the recent history panel (^109): in the flow, right-aligned. */
   .hints.inline {

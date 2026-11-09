@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.48.0",
-  "moniker": "Nodes without an effect dissolve",
+  "version": "0.49.0",
+  "moniker": "Google Maps palette and extend from end",
   "private": true,
   "type": "module",
   "scripts": {

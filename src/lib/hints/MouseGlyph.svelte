@@ -49,7 +49,7 @@
   width={WHEEL.w - stroke}
   height={WHEEL.bottom - WHEEL.top - stroke}
   rx={(WHEEL.w - stroke) / 2}
-  fill={mmb ? 'currentColor' : 'var(--bg)'}
+  fill={mmb ? 'currentColor' : 'var(--surface)'}
   stroke="currentColor"
   stroke-width={stroke}
 />

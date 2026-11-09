@@ -53,6 +53,8 @@ export type HintTarget =
       lane?: boolean;
       /** A right click removes the whole selection, which has several nodes (^290, ^779). */
       onSelection?: boolean;
+      /** A click on a leaf node extends this way: from a branch start node backwards, else forwards (^916). */
+      way?: 'forwards' | 'backwards';
     };
 
 /** Whether the user used a control lately, so that its hint is hidden (^110). */
@@ -64,6 +66,9 @@ const visited = (row: Hint, hidden: Hidden) => row.id !== undefined && hidden(ro
 export interface HistoryState {
   undo: boolean;
   redo: boolean;
+  /** The last step to undo, or the next to redo, is part of a batch of more than one step: `Alt` does more than a step (^418). */
+  undoBatch?: boolean;
+  redoBatch?: boolean;
 }
 
 const BATCH = (text: string) => ({ key: 'Alt', text });
@@ -74,7 +79,7 @@ export const HISTORY_CONTROLS: Control<HistoryState>[] = [
     hat: 454,
     input: keys('Ctrl', 'Z'),
     id: 'undo',
-    note: BATCH('to undo batch'),
+    note: (f) => (f.undoBatch ? BATCH('to undo batch') : null),
     on: (f) => f.undo,
     listens: (f) => f.undo,
     says: () => 'undo',
@@ -83,7 +88,7 @@ export const HISTORY_CONTROLS: Control<HistoryState>[] = [
     hat: 456,
     input: [keys('Ctrl', 'Y'), keys('Ctrl', 'Shift', 'Z')],
     id: 'redo',
-    note: BATCH('to redo batch'),
+    note: (f) => (f.redoBatch ? BATCH('to redo batch') : null),
     on: (f) => f.redo,
     listens: (f) => f.redo,
     says: () => 'redo',
@@ -106,6 +111,10 @@ export interface HintState {
   touching?: boolean;
   /** A click would place a node at the snap *with a heading*: `Shift` keeps only the position (^358, ^481). */
   placing?: boolean;
+  /** A road is being drawn from a node (extend mode), not just a first node placed next (^916). */
+  extending?: boolean;
+  /** The road is drawn backwards: reaching a node is a split there, not a merge (^916). */
+  backwards?: boolean;
   /** The middle button is held: the compass uses `S` and the other letters. */
   rotating?: boolean;
   /** Only the first node of the road is placed: finishing takes it away, which is `cancel` (^438). */
