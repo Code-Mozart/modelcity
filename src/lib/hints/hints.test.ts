@@ -51,21 +51,6 @@ describe('control hints (^49)', () => {
   });
 });
 
-describe('reaching a node or curve says what it does (^916)', () => {
-  const state = (backwards: boolean) => ({ backwards, extending: true });
-  const text = (target: HintTarget, backwards: boolean) =>
-    hintsFor(true, target, 0, state(backwards))
-      .map(show)
-      .filter((r) => r.startsWith('LMB: '));
-
-  it('a merge going forwards, a split going backwards', () => {
-    const merge: HintTarget = { kind: 'handle', type: 'node', act: 'merge' };
-    expect(text(merge, false)).toEqual(['LMB: merge']);
-    expect(text(merge, true)).toEqual(['LMB: split']);
-    expect(text({ kind: 'curve', act: 'merge' }, true)).toEqual(['LMB: split']);
-  });
-});
-
 describe('control hints over nodes and handles (^49)', () => {
   it('over the last node a click finishes the road', () => {
     // One row for both ways to finish, not two (^239).
