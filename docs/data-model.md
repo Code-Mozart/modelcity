@@ -41,7 +41,7 @@ One heading per node. A node is shared by all edges that meet there.
 ## Edges: `[id, startNodeId, endNodeId, radius, laneConfigurationId]` (densely packed)
 
 - The edge runs from the start to the end node; that is its direction of travel.
-- `radius` is an integer in millimeters, or `null` for automatic (the largest that fits, ^8). It is the only nullable element. The minimum is 0.5 m (^57).
+- `radius` is an integer in millimeters, or `null` for automatic (the largest that fits, ^8). It is the only nullable element. The minimum is half the width of the lane configuration, 1.5 m for the default lane (^942, which replaces the 0.5 m of ^57). Only this constraint changed, not the structure of the file: a project that stores a smaller radius is neither refused nor repaired, it loads as it is and the editor draws it with the minimum (^942).
 - There is no shape tag: the shape is derived from the two positions, the two headings and the radius (^172).
 
 ## Lane configurations: `{ "<id>": { "name": string, "width": mm } }` (not densely packed)
