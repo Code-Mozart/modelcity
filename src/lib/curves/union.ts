@@ -1,6 +1,6 @@
 import { crossPieces } from '../snap/geometry';
 import { boxAround, boxesMeet, type Box } from './hull';
-import { distanceToPiece, nearestParam, pieceLength, pointOn } from './piece';
+import { distanceToPiece, nearestParam, pieceLength, pointOn, reversePiece } from './piece';
 import { SAME_PLACE_M } from './tolerance';
 import type { Piece } from './types';
 import { add, dist, mul, perp, type Vec } from './vec';
@@ -41,11 +41,6 @@ function subPiece(p: Piece, t0: number, t1: number): Piece {
   if (p.type === 'line') return { type: 'line', P, Q };
   return { ...p, P, Q, a0: p.a0 + p.da * t0, da: p.da * (t1 - t0) };
 }
-
-const reversed = (p: Piece): Piece =>
-  p.type === 'line'
-    ? { type: 'line', P: p.Q, Q: p.P }
-    : { ...p, P: p.Q, Q: p.P, a0: p.a0 + p.da, da: -p.da };
 
 /** The parameters at which a piece is cut by the other pieces: crossings, and ends of others that lie on it. */
 function cutsOf(piece: Piece, others: Piece[]): number[] {
@@ -138,7 +133,7 @@ function chain(pieces: Piece[]): Loop[] {
     while (j >= 0) {
       used.add(j);
       const forward = ends[j]![0] === from;
-      loop.push(forward ? pieces[j]! : reversed(pieces[j]!));
+      loop.push(forward ? pieces[j]! : reversePiece(pieces[j]!));
       from = forward ? ends[j]![1] : ends[j]![0];
       j = from === first ? -1 : unusedAt(from);
     }

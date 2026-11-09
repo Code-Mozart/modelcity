@@ -1,7 +1,8 @@
 import { offsetPiece } from '../curves/offset';
 import type { Piece } from '../curves/types';
 import { SAME_PLACE_M } from '../curves/tolerance';
-import { dist, mul, add, type Vec } from '../curves/vec';
+import { dist, dot, perp, sub, type Vec } from '../curves/vec';
+import { isDegenerate, pointOn, reversePiece } from '../curves/piece';
 import { widthOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
 import { parallel } from './parallel';
@@ -24,17 +25,19 @@ const sameWay = (ea: GEdge, a: GNode, eb: GEdge, b: GNode) =>
 const kindOf = (same: boolean, group: number): Marking['kind'] =>
   same || group === 2 ? 'dashed' : 'solid';
 
-/** The centerline of a pair: the curve of `ea` moved half its width towards `eb`, which is on the side where the node `b` is of the node `a`. */
+/**
+ * The centerline of a pair: the curve of `ea` moved half its width towards `eb`, to the side
+ * where the node `b` is of the node `a`. A curve may have pieces with no length (a straight piece
+ * between two arcs that meet): they have no direction to move sideways, and are left out.
+ */
 function centerline(g: Graph, ea: GEdge, a: GNode, b: GNode): Piece[] | null {
-  const pieces = curveOfEdge(g, ea.id)?.pieces;
+  const pieces = curveOfEdge(g, ea.id)?.pieces.filter((p) => !isDegenerate(p));
   if (!pieces?.length) return null;
   const h = widthOf(g, ea) / 2;
-  const middle: Vec = mul(add(a, b), 0.5);
-  const aEnd = ea.start === a.id ? pieces[0]!.P : pieces.at(-1)!.Q;
-  const first = ea.start === a.id ? pieces[0]! : pieces.at(-1)!;
-  const probe = offsetPiece(first, h);
-  const right = probe && dist(ea.start === a.id ? probe.P : probe.Q, middle) < dist(aEnd, middle);
-  const moved = pieces.map((p) => offsetPiece(p, right ? h : -h));
+  const atStart = ea.start === a.id;
+  const t = pointOn(atStart ? pieces[0]! : pieces.at(-1)!, atStart ? 0 : 1);
+  const onRight = dot(sub(b, a), perp({ x: t.tx, y: t.ty })) > 0;
+  const moved = pieces.map((p) => offsetPiece(p, onRight ? h : -h));
   return moved.every((p) => p !== null) ? (moved as Piece[]) : null;
 }
 
@@ -62,24 +65,39 @@ function pairsOf(g: Graph, run: Run, seen: Set<string>): Marking[] {
   return found;
 }
 
-/** Whether `next` goes on where `m` ends, in the same style. */
-const goesOn = (m: Marking, next: Marking) =>
-  m.kind === next.kind && dist(m.pieces.at(-1)!.Q, next.pieces[0]!.P) < SAME_PLACE_M;
+const reversedLine = (m: Marking): Marking => ({
+  ...m,
+  pieces: m.pieces.map(reversePiece).reverse(),
+});
 
-/** Markings that meet end to start and have the same style are one line (^954: the dashes run on across the nodes). */
+/** The two lines as one, if they have the same style and meet at an end of each, one of them turned round if need be. */
+function linked(a: Marking, b: Marking): Marking | null {
+  if (a.kind !== b.kind) return null;
+  const meet = (p: Vec, q: Vec) => dist(p, q) < SAME_PLACE_M;
+  const [as, ae, bs, be] = [a.pieces[0]!.P, a.pieces.at(-1)!.Q, b.pieces[0]!.P, b.pieces.at(-1)!.Q];
+  const [first, second] = meet(ae, bs)
+    ? [a, b]
+    : meet(be, as)
+      ? [b, a]
+      : meet(ae, be)
+        ? [a, reversedLine(b)]
+        : meet(as, bs)
+          ? [reversedLine(a), b]
+          : [];
+  return first && second ? { kind: a.kind, pieces: [...first.pieces, ...second.pieces] } : null;
+}
+
+/** Lines that meet end to end and have the same style are one line (^954: the dashes run on across the nodes), whichever way each was found. */
 function joined(markings: Marking[]): Marking[] {
-  const rest = [...markings];
-  const lines: Marking[] = [];
-  for (let m = rest.shift(); m; m = rest.shift()) {
-    const line = { ...m, pieces: [...m.pieces] };
-    for (
-      let i = rest.findIndex((o) => goesOn(line, o));
-      i >= 0;
-      i = rest.findIndex((o) => goesOn(line, o))
-    ) {
-      line.pieces.push(...rest.splice(i, 1)[0]!.pieces);
+  const lines = [...markings];
+  for (let i = 0; i < lines.length; i++) {
+    for (let j = i + 1; j < lines.length; j++) {
+      const one = linked(lines[i]!, lines[j]!);
+      if (!one) continue;
+      lines[i] = one;
+      lines.splice(j, 1);
+      j = i;
     }
-    lines.push(line);
   }
   return lines;
 }

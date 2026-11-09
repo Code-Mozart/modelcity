@@ -27,6 +27,10 @@ The rules of the markings that are drawn on the road surface (^21, milestone ^94
 | --- | --- | --- |
 | ^958 | **Out of the milestone (for later):** the yellow and highway markings (^953), edge lines (the outline of the surface is the road edge, ^946), stop lines and the gaps at junctions (^157; where the markings of several groups meet they simply overlap until then), crossings (^158), lane types and different widths (^26: the centerline of two lanes of different widths lies on their shared border, so it must come from the lane widths, never from a constant), pedestrian and bike paths, arrows. The milestone is the rules ^950 to ^956 with white lines only. | decided |
 
+## Bugs found with the project of ^959
+
+^960 (pieces without a length gave ticks across the road and lines on the wrong side) and ^961 (lines found from the other end were not joined); `editor/markingsProject.test` checks the whole project: eight lines, each continuous and on the surface.
+
 ## Questions
 
 | Hat | Question | Recommendation |

@@ -1,4 +1,4 @@
-next: ^959
+next: ^962
 
 # Hats
 
@@ -691,6 +691,9 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^947 | decision | decided (user); done (PR #51) | **The debug overlay stays as an option (user):** `Ctrl+Period` still draws the hulls, their vertices and the corners (^925) on top of the surface. |
 | ^948 | feature | done (milestone ^156, PR #51; user) | **Walking dots in the debug layer (user):** to show that the generated polygons are proper (closed, joined end to start, no jumps), the debug layer (`Ctrl+Period`, ^833) draws one dot on the skin of each polygon of the surface. While the hidden controls `.` (forward) and `,` (back) are held (no hint, only while the layer is shown) all dots walk along their polygon at 6 m/s; at the end of a loop they go round. Asked for "one per road": a polygon is one connected area, so a crossing of two roads is one polygon and one dot, a ring has a dot on its outer and one on its inner loop (assumed). |
 | ^949 | milestone | in progress (PR #52; user: "now markings", white lines only; scope in the PR description; built) | **Lane markings (part of ^156, ^21):** the dashed and solid lines on the centerlines of parallel segments, after the rules of `docs/markings.md` (rented hats ^950 to ^958, with the question ^957). Depends on: ^816 (towers, derived nodes), ^945 (the surface). |
+| ^959 | image | done (PR #52; user) | **The project "6-lanes" (user):** 3+3 lanes that merge and split towards the west, with partly parallel lanes, bends and a crossing; the user's report of several marking bugs. `docs/mocks/hat959.json`, one of the tests (`editor/markingsProject.test`). |
+| ^960 | bug | done (PR #52; user report ^959) | **Ticks, wrong sides and gaps in the markings:** the curve of a segment has pieces with no length (a straight between two arcs that meet); `offsetPiece` moved them sideways by a made-up direction, which gave lines across the road, and the side for the line was judged by such a piece, so a line could run on the wrong side (the line between two lanes ended up between the next two). Pieces with no length are left out and the side is judged by the direction of the curve at the node. Test: every line is made of pieces with a length that follow each other, and lies on the surface. |
+| ^961 | bug | done (PR #52; user report ^959) | **A line that goes on was not one line:** lines were only joined end to start in the order they were found, so the parts of one line found from its other end stayed apart and the dash pattern restarted (^954). They are joined whichever way each runs (one is turned round if need be). |
 
 ## Rented ranges
 
