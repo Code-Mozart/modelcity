@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "title": "^944 a bend that ends a segment, tighter than half the width",
+  "createdAt": "2026-11-09T20:00:00.000Z",
+  "lastUpdatedAt": "2026-11-09T21:06:21.727Z",
+  "camera": {
+    "x": -2903,
+    "y": 10124,
+    "scale": 92.79013887064714,
+    "rotation": 0
+  },
+  "nodes": [
+    [
+      10,
+      -8225,
+      8179,
+      0
+    ],
+    [
+      13,
+      -641,
+      8834,
+      7.853981633974483
+    ],
+    [
+      14,
+      -641,
+      13536,
+      1.5707963267948966
+    ]
+  ],
+  "edges": [
+    [
+      5,
+      10,
+      13,
+      null,
+      1
+    ],
+    [
+      6,
+      13,
+      14,
+      null,
+      1
+    ]
+  ],
+  "laneConfigurations": {
+    "1": {
+      "name": "default",
+      "width": 3000
+    }
+  }
+}

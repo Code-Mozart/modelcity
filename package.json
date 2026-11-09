@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.50.0",
-  "moniker": "Hulls and corners",
+  "version": "0.51.0",
+  "moniker": "Road surface",
   "private": true,
   "type": "module",
   "scripts": {
