@@ -10,7 +10,15 @@ import { fromAngle, type Vec } from '../curves/vec';
 import type { Hover } from '../editor/editor.svelte';
 import type { Focus } from '../editor/focus';
 import { drawCircles, drawCorners, drawGuides, drawTowerLine, type TowerShape } from './guides';
-import { drawBars, drawCapsules, type BarShape, type TowerCapsule } from './towerGizmo';
+import {
+  drawBars,
+  drawCapsules,
+  barsOn,
+  shownDerived,
+  shownTowers,
+  type BarShape,
+  type TowerCapsule,
+} from './towerGizmo';
 import { drawMeasures } from './measures';
 import { drawCompass, drawOffset, type Turning } from './compass';
 import {
@@ -312,7 +320,8 @@ function drawAllNodes(f: Frame, scene: Scene, active: boolean[][], pal: Palette)
     };
     drawNodes(f, road, state, pal);
   });
-  for (const d of scene.derived)
+  const real = scene.roads.flatMap((r) => r.path.nodes);
+  for (const d of shownDerived(f, scene.derived, real, NODE_DOT_PX))
     ring(f.ctx, toScreen(f, d), NODE_DOT_PX, { color: pal.ink, width: DERIVED_LINE_PX });
 }
 
@@ -347,8 +356,9 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   if (scene.mergePreview) drawPreview(f, scene.mergePreview, pal, true);
   if (scene.band) drawBand(f, scene.band, pal);
   // The capsules and the bars on their skin are below the nodes, so that selected nodes stay blue (^350, ^820).
-  drawCapsules(f, scene.towers, pal);
-  drawBars(f, scene.bars, pal);
+  const towers = shownTowers(f, scene.towers);
+  drawCapsules(f, towers, pal);
+  drawBars(f, barsOn(scene.bars, scene.towers, towers), pal);
   // The arrows of what the snap takes its heading from are under the dots, the snap points of what it is made of over them (^795, ^803).
   for (const o of scene.headingFrom) drawArrow(f, { ...o.at, th: o.th }, pal.turquoise);
   drawAllNodes(f, scene, active, pal);

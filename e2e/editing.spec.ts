@@ -6,7 +6,9 @@ const nodes = (app: App) => app.nodes();
 /** A straight road of three nodes along the x axis, finished with Escape. */
 async function drawRoad(app: App) {
   await app.click({ x: 0, y: 30 }); // empty canvas: enters draw mode
-  for (const x of [0, 30, 60]) await app.click({ x, y: 0 });
+  await app.click({ x: 0, y: 0 });
+  await app.drag({ x: 30, y: 0 }, { x: 50, y: -20 }); // the middle node turns a little: a node without an effect would dissolve (^829)
+  await app.drag({ x: 60, y: 0 }, { x: 80, y: 20 }); // the end turns too: a bend after a straight piece would make the node between them dissolve
   await app.page.keyboard.press('Escape');
   expect(await nodes(app)).toHaveLength(3);
 }
@@ -125,7 +127,7 @@ test('a used control loses its hint, Esc deselects all, a right click removes a 
   await page.keyboard.press('Escape');
   expect((await app.state()).selected).toBe(0);
 
-  await app.rightClick({ x: 15, y: 0 });
+  await app.rightClick(await app.curvePoint({ x: 15, y: 0 }));
   expect(await nodes(app)).toHaveLength(2);
   expect(await app.edges()).toHaveLength(1);
 });
@@ -179,7 +181,7 @@ test('the outline follows Alt without moving the mouse, and a pan or a zoom unde
   await drawRoad(app);
   const segments = () => page.evaluate(() => window.__modelcity!.editor.hoverSegments.length);
   const hover = () => page.evaluate(() => window.__modelcity!.editor.hover?.kind ?? null);
-  await app.hover({ x: 15, y: 0 }); // on the first segment of a branch of two
+  await app.hover(await app.curvePoint({ x: 15, y: 0 })); // on the first segment of a branch of two
   expect(await hover()).toBe('candidate');
   expect(await segments()).toBe(1);
   await page.keyboard.down('Alt'); // no mouse movement

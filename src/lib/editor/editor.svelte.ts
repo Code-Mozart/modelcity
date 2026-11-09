@@ -18,6 +18,7 @@ import { pointerOf } from './proximity';
 import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
 import { focusOf, hoverAt } from './hits';
 import { followTowers } from './towerHeading';
+import { dissolveStep } from './dissolve';
 import { followParallels } from './followParallels';
 import { chainHandles, chainsOf, hitOfHandle, type RoadHandle, type RoadHit } from './chains';
 import { moveOf } from './moves';
@@ -170,6 +171,7 @@ export class Editor {
   private commit(before: Snapshot, name: string) {
     if (this.batching) return;
     this.graph = followParallels(before.graph, followTowers(before.graph, roundToMm(this.graph)));
+    Object.assign(this, dissolveStep(before, this.snapshot()));
     // A graph with the same content stays the object it was (a drag back to where it began), so nothing else sees a change.
     if (sameGraph(before.graph, this.graph)) this.graph = before.graph;
     if (before.graph === this.graph && sameSelection(before.selection, this.selection)) return;

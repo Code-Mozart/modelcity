@@ -46,6 +46,8 @@ export interface SnapPoint extends Base {
   node?: number;
   /** Which of the points at one place (or near each other) wins, the lower the better (^880); see `RANK`. */
   rank?: number;
+  /** The point is snapped to but not shown among the nearby points (^898): a crossing with an extend line: shown only when the pointer is snapped to it. */
+  quiet?: boolean;
 }
 
 /**

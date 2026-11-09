@@ -28,7 +28,9 @@ test('Tab shows only the roads, and leaves again', async ({ page }) => {
   const app = new App(page);
   const frame = page.getByTestId('mode-frame');
   await app.click({ x: 0, y: 30 });
-  for (const x of [0, 30, 60]) await app.click({ x, y: 0 });
+  await app.click({ x: 0, y: 0 });
+  await app.drag({ x: 30, y: 0 }, { x: 50, y: -20 }); // the middle node turns a little: a node without an effect would dissolve (^829)
+  await app.click({ x: 60, y: 0 });
   await expect(app.hints()).toContainText('view mode');
   await page.keyboard.press('Tab'); // from extend mode
   await expect(frame).toHaveAttribute('data-mode', 'view');

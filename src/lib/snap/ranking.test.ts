@@ -4,7 +4,8 @@ import { chainHandles } from '../editor/chains';
 import { snapBase, suggestionsOfGraph } from '../editor/snapping';
 import { graphOf } from '../testing/graphHelpers';
 import { at } from '../testing/editorHelpers';
-import { MERGE_PX, SNAP_NEAR_PX, SNAP_REACH_PX, nearbyPoints, snapTo } from './engine';
+import { MERGE_PX, SNAP_NEAR_PX, SNAP_SHOW_PX, nearbyPoints, snapTo } from './engine';
+import { line as lineOf } from '../curves/piece';
 import { RANK, type SnapCurve, type SnapPoint } from './types';
 
 const pt = (x: number, y: number, rank: number): SnapPoint => ({
@@ -145,16 +146,44 @@ describe('the previous position ranks last (^880)', () => {
 });
 
 describe('snap points near the pointer are shown (^890)', () => {
-  const list = [pt(0, 0, RANK.node), pt(10, 0, RANK.node), pt(1000, 0, RANK.node)];
-  it('those within the distance at which suggestions are offered, which is more than the one from which they snap', () => {
-    const near = nearbyPoints(list, query(0, 0, 10)).map((p) => p.at.x);
-    expect(near).toContain(0);
-    expect(near).toContain(10);
-    expect(near).not.toContain(1000);
-    expect(SNAP_REACH_PX).toBeGreaterThan(SNAP_NEAR_PX);
+  const line = (a: [number, number], b: [number, number]): SnapCurve => ({
+    kind: 'curve',
+    rule: 'curve',
+    from: [],
+    pieces: [lineOf({ x: a[0], y: a[1] }, { x: b[0], y: b[1] })],
+    straight: true,
+    origins: [],
+    limited: false,
   });
 
-  it('a point farther than the reach is not shown', () => {
-    expect(nearbyPoints([pt(40, 0, RANK.node)], query(0, 0, 10))).toEqual([]);
+  it('those within SNAP_SHOW_PX, which is more than the distance from which they snap', () => {
+    const list = [pt(0, 0, RANK.node), pt(4, 0, RANK.node), pt(10, 0, RANK.node)];
+    const near = nearbyPoints(list, query(0, 0, 10)).map((p) => p.at.x);
+    expect(near).toEqual([0, 4]);
+    expect(SNAP_SHOW_PX).toBeGreaterThan(SNAP_NEAR_PX);
+  });
+
+  it('the crossing of two curves is shown, farther than the 25 px from which it snaps', () => {
+    const list = [line([-10, 3], [10, 3]), line([3, -10], [3, 10])];
+    expect(nearbyPoints(list, query(0, 0, 10)).map((p) => p.at)).toEqual([{ x: 3, y: 3 }]);
+    expect(snapTo(list, query(0, 0, 10))?.pt).not.toEqual({ x: 3, y: 3 });
+  });
+
+  it('a crossing with an extend line is not shown early, but it is snapped to (^898)', () => {
+    const extend = (c: SnapCurve, rule: SnapCurve['rule']): SnapCurve => ({ ...c, rule });
+    const list = [
+      extend(line([-10, 0.2], [10, 0.2]), 'extend+15'),
+      extend(line([0.2, -10], [0.2, 10]), 'extend-30'),
+    ];
+    expect(nearbyPoints(list, query(0, 0, 10))).toEqual([]);
+    const withCurve = [list[0]!, line([0.2, -10], [0.2, 10])];
+    expect(nearbyPoints(withCurve, query(0, 0, 10))).toEqual([]);
+    expect(snapTo(withCurve, query(0, 0, 10))?.pt.x).toBeCloseTo(0.2, 6);
+    expect(snapTo(list, query(0, 0, 10))?.pt.x).toBeCloseTo(0.2, 6);
+    expect(snapTo(list, query(0, 0, 10))?.pt.y).toBeCloseTo(0.2, 6);
+  });
+
+  it('a point farther than SNAP_SHOW_PX is not shown', () => {
+    expect(nearbyPoints([pt(6, 0, RANK.node)], query(0, 0, 10))).toEqual([]);
   });
 });
