@@ -1,7 +1,8 @@
 import { offsetCurve } from './offset';
 import { isDegenerate, line, pointOn } from './piece';
+import { crossPieces } from '../snap/geometry';
 import type { Piece } from './types';
-import { add, mod, mul, perp, TAU, type Vec } from './vec';
+import { add, angleOf, dist, mod, mul, perp, sub, TAU, type Vec } from './vec';
 
 /**
  * The hull (skin) of a segment (^923): the outline of its road surface at its width. The sides are
@@ -26,6 +27,38 @@ function across(piece: Piece, t: number, half: number): [Vec, Vec] {
   return [add(s, n), add(s, mul(n, -1))];
 }
 
+/** The piece cut short at `x`: its end (a line or an arc, the arc keeping its sense). */
+function cutEnd(p: Piece, x: Vec): Piece {
+  if (p.type === 'line') return { ...p, Q: x };
+  const sign = Math.sign(p.da);
+  return { ...p, Q: x, da: sign * mod(sign * (angleOf(sub(x, p.c)) - p.a0), TAU) };
+}
+
+/** The piece cut short at `x`: its start. */
+function cutStart(p: Piece, x: Vec): Piece {
+  if (p.type === 'line') return { ...p, P: x };
+  const [sign, a1] = [Math.sign(p.da), p.a0 + p.da];
+  const a0 = angleOf(sub(x, p.c));
+  return { ...p, P: x, a0, da: sign * mod(sign * (a1 - a0), TAU) };
+}
+
+/**
+ * Where an arc between two pieces of a side was left out (it would have turned inside out, a road
+ * turning tighter than half its width, which only old projects and nodes that are too close can
+ * have, ^942) the two pieces overshoot each other: they are cut at the place where they cross, the
+ * sharp inner corner of the road.
+ */
+function joinGaps(side: Piece[]): Piece[] {
+  const out: Piece[] = [];
+  for (const piece of side) {
+    const last = out.at(-1);
+    const x = last && dist(last.Q, piece.P) > 1e-6 ? crossPieces(last, piece)[0] : undefined;
+    if (last && x) out[out.length - 1] = cutEnd(last, x);
+    out.push(last && x ? cutStart(piece, x) : piece);
+  }
+  return out;
+}
+
 /** The hull of a curve at `width`, or null for a curve that has no length. */
 export function hullOf(pieces: Piece[], width: number): Hull | null {
   const real = pieces.filter((p) => !isDegenerate(p));
@@ -35,7 +68,7 @@ export function hullOf(pieces: Piece[], width: number): Hull | null {
   const [startR, startL] = across(first, 0, half);
   const [endR, endL] = across(last, 1, half);
   return {
-    sides: [offsetCurve(real, half), offsetCurve(real, -half)],
+    sides: [joinGaps(offsetCurve(real, half)), joinGaps(offsetCurve(real, -half))],
     caps: [line(startR, startL), line(endR, endL)],
     vertices: [startR, startL, endR, endL],
   };

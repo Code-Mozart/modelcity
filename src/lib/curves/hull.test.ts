@@ -38,6 +38,17 @@ describe('the hull of a segment (^923)', () => {
     const arcs = (side: Piece[]) => side.filter((p) => p.type === 'arc').length;
     expect([arcs(h.sides[0]), arcs(h.sides[1])].sort()).toEqual([0, 1]);
   });
+});
+
+describe('a hull whose inside turns inside out (^942)', () => {
+  it('the pieces of a side meet: where the arc was left out they are cut at the sharp inner corner, no tails (^942)', () => {
+    const tight = buildEdge({ x: 0, y: 0, th: 0 }, { x: 1, y: 1, th: Math.PI / 2 }, 1).pieces;
+    for (const side of hullOf(tight, 3)!.sides) {
+      side.slice(1).forEach((p, i) => {
+        expect(Math.hypot(p.P.x - side[i]!.Q.x, p.P.y - side[i]!.Q.y)).toBeLessThan(1e-9);
+      });
+    }
+  });
 
   it('a curve with no length has no hull', () => {
     expect(hullOf([], 3)).toBeNull();
