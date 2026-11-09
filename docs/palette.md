@@ -1,6 +1,6 @@
-# The palette (^900 to ^915, milestone ^916)
+# The palette (^900 to ^913, milestone ^914)
 
-The colours of the map, after Google Maps. **Light mode** is measured from the user's screenshot (the most frequent pixel of each area, an outline from the pixel row across an edge); **dark mode** is made up (not important, ^916). One hat per colour. Status `assumed`: Claude read the value from the image and the user has not confirmed it.
+The colours of the map, after Google Maps. **Light mode** is measured from the user's screenshot (the most frequent pixel of each area, an outline from the pixel row across an edge); **dark mode** is made up (not important, ^914). One hat per colour. Status `assumed`: Claude read the value from the image and the user has not confirmed it.
 
 | Hat | Token | Light | Dark | Where it is in the image |
 | --- | --- | --- | --- | --- |
@@ -18,4 +18,3 @@ The colours of the map, after Google Maps. **Light mode** is measured from the u
 | ^911 | `marking-white` | `#ffffff` | to do | the dashed lane lines |
 | ^912 | `marking-yellow` | `#ffdc36` | to do | the line between the carriageways |
 | ^913 | `sand` (other land use, extra) | `#f5f0e5` | to do | the beige area at the top; extracted for later |
-| ^914–^915 | free | | | kept for what turns up |

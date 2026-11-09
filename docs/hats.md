@@ -1,4 +1,4 @@
-next: ^918
+next: ^916
 
 # Hats
 
@@ -663,8 +663,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^897 | feature | done (milestone ^829, PR #48; user) | **Towers of derived nodes only are hidden where a tower with a real node overlaps them (user):** to reduce clutter for bends with a short straight piece before the arc, whose derived arc-end nodes lie close to the real ones. Overlap is judged on the screen (the capsules, `CAPSULE_PX` radius), so it depends on the zoom; the bars on a hidden tower go with it. |
 | ^898 | feature | done (milestone ^829, PR #48; user, revises ^890) | **A crossing of an extend line with another snap line or curve is a snap point, but it is not shown early (user, the exception to ^890):** only when the pointer is snapped to it or hovers it may it show (it is still snapped to, ^280). |
 | ^899 | feature | done (milestone ^829, PR #48; user) | **A derived node is hidden where its circle overlaps the circle of a real node (user, like ^897):** judged on the screen, so it depends on the zoom. |
-| ^916 | milestone | in progress (PR #49; user) | **Google Maps palette, extend from end and minor things:** the colours of the map after Google Maps (^900 to ^915, light mode from the user's screenshot, dark mode made up), the control `Alt`+`LMB` *extend from end* (^917), and a few minor roadmap items (to be chosen with the user). Scope (in/out) is in the PR description. |
-| ^917 | feature | planned (milestone ^916; user; reading assumed) | **`Alt`+`LMB` extend from end (user):** in draw mode `LMB` on a node extends forward (the node is the start of the new segment, ^496). With `Alt` the node is the *end* of the new segment instead, and each node placed next is the start of the next segment, which ends at the node placed before it: the road is drawn backwards (`end: 'start'`, ^65). A control and a hint (^181). |
+| ^914 | milestone | in progress (PR #49; user) | **Google Maps palette, extend from end and minor things:** the colours of the map after Google Maps (^900 to ^913, light mode from the user's screenshot, dark mode made up), the control `Alt`+`LMB` *extend from end* (^915), and a few minor roadmap items (to be chosen with the user). Scope (in/out) is in the PR description. |
+| ^915 | feature | planned (milestone ^914; user; reading assumed) | **`Alt`+`LMB` extend from end (user):** in draw mode `LMB` on a node extends forward (the node is the start of the new segment, ^496). With `Alt` the node is the *end* of the new segment instead, and each node placed next is the start of the next segment, which ends at the node placed before it: the road is drawn backwards (`end: 'start'`, ^65). A control and a hint (^181). |
 
 ## Rented ranges
 
@@ -689,4 +689,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^771–^774 | docs/controls.md | controls of the user's table that had no hat |
 | ^777–^778 | docs/features.md | operations: pin and unpin snap suggestions |
 | ^787–^789 | docs/features.md | version display, tab title and version tag (^374) |
-| ^900–^915 | docs/palette.md | the colours of the palette, one hat each (rented range, milestone ^916) |
+| ^900–^913 | docs/palette.md | the colours of the palette, one hat each (rented range, milestone ^914) |
