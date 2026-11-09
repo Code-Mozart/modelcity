@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
   "version": "0.50.0",
-  "moniker": "Lanes, part 1: hulls and corners",
+  "moniker": "Hulls and corners",
   "private": true,
   "type": "module",
   "scripts": {
