@@ -3,6 +3,13 @@ import { buildEdge } from './edge';
 import { boxAround, boxesMeet, hullOf } from './hull';
 import type { Piece } from './types';
 
+/** The largest distance between the end of a piece and the start of the next. */
+const gaps = (side: Piece[]) =>
+  Math.max(
+    0,
+    ...side.slice(1).map((p, i) => Math.hypot(p.P.x - side[i]!.Q.x, p.P.y - side[i]!.Q.y)),
+  );
+
 const straight = buildEdge({ x: 0, y: 0, th: 0 }, { x: 20, y: 0, th: 0 }, null).pieces;
 const bend = buildEdge({ x: 0, y: 0, th: 0 }, { x: 20, y: 20, th: Math.PI / 2 }, 20).pieces;
 
@@ -49,7 +56,9 @@ describe('a hull whose inside turns inside out (^942)', () => {
       });
     }
   });
+});
 
+describe('the side of a bend tighter than half the width (^942)', () => {
   it('a bend that ends the segment: the inner side runs through the centre of the arc to the end vertex, no tail (^942)', () => {
     // The user's project: B is 0.655 m below the heading line of A, so the largest radius is 0.655 m.
     const A = { x: -8.225, y: 8.179, th: 0 };
@@ -80,9 +89,7 @@ describe('a hull whose inside turns inside out (^942)', () => {
         expect(side[0]!.P.y).toBeCloseTo(h.vertices[k]!.y, 9);
         expect(side.at(-1)!.Q.x).toBeCloseTo(h.vertices[2 + k]!.x, 9);
         expect(side.at(-1)!.Q.y).toBeCloseTo(h.vertices[2 + k]!.y, 9);
-        side.slice(1).forEach((p, i) => {
-          expect(Math.hypot(p.P.x - side[i]!.Q.x, p.P.y - side[i]!.Q.y)).toBeLessThan(1e-6);
-        });
+        expect(gaps(side)).toBeLessThan(1e-6);
       });
     }
   });
