@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cornersOf, hullsOf } from './editor/corners';
+  import { dotsOf, surfaceFrom } from './editor/surface';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
   import { headingSourceOrigins } from './editor/hintState';
@@ -23,12 +24,15 @@
     camera,
     onUse,
     debug = false,
+    walk = 0,
   }: {
     editor: Editor;
     camera: Camera;
     onUse: (id: ControlId) => void;
     /** The debug layer is on: the hulls and corners are drawn (^925). */
     debug?: boolean;
+    /** How far the dots of the debug layer have walked along their polygons, in meters (^948). */
+    walk?: number;
   } = $props();
 
   const LINE_PX = 16;
@@ -56,12 +60,18 @@
   const derivedAll = $derived(editor.derived);
   const seen = $derived(withDerived(editor.graph, derivedAll));
   const bars = $derived(barsOf(seen));
-  /** The hulls and corners, computed only while the debug layer is on (^925). */
-  const hulls = $derived.by(() => {
-    if (!debug) return null;
-    const all = hullsOf(editor.graph);
-    return { hulls: all.map((h) => h.hull), corners: cornersOf(all).map((c) => c.at) };
-  });
+  /** The hulls of the segments, the road surface round them (^945) and, while the debug layer is on, the hulls and corners (^925). */
+  const allHulls = $derived(hullsOf(editor.graph));
+  const surface = $derived(surfaceFrom(allHulls));
+  const hulls = $derived(
+    debug
+      ? {
+          hulls: allHulls.map((h) => h.hull),
+          corners: cornersOf(allHulls).map((c) => c.at),
+          dots: dotsOf(surface, walk),
+        }
+      : null,
+  );
   const towers = $derived(
     towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
   );
@@ -98,6 +108,7 @@
       bars: bars,
       towers: towers,
       derived: derivedAll,
+      surface,
       hulls,
       tower: followingTower(editor.graph, editor.chains, editor.focus, editor.selection),
       turning: turningOf(editor.chains, editor.press),

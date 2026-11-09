@@ -35,6 +35,7 @@
     DebugTools,
     hoverText,
     isCoordinatesKey,
+    isWalkKey,
     nearMissLines,
   } from './lib/hud/debugTools.svelte';
   import { violationsOf } from './lib/editor/violations';
@@ -178,6 +179,19 @@
     else session.closeModal();
   }
 
+  /** While `,` or `.` is held in the debug layer, the dots walk (^948). */
+  $effect(() => {
+    if (!debug.walking) return;
+    let [before, id] = [performance.now(), 0];
+    const frame = (now: number) => {
+      debug.step((now - before) / 1000);
+      before = now;
+      id = requestAnimationFrame(frame);
+    };
+    id = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(id);
+  });
+
   function onKeyDown(e: KeyboardEvent) {
     banner.used();
     editor.modifiers(modsOf(e));
@@ -187,6 +201,7 @@
       debug.toggleCoordinates();
       return e.preventDefault();
     }
+    if (isWalkKey(e) && debug.holdWalk(e.key, true)) return e.preventDefault();
     noHistory(e);
     if (projectKey(e) || camera.key(e.key) || editor.key(keyOf(e), modsOf(e))) e.preventDefault();
   }
@@ -197,14 +212,24 @@
   onpointerdown={() => banner.used()}
   onkeyup={(e) => {
     camera.keyUp(e.key);
+    debug.holdWalk(e.key, false);
     editor.modifiers(modsOf(e));
   }}
-  onblur={() => editor.modifiers({ alt: false, shift: false, ctrl: false })}
+  onblur={() => {
+    debug.releaseWalk();
+    editor.modifiers({ alt: false, shift: false, ctrl: false });
+  }}
   onpagehide={() => void session.flush()}
 />
 
 <main>
-  <MapCanvas {editor} {camera} debug={debug.coordinates} onUse={(id) => usage.mark(id)} />
+  <MapCanvas
+    {editor}
+    {camera}
+    debug={debug.coordinates}
+    walk={debug.walk}
+    onUse={(id) => usage.mark(id)}
+  />
   <ModeFrame phase={editor.phase} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
