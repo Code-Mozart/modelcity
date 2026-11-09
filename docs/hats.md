@@ -690,7 +690,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^946 | decision | decided (user: the same fill and stroke as before, the Google Maps colours); done (PR #51) | **Colours and outline of the surface:** the fill is `--road` and the stroke `--road-edge` (^907, ^908), the outline 2 px outside the polygon, scaling down on roads narrower than 20 px (^91); all of it from the one polygon: the stroke is drawn first, 4 px wide and centred, and the fill over it, so that only 2 px of it show outside. View mode shows the surface. |
 | ^947 | decision | decided (user); done (PR #51) | **The debug overlay stays as an option (user):** `Ctrl+Period` still draws the hulls, their vertices and the corners (^925) on top of the surface. |
 | ^948 | feature | done (milestone ^156, PR #51; user) | **Walking dots in the debug layer (user):** to show that the generated polygons are proper (closed, joined end to start, no jumps), the debug layer (`Ctrl+Period`, ^833) draws one dot on the skin of each polygon of the surface. While the hidden controls `.` (forward) and `,` (back) are held (no hint, only while the layer is shown) all dots walk along their polygon at 6 m/s; at the end of a loop they go round. Asked for "one per road": a polygon is one connected area, so a crossing of two roads is one polygon and one dot, a ring has a dot on its outer and one on its inner loop (assumed). |
-| ^949 | milestone | planned (user: "now markings"; rules recorded, scope in the PR description when it starts; follows PR #51, because only one PR at a time adds hats) | **Lane markings (part of ^156, ^21):** the dashed and solid lines on the centerlines of parallel segments, after the rules of `docs/markings.md` (rented hats ^950 to ^958, with the question ^957). Depends on: ^816 (towers, derived nodes), ^945 (the surface). |
+| ^949 | milestone | in progress (user: "now markings", white lines only; scope in the PR description) | **Lane markings (part of ^156, ^21):** the dashed and solid lines on the centerlines of parallel segments, after the rules of `docs/markings.md` (rented hats ^950 to ^958, with the question ^957). Depends on: ^816 (towers, derived nodes), ^945 (the surface). |
 
 ## Rented ranges
 
@@ -717,4 +717,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^787–^789 | docs/features.md | version display, tab title and version tag (^374) |
 | ^900–^913 | docs/palette.md | the colours of the palette, one hat each (rented range, milestone ^914) |
 | ^932–^941 | docs/optimizations.md | the optimizations, one hat each (rented range, milestone ^927) |
-| ^950–^958 | docs/markings.md | the rules of the lane markings, one hat each (rented range, milestone ^949; ^957 is a question) |
+| ^950–^958 | docs/markings.md | the rules of the lane markings, one hat each (rented range, milestone ^949; ^957 is a question, ^958 the scope) |
