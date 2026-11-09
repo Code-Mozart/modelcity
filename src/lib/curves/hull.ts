@@ -1,8 +1,8 @@
-import { offsetCurve } from './offset';
+import { offsetPiece } from './offset';
 import { isDegenerate, line, pointOn } from './piece';
 import { crossPieces } from '../snap/geometry';
-import type { Piece } from './types';
-import { add, angleOf, dist, mod, mul, perp, sub, TAU, type Vec } from './vec';
+import type { Arc, Piece } from './types';
+import { add, angleOf, mod, mul, perp, sub, TAU, type Vec } from './vec';
 
 /**
  * The hull (skin) of a segment (^923): the outline of its road surface at its width. The sides are
@@ -43,19 +43,39 @@ function cutStart(p: Piece, x: Vec): Piece {
 }
 
 /**
- * Where an arc between two pieces of a side was left out (it would have turned inside out, a road
- * turning tighter than half its width, which only old projects and nodes that are too close can
- * have, ^942) the two pieces overshoot each other: they are cut at the place where they cross, the
- * sharp inner corner of the road.
+ * What takes the place of an arc whose offset would turn inside out (a road turning tighter than
+ * half its width, which only old projects and nodes that are too close can have, ^942): the side
+ * runs to the centre of the arc and on to where the offset of the arc ends, the way the swept road
+ * is bounded there. So the side always reaches its end vertex.
  */
-function joinGaps(side: Piece[]): Piece[] {
+function throughCentre(arc: Arc, roff: number): Piece[] {
+  const at = (a: number): Vec => add(arc.c, mul({ x: Math.cos(a), y: Math.sin(a) }, roff));
+  return [line(at(arc.a0), arc.c), line(arc.c, at(arc.a0 + arc.da))];
+}
+
+/**
+ * One side of the hull: the curve moved by `d`. An arc that cannot be moved so far is left out:
+ * if the offsets of the pieces before and after cross, they are cut at the crossing, the sharp
+ * inner corner of the road; else the side goes through the centre of the arc (^942).
+ */
+function sideOf(real: Piece[], d: number): Piece[] {
+  const moved = real.map((p) => offsetPiece(p, d));
   const out: Piece[] = [];
-  for (const piece of side) {
-    const last = out.at(-1);
-    const x = last && dist(last.Q, piece.P) > 1e-6 ? crossPieces(last, piece)[0] : undefined;
-    if (last && x) out[out.length - 1] = cutEnd(last, x);
-    out.push(last && x ? cutStart(piece, x) : piece);
-  }
+  let cutNext: Vec | null = null;
+  moved.forEach((o, i) => {
+    const piece = real[i]!;
+    if (o) {
+      out.push(cutNext ? cutStart(o, cutNext) : o);
+      cutNext = null;
+    } else if (piece.type === 'arc') {
+      const [last, next] = [out.at(-1), moved[i + 1]];
+      const x = last && next ? crossPieces(last, next)[0] : undefined;
+      if (last && x) {
+        out[out.length - 1] = cutEnd(last, x);
+        cutNext = x;
+      } else out.push(...throughCentre(piece, piece.r - Math.sign(piece.da) * d));
+    }
+  });
   return out;
 }
 
@@ -68,7 +88,7 @@ export function hullOf(pieces: Piece[], width: number): Hull | null {
   const [startR, startL] = across(first, 0, half);
   const [endR, endL] = across(last, 1, half);
   return {
-    sides: [joinGaps(offsetCurve(real, half)), joinGaps(offsetCurve(real, -half))],
+    sides: [sideOf(real, half), sideOf(real, -half)],
     caps: [line(startR, startL), line(endR, endL)],
     vertices: [startR, startL, endR, endL],
   };

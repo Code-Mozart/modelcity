@@ -50,6 +50,43 @@ describe('a hull whose inside turns inside out (^942)', () => {
     }
   });
 
+  it('a bend that ends the segment: the inner side runs through the centre of the arc to the end vertex, no tail (^942)', () => {
+    // The user's project: B is 0.655 m below the heading line of A, so the largest radius is 0.655 m.
+    const A = { x: -8.225, y: 8.179, th: 0 };
+    const B = { x: -0.641, y: 8.834, th: Math.PI / 2 };
+    const pieces = buildEdge(A, B, null).pieces;
+    const h = hullOf(pieces, 3)!;
+    const inner = h.sides[0];
+    const centre = { x: B.x - 0.655, y: B.y };
+    expect(inner.at(-1)!.Q.x).toBeCloseTo(h.vertices[2].x, 9);
+    expect(inner.at(-1)!.Q.y).toBeCloseTo(h.vertices[2].y, 9);
+    expect(inner.some((p) => Math.hypot(p.Q.x - centre.x, p.Q.y - centre.y) < 1e-6)).toBe(true);
+    // Nothing of the inner side lies beyond the end of the straight piece and the centre.
+    expect(Math.max(...inner.flatMap((p) => [p.P.x, p.Q.x]))).toBeLessThan(centre.x + 1e-6);
+  });
+
+  it('whatever the radius, a side is one connected curve from the start vertex to the end vertex', () => {
+    const cases: [number, number, number | null][] = [
+      [1, 1, null],
+      [3, 3, 0.5],
+      [6, 4, null],
+      [20, 20, 20],
+      [0.8, 5, null],
+    ];
+    for (const [x, y, R] of cases) {
+      const h = hullOf(buildEdge({ x: 0, y: 0, th: 0 }, { x, y, th: Math.PI / 2 }, R).pieces, 3)!;
+      h.sides.forEach((side, k) => {
+        expect(side[0]!.P.x).toBeCloseTo(h.vertices[k]!.x, 9);
+        expect(side[0]!.P.y).toBeCloseTo(h.vertices[k]!.y, 9);
+        expect(side.at(-1)!.Q.x).toBeCloseTo(h.vertices[2 + k]!.x, 9);
+        expect(side.at(-1)!.Q.y).toBeCloseTo(h.vertices[2 + k]!.y, 9);
+        side.slice(1).forEach((p, i) => {
+          expect(Math.hypot(p.P.x - side[i]!.Q.x, p.P.y - side[i]!.Q.y)).toBeLessThan(1e-6);
+        });
+      });
+    }
+  });
+
   it('a curve with no length has no hull', () => {
     expect(hullOf([], 3)).toBeNull();
   });

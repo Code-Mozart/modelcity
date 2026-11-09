@@ -1,4 +1,3 @@
-import { isDegenerate } from './piece';
 import type { Piece } from './types';
 import { add, fromAngle, mul, perp, sub, unitOr, type Vec } from './vec';
 
@@ -19,12 +18,3 @@ export function offsetPiece(p: Piece, d: number): Piece | null {
   const at = (a: number): Vec => add(p.c, mul(fromAngle(a), r));
   return { ...p, r, P: at(p.a0), Q: at(p.a0 + p.da) };
 }
-
-/** A curve moved sideways by `d` (pieces that do not turn nor run are left out, and so are arcs that would turn inside out). */
-export const offsetCurve = (pieces: Piece[], d: number): Piece[] =>
-  pieces
-    .filter((p) => !isDegenerate(p))
-    .flatMap((p) => {
-      const moved = offsetPiece(p, d);
-      return moved ? [moved] : [];
-    });
