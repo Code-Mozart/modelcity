@@ -1,0 +1,110 @@
+import { alongLoop, loopLength } from '../curves/along';
+import type { Vec } from '../curves/vec';
+import { edgesIn, edgesOut, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
+import { curveOfEdge } from './chains';
+import { besideSibling, isShift, manoeuvreOf, turning, type Manoeuvre } from './manoeuvres';
+
+/**
+ * What a segment is, as a sign of the debug layer (^1012), after the German signs of the
+ * prescribed directions (209, 214) and the boards for a lane that is added or ends (541, 531).
+ * `directions`: the ways named; `extension`: a lane is added on that side; `merge`: the lane ends
+ * and merges into the lane on that side.
+ */
+export type Sign =
+  | { kind: 'directions'; straight: boolean; left: boolean; right: boolean }
+  | { kind: 'extension' | 'merge'; side: 'left' | 'right' };
+
+const directions = (straight: boolean, left: boolean, right: boolean): Sign => ({
+  kind: 'directions',
+  straight,
+  left,
+  right,
+});
+const STRAIGHT = directions(true, false, false);
+
+/** A node that a branch runs through: one segment in, one out (^128). */
+const plain = (g: Graph, id: number) => edgesIn(g, id).length === 1 && edgesOut(g, id).length === 1;
+
+/** The last segment of the branch of a segment, going on through plain nodes (not round a ring for ever). */
+function lastOfBranch(g: Graph, e: GEdge): GEdge {
+  const seen = new Set([e.id]);
+  let last = e;
+  while (plain(g, last.end)) {
+    const next = edgesOut(g, last.end)[0]!;
+    if (seen.has(next.id)) break;
+    seen.add(next.id);
+    last = next;
+  }
+  return last;
+}
+
+/** Left or right of a manoeuvre that is a turn (a u-turn by the way it turns), else null. */
+function turnSide(g: Graph, e: GEdge, m: Manoeuvre | null): 'left' | 'right' | null {
+  if (m === 'left turn') return 'left';
+  if (m === 'right turn') return 'right';
+  return m === 'u-turn' ? (turning(g, e) > 0 ? 'right' : 'left') : null;
+}
+
+/**
+ * The sign of a leg of a merge, the last segment of its branch (^1013): a right turn comes from
+ * the right, so it is the right leg, and a left turn the left leg. A shift beside the leg it
+ * moves towards is a lane that ends: it merges into that side. Any other shift comes from the
+ * side it moves away from. Null for the leg that goes straight on.
+ */
+function legSign(g: Graph, n: GNode, leg: GEdge): Sign | null {
+  const m = manoeuvreOf(g, leg);
+  const turn = turnSide(g, leg, m);
+  if (turn) return directions(false, turn === 'left', turn === 'right');
+  if (!isShift(m)) return null;
+  const towards = m === 'shift left' ? 'left' : 'right';
+  if (besideSibling(g, n, leg, edgesIn(g, n.id))) return { kind: 'merge', side: towards };
+  return directions(false, towards === 'right', towards === 'left');
+}
+
+/**
+ * The sign of what follows a split (^1012): the ways its segments leave, each by its own
+ * manoeuvre. Two segments of which one shifts and ends beside the other: a lane is added on the
+ * side of the shift. Nothing but segments that go on (straight or shifting): a split to the left
+ * and the right.
+ */
+function splitSign(g: Graph, n: GNode, outs: GEdge[]): Sign {
+  const all = outs.map((o) => ({ o, m: manoeuvreOf(g, o) }));
+  const shift = all.find(({ o, m }) => isShift(m) && besideSibling(g, n, o, outs));
+  if (outs.length === 2 && shift) {
+    return { kind: 'extension', side: shift.m === 'shift left' ? 'left' : 'right' };
+  }
+  const sides = all.map(({ o, m }) => turnSide(g, o, m));
+  if (sides.every((s) => s === null)) return directions(false, true, true);
+  return directions(sides.includes(null), sides.includes('left'), sides.includes('right'));
+}
+
+/**
+ * The sign of a segment (^1012): that of its branch, read at the last node of the branch. If
+ * that node is a merge and the branch reaches it as a leg that is not straight on, the sign of
+ * the leg; else, if the node is a split, the sign of the split; else straight on.
+ */
+export function signOf(g: Graph, e: GEdge): Sign {
+  const last = lastOfBranch(g, e);
+  const n = nodeOf(g, last.end);
+  if (!n) return STRAIGHT;
+  const leg = edgesIn(g, n.id).length > 1 ? legSign(g, n, last) : null;
+  if (leg) return leg;
+  const outs = edgesOut(g, n.id);
+  return outs.length > 1 ? splitSign(g, n, outs) : STRAIGHT;
+}
+
+/** A sign at the middle of its segment, with the way the segment runs there (^1015). */
+export interface PlacedSign {
+  at: Vec;
+  th: number;
+  sign: Sign;
+}
+
+export function segmentSigns(g: Graph): PlacedSign[] {
+  return g.edges.flatMap((e): PlacedSign[] => {
+    const pieces = curveOfEdge(g, e.id)?.pieces ?? [];
+    const mid = alongLoop(pieces, loopLength(pieces) / 2);
+    if (!mid) return [];
+    return [{ at: { x: mid.x, y: mid.y }, th: Math.atan2(mid.ty, mid.tx), sign: signOf(g, e) }];
+  });
+}

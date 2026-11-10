@@ -35,7 +35,7 @@
     color: var(--ink);
     text-align: right;
     pointer-events: none;
-    filter: drop-shadow(0 0 2px var(--surface)) drop-shadow(0 0 2px var(--surface));
+    filter: drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 2px var(--glow));
     font:
       500 var(--font-size) / 1.3 system-ui,
       sans-serif;

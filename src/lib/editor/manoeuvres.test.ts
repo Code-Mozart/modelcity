@@ -62,11 +62,10 @@ describe('splits and merges of the testing ground (^1007 to ^1009)', () => {
 });
 
 describe('the labels of the debug layer (^1010)', () => {
-  it('one at every node of a split or merge and one on each of its segments', () => {
+  it('one under every node of a split or merge', () => {
     const labels = junctionLabels(ground);
-    const expected = nodes.reduce((n, j) => n + 1 + j.roles.length, 0);
-    expect(labels).toHaveLength(expected);
+    expect(labels).toHaveLength(nodes.length);
     expect(labels.some((l) => l.text === 'split, equal')).toBe(true);
-    expect(labels.some((l) => l.text === 'narrowing')).toBe(true);
+    expect(labels.some((l) => l.text === 'merge')).toBe(true);
   });
 });

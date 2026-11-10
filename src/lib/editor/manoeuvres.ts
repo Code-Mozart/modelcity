@@ -1,5 +1,4 @@
 import { alongOrAgainst, sameWay, SAME_PLACE_M } from '../curves/tolerance';
-import { alongLoop, loopLength } from '../curves/along';
 import { isDegenerate, pieceLength } from '../curves/piece';
 import type { Piece } from '../curves/types';
 import { dist, dot, fromAngle, perp, sub, type Vec } from '../curves/vec';
@@ -17,7 +16,7 @@ export type Manoeuvre =
   'straight' | 'left turn' | 'right turn' | 'shift left' | 'shift right' | 'u-turn';
 
 /** The sum of the turning of the arcs of a segment: positive is to the right (y is down). */
-const turning = (g: Graph, e: GEdge) =>
+export const turning = (g: Graph, e: GEdge) =>
   (curveOfEdge(g, e.id)?.pieces ?? []).reduce((n, p) => n + (p.type === 'arc' ? p.da : 0), 0);
 
 export function manoeuvreOf(g: Graph, e: GEdge): Manoeuvre | null {
@@ -105,10 +104,10 @@ function mains(g: Graph, ins: GEdge[], outs: GEdge[]): Set<number> {
   return new Set(main.flatMap((t) => [t.i.id, t.o.id]));
 }
 
-const isShift = (m: Manoeuvre | null) => m === 'shift left' || m === 'shift right';
+export const isShift = (m: Manoeuvre | null) => m === 'shift left' || m === 'shift right';
 
 /** Whether the far node of the segment `e` of the node `n` lies beside another segment of the node on the same side of it: one lane width away, heading along it (^818). */
-function besideSibling(g: Graph, n: GNode, e: GEdge, siblings: GEdge[]): boolean {
+export function besideSibling(g: Graph, n: GNode, e: GEdge, siblings: GEdge[]): boolean {
   const far = nodeOf(g, e.start === n.id ? e.end : e.start);
   return siblings.some((s) => {
     const pieces = s.id === e.id ? null : curveOfEdge(g, s.id)?.pieces;
@@ -143,38 +142,18 @@ export function junctionNodes(g: Graph): JunctionNode[] {
   });
 }
 
-/** A word of the debug layer at a place of the map (^1010). */
+/** A word of the debug layer under a node (^1010). */
 export interface JunctionLabel {
   at: Vec;
   text: string;
-  /** The label of a node (drawn beside it), not of a segment. */
-  node?: boolean;
-}
-
-/** How far from its node the label of a segment sits, at most (meters; a third of the segment if that is less, so that the labels of its two ends stay apart). */
-const LABEL_AT_M = 6;
-
-const roleText = (r: Role) => (r.main ? 'main' : (r.lane ?? r.manoeuvre ?? '?'));
-
-/** Where the label of a segment of a node sits: on its curve, a little away from the node. */
-function labelPlace(g: Graph, r: Role): Vec | null {
-  const pieces = curveOfEdge(g, r.edge)?.pieces ?? [];
-  const total = loopLength(pieces);
-  const d = Math.min(LABEL_AT_M, total / 3);
-  return alongLoop(pieces, r.way === 'out' ? d : total - d);
 }
 
 /**
- * The labels of the debug layer (^1010): at every node of a split or merge its kind (with `equal`
- * if no segment pulls through), and on each of its segments what it is there: `main`,
- * `extension`, `narrowing`, or its manoeuvre.
+ * The labels of the debug layer (^1010): under every node of a split or merge its kind, with
+ * `equal` if no segment pulls through. What a segment is there is shown by its sign (^1015).
  */
-export function junctionLabels(g: Graph): JunctionLabel[] {
-  return junctionNodes(g).flatMap((j) => [
-    { at: { x: j.node.x, y: j.node.y }, text: j.equal ? `${j.kind}, equal` : j.kind, node: true },
-    ...j.roles.flatMap((r) => {
-      const at = labelPlace(g, r);
-      return at ? [{ at, text: roleText(r) }] : [];
-    }),
-  ]);
-}
+export const junctionLabels = (g: Graph): JunctionLabel[] =>
+  junctionNodes(g).map((j) => ({
+    at: { x: j.node.x, y: j.node.y },
+    text: j.equal ? `${j.kind}, equal` : j.kind,
+  }));

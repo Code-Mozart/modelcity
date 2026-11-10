@@ -1,6 +1,5 @@
-import { pieceLength, pointOn } from './piece';
+import { pieceLength, pointOn, type Sample } from './piece';
 import type { Loop } from './union';
-import type { Vec } from './vec';
 
 /** The length of a closed loop of pieces (meters). */
 export const loopLength = (loop: Loop): number => loop.reduce((n, p) => n + pieceLength(p), 0);
@@ -9,7 +8,7 @@ export const loopLength = (loop: Loop): number => loop.reduce((n, p) => n + piec
  * The place `s` meters along a loop from its start, going round: past the end it starts again,
  * and a negative `s` goes backwards from the start (^948). Null for a loop with no length.
  */
-export function alongLoop(loop: Loop, s: number): Vec | null {
+export function alongLoop(loop: Loop, s: number): Sample | null {
   const total = loopLength(loop);
   if (!(total > 0)) return null;
   let rest = ((s % total) + total) % total;
