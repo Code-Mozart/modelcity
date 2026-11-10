@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "e2e": "playwright test",
+    "shots": "playwright test -c playwright.shots.config.ts",
     "ci": "bun run lint && bun run check && bun run test && bun run build",
     "prepare": "git config core.hooksPath .githooks"
   },

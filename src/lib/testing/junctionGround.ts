@@ -105,3 +105,53 @@ export function junctionGround(): Graph {
   more(s);
   return roundToMm(s.graph);
 }
+
+/** A case of the ground (`docs/junctions.md`): its hat, what it is, and the pictures to take of it: where each looks and how many meters across it shows. */
+export interface GroundCase {
+  hat: number;
+  name: string;
+  views: { center: Vec; span: number }[];
+}
+
+/** A case in a cell, with pictures of the given spans around its center, or around places `[x, y, span]` from it. */
+function named(
+  hat: number,
+  at: [number, number],
+  name: string,
+  views: (number | [number, number, number])[] = [70],
+): GroundCase {
+  const c = cell(...at);
+  return {
+    hat,
+    name,
+    views: views.map((v) =>
+      typeof v === 'number'
+        ? { center: c, span: v }
+        : { center: { x: c.x + v[0], y: c.y + v[1] }, span: v[2] },
+    ),
+  };
+}
+
+export const GROUND_CASES: GroundCase[] = [
+  named(985, [0, 0], 'T-junction, 1+1 with 1+1', [45]),
+  named(986, [1, 0], 'T-junction, main road 2+2, side road 1+1', [50]),
+  named(987, [2, 0], 'T-junction with a left-turn pocket, two lanes out of the side road', [
+    150,
+    50,
+    [45, 0, 60],
+  ]),
+  named(988, [0, 1], 'X-junction, 1+1 with 1+1', [45]),
+  named(989, [1, 1], 'X-junction, 2+2 with 1+1', [50]),
+  named(990, [2, 1], 'X-junction, 2+2 with 2+2, pockets on every arm', [150, 55, [-50, 0, 60]]),
+  named(991, [0, 2], 'lane drop and lane gain', [240, [-50, 0, 60], [50, 0, 60]]),
+  named(992, [1, 2], 'on-ramp and off-ramp', [270, [-55, 5, 90], [55, 5, 90]]),
+  named(993, [2, 2], 'fork (Y)', [50]),
+  named(994, [0, 3], '1 x 1 crossing without a node', [60]),
+  named(995, [1, 3], 'three lanes across a 2+2 road, without nodes', [80]),
+  named(996, [2, 3], 'roundabout, one lane', [70]),
+  named(997, [0, 4], 'T-junction at 60 degrees', [50]),
+  named(998, [1, 4], 'one-way street across a 1+1 road', [45]),
+  named(999, [2, 4], 'five arms', [60]),
+  named(1000, [0, 5], 'staggered junction', [90]),
+  named(1001, [1, 5], 'roundabout, two lanes', [90]),
+];

@@ -1,4 +1,4 @@
-next: ^1018
+next: ^1019
 
 # Hats
 
@@ -712,6 +712,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^1002 | bug | done (PR #53; user: the glitch between the segments 242 and 243 of ^999) | **An open loop in the surface, drawn as a line across the map:** the ends of the pieces of the outline were numbered by place (the first place within the tolerance); with three ends within a few millimeters (a sliver of a millimeter where two hull sides cross almost along each other) two ends that are the same place got different numbers, and the loop stopped. The next piece is now the one with the nearest end, within reach; a piece shorter than the tolerance is no edge. Test: every loop of the surface of the testing ground is closed. |
 | ^1016 | decision | decided (user); done (PR #53; the strength is assumed) | **The glow behind the text and icons on the map (user):** it is there so that text and icons stand out against a background of low contrast. It has the colour of the interface (`--surface`, as before v0.45) and is faint: `--glow` is `--surface` at 45%. (Tried and taken back in PR #53: the ink colour.) The cards and the search field keep `--surface`. |
 | ^1017 | feature | done (PR #53; user) | **The sign of the hovered segment is named in the debug layer (user):** a new line under the coordinates and the ids (^833, ^871), in the same grey: `sign: straight and right (214)`, with the number of the German sign it is after. Nothing on a node or on nothing. |
+| ^1018 | chore | done (PR #53; user) | **Pictures of the testing ground from the CI (user):** on every push the CI job `shots` (`bun run shots`, `shots/junctions.spec.ts`) takes a picture of every case of the testing ground of the junctions (^984) with the debug layer on, some cases also close up, and puts them with an index on the branch `screenshots`, in a folder named after the branch (`feature-junctions`): to review on a phone. Not on the branch of the PR itself: a commit made by the CI starts no checks, and the PR would wait for them for ever. The branch holds one commit only. The test hook got `show` (move the camera). |
 
 ## Rented ranges
 
