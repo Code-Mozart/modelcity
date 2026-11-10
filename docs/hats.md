@@ -1,4 +1,4 @@
-next: ^1017
+next: ^1018
 
 # Hats
 
@@ -710,7 +710,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^983 | image | done (PR #52; user, given before, registered now) | **Google Maps, light mode: the same place (user):** `docs/mocks/hat983.png`. Compared with the palette in `docs/road-styles.md`. |
 | ^984 | mock | done (PR #53; user) | **The testing ground of the junctions (user):** one project with the common kinds of junction (T and X with different lane counts, with and without turn lanes, merges and splits, ramps, a fork, crossings without nodes, a roundabout and others), made by code (`src/lib/testing/junctionGround.ts`). `docs/mocks/hat984.json`; the cases are the rented hats ^985 to ^1001 in `docs/junctions.md`. |
 | ^1002 | bug | done (PR #53; user: the glitch between the segments 242 and 243 of ^999) | **An open loop in the surface, drawn as a line across the map:** the ends of the pieces of the outline were numbered by place (the first place within the tolerance); with three ends within a few millimeters (a sliver of a millimeter where two hull sides cross almost along each other) two ends that are the same place got different numbers, and the loop stopped. The next piece is now the one with the nearest end, within reach; a piece shorter than the tolerance is no edge. Test: every loop of the surface of the testing ground is closed. |
-| ^1016 | decision | decided (user); done (PR #53; the strength is assumed) | **The glow behind the text and icons on the map has their colour (user):** it was the old land colour (`--surface`), which showed as a white halo on the Google Maps land; now `--glow` is the ink colour, light and dark, at 30% (at full strength the text smeared and the coordinates could not be read). The cards and the search field keep `--surface`. |
+| ^1016 | decision | decided (user); done (PR #53; the strength is assumed) | **The glow behind the text and icons on the map (user):** it is there so that text and icons stand out against a background of low contrast. It has the colour of the interface (`--surface`, as before v0.45) and is faint: `--glow` is `--surface` at 45%. (Tried and taken back in PR #53: the ink colour.) The cards and the search field keep `--surface`. |
+| ^1017 | feature | done (PR #53; user) | **The sign of the hovered segment is named in the debug layer (user):** a new line under the coordinates and the ids (^833, ^871), in the same grey: `sign: straight and right (214)`, with the number of the German sign it is after. Nothing on a node or on nothing. |
 
 ## Rented ranges
 

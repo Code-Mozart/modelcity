@@ -3,8 +3,8 @@
   --bg: #d3f8e2;
   /* What the interface is made of on top of the land: as before the Google Maps palette (^914). */
   --surface: #f2efe9;
-  /* The glow behind the text and icons on the map has their colour (^1016). */
-  --glow: color-mix(in srgb, var(--ink) 30%, transparent);
+  /* The glow behind the text and icons on the map, so that they stand out against a background of low contrast: the colour of the interface, faint (^1016). */
+  --glow: color-mix(in srgb, var(--surface) 45%, transparent);
   --panel: #ffffff;
   --ink: #15171c;
   /* The road surface and its outline, after Google Maps (^90). */

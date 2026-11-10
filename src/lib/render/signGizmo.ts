@@ -2,14 +2,14 @@ import type { PlacedSign, Sign } from '../editor/signs';
 import { toScreen, type Frame, type Palette } from './paint';
 
 /** The radius of a sign, the width of its arrows and the length of the barbs of an arrow head, in pixels. */
-const SIGN_PX = 10;
-const ARROW_PX = 1.6;
+const SIGN_PX = 20;
+const ARROW_PX = 3;
 const HEAD = 0.28;
 /** The arrows of a sign are white on the debug red (^926), as the German signs are white on blue. */
 const ARROW_COLOR = '#ffffff';
 
 type Pt = [number, number];
-/** A line through points, in units of the radius, up being the way the segment runs; with an arrow head at its end or not. */
+/** A line through points, in units of the radius, up being straight on; with an arrow head at its end or not. */
 interface Stroke {
   through: Pt[];
   head: boolean;
@@ -35,17 +35,17 @@ function laneStrokes(s: Extract<Sign, { kind: 'extension' | 'merge' }>): Stroke[
   if (s.kind === 'extension') {
     const x = -0.25 * side;
     return [
-      arrow([x, 0.65], [x, -0.65]),
-      arrow([x, 0.45], [x + 0.5 * side, 0.05], [x + 0.5 * side, -0.65]),
+      arrow([x, 0.6], [x, -0.6]),
+      arrow([x, 0.4], [x + 0.5 * side, 0.05], [x + 0.5 * side, -0.55]),
     ];
   }
   const x = 0.25 * side;
   const ends: Pt[] = [
-    [x - 0.5 * side, 0.65],
+    [x - 0.5 * side, 0.55],
     [x - 0.5 * side, 0.15],
     [x, -0.25],
   ];
-  return [arrow([x, 0.65], [x, -0.65]), { through: ends, head: false }];
+  return [arrow([x, 0.6], [x, -0.6]), { through: ends, head: false }];
 }
 
 function drawStroke(ctx: CanvasRenderingContext2D, { through, head }: Stroke) {
@@ -66,20 +66,18 @@ function drawStroke(ctx: CanvasRenderingContext2D, { through, head }: Stroke) {
 }
 
 /**
- * The signs of the segments (^1015): a disc for the directions, a board for a lane that is added
- * or ends, turned so that up on the sign is the way the segment runs.
+ * The signs of the segments (^1015): a disc each, upright on the screen whichever way the segment
+ * or the map is turned.
  */
 export function drawSigns(f: Frame, signs: PlacedSign[], pal: Palette) {
   const { ctx } = f;
-  for (const { at, th, sign } of signs) {
+  for (const { at, sign } of signs) {
     const p = toScreen(f, at);
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.rotate(th + f.view.rot + Math.PI / 2);
     ctx.fillStyle = pal.debug;
     ctx.beginPath();
-    if (sign.kind === 'directions') ctx.arc(0, 0, SIGN_PX, 0, 2 * Math.PI);
-    else ctx.rect(-SIGN_PX, -SIGN_PX, 2 * SIGN_PX, 2 * SIGN_PX);
+    ctx.arc(0, 0, SIGN_PX, 0, 2 * Math.PI);
     ctx.fill();
     ctx.strokeStyle = ARROW_COLOR;
     ctx.lineWidth = ARROW_PX;

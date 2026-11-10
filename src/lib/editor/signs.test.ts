@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { curveOfEdge } from './chains';
 import { alongLoop, loopLength } from '../curves/along';
 import { junctionGround } from '../testing/junctionGround';
-import { segmentSigns, signOf, type Sign } from './signs';
+import { segmentSigns, signName, signOf, type Sign } from './signs';
 
 const g = junctionGround();
 const node = (x: number, y: number) =>
@@ -65,5 +65,18 @@ describe('the signs of the debug layer (^1015)', () => {
     const pieces = curveOfEdge(g, e.id)!.pieces;
     const mid = alongLoop(pieces, loopLength(pieces) / 2)!;
     expect(signs[0]!.at).toEqual({ x: mid.x, y: mid.y });
+  });
+});
+
+describe('the name of a sign (^1017)', () => {
+  it('says what it is and the German sign it is after', () => {
+    const name = (from: [number, number], to: [number, number]) =>
+      signName(signOf(g, seg(from, to)));
+    expect(name([-86, 1.5], [-6, 1.5])).toBe('straight and right (214)');
+    expect(name([1.5, 86], [1.5, 6])).toBe('split (214-30)');
+    expect(name([-6, 1.5], [-1.5, 6])).toBe('right (209)');
+    expect(name([-70, 483], [-30, 480])).toBe('merge into left (after 531-10)');
+    expect(name([-30, 480], [30, 480])).toBe('extension right (after 541-20)');
+    expect(name([6, 1.5], [86, 1.5])).toBe('straight (209-30)');
   });
 });

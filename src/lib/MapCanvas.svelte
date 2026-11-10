@@ -1,6 +1,5 @@
 <script lang="ts">
   import { cornersOf, hullsOf } from './editor/corners';
-  import { junctionLabels } from './editor/manoeuvres';
   import { segmentSigns } from './editor/signs';
   import { markingsOf } from './editor/markings';
   import { dotsOf, surfaceFrom } from './editor/surface';
@@ -72,7 +71,6 @@
           hulls: allHulls.map((h) => h.hull),
           corners: cornersOf(allHulls).map((c) => c.at),
           dots: dotsOf(surface, walk),
-          labels: junctionLabels(editor.graph),
           signs: segmentSigns(editor.graph),
         }
       : null,

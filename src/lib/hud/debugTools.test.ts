@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { FEATURES } from '../features';
-import { DebugTools, coordinatesText, hoverText, isCoordinatesKey } from './debugTools.svelte';
+import {
+  DebugTools,
+  coordinatesText,
+  hoverText,
+  isCoordinatesKey,
+  signText,
+} from './debugTools.svelte';
 import { graphOf } from '../testing/graphHelpers';
 
 const key = (extra: Partial<Parameters<typeof isCoordinatesKey>[0]> = {}) => ({
@@ -55,5 +61,13 @@ describe('what the pointer is on (^871)', () => {
       `segment ${e.id} (start node ${e.start}, end node ${e.end})`,
     );
     expect(hoverText(g, null)).toBe('-');
+  });
+
+  it('says the sign of a hovered segment, and nothing on a node or on nothing (^1017)', () => {
+    const hit = { edge: e.id } as never;
+    expect(signText(g, { kind: 'candidate', hit })).toBe('sign: straight (209-30)');
+    const handle = { type: 'node', id: g.nodes[1]!.id, road: 0, i: 1 } as never;
+    expect(signText(g, { kind: 'handle', handle })).toBeNull();
+    expect(signText(g, null)).toBeNull();
   });
 });

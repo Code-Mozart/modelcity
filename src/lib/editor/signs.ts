@@ -93,10 +93,9 @@ export function signOf(g: Graph, e: GEdge): Sign {
   return outs.length > 1 ? splitSign(g, n, outs) : STRAIGHT;
 }
 
-/** A sign at the middle of its segment, with the way the segment runs there (^1015). */
+/** A sign at the middle of its segment (^1015). */
 export interface PlacedSign {
   at: Vec;
-  th: number;
   sign: Sign;
 }
 
@@ -105,6 +104,26 @@ export function segmentSigns(g: Graph): PlacedSign[] {
     const pieces = curveOfEdge(g, e.id)?.pieces ?? [];
     const mid = alongLoop(pieces, loopLength(pieces) / 2);
     if (!mid) return [];
-    return [{ at: { x: mid.x, y: mid.y }, th: Math.atan2(mid.ty, mid.tx), sign: signOf(g, e) }];
+    return [{ at: { x: mid.x, y: mid.y }, sign: signOf(g, e) }];
   });
 }
+
+/** The name of a sign, with the number of the German sign it is after (^1017). */
+export function signName(s: Sign): string {
+  if (s.kind !== 'directions') {
+    const number = (s.kind === 'extension' ? 541 : 531) + (s.side === 'left' ? '-10' : '-20');
+    return `${s.kind === 'extension' ? 'extension' : 'merge into'} ${s.side} (after ${number})`;
+  }
+  const key = `${s.straight ? 'S' : ''}${s.left ? 'L' : ''}${s.right ? 'R' : ''}`;
+  return DIRECTION_NAMES[key] ?? 'none';
+}
+
+const DIRECTION_NAMES: Record<string, string> = {
+  S: 'straight (209-30)',
+  SR: 'straight and right (214)',
+  SL: 'straight and left (214-10)',
+  SLR: 'straight, right and left (209-30 and 214-30)',
+  LR: 'split (214-30)',
+  R: 'right (209)',
+  L: 'left (209-10)',
+};
