@@ -1,4 +1,4 @@
-next: ^984
+next: ^1000
 
 # Hats
 
@@ -203,7 +203,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^154 | milestone | planned | **Selection transforms and clipboard:** ^114 rings, ^115 rotate, ^116 crosshair and scale, ^117 clipboard. Also belongs to it: ^118. Depends on: ^153 (^112), ^149 (clipboard format). Scope (in/out) is written when the milestone starts. |
 | ^155 | milestone | planned | **Situational rendering:** ^98 segment colors (the blue for selected segments is ^231, done in ^151; ^99 hover emphasis moved to ^151). Also belongs to it: none. Depends on: none. Scope (in/out) is written when the milestone starts. **Note:** it also decides how the generated geometry of previews looks (the merge preview of a dragged node, ^284, shows only the gizmo until then). |
 | ^156 | milestone | in progress (part 1 ^921 and part 2 ^945 to ^948 done; the markings ^949 done in PR #52; next: junctions ^157; later ^22 lanes, ^26 lane types, road styles ^964) | **Lanes and markings:** ^21 markings, ^22 multi-lane roads, ^26 lane types and width. Also belongs to it: none (^100 moved to ^816). Depends on: ^149, ^153, ^816 (user: the rules first, or it would make a mess). Scope (in/out) is written when the milestone starts. |
-| ^157 | milestone | planned | **Junctions and islands:** ^24 junctions, ^27 traffic islands. Also belongs to it: none. Depends on: ^156. Scope (in/out) is written when the milestone starts. |
+| ^157 | milestone | in progress (scope being written; the testing ground ^984 is there) | **Junctions and islands:** ^24 junctions, ^27 traffic islands. Also belongs to it: none. Depends on: ^156. Scope (in/out) is written when the milestone starts. |
 | ^158 | milestone | planned | **Crossings:** ^25 crossings. Also belongs to it: none. Depends on: ^156. Scope (in/out) is written when the milestone starts. |
 | ^159 | milestone | planned | **Quality:** ^122 performance tests. Also belongs to it: ^145 (done). Depends on: none. Scope (in/out) is written when the milestone starts. |
 | ^160 | feature | done (milestone ^151, PR #28) | **RMB removes a segment (user):** a right click on a segment removes that segment, and its nodes if it is their only segment. Deleting a node (right click on a node, Delete key) stays. Open (Claude): a segment in the middle of a road splits the road in two (nodes that still have another segment stay); today a right click on a curve finishes the road, so this changes that control (`docs/controls.md`); and what it does while drawing a road. **Decided (user leans to this; Claude agrees):** while drawing, the road is not finished first, as a right click on a node does not finish it either: the segment is removed (and its nodes if it was their only segment), and the road being drawn goes on from the active node if that survives, else from its neighbour (as when the active node is deleted); a right click on empty canvas still finishes the road. **Added (user, milestone ^151):** `Alt` + a right click on a segment removes the whole *branch* it is on (all its segments; nodes that have no other segment go; hint `[Alt]+[RMB]: remove branch`). While drawing: the road goes on from the node being drawn from if that survives, else from a neighbour that still has a segment, else it is no longer drawn (assumed). |
@@ -708,6 +708,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^981 | decision | decided (user) | **The no-line rule of the 1+1 Ortsstraße (^972) does not apply to the logical markings (user):** the logical markings draw a 1+1 as one dashed line (^951); the physical ones (switched off) follow ^972. |
 | ^982 | image | done (PR #52; user, given before, registered now) | **Google Maps, dark mode: the B 47 near Lorsch (user):** a Bundesstraße with green edges and yellow lines, ordinary streets, fields, buildings. `docs/mocks/hat982.jpg`. |
 | ^983 | image | done (PR #52; user, given before, registered now) | **Google Maps, light mode: the same place (user):** `docs/mocks/hat983.png`. Compared with the palette in `docs/road-styles.md`. |
+| ^984 | mock | done (PR to come; user) | **The testing ground of the junctions (user):** one project with the common kinds of junction (T and X with different lane counts, with and without turn lanes, merges and splits, ramps, a fork, crossings without nodes, a roundabout and others), made by code (`src/lib/testing/junctionGround.ts`). `docs/mocks/hat984.json`; the cases are the rented hats ^985 to ^999 in `docs/junctions.md`. |
 
 ## Rented ranges
 
@@ -737,3 +738,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^932–^941 | docs/optimizations.md | the optimizations, one hat each (rented range, milestone ^927) |
 | ^950–^958 | docs/markings.md | the rules of the lane markings, one hat each (rented range, milestone ^949; ^957 is a question, ^958 the scope) |
 | ^965–^970 | docs/road-styles.md | the road styles, one hat each (rented range, milestone ^964) |
+| ^985–^999 | docs/junctions.md | the cases of the testing ground of the junctions, one hat each (rented range, milestone ^157) |
