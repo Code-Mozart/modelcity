@@ -36,11 +36,22 @@ describe('a line between neighbouring parallel segments (^950, ^951)', () => {
     expect(marked(lanes([[0, 20, 0, 1]]))).toEqual([]);
   });
 
-  it('1+1: one dashed line half way between the lanes', () => {
+  it('1+1: no line, an Ortsstraße has none (^972)', () => {
+    expect(
+      marked(
+        lanes([
+          [0, 20, 0, 1],
+          [0, 20, 3, -1],
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it('one-way, two lanes: one dashed line half way between them', () => {
     const m = marked(
       lanes([
         [0, 20, 0, 1],
-        [0, 20, 3, -1],
+        [0, 20, 3, 1],
       ]),
     );
     expect(m).toHaveLength(1);
@@ -48,7 +59,9 @@ describe('a line between neighbouring parallel segments (^950, ^951)', () => {
     expect(yOf(m[0]!)).toBeCloseTo(1.5, 6);
     expect(span(m[0]!)).toEqual([0, 20]);
   });
+});
 
+describe('lanes of one way and of both (^951)', () => {
   it('one-way, three lanes: two dashed lines', () => {
     const m = marked(
       lanes([
@@ -102,7 +115,7 @@ describe('judged per stretch (^950, ^952)', () => {
     expect(span(m[0]!)).toEqual([25, 75]);
   });
 
-  it('a lane added over the last 40 m: dashed over 60 m, then solid and dashed over 40 m', () => {
+  it('a lane added over the last 40 m: nothing over 60 m, then solid and dashed over 40 m', () => {
     const m = marked(
       lanes([
         [0, 100, 0, 1],
@@ -112,8 +125,7 @@ describe('judged per stretch (^950, ^952)', () => {
     );
     const row = (kind: string, a: number, b: number) =>
       m.some((x) => x.kind === kind && span(x)[0] === a && span(x)[1] === b);
-    expect(m).toHaveLength(3);
-    expect(row('dashed', 0, 60)).toBe(true);
+    expect(m).toHaveLength(2);
     expect(row('solid', 60, 100)).toBe(true);
     expect(row('dashed', 60, 100)).toBe(true);
   });

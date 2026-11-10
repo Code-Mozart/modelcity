@@ -1,4 +1,4 @@
-next: ^962
+next: ^975
 
 # Hats
 
@@ -694,6 +694,13 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^959 | image | done (PR #52; user) | **The project "6-lanes" (user):** 3+3 lanes that merge and split towards the west, with partly parallel lanes, bends and a crossing; the user's report of several marking bugs. `docs/mocks/hat959.json`, one of the tests (`editor/markingsProject.test`). |
 | ^960 | bug | done (PR #52; user report ^959) | **Ticks, wrong sides and gaps in the markings:** the curve of a segment has pieces with no length (a straight between two arcs that meet); `offsetPiece` moved them sideways by a made-up direction, which gave lines across the road, and the side for the line was judged by such a piece, so a line could run on the wrong side (the line between two lanes ended up between the next two). Pieces with no length are left out and the side is judged by the direction of the curve at the node. Test: every line is made of pieces with a length that follow each other, and lies on the surface. |
 | ^961 | bug | done (PR #52; user report ^959) | **A line that goes on was not one line:** lines were only joined end to start in the order they were found, so the parts of one line found from its other end stayed apart and the dash pattern restarted (^954). They are joined whichever way each runs (one is turned round if need be). |
+| ^962 | image | done (PR #52; user) | **The project "simple T-junction" (user):** a main road with a side road, the user's report of the centerline strokes that "reset" at the junction. `docs/mocks/hat962.json`, a test (`editor/markingsJunction.test`). |
+| ^963 | image | done (PR #52; user) | **Google Maps, dark mode, Android (user):** the B 27 (highway colours, green lines) and the Oskar-von-Miller-Straße, a Feldweg per the user. `docs/mocks/hat963.jpg`; the measured colours are in `docs/road-styles.md`. |
+| ^964 | milestone | planned (user: "an upcoming milestone"; not before the markings, ^949) | **Road styles:** the width per lane, speed, marking rules and fill and stroke colours of the German road classes, as part of the lane configuration (^26): rented hats ^965 to ^970 in `docs/road-styles.md` (Feldweg, Ortsstraße, Hauptverkehrsstraße, Landstraße, Bundesstraße, Autobahn), the rules ^971 to ^973. Needs a data model change (version bump, migration, the user's agreement), the validator of ^973, the yellow and highway markings of ^953 and ^958. Scope is written when the milestone starts. |
+| ^971 | decision | decided (user) | **All roads are Ortsstraßen for now (user):** the data model and the default lane configuration stay as they are; see `docs/road-styles.md`. |
+| ^972 | decision | decided (user, answer) | **A 1+1 Ortsstraße has no centerline (user):** replaces the 1+1 exception of ^951 for the Ortsstraße. Built in PR #52. |
+| ^973 | decision | decided (patterns); planned (validator) | **Marking patterns by style, a Feldweg never has more than one lane (user's research):** 3 m : 3 m in towns, 3 m : 6 m on a Landstraße, 6 m : 12 m on an Autobahn; the validator is roadmap. **Maintains ^954** for the dash and the gap. |
+| ^974 | feature | done (PR #52; user) | **Dashes are drawn once (user's report ^962):** where lines of one style lie on top of each other (the stubs of the lanes that turn, across the line of the main road at a junction) only the longest is drawn, so the dash pattern of the main line is not interrupted. |
 
 ## Rented ranges
 
@@ -721,3 +728,4 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^900–^913 | docs/palette.md | the colours of the palette, one hat each (rented range, milestone ^914) |
 | ^932–^941 | docs/optimizations.md | the optimizations, one hat each (rented range, milestone ^927) |
 | ^950–^958 | docs/markings.md | the rules of the lane markings, one hat each (rented range, milestone ^949; ^957 is a question, ^958 the scope) |
+| ^965–^970 | docs/road-styles.md | the road styles, one hat each (rented range, milestone ^964) |

@@ -2,7 +2,7 @@ import { offsetPiece } from '../curves/offset';
 import type { Piece } from '../curves/types';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import { dist, dot, perp, sub, type Vec } from '../curves/vec';
-import { isDegenerate, pointOn, reversePiece } from '../curves/piece';
+import { distanceToPiece, isDegenerate, pieceLength, pointOn, reversePiece } from '../curves/piece';
 import { widthOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
 import { parallel } from './parallel';
@@ -21,9 +21,9 @@ export interface Marking {
 const sameWay = (ea: GEdge, a: GNode, eb: GEdge, b: GNode) =>
   (ea.start === a.id) === (eb.start === b.id);
 
-/** Dashed for the same way and for a group of two; solid for opposite ways in a larger group (^951). */
-const kindOf = (same: boolean, group: number): Marking['kind'] =>
-  same || group === 2 ? 'dashed' : 'solid';
+/** Dashed for the same way; solid for opposite ways in a group of three or more; none for a 1+1, the Ortsstraße having no centerline (^951, ^972). */
+const kindOf = (same: boolean, group: number): Marking['kind'] | null =>
+  same ? 'dashed' : group === 2 ? null : 'solid';
 
 /**
  * The centerline of a pair: the curve of `ea` moved half its width towards `eb`, to the side
@@ -59,7 +59,7 @@ function pairsOf(g: Graph, run: Run, seen: Set<string>): Marking[] {
       const [a, b] = [run.nodes[k]!, run.nodes[k + 1]!];
       const pieces = centerline(g, ea, a, b);
       const kind = kindOf(sameWay(ea, a, eb, b), run.nodes.length);
-      if (pieces) found.push({ pieces, kind });
+      if (pieces && kind) found.push({ pieces, kind });
     }
   }
   return found;
@@ -102,6 +102,29 @@ function joined(markings: Marking[]): Marking[] {
   return lines;
 }
 
+const POINTS = [0, 0.25, 0.5, 0.75, 1];
+
+/** Whether every place of the line `m` is on the line `other`, within the position tolerance (^865). */
+const liesOn = (m: Marking, other: Marking) =>
+  m.pieces.every((p) =>
+    POINTS.every((t) => {
+      const at = pointOn(p, t);
+      return other.pieces.some((q) => distanceToPiece(q, at) < SAME_PLACE_M);
+    }),
+  );
+
+const lengthOf = (m: Marking) => m.pieces.reduce((n, p) => n + pieceLength(p), 0);
+
+/** Lines of one style on top of each other are drawn once, the longest: a short line over the main line would restart its dashes (^974). */
+export function distinct(lines: Marking[]): Marking[] {
+  const longest = [...lines].sort((a, b) => lengthOf(b) - lengthOf(a));
+  const kept: Marking[] = [];
+  for (const m of longest) {
+    if (!kept.some((k) => k.kind === m.kind && liesOn(m, k))) kept.push(m);
+  }
+  return kept;
+}
+
 /**
  * The lane markings of a graph with its derived nodes in it (`withDerived`, ^822, so that segments
  * that are parallel for a part only are parallel there, ^950): one line for each pair of
@@ -110,5 +133,5 @@ function joined(markings: Marking[]): Marking[] {
  */
 export function markingsOf(g: Graph): Marking[] {
   const seen = new Set<string>();
-  return joined(runsOfGraph(g).flatMap((run) => pairsOf(g, run, seen)));
+  return distinct(joined(runsOfGraph(g).flatMap((run) => pairsOf(g, run, seen))));
 }

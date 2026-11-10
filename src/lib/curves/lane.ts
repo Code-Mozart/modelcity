@@ -13,9 +13,9 @@ const OUTLINE_SHARE = 0.2;
  */
 export const outlinePx = (roadPx: number) => Math.min(OUTLINE_PX, (OUTLINE_SHARE * roadPx) / 2);
 
-/** A dash of a dashed lane marking, and the gap after it (meters, ^954). */
+/** A dash of a dashed lane marking, and the gap after it (meters): the pattern of the Ortsstraße, the style of all roads for now (^954, ^971, ^973). */
 export const DASH_M = 3;
-export const DASH_GAP_M = 6;
+export const DASH_GAP_M = 3;
 /** The width of a lane marking (meters), and the least it is drawn with (pixels, ^954). */
 export const MARKING_WIDTH_M = 0.15;
 export const MARKING_MIN_PX = 1;
