@@ -708,7 +708,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^981 | decision | decided (user) | **The no-line rule of the 1+1 Ortsstraße (^972) does not apply to the logical markings (user):** the logical markings draw a 1+1 as one dashed line (^951); the physical ones (switched off) follow ^972. |
 | ^982 | image | done (PR #52; user, given before, registered now) | **Google Maps, dark mode: the B 47 near Lorsch (user):** a Bundesstraße with green edges and yellow lines, ordinary streets, fields, buildings. `docs/mocks/hat982.jpg`. |
 | ^983 | image | done (PR #52; user, given before, registered now) | **Google Maps, light mode: the same place (user):** `docs/mocks/hat983.png`. Compared with the palette in `docs/road-styles.md`. |
-| ^984 | mock | done (PR to come; user) | **The testing ground of the junctions (user):** one project with the common kinds of junction (T and X with different lane counts, with and without turn lanes, merges and splits, ramps, a fork, crossings without nodes, a roundabout and others), made by code (`src/lib/testing/junctionGround.ts`). `docs/mocks/hat984.json`; the cases are the rented hats ^985 to ^999 in `docs/junctions.md`. |
+| ^984 | mock | done (PR #53; user) | **The testing ground of the junctions (user):** one project with the common kinds of junction (T and X with different lane counts, with and without turn lanes, merges and splits, ramps, a fork, crossings without nodes, a roundabout and others), made by code (`src/lib/testing/junctionGround.ts`). `docs/mocks/hat984.json`; the cases are the rented hats ^985 to ^999 in `docs/junctions.md`. |
 
 ## Rented ranges
 

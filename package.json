@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.52.0",
-  "moniker": "Lane markings",
+  "version": "0.53.0",
+  "moniker": "Junctions",
   "private": true,
   "type": "module",
   "scripts": {
