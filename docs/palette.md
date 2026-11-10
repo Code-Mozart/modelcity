@@ -16,7 +16,7 @@ The colours of the map, after Google Maps. **The values live in one place only: 
 | ^909 | `--highway` | fill of a highway | not drawn yet |
 | ^910 | `--highway-edge` | stroke of a highway (blue in light mode, green in dark mode) | not drawn yet |
 | ^911 | `--marking-white` | white lane marking | not drawn yet; used for all lane markings for now (^953, `docs/markings.md`) |
-| ^912 | `--marking-yellow` | yellow lane marking | not drawn yet; not drawn yet; comes with the highway markings (^953) |
+| ^912 | `--marking-yellow` | yellow lane marking (the line, not the shield) | not drawn yet; comes with the highway markings (^953). Values by the user from ^982 and ^983: light about `#e8deb8`, dark about `#858d7a` (the earlier `#ffdc36` and `#cebc56` were the colour of the shield) |
 | ^913 | `--sand` | other land use (the beige area in light mode) | not drawn yet; extra |
 | ^978 | `--track` | fill of a Feldweg | not drawn yet (road styles, ^964); measured from ^963 and ^980 |
 | ^979 | `--track-edge` | stroke of a Feldweg | not drawn yet; light is an estimate: anti-aliasing blends the thin stroke with its neighbours |
