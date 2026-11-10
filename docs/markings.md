@@ -37,7 +37,7 @@ The patterns, widths and colours will come from the road style (`docs/road-style
 
 ## Physical and logical markings (^975, ^976, ^977)
 
-The markings of this file with their meters (^954, ^973) are the **physical** ones: they grow and shrink with the zoom, and at a low zoom they are a hair of one pixel or hidden. They are kept but switched off (`FEATURES.physicalMarkings`). The **logical** ones are drawn instead: dash and gap 10 px each (1:1), 2 px wide, at every zoom, for every road style, never hidden. A line is drawn the same (which lines, dashed or solid, colour); the ends of a solid line are square (^977).
+The markings of this file with their meters (^954, ^973) are the **physical** ones: they grow and shrink with the zoom, and at a low zoom they are a hair of one pixel or hidden. They are kept but switched off (`FEATURES.physicalMarkings`). The **logical** ones are drawn instead: dash and gap 10 px each (1:1), 2 px wide, at every zoom, for every road style, never hidden. The rule that a 1+1 Ortsstraße has no line (^972) is for the physical ones only: the logical ones draw a 1+1 as one dashed line (^981). Otherwise a line is drawn the same (which lines, dashed or solid, colour); the ends of a solid line are square (^977).
 
 ## Questions
 

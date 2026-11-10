@@ -4,6 +4,7 @@ import { SAME_PLACE_M } from '../curves/tolerance';
 import { dist, dot, perp, sub, type Vec } from '../curves/vec';
 import { distanceToPiece, isDegenerate, pieceLength, pointOn, reversePiece } from '../curves/piece';
 import { widthOf, type GEdge, type GNode, type Graph } from '../model/graph';
+import { FEATURES } from '../features';
 import { curveOfEdge } from './chains';
 import { parallel } from './parallel';
 import { runsOfGraph, type Run } from './towers';
@@ -21,9 +22,12 @@ export interface Marking {
 const sameWay = (ea: GEdge, a: GNode, eb: GEdge, b: GNode) =>
   (ea.start === a.id) === (eb.start === b.id);
 
-/** Dashed for the same way; solid for opposite ways in a group of three or more; none for a 1+1, the Ortsstraße having no centerline (^951, ^972). */
-const kindOf = (same: boolean, group: number): Marking['kind'] | null =>
-  same ? 'dashed' : group === 2 ? null : 'solid';
+/** Dashed for the same way; solid for opposite ways in a group of three or more; none for a 1+1 in the physical markings, the Ortsstraße having no centerline (^972), where the logical ones draw it dashed (^951, ^981). */
+const kindOf = (same: boolean, group: number, physical: boolean): Marking['kind'] | null => {
+  if (same) return 'dashed';
+  if (group === 2) return physical ? null : 'dashed';
+  return 'solid';
+};
 
 /**
  * The centerline of a pair: the curve of `ea` moved half its width towards `eb`, to the side
@@ -49,7 +53,7 @@ function pairsAt(g: Graph, run: Run, k: number): [GEdge, GEdge][] {
 }
 
 /** The pairs of neighbouring parallel segments of a run, once each. */
-function pairsOf(g: Graph, run: Run, seen: Set<string>): Marking[] {
+function pairsOf(g: Graph, run: Run, seen: Set<string>, physical: boolean): Marking[] {
   const found: Marking[] = [];
   for (let k = 0; k + 1 < run.nodes.length; k++) {
     for (const [ea, eb] of pairsAt(g, run, k)) {
@@ -58,7 +62,7 @@ function pairsOf(g: Graph, run: Run, seen: Set<string>): Marking[] {
       seen.add(key);
       const [a, b] = [run.nodes[k]!, run.nodes[k + 1]!];
       const pieces = centerline(g, ea, a, b);
-      const kind = kindOf(sameWay(ea, a, eb, b), run.nodes.length);
+      const kind = kindOf(sameWay(ea, a, eb, b), run.nodes.length, physical);
       if (pieces && kind) found.push({ pieces, kind });
     }
   }
@@ -131,7 +135,7 @@ export function distinct(lines: Marking[]): Marking[] {
  * neighbouring parallel segments (^950), dashed or solid by the way they run and the size of the
  * group (^951). Derived from the graph, never stored (^956).
  */
-export function markingsOf(g: Graph): Marking[] {
+export function markingsOf(g: Graph, physical: boolean = FEATURES.physicalMarkings): Marking[] {
   const seen = new Set<string>();
-  return distinct(joined(runsOfGraph(g).flatMap((run) => pairsOf(g, run, seen))));
+  return distinct(joined(runsOfGraph(g).flatMap((run) => pairsOf(g, run, seen, physical))));
 }

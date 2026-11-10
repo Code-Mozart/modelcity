@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { line } from '../curves/piece';
+import { line, pieceLength } from '../curves/piece';
 import { distinct, markingsOf, type Marking } from './markings';
 import { readFileSync } from 'node:fs';
 import { fromFile } from '../project/file';
@@ -25,10 +25,20 @@ describe('lines on top of each other are drawn once (^974, ^962)', () => {
 });
 
 describe('the simple T-junction (^962): a main road and a side road, each 1+1', () => {
-  it('has no centerline on an Ortsstraße (^972), so nothing restarts', () => {
-    const graph = fromFile(
-      JSON.parse(readFileSync(new URL('../../../docs/mocks/hat962.json', import.meta.url), 'utf8')),
-    ).graph;
-    expect(markingsOf(withDerived(graph, derivedNodes(graph)))).toEqual([]);
+  const graph = fromFile(
+    JSON.parse(readFileSync(new URL('../../../docs/mocks/hat962.json', import.meta.url), 'utf8')),
+  ).graph;
+  const seen = withDerived(graph, derivedNodes(graph));
+  const length = (m: Marking) => m.pieces.reduce((n, p) => n + pieceLength(p), 0);
+
+  it('physical: no centerline on an Ortsstraße (^972)', () => {
+    expect(markingsOf(seen, true)).toEqual([]);
+  });
+
+  it('logical: the main line is one line over its whole length, no short line restarts its dashes (^974)', () => {
+    const m = markingsOf(seen, false);
+    expect(m).toHaveLength(2);
+    expect(m.map(length).sort((a, b) => b - a)[0]).toBeCloseTo(36.6, 1);
+    expect(m.every((x) => length(x) > 5)).toBe(true);
   });
 });

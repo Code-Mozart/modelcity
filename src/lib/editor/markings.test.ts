@@ -26,7 +26,7 @@ function lanes(rows: [number, number, number, 1 | -1][]): Graph {
   );
 }
 
-const marked = (g: Graph) => markingsOf(withDerived(g, derivedNodes(g)));
+const marked = (g: Graph, physical = true) => markingsOf(withDerived(g, derivedNodes(g)), physical);
 const xs = (m: Marking) => m.pieces.flatMap((p) => [p.P.x, p.Q.x]);
 const span = (m: Marking): [number, number] => [Math.min(...xs(m)), Math.max(...xs(m))];
 const yOf = (m: Marking) => m.pieces[0]!.P.y;
@@ -45,6 +45,18 @@ describe('a line between neighbouring parallel segments (^950, ^951)', () => {
         ]),
       ),
     ).toEqual([]);
+  });
+
+  it('1+1 in the logical markings: one dashed line, the rule of the Ortsstraße is for the physical ones (^981)', () => {
+    const m = marked(
+      lanes([
+        [0, 20, 0, 1],
+        [0, 20, 3, -1],
+      ]),
+      false,
+    );
+    expect(m).toHaveLength(1);
+    expect(m[0]!.kind).toBe('dashed');
   });
 
   it('one-way, two lanes: one dashed line half way between them', () => {

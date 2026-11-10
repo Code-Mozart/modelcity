@@ -44,4 +44,15 @@ The values of the palette live in `src/app.css` (`docs/palette.md`; the Feldweg 
 | B 27 stroke | `#a0acb8` (darkest edge pixel) | outer edge: none; the green lines about `#3d7d49` to `#418346` | light about `--road-edge` `#9dadbd`; dark about `--highway-edge` `#398e3d` |
 | land | `#d3f8e2` | `#133848` | |
 
-**What this shows:** in light mode Google draws the Feldweg lighter than the B 27 (as the user suspected), in dark mode the Feldweg is the colour of the current dark `--road`. **Neither screenshot contains an ordinary street (an Ortsstraße)**, so `--road` is, in light mode, the colour of the B 27 and, in dark mode, the colour of the Feldweg: the "default" colours of the palette cannot both be right for one road class. To settle it (and `--highway`, ^909, ^910, which no screenshot shows in light mode as a blue road): a screenshot of an ordinary street next to a Bundesstraße, in both modes (open question for the user).
+**Compared with the screenshots of the B 47 near Lorsch (light `docs/mocks/hat983.png`, ^983; dark `docs/mocks/hat982.jpg`, ^982), which have ordinary streets next to a Bundesstraße:**
+
+| What | Light mode | Dark mode | Palette |
+| --- | --- | --- | --- |
+| ordinary street fill | `#abbac9` (the most frequent road pixel) | `#3f5a77` | `--road`: **both right** |
+| ordinary street stroke | `#a2b3c0` to `#a4b3c3` | about `#19394e` (darkest) | `--road-edge` light `#9dadbd` fits; dark `#3b5673` is lighter than the darkest pixel (kept, ^908) |
+| B 47 fill | `#8ba5c1` | between the green lines about `#3b5876` to `#3e5c78`, as `--road` | `--highway` light `#8ba5c1` **exact**; dark `#405977` fits (it is not distinguishable from the street) |
+| B 47 stroke | blue, `#6f8ab5` to `#6881b0` at its darkest | green `#37803f` to `#33833a` (`#397744` at the rim) | `--highway-edge` `#6780b0` fits; dark `#398e3d` is a little brighter than the green seen, kept |
+| yellow centerlines (the pair of lines between the carriageways) | pale: `#eadfb8` at its most saturated pixel (anti-aliasing of a thin line) | `#cdbe59` to `#cfc156` | `--marking-yellow` dark `#cebc56` fits; light `#ffdc36` is the colour of the shield: the line itself looks paler, to be decided when yellow lines are drawn (^953) |
+| white dashes | pale blue-white (`#c4d6ed`, blended) | not visible | `--marking-white` |
+
+**Conclusion:** the palette's `--road` and `--highway` agree with these screenshots in both modes, so nothing in `app.css` changes. What the earlier screenshots of the B 27 and the Oskar-von-Miller-Straße (^963, ^980) show differently (the B 27 fill `#47688b` in dark mode and `#aab9c9` in light mode, which is the ordinary street's) is not explained by these; the Feldweg values (`--track`, ^978, ^979) rest on the Oskar-von-Miller-Straße alone and stay `assumed`.

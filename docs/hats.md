@@ -1,4 +1,4 @@
-next: ^981
+next: ^984
 
 # Hats
 
@@ -705,6 +705,9 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^976 | feature | done (PR #52; user) | **Logical markings (user):** dashes and gaps are equal (1:1) and 10 px long, the line 2 px wide, at every zoom and for every lane configuration and road style (the 3:3, 3:6 and 6:12 of ^973 do not apply to them); they never hide. A solid line is 2 px wide. Which lines there are (^950, ^951, ^972) and their colour (^953) are the same. |
 | ^977 | bug | done (PR #52; user) | **A solid marking has square ends, not round (user):** `strokeChain` rounded the ends of every undashed line; markings now say `cap: 'butt'`. |
 | ^980 | image | done (PR #52; user) | **Google Maps, light mode (user):** the B 27 and the Oskar-von-Miller-Straße (Feldweg). `docs/mocks/hat980.png`; measured in `docs/road-styles.md`. |
+| ^981 | decision | decided (user) | **The no-line rule of the 1+1 Ortsstraße (^972) does not apply to the logical markings (user):** the logical markings draw a 1+1 as one dashed line (^951); the physical ones (switched off) follow ^972. |
+| ^982 | image | done (PR #52; user, given before, registered now) | **Google Maps, dark mode: the B 47 near Lorsch (user):** a Bundesstraße with green edges and yellow lines, ordinary streets, fields, buildings. `docs/mocks/hat982.jpg`. |
+| ^983 | image | done (PR #52; user, given before, registered now) | **Google Maps, light mode: the same place (user):** `docs/mocks/hat983.png`. Compared with the palette in `docs/road-styles.md`. |
 
 ## Rented ranges
 
