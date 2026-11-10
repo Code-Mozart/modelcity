@@ -44,6 +44,8 @@ export interface ArmSpec {
   pocket?: boolean;
   /** The lanes out begin one lane further out, opposite an arm with a pocket, and come back in. */
   outShift?: boolean;
+  /** Only the nodes at the junction, no road behind them: to join two junctions by hand. */
+  stub?: boolean;
 }
 
 /** The nodes of an arm at the junction, innermost lane first. */
@@ -65,8 +67,10 @@ function lanesIn(s: Sketch, c: Vec, spec: ArmSpec, d: number): number[] {
   const stops: number[] = [];
   for (let i = 0; i < spec.in; i++) {
     const side = W / 2 + W * i;
-    const far = at(d + FAR_M + TAPER_M, side);
     const stop = at(d, side + shift);
+    stops.push(stop);
+    if (spec.stub) continue;
+    const far = at(d + FAR_M + TAPER_M, side);
     if (!spec.pocket) s.chain([far, stop]);
     else {
       const split = at(d + 2 * TAPER_M, side);
@@ -74,10 +78,9 @@ function lanesIn(s: Sketch, c: Vec, spec: ArmSpec, d: number): number[] {
       if (i === 0) {
         const pocket = at(d, side);
         s.edge(split, pocket);
-        stops.push(pocket);
+        stops.unshift(pocket);
       }
     }
-    stops.push(stop);
   }
   return stops;
 }
@@ -91,10 +94,11 @@ function lanesOut(s: Sketch, c: Vec, spec: ArmSpec, d: number): number[] {
   for (let i = 0; i < spec.out; i++) {
     const side = W / 2 + W * i;
     const stop = at(d, side + shift);
+    stops.push(stop);
+    if (spec.stub) continue;
     const far = at(d + FAR_M + TAPER_M, side);
     if (!spec.outShift) s.chain([stop, far]);
     else s.chain([stop, at(d + TAPER_M, side + shift), at(d + 2 * TAPER_M, side), far]);
-    stops.push(stop);
   }
   return stops;
 }
@@ -144,22 +148,30 @@ export function lane(
 }
 
 /**
- * A roundabout at `c` with one lane of radius `r` and 1+1 arms at the angles: traffic runs
- * counter-clockwise on the screen (the angle falls). Each arm enters `gap` radians after its
- * axis and leaves `gap` before it.
+ * A roundabout at `c` with `lanes` lanes, the innermost of radius `r`, and arms at the angles with
+ * as many lanes each way: traffic runs counter-clockwise on the screen (the angle falls). Each arm
+ * enters `gap` radians after its axis and leaves `gap` before it, lane by lane (the inner lane of
+ * the arm to the inner lane of the ring).
  */
-export function roundabout(s: Sketch, c: Vec, r: number, angles: number[]) {
+export function roundabout(
+  s: Sketch,
+  c: Vec,
+  ring: { r: number; lanes?: number },
+  angles: number[],
+) {
+  const { r, lanes = 1 } = ring;
   const gap = 0.5;
-  const ring = (a: number) => s.node(add(c, mul(fromAngle(a), r)), a - Math.PI / 2);
-  const stops = [...angles]
-    .sort((a, b) => b - a)
-    .map((a) => ({ a, exit: ring(a + gap), entry: ring(a - gap) }));
-  stops.forEach((stop, i) => {
-    const next = stops[(i + 1) % stops.length]!;
-    s.edge(stop.exit, stop.entry);
-    s.edge(stop.entry, next.exit);
-    const far = r + FAR_M;
-    s.edge(s.node(place(c, stop.a + Math.PI, -far, W / 2), stop.a + Math.PI), stop.entry);
-    s.edge(stop.exit, s.node(place(c, stop.a, far, W / 2), stop.a));
-  });
+  const far = r + W * lanes + FAR_M;
+  const sorted = [...angles].sort((a, b) => b - a);
+  for (let k = 0; k < lanes; k++) {
+    const onRing = (a: number) => s.node(add(c, mul(fromAngle(a), r + W * k)), a - Math.PI / 2);
+    const stops = sorted.map((a) => ({ a, exit: onRing(a + gap), entry: onRing(a - gap) }));
+    stops.forEach((stop, i) => {
+      s.edge(stop.exit, stop.entry);
+      s.edge(stop.entry, stops[(i + 1) % stops.length]!.exit);
+      const side = W / 2 + W * k;
+      s.edge(s.node(place(c, stop.a + Math.PI, -far, side), stop.a + Math.PI), stop.entry);
+      s.edge(stop.exit, s.node(place(c, stop.a, far, side), stop.a));
+    });
+  }
 }

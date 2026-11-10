@@ -105,37 +105,39 @@ function same(a: Piece, b: Piece): boolean {
   return ends && dist(ma, mb) < SAME_PLACE_M;
 }
 
-/** Places that are the same place within the tolerance, numbered. */
-class Places {
-  private reps: Vec[] = [];
-
-  id(p: Vec): number {
-    const found = this.reps.findIndex((r) => dist(r, p) < SAME_PLACE_M);
-    if (found >= 0) return found;
-    this.reps.push(p);
-    return this.reps.length - 1;
-  }
+/**
+ * Takes out of `rest` the piece that goes on from `at`: the one with an end nearest to it, within
+ * reach, turned round if it is its far end. None when the loop is back at its `start` (or nothing
+ * is in reach). The nearest end is asked for, not a numbered place: ends that are the same place
+ * within the tolerance do not always fall into the same group of three or more (^1002).
+ */
+function takeNext(rest: Piece[], at: Vec, start: Vec): Piece | null {
+  let [best, reach, turned] = [-1, PROBE_M, false];
+  rest.forEach((p, j) => {
+    const [dP, dQ] = [dist(p.P, at), dist(p.Q, at)];
+    if (Math.min(dP, dQ) >= reach) return;
+    [best, reach, turned] = [j, Math.min(dP, dQ), dQ < dP];
+  });
+  if (best < 0 || dist(start, at) <= reach) return null;
+  const [piece] = rest.splice(best, 1);
+  return turned ? reversePiece(piece!) : piece!;
 }
 
-/** The pieces chained into closed loops: each one starts where the one before ends. */
+/**
+ * The pieces chained into closed loops: each one starts where the one before ends. A piece shorter
+ * than the tolerance is no edge of the outline: its two ends are one place (^1002).
+ */
 function chain(pieces: Piece[]): Loop[] {
-  const places = new Places();
-  const ends = pieces.map((p) => [places.id(p.P), places.id(p.Q)] as const);
-  const used = new Set<number>();
+  const rest = pieces.filter((p) => pieceLength(p) >= SAME_PLACE_M);
   const loops: Loop[] = [];
-  const unusedAt = (place: number) =>
-    pieces.findIndex((_, j) => !used.has(j) && (ends[j]![0] === place || ends[j]![1] === place));
-  for (let i = 0; i < pieces.length; i++) {
-    if (used.has(i)) continue;
-    const loop: Loop = [];
-    const first = ends[i]![0];
-    let [j, from] = [i, first];
-    while (j >= 0) {
-      used.add(j);
-      const forward = ends[j]![0] === from;
-      loop.push(forward ? pieces[j]! : reversePiece(pieces[j]!));
-      from = forward ? ends[j]![1] : ends[j]![0];
-      j = from === first ? -1 : unusedAt(from);
+  for (let first = rest.shift(); first; first = rest.shift()) {
+    const loop: Loop = [first];
+    for (
+      let next = takeNext(rest, first.Q, first.P);
+      next;
+      next = takeNext(rest, next.Q, first.P)
+    ) {
+      loop.push(next);
     }
     loops.push(loop);
   }

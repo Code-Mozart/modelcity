@@ -1,6 +1,7 @@
 import type { Hull } from '../curves/hull';
 import type { Vec } from '../curves/vec';
-import { dot, segment, strokePiece, toScreen, type Frame, type Palette } from './paint';
+import type { JunctionLabel } from '../editor/manoeuvres';
+import { dot, segment, strokePiece, text, toScreen, type Frame, type Palette } from './paint';
 
 /** The hulls of the segments and the corners of their crossings, for the debug layer (^925). */
 export interface HullScene {
@@ -8,6 +9,8 @@ export interface HullScene {
   corners: Vec[];
   /** One dot on the skin of each polygon of the surface (^948). */
   dots: Vec[];
+  /** The splits and merges, and what each of their segments is there (^1010). */
+  labels: JunctionLabel[];
 }
 
 const HULL_LINE_PX = 1;
@@ -16,6 +19,8 @@ const VERTEX_PX = 2.5;
 const CROSS_ARM_PX = 6;
 const CROSS_LINE_PX = 2;
 const WALKER_PX = 6;
+/** The label of a node sits under it. */
+const NODE_LABEL_DOWN_PX = 22;
 
 /**
  * The hull of every segment as a thin outline, its vertices as dots, and the corners of the
@@ -35,4 +40,9 @@ export function drawHulls(f: Frame, scene: HullScene, pal: Palette) {
     segment(f.ctx, { x: p.x - arm, y: p.y + arm }, { x: p.x + arm, y: p.y - arm }, cross);
   }
   for (const d of scene.dots) dot(f.ctx, toScreen(f, d), WALKER_PX, pal.debug);
+  for (const l of scene.labels) {
+    const p = toScreen(f, l.at);
+    const at = { x: p.x, y: p.y + (l.node ? NODE_LABEL_DOWN_PX : 0) };
+    text(f.ctx, l.text, at, { color: pal.debug, align: 'center' });
+  }
 }

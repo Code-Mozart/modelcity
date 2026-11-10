@@ -1,6 +1,38 @@
-# Junctions: the testing ground (^984, rented hats ^985 to ^999)
+# Junctions (^157): the rules, and the testing ground
 
-One project with the common kinds of junction, for the milestone of the junctions (^157): `docs/mocks/hat984.json` (import it in the projects modal). It is **made by code**, `src/lib/testing/junctionGround.ts` with the kit `junctionKit.ts` (arms with lanes, joined lane by lane), so a case can be added or changed in one line; `junctionGround.test` keeps the file equal to the code (`UPDATE_MOCKS=1 bunx vitest run src/lib/testing/junctionGround.test.ts` writes it again) and checks that it opens and that every segment has a curve. 269 nodes, 271 segments.
+**This file is the one place for the rules of junctions.** Rented hats: the rules ^1003 to ^1011, the cases of the testing ground ^985 to ^1001. Status `decided` = the user's words, `assumed` = Claude filled it in.
+
+## Principles and scope
+
+| Hat | What | Status |
+| --- | --- | --- |
+| ^1003 | **Junctions are derived, by rules (user).** Everything a junction is and shows (its area, the roles of its lanes, its markings, stop lines, arrows, islands) is derived from the stored model (nodes with headings, segments with a direction, a radius and a lane configuration) by the rules of this file. Nothing about a junction is stored; the data model does not change. Where a rule cannot decide, or two readings are possible, it is listed under *Ambiguities* and goes to the user. | decided |
+| ^1004 | **Scope of the milestone (user).** In: the islands and holes of the surface and what happens to them for now (to be customised later); what a junction is; the **lane markings inside junctions**; stop lines, give-way lines and arrows; whatever it takes to detect and classify (splits, merges, turns). Out: fundamental or structural performance work (^927); validations (^827); road styles (^964), though the rules must hold for every kind of car lane (trams, bike paths and the like are out for now). If the milestone grows past about 2000 added lines it is cut into parts. First step: the classification of ^1006 to ^1009, shown only in the debug layer (^1010). | decided |
+| ^1005 | **What a junction is (user; more to come).** A junction is where two or more segments intersect. Several intersections whose segments start or end in the same tower count as one junction. (Claude, to be made precise with the user: whether a split or a merge alone, where segments leave one node without crossing, is a junction; whether segments that cross without a node, ^994 and ^995, are one.) | decided (the sentence); open (the details) |
+
+## Classification (the first step)
+
+All of it is judged where the points are (^853, the one position tolerance ^865, the heading test `alongOrAgainst`), with no new number.
+
+| Hat | Rule | Status |
+| --- | --- | --- |
+| ^1006 | **The manoeuvre of a segment.** What a segment does from its start node to its end node, as it is travelled. Seen from the start node (its position and heading): the end node heads **another way** (not the same, not the opposite): a **left turn** or a **right turn**, by the sum of the turning of its arcs; the **opposite** way: a **u-turn**; the **same** way and on the line of the start heading: **straight**; the same way but beside that line: a **shift left** or a **shift right** (a lane change, an S-curve). A manoeuvre belongs to the segment, not to a node: it is the same at both its ends. | assumed |
+| ^1007 | **Pulling through: the main.** At a node, an incoming and an outgoing segment (of the same lane configuration) *pull through* when the curve does not change its bend at the node: straight goes on straight, or an arc goes on along the same circle. Those two are the **main** at that node. If a segment has more than one such partner (a lane that goes straight on and one that goes straight a little and then turns), the partner that keeps to the common curve longest is the main. This is narrower than a *node without an effect* (^891), which also allows a straight followed by a bend. | assumed |
+| ^1008 | **Splits, merges and equals.** A node with three or more segments is a **split** (more segments out than in), a **merge** (more in than out) or **both**. Its segments that are not main split off the main, or merge into it: this is which lane merges into which. If no pair pulls through, the segments split or merge **as equals** (the end of the side road of a T: a left and a right turn; a fork). | assumed |
+| ^1009 | **Lane extension and narrowing.** At a split, an outgoing *shift* whose end node lies beside another outgoing segment of the node (it touches it, ^818: one lane width away, heading along it) is a **lane extension**: a lane is added beside it. At a merge, an incoming *shift* whose start node lies beside another incoming segment is a **narrowing**: a lane ends. A shift that ends beside nothing is just a shift. | assumed |
+| ^1010 | **Shown in the debug layer only (`Ctrl+Period`).** Under every node of a split or merge: `split`, `merge` or `both`, with `, equal` if nothing pulls through. On each of its segments, a little away from the node: `main`, `extension`, `narrowing`, or its manoeuvre (`left turn`, `right turn`, `shift left`, `shift right`, `straight`, `u-turn`). In the debug red (^926). | assumed |
+
+**Per branch or per segment?** The user's guess was per branch. The rules are per **segment at a node**: a branch (a chain of segments without splits or merges, ^128) can be long and turn many times, and a segment between two junction nodes is the first of its branch at one end and the last at the other; what matters at a junction is how a segment leaves or reaches the node. The manoeuvre (^1006) is one per segment; main, extension and narrowing (^1007, ^1009) are per segment and node. In the usual case, a branch of one segment, it is the same thing.
+
+## Ambiguities (^1011, for the user)
+
+| Hat | What the rules cannot decide, or decide in a way that may surprise | Status |
+| --- | --- | --- |
+| ^1011 | (1) **Which lane is the added one is a matter of how it is drawn.** In the turn pockets of the ground (^987, ^990) the pocket goes straight on and the through lane shifts a lane to the right: the rules call the pocket `main` and the through lane an `extension`. A person would say the pocket is the added lane. Geometry alone cannot tell; if the main must be the lane that carries the through traffic, it has to be drawn straight (the pocket shifting left), or a later rule must look further (which lane goes straight on *across* the junction). (2) **Two lanes that both go straight on** from one node for the same length before they part: no longest partner; today the first found is the main. (3) **A gentle turn against a sharp one**: with nothing pulling through they are equals, however different. (4) **A main road that bends where a side road goes straight on** (a motorway exit on a curve): the rule follows the circle, so the curving road is the main, which is right; but a side road that leaves on the same circle and the main road that straightens would be told wrongly. | open |
+
+## The testing ground (^984)
+
+One project with the common kinds of junction, for the milestone of the junctions (^157): `docs/mocks/hat984.json` (import it in the projects modal). It is **made by code**, `src/lib/testing/junctionGround.ts` with the kit `junctionKit.ts` (arms with lanes, joined lane by lane), so a case can be added or changed in one line; `junctionGround.test` keeps the file equal to the code (`UPDATE_MOCKS=1 bunx vitest run src/lib/testing/junctionGround.test.ts` writes it again) and checks that it opens and that every segment has a curve. Seventeen cases.
 
 Right-hand traffic. Every lane in of an arm is joined to the lanes out of the other arms: a left turn from the innermost lane to the innermost, a right turn from the outermost to the outermost, straight on lane by lane. All radii are automatic. The cells of the grid are 260 m apart to the right and 240 m down; the center of a cell is the center of its junction.
 
@@ -21,6 +53,8 @@ Right-hand traffic. Every lane in of an arm is joined to the lanes out of the ot
 | ^997 | 0, 960 | T-junction at 60 degrees | arms that are not square |
 | ^998 | 260, 960 | a one-way street across a 1+1 road | arms with lanes one way only |
 | ^999 | 520, 960 | a junction of five arms | many turns over one place (the lanes stop 12 m from the center) |
+| ^1000 | 0, 1200 | a staggered junction: two T-junctions 40 m apart on one 1+1 road, the side roads on opposite sides | junctions close to each other |
+| ^1001 | 260, 1200 | a roundabout of two lanes (radii 18 m and 21 m) with 2+2 arms | lanes that cross a ring lane to reach the inner one |
 
 ## What it shows today (before the milestone)
 

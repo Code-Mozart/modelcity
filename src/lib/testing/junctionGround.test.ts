@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { SAME_PLACE_M } from '../curves/tolerance';
+import { dist } from '../curves/vec';
 import { curveOfEdge } from '../editor/chains';
+import { surfaceOf } from '../editor/surface';
 import { fromFile, toFile, type ProjectFile } from '../project/file';
 import { junctionGround } from './junctionGround';
 
@@ -41,5 +44,15 @@ describe('the testing ground of the junctions (^984)', () => {
     expect(graph.nodes.filter((n) => !used.has(n.id))).toEqual([]);
     const places = new Set(graph.nodes.map((n) => `${n.x},${n.y}`));
     expect(places.size).toBe(graph.nodes.length);
+  });
+
+  it('the surface is closed loops only: no piece ends without the next one beginning there (^1002)', () => {
+    const { graph } = fromFile(stored);
+    for (const loop of surfaceOf(graph)) {
+      loop.forEach((p, i) => {
+        const next = loop[(i + 1) % loop.length]!;
+        expect(dist(p.Q, next.P)).toBeLessThan(2 * SAME_PLACE_M);
+      });
+    }
   });
 });

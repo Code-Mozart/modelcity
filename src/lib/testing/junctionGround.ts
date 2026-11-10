@@ -74,7 +74,7 @@ function crossingsAndRoundabout(s: Sketch) {
     lane(s, { c, h: W }, [-90, 90], side);
   }
   for (const side of [-3, 0, 3]) lane(s, { c, h: 1 }, [-80, 80], side);
-  roundabout(s, cell(2, 3), 14, [E, S, W, N]);
+  roundabout(s, cell(2, 3), { r: 14 }, [E, S, W, N]);
 }
 
 /** Row 4: a T at 60 degrees, a one-way street across a 1+1 road, a junction of five arms. */
@@ -84,6 +84,17 @@ function others(s: Sketch) {
   junction(s, cell(2, 4), [arm(W), arm(-0.3), arm(1.1), arm(2.2), arm(N)], 12);
 }
 
+/** Row 5: a staggered junction (two T-junctions 40 m apart, the side roads on opposite sides) and a roundabout of two lanes with 2+2 arms. */
+function more(s: Sketch) {
+  const c = cell(0, 5);
+  const link = (angle: number): ArmSpec => ({ ...arm(angle), stub: true });
+  const [, east] = junction(s, { x: c.x - 20, y: c.y }, [arm(W), link(E), arm(N)]);
+  const [west] = junction(s, { x: c.x + 20, y: c.y }, [link(W), arm(E), arm(S)]);
+  s.edge(east!.outs[0]!, west!.ins[0]!);
+  s.edge(west!.outs[0]!, east!.ins[0]!);
+  roundabout(s, cell(1, 5), { r: 18, lanes: 2 }, [E, S, W, N]);
+}
+
 export function junctionGround(): Graph {
   const s = new Sketch();
   tJunctions(s);
@@ -91,5 +102,6 @@ export function junctionGround(): Graph {
   mergesAndSplits(s);
   crossingsAndRoundabout(s);
   others(s);
+  more(s);
   return roundToMm(s.graph);
 }
