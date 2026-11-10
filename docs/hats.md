@@ -1,4 +1,4 @@
-next: ^975
+next: ^981
 
 # Hats
 
@@ -701,6 +701,10 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^972 | decision | decided (user, answer) | **A 1+1 Ortsstraße has no centerline (user):** replaces the 1+1 exception of ^951 for the Ortsstraße. Built in PR #52. |
 | ^973 | decision | decided (patterns); planned (validator) | **Marking patterns by style, a Feldweg never has more than one lane (user's research):** 3 m : 3 m in towns, 3 m : 6 m on a Landstraße, 6 m : 12 m on an Autobahn; the validator is roadmap. **Maintains ^954** for the dash and the gap. |
 | ^974 | feature | done (PR #52; user) | **Dashes are drawn once (user's report ^962):** where lines of one style lie on top of each other (the stubs of the lanes that turn, across the line of the main road at a junction) only the longest is drawn, so the dash pattern of the main line is not interrupted. |
+| ^975 | decision | decided (user); assumed (the names) | **Two styles of lane markings, physical and logical (user):** *physical* markings are in meters (dash, gap, width, ^954, ^973): they grow and shrink with the camera; *logical* markings are in pixels (^976). Both are kept; the physical ones are switched off (`FEATURES.physicalMarkings`, `src/lib/features.ts`) and the logical ones are shown. The user decides whether the physical ones come back (for example at a zoom where they are readable, or with the road styles, ^964). |
+| ^976 | feature | done (PR #52; user) | **Logical markings (user):** dashes and gaps are equal (1:1) and 10 px long, the line 2 px wide, at every zoom and for every lane configuration and road style (the 3:3, 3:6 and 6:12 of ^973 do not apply to them); they never hide. A solid line is 2 px wide. Which lines there are (^950, ^951, ^972) and their colour (^953) are the same. |
+| ^977 | bug | done (PR #52; user) | **A solid marking has square ends, not round (user):** `strokeChain` rounded the ends of every undashed line; markings now say `cap: 'butt'`. |
+| ^980 | image | done (PR #52; user) | **Google Maps, light mode (user):** the B 27 and the Oskar-von-Miller-Straße (Feldweg). `docs/mocks/hat980.png`; measured in `docs/road-styles.md`. |
 
 ## Rented ranges
 
@@ -726,6 +730,7 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^777–^778 | docs/features.md | operations: pin and unpin snap suggestions |
 | ^787–^789 | docs/features.md | version display, tab title and version tag (^374) |
 | ^900–^913 | docs/palette.md | the colours of the palette, one hat each (rented range, milestone ^914) |
+| ^978–^979 | docs/palette.md | the Feldweg colours (rented range, milestone ^964) |
 | ^932–^941 | docs/optimizations.md | the optimizations, one hat each (rented range, milestone ^927) |
 | ^950–^958 | docs/markings.md | the rules of the lane markings, one hat each (rented range, milestone ^949; ^957 is a question, ^958 the scope) |
 | ^965–^970 | docs/road-styles.md | the road styles, one hat each (rented range, milestone ^964) |

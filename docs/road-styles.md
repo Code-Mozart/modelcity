@@ -34,16 +34,14 @@ L = Landesstraße, B = Bundesstraße, K = Kreisstraße, A = Bundesautobahn. (The
 
 ## Colours
 
-The values of the palette live in `src/app.css` (`docs/palette.md`). Measured from the user's dark-mode screenshot (Google Maps, Android, the B 27 and the Oskar-von-Miller-Straße; `docs/mocks/hat963.jpg`, ^963), by the most frequent pixel of an area and the pixels across an edge (jpeg noise: about ±3 per channel):
+The values of the palette live in `src/app.css` (`docs/palette.md`; the Feldweg ones are `--track` and `--track-edge`, ^978, ^979). Measured from the user's two screenshots of Google Maps, dark mode (Android, `docs/mocks/hat963.jpg`, ^963) and light mode (`docs/mocks/hat980.png`, ^980), both showing the B 27 and the Oskar-von-Miller-Straße (a Feldweg, per the user), by the most frequent pixel of an area and the pixels across an edge. A stroke is about one pixel wide, so anti-aliasing blends it with its neighbours: the darkest pixel at an edge is the estimate (a little lighter than the real stroke; jpeg adds ±3 per channel).
 
-| What | Dark mode | Same as the palette? |
-| --- | --- | --- |
-| land | `#133848` | `--bg` |
-| the thin street (Oskar-von-Miller-Straße) fill | `#3f5a77` | **exactly `--road`** (^907) |
-| its outline (darkest pixel at the edge) | `#152a3b` (the palette has `#3b5673` for `--road-edge`, from an earlier screenshot) | no: darker, ^908 stays until the user decides |
-| the B 27 fill | `#47688b` | **no**: `--highway` is `#405977` (^909) |
-| the B 27 green line | about `#3d7d49` to `#418346`, 15 px wide at the scale of the picture, with a darker rim | roughly `--highway-edge` `#398e3d` (^910) |
-| the B 27 outer edge against the land | no dark outline, the fill meets the land | |
-| a building | `#213e6a` | `--building` (^905) |
+| What | Light mode | Dark mode | Palette |
+| --- | --- | --- | --- |
+| Feldweg fill | `#dbe0e8` | `#3f5a77` | `--track` (new, ^978) |
+| Feldweg stroke | `#c4ccd9` (estimate) | `#152a3b` (estimate) | `--track-edge` (new, ^979) |
+| B 27 fill | `#aab9c9` | `#47688b` | light = `--road` `#abbac9`; dark differs from `--highway` `#405977` |
+| B 27 stroke | `#a0acb8` (darkest edge pixel) | outer edge: none; the green lines about `#3d7d49` to `#418346` | light about `--road-edge` `#9dadbd`; dark about `--highway-edge` `#398e3d` |
+| land | `#d3f8e2` | `#133848` | |
 
-**The Feldweg:** the user says the Oskar-von-Miller-Straße is a Feldweg with its own fill and maybe its own stroke. Its fill is the same pixel value as the palette's `--road` for dark mode, so either Google draws a Feldweg like an ordinary street in dark mode, or `--road` was measured from a street of that class. The screenshot cannot tell; it needs a Feldweg and an ordinary street side by side (light and dark). Until then the Feldweg has the default colours (assumed).
+**What this shows:** in light mode Google draws the Feldweg lighter than the B 27 (as the user suspected), in dark mode the Feldweg is the colour of the current dark `--road`. **Neither screenshot contains an ordinary street (an Ortsstraße)**, so `--road` is, in light mode, the colour of the B 27 and, in dark mode, the colour of the Feldweg: the "default" colours of the palette cannot both be right for one road class. To settle it (and `--highway`, ^909, ^910, which no screenshot shows in light mode as a blue road): a screenshot of an ordinary street next to a Bundesstraße, in both modes (open question for the user).

@@ -12,6 +12,8 @@ export interface Stroke {
   color: string;
   width: number;
   dash?: number[];
+  /** The ends of the line: round unless dashed, where they are square. */
+  cap?: 'butt' | 'round';
 }
 
 const PALETTE_KEYS = [
@@ -145,7 +147,7 @@ export const strokePiece = (f: Frame, piece: Piece, s: Stroke) => strokeChain(f,
 export function strokeChain(f: Frame, pieces: Piece[], s: Stroke) {
   f.ctx.beginPath();
   traceChain(f, pieces);
-  f.ctx.lineCap = s.dash ? 'butt' : 'round';
+  f.ctx.lineCap = s.cap ?? (s.dash ? 'butt' : 'round');
   f.ctx.lineJoin = 'round';
   applyStroke(f.ctx, s);
 }

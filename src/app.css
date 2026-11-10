@@ -16,6 +16,9 @@
   --building-edge: #d7dae7;
   --highway: #8ba5c1;
   --highway-edge: #6780b0;
+  /* The Feldweg (^978, ^979), measured from the user's screenshot (docs/road-styles.md): not drawn yet. */
+  --track: #dbe0e8;
+  --track-edge: #c4ccd9;
   --marking-white: #ffffff;
   --marking-yellow: #ffdc36;
   --sand: #f5f0e5;
@@ -62,6 +65,8 @@
     --building-edge: #1a2d4d;
     --highway: #405977;
     --highway-edge: #398e3d;
+    --track: #3f5a77;
+    --track-edge: #152a3b;
     --marking-white: #c5ced7;
     --marking-yellow: #cebc56;
     --sand: #32384e;

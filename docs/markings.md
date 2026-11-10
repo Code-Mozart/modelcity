@@ -35,6 +35,10 @@ The rules of the markings that are drawn on the road surface (^21, milestone ^94
 
 The patterns, widths and colours will come from the road style (`docs/road-styles.md`, ^964); until then all roads are Ortsstraßen (^971): dashes 3 m : 3 m, and **no line on a 1+1 road** (^972). ^974: lines of one style that lie on top of each other (within the position tolerance) are drawn once, the longest, so that a short line of a lane that turns does not restart the dash pattern of the main line (^962).
 
+## Physical and logical markings (^975, ^976, ^977)
+
+The markings of this file with their meters (^954, ^973) are the **physical** ones: they grow and shrink with the zoom, and at a low zoom they are a hair of one pixel or hidden. They are kept but switched off (`FEATURES.physicalMarkings`). The **logical** ones are drawn instead: dash and gap 10 px each (1:1), 2 px wide, at every zoom, for every road style, never hidden. A line is drawn the same (which lines, dashed or solid, colour); the ends of a solid line are square (^977).
+
 ## Questions
 
 | Hat | Question | Recommendation |

@@ -1,13 +1,46 @@
 import { DASH_GAP_M, DASH_M, MARKING_MIN_PX, MARKING_WIDTH_M } from '../curves/lane';
 import type { Marking } from '../editor/markings';
-import { strokeChain, type Frame, type Palette } from './paint';
+import { FEATURES } from '../features';
+import { strokeChain, type Frame, type Palette, type Stroke } from './paint';
 
-/** The lane markings on the surface (^949 to ^955): all white for now (^953), dashes in meters. */
+/** Logical markings (^976): a dash and the gap after it are equal, in pixels, and so is the width. The same for every road style and zoom. */
+export const LOGICAL_DASH_PX = 10;
+export const LOGICAL_WIDTH_PX = 2;
+
+/**
+ * How a marking is stroked, on a map of `scale` pixels per meter (^975). Logical (the shown
+ * ones, ^976): the dash, the gap and the width are in pixels, so they never grow or hide.
+ * Physical: in meters (^954), growing and shrinking with the zoom. The ends are square (^977).
+ */
+export function markingStroke(
+  kind: Marking['kind'],
+  scale: number,
+  color: string,
+  physical: boolean,
+): Stroke {
+  const dashed = kind === 'dashed';
+  if (physical) {
+    const width = Math.max(MARKING_WIDTH_M * scale, MARKING_MIN_PX);
+    return {
+      color,
+      width,
+      cap: 'butt',
+      dash: dashed ? [DASH_M * scale, DASH_GAP_M * scale] : undefined,
+    };
+  }
+  const dash = dashed ? [LOGICAL_DASH_PX, LOGICAL_DASH_PX] : undefined;
+  return { color, width: LOGICAL_WIDTH_PX, cap: 'butt', dash };
+}
+
+/** The lane markings on the surface (^949 to ^955): all white for now (^953). */
 export function drawMarkings(f: Frame, markings: Marking[], pal: Palette) {
-  const scale = f.view.scale;
-  const width = Math.max(MARKING_WIDTH_M * scale, MARKING_MIN_PX);
   for (const m of markings) {
-    const dash = m.kind === 'dashed' ? [DASH_M * scale, DASH_GAP_M * scale] : undefined;
-    strokeChain(f, m.pieces, { color: pal['marking-white'], width, dash });
+    const stroke = markingStroke(
+      m.kind,
+      f.view.scale,
+      pal['marking-white'],
+      FEATURES.physicalMarkings,
+    );
+    strokeChain(f, m.pieces, stroke);
   }
 }
