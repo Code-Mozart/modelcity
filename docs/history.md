@@ -54,4 +54,5 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #48 | | v0.48.0: Nodes without an effect dissolve | ^829, ^891 to ^899 | A node that changes nothing is removed after the operation that made it so |
 | #49 | | v0.49.0: Google Maps palette and extend from end | ^900 to ^920 | The colours after Google Maps, `Alt`+`LMB` extend from end, and six minor items (^421, ^474, ^418, ^757, ^746, ^745) |
 | #50 | | v0.50.0: Hulls and corners | ^921 to ^941 | The road surface is removed; the hulls of the segments and the corners where they cross in the debug layer; the performance milestone is registered |
-| #51 | | v0.51.0: Road surface | ^944 to ^947 | The road surface generated as the outline of the union of the hulls |
+| #51 | | v0.51.0: Road surface | ^944 to ^948 | The road surface generated as the outline of the union of the hulls |
+| #52 | | v0.52.0: Lane markings | ^949 to ^983 | Dashed and solid centerlines between parallel segments, in pixels (the meter style kept, switched off), the road styles written down, the walking dots of the debug layer |

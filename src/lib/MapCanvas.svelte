@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cornersOf, hullsOf } from './editor/corners';
+  import { markingsOf } from './editor/markings';
   import { dotsOf, surfaceFrom } from './editor/surface';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
@@ -72,6 +73,8 @@
         }
       : null,
   );
+  /** The lane markings, derived from the graph with the derived nodes in it (^956). */
+  const markings = $derived(markingsOf(seen));
   const towers = $derived(
     towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
   );
@@ -109,6 +112,7 @@
       towers: towers,
       derived: derivedAll,
       surface,
+      markings,
       hulls,
       tower: followingTower(editor.graph, editor.chains, editor.focus, editor.selection),
       turning: turningOf(editor.chains, editor.press),

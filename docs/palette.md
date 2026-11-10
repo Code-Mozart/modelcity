@@ -1,4 +1,4 @@
-# The palette (^900 to ^913, milestone ^914)
+# The palette (^900 to ^913, milestone ^914; ^978 and ^979, milestone ^964)
 
 The colours of the map, after Google Maps. **The values live in one place only: `src/app.css`** (the CSS variable named in the table, with its light value in `:root` and its dark value in `@media (prefers-color-scheme: dark)`), so that this file cannot drift from the code. Light mode was measured from the user's screenshot of Google Maps (the most frequent pixel of each area, an outline from the pixel row across an edge); dark mode from the user's screenshot of Google Maps in dark mode (an outline that the image does not show distinctly was taken from the darkest pixel at the edge: `--building-edge`, `--road-edge`). One hat per colour; status `assumed` until the user confirms the values.
 
@@ -15,8 +15,10 @@ The colours of the map, after Google Maps. **The values live in one place only: 
 | ^908 | `--road-edge` | stroke of a road that is not a highway | used for the road outline (^946) |
 | ^909 | `--highway` | fill of a highway | not drawn yet |
 | ^910 | `--highway-edge` | stroke of a highway (blue in light mode, green in dark mode) | not drawn yet |
-| ^911 | `--marking-white` | white lane marking | not drawn yet; planned for the lines between lanes of the same way (^953, `docs/markings.md`) |
-| ^912 | `--marking-yellow` | yellow lane marking | not drawn yet; planned for the lines between opposite ways (^953, `docs/markings.md`) |
+| ^911 | `--marking-white` | white lane marking | not drawn yet; used for all lane markings for now (^953, `docs/markings.md`) |
+| ^912 | `--marking-yellow` | yellow lane marking (the line, not the shield) | not drawn yet; comes with the highway markings (^953). Values by the user from ^982 and ^983: light about `#e8deb8`, dark about `#858d7a` (the earlier `#ffdc36` and `#cebc56` were the colour of the shield) |
 | ^913 | `--sand` | other land use (the beige area in light mode) | not drawn yet; extra |
+| ^978 | `--track` | fill of a Feldweg | not drawn yet (road styles, ^964); measured from ^963 and ^980 |
+| ^979 | `--track-edge` | stroke of a Feldweg | not drawn yet; light is an estimate: anti-aliasing blends the thin stroke with its neighbours |
 
 Not part of the palette: `--debug`, the intense red of the debug layer (^926), the same in light and dark mode; `--surface`, the colour of the interface on top of the map (the search field, the cards, the glow behind text and icons), unchanged by the palette: it is what `--bg` was before.

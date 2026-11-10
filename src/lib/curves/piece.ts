@@ -36,6 +36,12 @@ export function arcAround({ c, r }: { c: Vec; r: number }, P: Vec, Q: Vec, da: n
 /** An arc that actually turns (others are drawn and handled as nothing). */
 export const sweeps = (p: Piece): p is Arc => p.type === 'arc' && Math.abs(p.da) > 1e-3;
 
+/** The same piece run the other way. */
+export const reversePiece = (p: Piece): Piece =>
+  p.type === 'line'
+    ? { type: 'line', P: p.Q, Q: p.P }
+    : { ...p, P: p.Q, Q: p.P, a0: p.a0 + p.da, da: -p.da };
+
 export const isDegenerate = (p: Piece) =>
   p.type === 'line' ? dist(p.P, p.Q) < 1e-3 : Math.abs(p.da) < 1e-3;
 

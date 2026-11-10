@@ -84,22 +84,38 @@ function runsOf(tower: GNode[], joined: (a: GNode, b: GNode) => boolean): GNode[
   return runs.filter((r) => r.length > 1);
 }
 
+/** A run of a tower on one side (^350): the neighbouring nodes whose segments on that side are parallel, in order across the lanes. */
+export interface Run {
+  nodes: GNode[];
+  /** The way of the axis of the tower the segments of the run leave to: +1 or -1. */
+  side: 1 | -1;
+  axis: Vec;
+  /** The segments of a node on that side. */
+  onSide: (n: GNode) => GEdge[];
+}
+
+/** The runs of all towers, on both sides (^350): each is a group of two or more parallel segments side by side. */
+export function runsOfGraph(g: Graph): Run[] {
+  const found: Run[] = [];
+  for (const tower of towersOf(g)) {
+    const axis = fromAngle(tower[0]!.th);
+    for (const side of [1, -1] as const) {
+      const onSide = (n: GNode) => edgesAt(g, n.id).filter((e) => sideOf(n, e, axis) === side);
+      const joined = (a: GNode, b: GNode) =>
+        onSide(a).some((ea) => onSide(b).some((eb) => parallel(g, ea, eb)));
+      for (const nodes of runsOf(tower, joined)) found.push({ nodes, side, axis, onSide });
+    }
+  }
+  return found;
+}
+
 /**
  * The bars (^350, ^352): on each side of a tower, neighbouring nodes whose segments on that side
  * are parallel (^334) form a run; a run of two or more nodes gets one bar.
  */
-export function barsOf(g: Graph): Bar[] {
-  const bars: Bar[] = [];
-  for (const tower of towersOf(g)) {
-    const axis = fromAngle(tower[0]!.th);
-    for (const s of [1, -1] as const) {
-      const onSide = (n: GNode) => edgesAt(g, n.id).filter((e) => sideOf(n, e, axis) === s);
-      const joined = (a: GNode, b: GNode) =>
-        onSide(a).some((ea) => onSide(b).some((eb) => parallel(g, ea, eb)));
-      for (const r of runsOf(tower, joined)) {
-        bars.push({ from: r[0]!, to: r.at(-1)!, side: mul(axis, s) });
-      }
-    }
-  }
-  return bars;
-}
+export const barsOf = (g: Graph): Bar[] =>
+  runsOfGraph(g).map((r) => ({
+    from: r.nodes[0]!,
+    to: r.nodes.at(-1)!,
+    side: mul(r.axis, r.side),
+  }));
