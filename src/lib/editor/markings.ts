@@ -5,7 +5,6 @@ import { dist, dot, perp, sub, type Vec } from '../curves/vec';
 import { distanceToPiece, isDegenerate, pieceLength, pointOn, reversePiece } from '../curves/piece';
 import { widthOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import { curveOfEdge } from './chains';
-import { originOf } from './derived';
 import { parallel } from './parallel';
 import { runsOfGraph, type Run } from './towers';
 
@@ -52,10 +51,11 @@ function pairsAt(g: Graph, run: Run, k: number): [GEdge, GEdge][] {
   return all.filter(([ea, eb]) => parallel(g, ea, eb));
 }
 
-/** What decides the lines besides the graph: the physical markings or the logical ones (^975), and whether two segments (of the stored graph) are inside one junction, where no line is drawn between them (^1032). */
+/** What decides the lines besides the graph: the physical markings or the logical ones (^975), and the guide lines of the junctions. */
 export interface Rules {
   physical: boolean;
-  inside: (a: number, b: number) => boolean;
+  /** Lines of the junctions that come on top of those between parallel lanes (^1048, ^1049). */
+  extra: Marking[];
 }
 
 /** The pairs of neighbouring parallel segments of a run, once each. */
@@ -64,7 +64,7 @@ function pairsOf(g: Graph, run: Run, seen: Set<string>, rules: Rules): Marking[]
   for (let k = 0; k + 1 < run.nodes.length; k++) {
     for (const [ea, eb] of pairsAt(g, run, k)) {
       const key = `${Math.min(ea.id, eb.id)},${Math.max(ea.id, eb.id)}`;
-      if (seen.has(key) || rules.inside(originOf(g, ea.id), originOf(g, eb.id))) continue;
+      if (seen.has(key)) continue;
       seen.add(key);
       const [a, b] = [run.nodes[k]!, run.nodes[k + 1]!];
       const pieces = centerline(g, ea, a, b);
@@ -142,7 +142,8 @@ export function distinct(lines: Marking[]): Marking[] {
  * group (^951). Derived from the graph, never stored (^956).
  */
 export function markingsOf(g: Graph, rules: Partial<Rules> = {}): Marking[] {
-  const all: Rules = { physical: false, inside: () => false, ...rules };
+  const all: Rules = { physical: false, extra: [], ...rules };
   const seen = new Set<string>();
-  return distinct(joined(runsOfGraph(g).flatMap((run) => pairsOf(g, run, seen, all))));
+  const pairs = runsOfGraph(g).flatMap((run) => pairsOf(g, run, seen, all));
+  return distinct(joined([...pairs, ...all.extra]));
 }

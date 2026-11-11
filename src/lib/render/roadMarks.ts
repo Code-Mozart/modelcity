@@ -22,6 +22,19 @@ const ARROW_STROKE_PX = 2;
 const GLYPH_UNITS = 1.3;
 /** The width of a physical stop line, Zeichen 294 (meters), and its minimum on the screen (pixels). */
 const STOP_LINE_M = 0.5;
+/**
+ * How far before the place where its lane first meets another segment (^1051) a line is, and then
+ * an arrow after a gap: meters for the physical markings, pixels for the logical ones (^1041).
+ */
+const LINE_BACK = { physical: 1, logical: 10 };
+const ARROW_GAP = { physical: 1.5, logical: 10 };
+
+/** The place on the screen `back` pixels before `at`, on the lane that runs the way `th` (world heading). */
+function before(f: Frame, at: { x: number; y: number }, th: number, back: number) {
+  const p = toScreen(f, at);
+  const a = th + f.view.rot;
+  return { x: p.x - back * Math.cos(a), y: p.y - back * Math.sin(a) };
+}
 
 const strokesOf = (a: LaneArrow): GlyphStroke[] => {
   const s = a.sign;
@@ -56,6 +69,14 @@ export function arrowSize(width: number, scale: number, physical: boolean): Arro
   };
 }
 
+/** How far before the place of its lane (in pixels) the middle of an arrow that is `along` pixels long is: past the line and a gap (^1051). */
+function anchorBack(scale: number, physical: boolean, along: number): number {
+  const [line, gap] = physical
+    ? [LINE_BACK.physical * scale, ARROW_GAP.physical * scale]
+    : [LINE_BACK.logical, ARROW_GAP.logical];
+  return line + gap + along / 2;
+}
+
 /** The painted arrows on the lanes (^1028, ^1029, ^1041), pointing the way the lane runs. */
 function drawArrows(f: Frame, arrows: LaneArrow[], pal: Palette, physical: boolean) {
   const { ctx } = f;
@@ -63,14 +84,16 @@ function drawArrows(f: Frame, arrows: LaneArrow[], pal: Palette, physical: boole
   for (const a of arrows) {
     const { along, across, shown } = arrowSize(a.width, scale, physical);
     if (!shown) continue;
-    const p = toScreen(f, a.at);
+    const back = a.anchored ? anchorBack(f.view.scale, physical, along) : 0;
+    const p = before(f, a.at, a.th, back);
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(a.th + f.view.rot + Math.PI / 2);
     ctx.strokeStyle = pal['marking-white'];
     ctx.lineWidth = physical ? Math.max(0.2 * scale, ARROW_STROKE_PX) : ARROW_STROKE_PX;
-    ctx.lineCap = 'butt';
-    ctx.lineJoin = 'miter';
+    // Round ends, so that the tips of the arrow heads are not cut off (^1053).
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     drawGlyph(ctx, strokesOf(a), { rx: across / GLYPH_UNITS, ry: along / GLYPH_UNITS });
     ctx.restore();
   }
@@ -86,11 +109,21 @@ function drawWaitLines(f: Frame, lines: WaitLine[], pal: Palette, physical: bool
   for (const l of lines) {
     const width = physical ? Math.max(STOP_LINE_M * scale, LOGICAL_WIDTH_PX) : LOGICAL_WIDTH_PX;
     const dash = physical ? [0.6 * scale, 0.4 * scale] : [LOGICAL_DASH_PX / 2, LOGICAL_DASH_PX / 2];
-    segment(f.ctx, toScreen(f, l.from), toScreen(f, l.to), {
-      color: pal['marking-white'],
-      width,
-      dash: l.kind === 'give way' ? dash : undefined,
-    });
+    const back = (physical ? LINE_BACK.physical * scale : LINE_BACK.logical) + width / 2;
+    const middle = before(f, l.at, l.th, back);
+    const across = (l.width * scale) / 2;
+    const a = l.th + f.view.rot + Math.PI / 2;
+    const [dx, dy] = [across * Math.cos(a), across * Math.sin(a)];
+    segment(
+      f.ctx,
+      { x: middle.x - dx, y: middle.y - dy },
+      { x: middle.x + dx, y: middle.y + dy },
+      {
+        color: pal['marking-white'],
+        width,
+        dash: l.kind === 'give way' ? dash : undefined,
+      },
+    );
   }
 }
 

@@ -18,20 +18,22 @@ import { towersOf } from './towers';
 export interface Junction {
   /** The segments inside the junction. */
   segments: number[];
-  approaches: Approach[];
+  arms: Arm[];
   control: Control;
 }
 
 /**
- * An approach of a junction (^1035): the nodes on its edge that lead the same way out of it; a lane
- * in heads into the junction there, a lane out heads away. `road` numbers the approaches that go on
- * into each other (^1036); `lanes` is how many lanes it has at the junction, the most in one direction.
+ * An arm of a junction (^1035): the nodes on its edge that lead the same way out of it; a lane in
+ * heads into the junction there, a lane out heads away. `direction` numbers the arms that go on
+ * into each other (^1036); `lanes` is how many lanes it has at the junction, both ways together.
  */
-export interface Approach {
+export interface Arm {
   ins: GNode[];
   outs: GNode[];
-  road: number;
+  direction: number;
   lanes: number;
+  /** Of the larger direction (major) or a smaller one (minor); null where all are as large (^1037). */
+  role: 'major' | 'minor' | null;
   /** Its lanes in wait at a line: give way, or stop (^1038). */
   waits: 'give way' | 'stop' | null;
 }
@@ -110,83 +112,99 @@ function memberships(g: Graph): number[][] {
 /** The way a node on the edge of a junction leads out of it: its heading if a segment of the junction ends there, the opposite if one starts there. */
 const outward = (n: GNode, lane: 'in' | 'out') => ({ th: lane === 'in' ? n.th + Math.PI : n.th });
 
-/** The approaches of a junction (^1035), without roads and waiting yet. */
-function approachesOf(g: Graph, segments: GEdge[]): Approach[] {
-  const approaches: Approach[] = [];
+/** The arms of a junction (^1035), without roads and waiting yet. */
+function armsOf(g: Graph, segments: GEdge[]): Arm[] {
+  const arms: Arm[] = [];
   const seen = new Set<string>();
   const add = (id: number, lane: 'in' | 'out') => {
     const n = nodeOf(g, id);
     if (!n || seen.has(`${lane}${id}`)) return;
     seen.add(`${lane}${id}`);
     const way = outward(n, lane);
-    const arm = approaches.find((a) =>
+    const arm = arms.find((a) =>
       sameWay(way, outward(a.ins[0] ?? a.outs[0]!, a.ins[0] ? 'in' : 'out')),
     );
-    const into = arm ?? { ins: [], outs: [], road: approaches.length, lanes: 0, waits: null };
+    const into: Arm = arm ?? {
+      ins: [],
+      outs: [],
+      direction: arms.length,
+      lanes: 0,
+      role: null,
+      waits: null,
+    };
     (lane === 'in' ? into.ins : into.outs).push(n);
-    if (!arm) approaches.push(into);
+    if (!arm) arms.push(into);
   };
   for (const e of segments) {
     add(e.start, 'in');
     add(e.end, 'out');
   }
-  for (const a of approaches) a.lanes = Math.max(a.ins.length, a.outs.length);
-  return approaches;
+  for (const a of arms) a.lanes = a.ins.length + a.outs.length;
+  return arms;
 }
 
-/** Approaches that a segment of the junction goes on between without a turn are one road (^1036): they get one number. */
-function joinRoads(g: Graph, segments: GEdge[], approaches: Approach[]) {
+/** Arms that a segment of the junction goes on between without a turn are one direction (^1036): they get one number. */
+function joinDirections(g: Graph, segments: GEdge[], arms: Arm[]) {
   const armOf = (id: number, lane: 'ins' | 'outs') =>
-    approaches.find((a) => a[lane].some((n) => n.id === id));
+    arms.find((a) => a[lane].some((n) => n.id === id));
   for (const e of segments) {
     const m = manoeuvreOf(g, e);
     const [from, to] = [armOf(e.start, 'ins'), armOf(e.end, 'outs')];
     if (!from || !to || m === 'left turn' || m === 'right turn' || m === 'u-turn') continue;
-    const [keep, drop] = [from.road, to.road];
-    for (const a of approaches) if (a.road === drop) a.road = keep;
+    const [keep, drop] = [from.direction, to.direction];
+    for (const a of arms) if (a.direction === drop) a.direction = keep;
   }
 }
 
-/** The most lanes an approach of each road has (^1036). */
-function lanesOfRoads(approaches: Approach[]): Map<number, number> {
+/** The most lanes an arm of each direction has (^1036). */
+function lanesOfDirections(arms: Arm[]): Map<number, number> {
   const lanes = new Map<number, number>();
-  for (const a of approaches) lanes.set(a.road, Math.max(lanes.get(a.road) ?? 0, a.lanes));
+  for (const a of arms) lanes.set(a.direction, Math.max(lanes.get(a.direction) ?? 0, a.lanes));
   return lanes;
 }
 
-/** More lanes in one direction than a 1+1 road has: a junction of roads that wide is not left to right before left (^1037). */
-const WIDE_LANES = 1;
+/** Lanes of a 1+1 arm, or of one that is one-way with two lanes: a junction of directions as large as this is not wide (^1037). */
+const NARROW_LANES = 2;
+
+/** An arm that is small (^1037): at most one lane in and one out, so no turn lanes side by side. */
+const isSmall = (a: Arm) => a.ins.length <= 1 && a.outs.length <= 1;
 
 /**
- * How the junction is ruled, and which approaches wait (^1037, ^1038). Roads with as many lanes: right
- * before left, or traffic lights if they are wider than 1+1, where every approach stops at a line.
- * Else the road with the most lanes has priority and the approaches of the others give way.
+ * How the junction is ruled, and which arms wait (^1037, ^1038). Directions as large as each
+ * other (the lanes of both ways together): when that is a 1+1 or a one-way road, give way at
+ * every arm, else traffic lights with a stop line at every arm. Else the larger direction is
+ * major; if every arm of the others is small, the junction is *priority* (marked by the dashed lines
+ * of the major direction, ^1048), else traffic lights.
  */
-function rule(approaches: Approach[]): Control {
-  const lanes = lanesOfRoads(approaches);
+function rule(arms: Arm[]): Control {
+  const lanes = lanesOfDirections(arms);
   const most = Math.max(...lanes.values());
-  const equal = [...lanes.values()].every((n) => n === most);
-  if (equal && most <= WIDE_LANES) return 'right before left';
-  for (const a of approaches)
-    a.waits = equal ? 'stop' : lanes.get(a.road)! < most ? 'give way' : null;
-  return equal ? 'traffic lights' : 'priority';
+  const tie = [...lanes.values()].every((n) => n === most);
+  const lights = (waits: Arm['waits']) => {
+    for (const a of arms) a.waits = waits;
+    return waits === 'stop' ? 'traffic lights' : 'right before left';
+  };
+  if (tie) return lights(most <= NARROW_LANES ? 'give way' : 'stop');
+  for (const a of arms) a.role = lanes.get(a.direction) === most ? 'major' : 'minor';
+  if (arms.every((a) => a.role === 'major' || isSmall(a))) return 'priority';
+  return lights('stop');
 }
 
-/** The junctions of a graph (^1005, ^1032), with their approaches and how they are ruled. */
+/** The junctions of a graph (^1005, ^1032), with their arms and how they are ruled. */
 export function junctionsOf(g: Graph): Junction[] {
   const byId = new Map(g.edges.map((e) => [e.id, e]));
   return memberships(g).map((ids) => {
     const segments = ids.map((id) => byId.get(id)!);
-    const approaches = approachesOf(g, segments);
-    joinRoads(g, segments, approaches);
-    return { segments: ids, approaches, control: rule(approaches) };
+    const arms = armsOf(g, segments);
+    joinDirections(g, segments, arms);
+    return { segments: ids, arms, control: rule(arms) };
   });
 }
 
-/** The lanes in of an approach: the stop node of each with the segment from outside that leads to it, where a line or an arrow can stand (^1038). */
-export function lanesIn(g: Graph, j: Junction, approach: Approach): { node: GNode; from: GEdge }[] {
+/** The lanes in of an arm: the stop node of each with the segment from outside that leads to it, where a line or an arrow can stand (^1038). */
+export function lanesIn(g: Graph, j: Junction, arm: Arm): { node: GNode; from: GEdge }[] {
   const inside = new Set(j.segments);
-  return approach.ins.flatMap((node) =>
+  return arm.ins.flatMap((node) =>
     edgesIn(g, node.id)
       .filter((e) => !inside.has(e.id))
       .map((from) => ({ node, from })),

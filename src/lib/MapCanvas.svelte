@@ -5,6 +5,7 @@
   import { dotsOf, holesOf, patched, surfaceFrom } from './editor/surface';
   import { junctionHull, junctionOfSegment, junctionsOf } from './editor/junctions';
   import { laneArrows, waitLines } from './editor/junctionMarkings';
+  import { guideLines } from './editor/guides';
   import { hoveredSegment } from './hud/debugTools.svelte';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
@@ -75,8 +76,8 @@
   const surface = $derived(patched(rawSurface));
   /** The junctions, derived from the graph (^1003). */
   const junctions = $derived(junctionsOf(editor.graph));
-  const waits = $derived(waitLines(editor.graph, junctions));
-  const arrows = $derived(laneArrows(editor.graph, junctions));
+  const waits = $derived(waitLines(editor.graph, junctions, allHulls));
+  const arrows = $derived(laneArrows(editor.graph, junctions, allHulls));
   /** The hull of the junction of the hovered segment, in the debug layer (^1039). */
   const hoveredJunctionHull = $derived.by(() => {
     if (!debug) return [];
@@ -95,11 +96,10 @@
         }
       : null,
   );
-  /** Whether two segments of the stored graph are in one junction: no line between them (^1044). */
-  const insideOneJunction = (a: number, b: number) =>
-    junctions.some((j) => j.segments.includes(a) && j.segments.includes(b));
+  /** The dashed lines that guide traffic through junctions (^1048, ^1049). */
+  const guides = $derived(guideLines(editor.graph, junctions));
   /** The lane markings, derived from the graph with the derived nodes in it (^956). */
-  const markings = $derived(markingsOf(seen, { physical, inside: insideOneJunction }));
+  const markings = $derived(markingsOf(seen, { physical, extra: guides }));
   /** Everything painted on the road surface (^949, ^1028, ^1038). */
   const marks = $derived({ markings, waitLines: waits, arrows, physical });
   const towers = $derived(

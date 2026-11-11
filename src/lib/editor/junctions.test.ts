@@ -14,25 +14,25 @@ const near = (x: number, y: number): Junction =>
       return Math.hypot(node(e.start).x - x, node(e.start).y - y) < 15;
     }),
   )!;
-const waits = (j: Junction) => j.approaches.map((a) => a.waits);
+const waits = (j: Junction) => j.arms.map((a) => a.waits);
 
 describe('junctions are found by rules (^1005, ^1032)', () => {
-  it('T-junction ^985: one junction, three approaches, two of them one road', () => {
+  it('T-junction ^985: one junction, three arms, two of them one road', () => {
     const j = near(0, 0);
-    expect(j.approaches).toHaveLength(3);
-    expect(new Set(j.approaches.map((a) => a.road)).size).toBe(2);
+    expect(j.arms).toHaveLength(3);
+    expect(new Set(j.arms.map((a) => a.direction)).size).toBe(2);
   });
 
-  it('X-junction ^988: four approaches in two roads', () => {
+  it('X-junction ^988: four arms in two roads', () => {
     const j = near(0, 240);
-    expect(j.approaches).toHaveLength(4);
-    expect(new Set(j.approaches.map((a) => a.road)).size).toBe(2);
+    expect(j.arms).toHaveLength(4);
+    expect(new Set(j.arms.map((a) => a.direction)).size).toBe(2);
   });
 
   it('crossings without a node ^994 are a junction of two segments', () => {
     const j = junctions.find((j) => j.segments.length === 2 && near(0, 720) === undefined);
     expect(j).toBeDefined();
-    expect(j!.approaches).toHaveLength(4);
+    expect(j!.arms).toHaveLength(4);
   });
 
   it('a lane that only merges or splits and crosses nothing (^991) is no junction', () => {
@@ -40,32 +40,38 @@ describe('junctions are found by rules (^1005, ^1032)', () => {
   });
 });
 
-describe('how a junction is ruled (^1037, ^1038)', () => {
-  it('roads of one lane each way: right before left, nobody waits', () => {
+describe('how a junction is ruled (^1037, ^1038, ^1047)', () => {
+  it('equal 1+1 roads (^985, ^988): give way at every arm, no priority', () => {
     for (const [x, y] of [
       [0, 0],
       [0, 240],
     ] as const) {
       const j = near(x, y);
       expect(j.control).toBe('right before left');
-      expect(waits(j).every((w) => w === null)).toBe(true);
+      expect(waits(j).every((w) => w === 'give way')).toBe(true);
+      expect(j.arms.every((a) => a.role === null)).toBe(true);
     }
   });
 
-  it('a 1+1 road meets a 2+2 road: the wider has priority, the narrower gives way', () => {
+  it('a 1+1 side road meets a 2+2 road (^986): the wider is major, the small arms minor, nobody gets a line', () => {
     for (const [x, y] of [
       [260, 0],
       [260, 240],
     ] as const) {
       const j = near(x, y);
       expect(j.control).toBe('priority');
-      const wide = Math.max(...j.approaches.map((a) => a.lanes));
-      for (const a of j.approaches) expect(a.waits).toBe(a.lanes < wide ? 'give way' : null);
-      expect(j.approaches.some((a) => a.waits === 'give way')).toBe(true);
+      expect(j.arms.some((a) => a.role === 'major')).toBe(true);
+      expect(j.arms.some((a) => a.role === 'minor')).toBe(true);
+      expect(waits(j).every((w) => w === null)).toBe(true);
     }
   });
 
-  it('roads of more than one lane each way: traffic lights, every approach stops at a line', () => {
+  it('a minor arm with turn lanes side by side is not small: traffic lights (^987)', () => {
+    const j = near(520, 0);
+    expect(j.control).toBe('traffic lights');
+  });
+
+  it('equal roads of more than 1+1: traffic lights, every arm stops at a line (^990)', () => {
     const j = near(520, 240);
     expect(j.control).toBe('traffic lights');
     expect(waits(j).every((w) => w === 'stop')).toBe(true);

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { curveOfEdge } from './chains';
 import { alongLoop, loopLength } from '../curves/along';
 import { junctionGround } from '../testing/junctionGround';
-import { segmentSigns, signName, signOf, type Sign } from './signs';
+import { paintedSign, segmentSigns, signName, signOf, type Sign } from './signs';
 
 const g = junctionGround();
 const node = (x: number, y: number) =>
@@ -105,5 +105,22 @@ describe('the name of a sign (^1017)', () => {
     expect(name([-70, 483], [-30, 480])).toBe('merge into left (after 531-10)');
     expect(name([-30, 480], [30, 480])).toBe('extension right (after 541-20)');
     expect(name([6, 1.5], [86, 1.5])).toBe('straight (209-30)');
+  });
+});
+
+describe('what is painted (^1052)', () => {
+  const painted = (from: [number, number], to: [number, number]) => {
+    const s = paintedSign(g, seg(from, to));
+    return s && say(s);
+  };
+
+  it('not straight, right and left, and not the split of a direction that ends in a T', () => {
+    expect(painted([-86, 241.5], [-6, 241.5])).toBeNull();
+    expect(painted([1.5, 86], [1.5, 6])).toBeNull();
+  });
+
+  it('the split of a fork, where the turns are gentle, is painted; straight and right too', () => {
+    expect(painted([434, 481.5], [514, 481.5])).toBe('left+right');
+    expect(painted([-86, 1.5], [-6, 1.5])).toBe('straight+right');
   });
 });

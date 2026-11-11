@@ -1,53 +1,61 @@
 import { describe, expect, it } from 'vitest';
 import { derivedNodes, withDerived } from './derived';
 import { junctionsOf } from './junctions';
+import { hullsOf } from './corners';
+import { guideLines } from './guides';
 import { laneArrows, waitLines } from './junctionMarkings';
 import { markingsOf } from './markings';
 import { patched, holesOf, surfaceOf } from './surface';
 import { junctionGround } from '../testing/junctionGround';
-import { dist } from '../curves/vec';
 
 const g = junctionGround();
 const junctions = junctionsOf(g);
 const inArea = (x: number, y: number, r: number) => (p: { x: number; y: number }) =>
   Math.hypot(p.x - x, p.y - y) < r;
 
-describe('the lines where traffic waits (^1038)', () => {
-  const lines = waitLines(g, junctions);
+const hulls = hullsOf(g);
 
-  it('right before left (^985, ^988): no line at all', () => {
-    expect(lines.filter((l) => inArea(0, 0, 20)(l.from) || inArea(0, 240, 20)(l.from))).toEqual([]);
+describe('the lines where traffic waits (^1038, ^1051)', () => {
+  const lines = waitLines(g, junctions, hulls);
+  const within = (x: number, y: number, r: number) => lines.filter((l) => inArea(x, y, r)(l.at));
+
+  it('equal 1+1 roads (^985, ^988): a give-way line across the lane in of every arm', () => {
+    expect(within(0, 0, 20)).toHaveLength(3);
+    expect(within(0, 240, 20)).toHaveLength(4);
+    expect(within(0, 240, 20).every((l) => l.kind === 'give way')).toBe(true);
   });
 
-  it('1+1 side road meeting a 2+2 road (^986): a give-way line across each lane of the side road, none on the main road', () => {
-    const here = lines.filter((l) => inArea(260, 0, 20)(l.from));
-    expect(here.length).toBeGreaterThan(0);
-    expect(here.every((l) => l.kind === 'give way')).toBe(true);
-    expect(here.every((l) => l.from.y > 3)).toBe(true);
+  it('priority (^986): no line, the dashed lines of the major direction mark it (^1048)', () => {
+    expect(within(260, 0, 20)).toEqual([]);
   });
 
   it('traffic lights (^990): a solid stop line across every lane in, as wide as the lane', () => {
-    const here = lines.filter((l) => inArea(520, 240, 40)(l.from));
+    const here = within(520, 240, 40);
     expect(here).toHaveLength(12);
-    expect(here.every((l) => l.kind === 'stop')).toBe(true);
-    for (const l of here) expect(dist(l.from, l.to)).toBeCloseTo(3, 6);
+    expect(here.every((l) => l.kind === 'stop' && l.width === 3)).toBe(true);
+  });
+
+  it('a line stands where its lane first meets another segment, not at its node (^1051)', () => {
+    const [stop] = within(0, 240, 20);
+    const node = g.nodes.find((n) => Math.hypot(n.x - stop!.at.x, n.y - stop!.at.y) < 0.01);
+    expect(node).toBeUndefined();
   });
 });
 
 describe('the arrows painted on lanes (^1028, ^1029)', () => {
-  const arrows = laneArrows(g, junctions);
+  const arrows = laneArrows(g, junctions, hulls);
   const at = (x: number, y: number, r: number) => arrows.filter((a) => inArea(x, y, r)(a.at));
 
-  it('a lane of an approach of two lanes or more shows its sign, also plain straight (^989)', () => {
+  it('a lane of an arm of two lanes or more shows its sign, also plain straight (^989)', () => {
     expect(at(260, 240, 30).length).toBeGreaterThanOrEqual(4);
   });
 
-  it('a single lane in shows its sign only if it is not plain straight (^988 side roads show none, a T side road shows the split)', () => {
+  it('a single lane in shows its sign only if it is not plain straight; the split of the side road of a T is not painted (^1052)', () => {
     const t = at(0, 0, 30);
-    expect(t).toHaveLength(3);
-    expect(
-      t.filter((a) => a.sign.kind === 'directions' && a.sign.left && a.sign.right),
-    ).toHaveLength(1);
+    expect(t).toHaveLength(2);
+    expect(t.filter((a) => a.sign.kind === 'directions' && a.sign.left && a.sign.right)).toEqual(
+      [],
+    );
   });
 
   it('a lane that ends shows the lane-end arrow, on the lane before the shift (^991)', () => {
@@ -57,16 +65,31 @@ describe('the arrows painted on lanes (^1028, ^1029)', () => {
   });
 });
 
-describe('no lines inside a junction (^1044)', () => {
-  it('the lines of two lanes that cross a junction end at it: none between the segments inside', () => {
+describe('the guide lines of junctions (^1048 to ^1050)', () => {
+  const guides = guideLines(g, junctions);
+  const near = (x: number, y: number, r: number) =>
+    guides.filter((m) => m.pieces.some((p) => inArea(x, y, r)(p.P)));
+
+  it('priority (^986): dashed lines along both sides of the major direction and none for the minor', () => {
+    expect(near(260, 0, 14).length).toBeGreaterThanOrEqual(2);
+    expect(near(260, 0, 14).every((m) => m.kind === 'dashed')).toBe(true);
+  });
+
+  it('equal roads (^985, ^988): none on the sides', () => {
+    expect(near(0, 0, 14)).toEqual([]);
+  });
+
+  it('a junction of four ways or more: the left turns get a line on their left (^1049)', () => {
+    expect(near(0, 240, 14).length).toBeGreaterThanOrEqual(4);
+    expect(near(520, 960, 14).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('a lane beside another inside a junction keeps its centerline (^1050)', () => {
     const seen = withDerived(g, derivedNodes(g));
-    const inside = (a: number, b: number) =>
-      junctions.some((j) => j.segments.includes(a) && j.segments.includes(b));
-    const all = markingsOf(seen);
-    const clipped = markingsOf(seen, { inside });
-    const longest = (ms: typeof all) => Math.max(...ms.map((m) => m.pieces.length));
-    expect(clipped.length).toBeLessThanOrEqual(all.length);
-    expect(longest(clipped)).toBeLessThanOrEqual(longest(all));
+    const lines = markingsOf(seen, { extra: guides });
+    const centre = inArea(520, 240, 25);
+    const startsNear = (m: (typeof lines)[number]) => centre(m.pieces[0]!.P);
+    expect(lines.filter(startsNear).length).toBeGreaterThan(0);
   });
 });
 
@@ -80,7 +103,7 @@ describe('holes of the surface (^1042)', () => {
     expect(after.length).toBeLessThan(holes.length);
   });
 
-  it('a larger hole stays: the middle of the roundabout (^996) is land', () => {
+  it('a hole that a circle of 1.5 m across does not fit in is patched, a wider one stays: the middle of the roundabout (^996) is land (^1054)', () => {
     const left = holesOf(patched(raw));
     const round = inArea(520, 720, 16);
     const roundabout = left.filter((h) => round(h[0]!.P));

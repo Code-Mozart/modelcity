@@ -1,4 +1,4 @@
-next: ^1046
+next: ^1055
 
 # Hats
 
@@ -749,6 +749,7 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^950–^958 | docs/markings.md | the rules of the lane markings, one hat each (rented range, milestone ^949; ^957 is a question, ^958 the scope) |
 | ^1026–^1034 | docs/markings.md | the catalog and rules of the junction markings (rented range, milestone ^1025) |
 | ^1035–^1044 | docs/junctions.md | what a junction is and how it is ruled, the control, wait lines, arrows, holes, one hat each (rented range, milestone ^1025) |
+| ^1046–^1054 | docs/junctions.md | the revisions of the junction rules: terms, control, guide lines, anchors, what is not painted, holes by width (rented range, milestone ^1025) |
 | ^965–^970 | docs/road-styles.md | the road styles, one hat each (rented range, milestone ^964) |
 | ^985–^1001 | docs/junctions.md | the cases of the testing ground of the junctions, one hat each (rented range, milestone ^157) |
 | ^1020–^1021 | docs/junctions.md | the user's special cases in the testing ground (rented range, milestone ^157) |

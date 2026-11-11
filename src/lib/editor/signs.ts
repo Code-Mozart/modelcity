@@ -157,3 +157,22 @@ const DIRECTION_NAMES: Record<string, string> = {
   R: 'right (209)',
   L: 'left (209-10)',
 };
+
+/**
+ * The sign that is painted on the lane (^1052), or null: *straight, right and left* is not painted
+ * (the lane before it has no arrow), and neither is the split of a direction that ends in the
+ * junction, where both turns are at least a quarter turn (the side road of a T). The split of a
+ * fork, where the turns are gentle, is painted.
+ */
+export function paintedSign(g: Graph, e: GEdge): Sign | null {
+  const sign = signOf(g, e);
+  if (sign.kind !== 'directions') return sign;
+  const [all, onlyTurns] = [
+    sign.straight && sign.left && sign.right,
+    !sign.straight && sign.left && sign.right,
+  ];
+  if (all) return null;
+  if (!onlyTurns) return sign;
+  const turns = edgesOut(g, lastOfBranch(g, e).end).map((o) => againstQuarter(g, o));
+  return turns.every((q) => q >= 0) ? null : sign;
+}

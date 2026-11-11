@@ -1,7 +1,7 @@
 import { alongLoop } from '../curves/along';
 import type { Hull } from '../curves/hull';
 import type { Piece } from '../curves/types';
-import { loopArea } from '../curves/area';
+import { inscribedRadius } from '../curves/area';
 import { LANE_WIDTH_M } from '../curves/lane';
 import { pointOn } from '../curves/piece';
 import { insideLoops, unionOutline, type Loop } from '../curves/union';
@@ -30,11 +30,11 @@ export function holesOf(loops: Loop[]): Loop[] {
   });
 }
 
-/** A hole smaller than a square of one lane width is patched (^1033): no new number, the lane is the measure. */
-const TINY_HOLE_M2 = LANE_WIDTH_M * LANE_WIDTH_M;
+/** A hole that a circle of half a lane width (1.5 m across: less than a lane) does not fit in is patched (^1054): thin and long ones too. The lane is the measure, no new number. */
+const PATCH_RADIUS_M = LANE_WIDTH_M / 4;
 
-/** The surface without its tiny holes (^1033): they are road. Larger holes stay land, islands. */
+/** The surface without its narrow holes (^1054): they are road. Wider holes stay land, islands. */
 export function patched(loops: Loop[]): Loop[] {
-  const tiny = new Set(holesOf(loops).filter((h) => loopArea(h) < TINY_HOLE_M2));
-  return loops.filter((l) => !tiny.has(l));
+  const narrow = new Set(holesOf(loops).filter((h) => inscribedRadius(h) < PATCH_RADIUS_M));
+  return loops.filter((l) => !narrow.has(l));
 }
