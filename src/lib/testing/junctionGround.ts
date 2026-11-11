@@ -212,6 +212,35 @@ function mergeBesideCut(s: Sketch) {
   );
 }
 
+/** The top of the user's project *noses* (^1066): a lane that leaves a lane and one that arrives, crossing, with segments cut in pieces by derived nodes where they cross. */
+function noses(s: Sketch) {
+  drawn(
+    s,
+    cell(1, 7),
+    [
+      [-55.473, -2.135, 6.283185307179586],
+      [20.54, -1.389, 0.03441068807615733],
+      [-12.165, -2.135, 6.123233995736766e-17],
+      [-1.07, -5.04, 6.300390651217665],
+      [5.976, -4.88, 6.3113186364332865],
+      [36.38, -18.362, -0.49546544634522566],
+      [-27.147, 21.054, 5.672320068981571],
+      [7.309, 1.162, 0.03050413446830908],
+      [44.832, -0.553, 0.03441068807615733],
+    ],
+    [
+      [0, 2],
+      [2, 1],
+      [2, 3],
+      [3, 4],
+      [4, 5],
+      [6, 7],
+      [7, 1],
+      [1, 8],
+    ],
+  );
+}
+
 export function junctionGround(): Graph {
   const s = new Sketch();
   tJunctions(s);
@@ -224,6 +253,7 @@ export function junctionGround(): Graph {
   curvedExtension(s);
   twoMerges(s);
   mergeBesideCut(s);
+  noses(s);
   return roundToMm(s.graph);
 }
 
@@ -279,5 +309,11 @@ export const GROUND_CASES: GroundCase[] = [
   named(1021, [0, 6], 'a merge and a split at one node', [50]),
   named(1055, [1, 6], 'a lane added on the left, on curves', [60]),
   named(1060, [2, 6], 'two lanes that merge', [60]),
+  named(
+    1066,
+    [1, 7],
+    'a lane that leaves and one that arrives, crossing: wedges, not slivers',
+    [90],
+  ),
   named(1063, [0, 7], 'a lane that merges, the lane it merges into cut by other lanes', [70]),
 ];

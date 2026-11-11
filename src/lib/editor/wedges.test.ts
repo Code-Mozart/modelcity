@@ -62,3 +62,21 @@ describe('wedges of the testing ground', () => {
     expect(all.every((w) => loopArea(w.loop) > 0)).toBe(true);
   });
 });
+
+describe('no slivers (^1066)', () => {
+  it('every wedge of the testing ground is wide enough for the circle: its area is more than a sliver', () => {
+    const all = wedgesOf(d, changes);
+    for (const w of all) expect(loopArea(w.loop)).toBeGreaterThan(1);
+  });
+
+  it('the noses case: one wedge where the lane leaves and one where the other arrives, each some meters long', () => {
+    const mine = wedgesOf(d, changes).filter(
+      (w) =>
+        Math.abs(w.loop[0]!.P.y - 1680) < 25 &&
+        w.loop[0]!.P.x > 260 - 60 &&
+        w.loop[0]!.P.x < 260 + 50,
+    );
+    expect(mine).toHaveLength(2);
+    for (const w of mine) expect(loopArea(w.loop)).toBeGreaterThan(5);
+  });
+});

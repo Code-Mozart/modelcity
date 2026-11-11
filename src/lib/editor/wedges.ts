@@ -1,5 +1,6 @@
 import { alongLoop, between, lengthTo, loopLength } from '../curves/along';
 import { LANE_WIDTH_M } from '../curves/lane';
+import { SAME_PLACE_M } from '../curves/tolerance';
 import { offsetPiece } from '../curves/offset';
 import {
   arcAround,
@@ -23,7 +24,7 @@ import {
   type Graph,
 } from '../model/graph';
 import { curveOfEdge } from './chains';
-import type { LaneChange } from './laneChanges';
+import { walk, type LaneChange } from './laneChanges';
 import type { Marking } from './markings';
 import { parallel } from './parallel';
 
@@ -72,12 +73,14 @@ function stretchEnd(d: Graph, pair: [GNode, GNode], way: Way): [GNode, GNode] {
   }
 }
 
-/** The side of a lane facing the other lane of the pair, as the curve with its pieces turned so that it runs away from the tip. */
-function facingEdge(d: Graph, e: GEdge, towards: 'left' | 'right', way: Way): Piece[] {
-  const pieces = (curveOfEdge(d, e.id)?.pieces ?? []).filter((p) => !isDegenerate(p));
-  const h = (towards === 'right' ? 1 : -1) * (widthOf(d, e) / 2);
-  const moved = pieces.map((p) => offsetPiece(p, h)).filter((p) => p !== null) as Piece[];
-  return way === 'out' ? moved : moved.map(reversePiece).reverse();
+/** The side of a lane (the segments of it, from the tip on) facing the other lane of the pair, as a curve running away from the tip. */
+function facingEdge(d: Graph, lane: GEdge[], towards: 'left' | 'right', way: Way): Piece[] {
+  return lane.flatMap((e) => {
+    const pieces = (curveOfEdge(d, e.id)?.pieces ?? []).filter((p) => !isDegenerate(p));
+    const h = (towards === 'right' ? 1 : -1) * (widthOf(d, e) / 2);
+    const moved = pieces.map((p) => offsetPiece(p, h)).filter((p) => p !== null) as Piece[];
+    return way === 'out' ? moved : moved.map(reversePiece).reverse();
+  });
 }
 
 const nearestPoint = (curve: Piece[], p: Vec): Vec => {
@@ -89,20 +92,16 @@ const nearestPoint = (curve: Piece[], p: Vec): Vec => {
   return best;
 };
 
-/** Where a wedge ends: how far along its first side (meters), and the circle that closes it. */
+/** Where a wedge ends: how far along its first side (meters), and the centre of the circle that closes it. */
 interface WedgeEnd {
   s: number;
   centre: Vec;
-  r: number;
 }
-
-/** The thinnest wedge that is closed by a circle (meters across): a thinner one is not made. */
-const MIN_RADIUS_M = 0.1;
 
 /**
  * Where the circle of `WEDGE_RADIUS_M` that touches both sides touches the first one, by looking
- * along it and halving. If the lanes end before they are that far apart, the wedge goes to the
- * end of the first side, closed by the circle that fits there (null if that is a hair).
+ * along it and halving; null if the lanes end before they are that far apart (within the one
+ * tolerance for places, ^865): then there is no wedge, only a sliver.
  */
 function endOfWedge(first: Piece[], second: Piece[]): WedgeEnd | null {
   const centreAt = (s: number): Vec => {
@@ -112,23 +111,26 @@ function endOfWedge(first: Piece[], second: Piece[]): WedgeEnd | null {
     const side = n.x * toSecond.x + n.y * toSecond.y >= 0 ? 1 : -1;
     return add(p, mul(n, side * WEDGE_RADIUS_M));
   };
-  const reaches = (s: number) =>
-    dist(centreAt(s), nearestPoint(second, centreAt(s))) >= WEDGE_RADIUS_M;
+  const reaches = (s: number) => {
+    const [p, c] = [alongLoop(first, s)!, centreAt(s)];
+    // The circle is between the sides, not beyond the second one, when they are more than its radius apart.
+    const between = dist(p, nearestPoint(second, p)) > WEDGE_RADIUS_M;
+    return between && dist(c, nearestPoint(second, c)) >= WEDGE_RADIUS_M - SAME_PLACE_M;
+  };
   const total = loopLength(first);
-  for (let s = SCAN_M; s <= total; s += SCAN_M) {
+  const looks = Array.from({ length: Math.floor(total / SCAN_M) }, (_, i) => (i + 1) * SCAN_M);
+  // Not exactly the end: past it a loop starts again.
+  for (const s of [...looks, total - 1e-6]) {
     if (!reaches(s)) continue;
-    let [lo, hi] = [s - SCAN_M, s];
+    let [lo, hi] = [Math.max(0, s - SCAN_M), s];
     for (let i = 0; i < 30; i++) {
       const m = (lo + hi) / 2;
       if (reaches(m)) hi = m;
       else lo = m;
     }
-    return { s: hi, centre: centreAt(hi), r: WEDGE_RADIUS_M };
+    return { s: hi, centre: centreAt(hi) };
   }
-  const last = pointOn(first.at(-1)!, 1);
-  const across = nearestPoint(second, last);
-  const r = dist(last, across) / 2;
-  return r < MIN_RADIUS_M ? null : { s: total, centre: mul(add(last, across), 0.5), r };
+  return null;
 }
 
 /** The closed loop of the wedge: along the first side, round the circle, back along the second. */
@@ -139,7 +141,7 @@ function loopOf(first: Piece[], second: Piece[], end: WedgeEnd): Loop {
   const [from, to] = [along.at(-1)!.Q, back[0]!.P];
   const turn =
     mod(angleOf(sub(to, end.centre)) - angleOf(sub(from, end.centre)) + Math.PI, TAU) - Math.PI;
-  const arc = arcAround({ c: end.centre, r: end.r }, from, to, turn);
+  const arc = arcAround({ c: end.centre, r: WEDGE_RADIUS_M }, from, to, turn);
   const loop = [...along, arc, ...back];
   const [first0, last] = [loop[0]!, loop.length - 1];
   loop[last] = { ...loop[last]!, Q: first0.P } as Piece;
@@ -149,7 +151,7 @@ function loopOf(first: Piece[], second: Piece[], end: WedgeEnd): Loop {
 /** The chevrons in a wedge: their apex against the traffic, their arms open the way the traffic goes (^1065). */
 function chevrons(first: Piece[], second: Piece[], reach: number, way: Way): Marking[] {
   const arm = CHEVRON_ARM_M;
-  const [lo, hi] = way === 'out' ? [0.5, reach - arm] : [arm + 0.5, reach];
+  const [lo, hi] = way === 'out' ? [0.5, reach - arm] : [arm + 0.5, reach - arm];
   const found: Marking[] = [];
   for (let s = lo; s <= hi; s += CHEVRON_STEP_M) {
     const at = (t: number) => {
@@ -171,8 +173,9 @@ function wedgeOf(d: Graph, c: LaneChange): Wedge | null {
   if (ox.length !== 1 || oy.length !== 1 || parallel(d, ox[0]!, oy[0]!)) return null;
   const left = (a: GNode, b: GNode) =>
     (a.x - b.x) * -Math.sin(b.th) + (a.y - b.y) * Math.cos(b.th) < 0;
-  const first = facingEdge(d, ox[0]!, left(y, x) ? 'left' : 'right', way);
-  const second = facingEdge(d, oy[0]!, left(x, y) ? 'left' : 'right', way);
+  const lane = (e: GEdge) => walk(d, e, way).at(-1)!.edges;
+  const first = facingEdge(d, lane(ox[0]!), left(y, x) ? 'left' : 'right', way);
+  const second = facingEdge(d, lane(oy[0]!), left(x, y) ? 'left' : 'right', way);
   const end = first.length && second.length ? endOfWedge(first, second) : null;
   if (!end) return null;
   const loop = loopOf(first, second, end);

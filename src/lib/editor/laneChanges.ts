@@ -48,7 +48,7 @@ function towerNumbers(d: Graph): Map<number, number> {
 const leftOf = (a: GNode, b: GNode) => dot(sub(a, b), perp(fromAngle(b.th))) < 0;
 
 /** A node along a lane from a node, and the segments between. */
-interface Step {
+export interface Step {
   node: GNode;
   edges: GEdge[];
 }
@@ -57,7 +57,7 @@ const isPlain = (d: Graph, n: GNode) =>
   edgesIn(d, n.id).length === 1 && edgesOut(d, n.id).length === 1;
 
 /** The nodes along a lane that leaves (`out`) or arrives at a node by its first segment, through plain nodes. */
-function walk(d: Graph, first: GEdge, way: 'out' | 'in'): Step[] {
+export function walk(d: Graph, first: GEdge, way: 'out' | 'in'): Step[] {
   const steps: Step[] = [];
   const [edges, seen] = [[first], new Set([first.id])];
   for (let e = first; ;) {
