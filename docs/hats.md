@@ -1,4 +1,4 @@
-next: ^1023
+next: ^1025
 
 # Hats
 
@@ -715,6 +715,8 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^1018 | chore | done (PR #53; user) | **Pictures of the testing ground from the CI (user):** on every push the CI job `shots` (`bun run shots`, `shots/junctions.spec.ts`) takes a picture of every case of the testing ground of the junctions (^984) with the debug layer on, some cases also close up, and puts them with an index on the branch `screenshots`, in a folder named after the branch (`feature-junctions`): to review on a phone. Not on the branch of the PR itself: a commit made by the CI starts no checks, and the PR would wait for them for ever. The branch holds one commit only. The test hook got `show` (move the camera). |
 | ^1019 | mock | done (PR #53; user) | **Two special layouts (user):** a winding lane that splits into two left turns, and a node that is a merge and a split at once. `docs/mocks/hat1019.json`; in the testing ground as the cases ^1020 and ^1021 (`docs/junctions.md`). The user's question why the segments before the double left turn were *left turns*: both branches of the split turn left, and the sign listed the directions that were there; two turns to one side are now a split (^1013). |
 | ^1022 | feature | planned (user: maybe later, not needed now) | **Detecting roundabouts (user's question):** not required to be round, nor to have arms in both directions; one arm or road may have several. Claude's idea: a roundabout is a **closed directed loop** of segments (following the segments comes back to where it began) that all turn the same way, a full turn in sum, with other segments merging into it and splitting off it; found per loop, not per arm. To be designed when it is needed (markings of a roundabout: give-way lines at the entries). |
+| ^1023 | decision | decided (user agreed to Claude's proposal); done (PR #53) | **The quarter-turn rule:** of two turns to opposite sides out of a split, one of less than a quarter turn counts as going on if the other is more than a quarter turn; the sign is then straight and left, or straight and right, not a split. Rule text in `docs/junctions.md` (^1013). |
+| ^1024 | decision | decided (user); done (PR #53) | **A turn that ends in a node that also splits is a split (user):** a segment is a turn (left or right) when it ends in a node that only merges; if that node is a split as well, it shows the sign of the split, as every leg of that node does. Rule text in `docs/junctions.md` (^1013). |
 
 ## Rented ranges
 

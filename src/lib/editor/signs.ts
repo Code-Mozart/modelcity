@@ -1,6 +1,7 @@
 import { alongLoop, loopLength } from '../curves/along';
 import type { Vec } from '../curves/vec';
 import { edgesIn, edgesOut, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
+import { alongOrAgainst } from '../curves/tolerance';
 import { curveOfEdge } from './chains';
 import { besideSibling, isShift, manoeuvreOf, turning, type Manoeuvre } from './manoeuvres';
 
@@ -75,23 +76,51 @@ function splitSign(g: Graph, n: GNode, outs: GEdge[]): Sign {
   }
   const sides = all.map(({ o, m }) => turnSide(g, o, m));
   const turns = sides.filter((s) => s !== null);
+  const sharp = sharperOfTwo(g, outs, sides);
+  if (sharp) return directions(true, sharp === 'left', sharp === 'right');
   if (turns.length === 0 || turns.length === sides.length) return directions(false, true, true);
   return directions(true, turns.includes('left'), turns.includes('right'));
 }
 
 /**
+ * How a turn compares with a quarter turn: less (-1), more (1), or a quarter turn (0), which is
+ * judged by the headings of its nodes (^865) and not by an angle that is 90 degrees but for a hair.
+ */
+function againstQuarter(g: Graph, e: GEdge): -1 | 0 | 1 {
+  const [a, b] = [nodeOf(g, e.start), nodeOf(g, e.end)];
+  if (a && b && alongOrAgainst({ th: a.th + Math.PI / 2 }, b)) return 0;
+  return Math.abs(turning(g, e)) < Math.PI / 2 ? -1 : 1;
+}
+
+/**
+ * The quarter-turn rule (^1023): of two turns to opposite sides, one of less than a quarter turn
+ * counts as going on if the other is more than a quarter turn. The side of that sharper turn, or
+ * null if the rule does not apply.
+ */
+function sharperOfTwo(
+  g: Graph,
+  outs: GEdge[],
+  sides: ('left' | 'right' | null)[],
+): 'left' | 'right' | null {
+  if (outs.length !== 2 || sides.includes(null) || sides[0] === sides[1]) return null;
+  const [q0, q1] = [againstQuarter(g, outs[0]!), againstQuarter(g, outs[1]!)];
+  if (q0 === -1 && q1 === 1) return sides[1]!;
+  return q0 === 1 && q1 === -1 ? sides[0]! : null;
+}
+
+/**
  * The sign of a segment (^1012): that of its branch, read at the last node of the branch. If
- * that node is a merge and the branch reaches it as a leg that is not straight on, the sign of
- * the leg; else, if the node is a split, the sign of the split; else straight on.
+ * that node is a split, also one that is a merge as well, the sign of the split: what follows
+ * matters more than how the node is reached (^1024). Else, if it is a merge and the branch
+ * reaches it as a leg that is not straight on, the sign of the leg; else straight on.
  */
 export function signOf(g: Graph, e: GEdge): Sign {
   const last = lastOfBranch(g, e);
   const n = nodeOf(g, last.end);
   if (!n) return STRAIGHT;
-  const leg = edgesIn(g, n.id).length > 1 ? legSign(g, n, last) : null;
-  if (leg) return leg;
   const outs = edgesOut(g, n.id);
-  return outs.length > 1 ? splitSign(g, n, outs) : STRAIGHT;
+  if (outs.length > 1) return splitSign(g, n, outs);
+  return (edgesIn(g, n.id).length > 1 ? legSign(g, n, last) : null) ?? STRAIGHT;
 }
 
 /** A sign at the middle of its segment (^1015). */

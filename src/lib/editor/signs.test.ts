@@ -63,9 +63,24 @@ describe("the user's special cases ^1020 and ^1021", () => {
     expect(sign([515.068, 1203.734], [523.822, 1202.522])).toBe('left+right');
   });
 
-  it('a node that is a merge and a split: the straight leg shows the split, the leg that turns in shows its turn', () => {
+  it('a node that is a merge and a split: every leg shows the split, also the one that turns in (^1024)', () => {
     expect(sign([-18.824, 1440], [-4.423, 1440])).toBe('left+right');
-    expect(sign([-10.802, 1449.835], [-4.423, 1440])).toBe('right');
+    expect(sign([-10.802, 1449.835], [-4.423, 1440])).toBe('left+right');
+  });
+});
+
+describe('the quarter-turn rule (^1023)', () => {
+  it('fork ^993 from the right arm: a gentle left and a sharp right are straight and right', () => {
+    expect(sign([596.191, 519.914], [525.985, 481.56])).toBe('straight+right');
+  });
+
+  it('the stem of the fork (both gentle) and the side road of a T (both a quarter turn) stay a split', () => {
+    expect(sign([434, 481.5], [514, 481.5])).toBe('left+right');
+    expect(sign([1.5, 86], [1.5, 6])).toBe('left+right');
+  });
+
+  it('^1021: a quarter turn left is not more than a quarter turn, so it stays a split', () => {
+    expect(sign([-18.824, 1440], [-4.423, 1440])).toBe('left+right');
   });
 });
 
