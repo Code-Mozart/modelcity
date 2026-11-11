@@ -1,4 +1,4 @@
-# Lane markings (^949, rented hats ^950 to ^958)
+# Lane markings (^949, rented hats ^950 to ^958; junction markings ^1025, rented hats ^1026 to ^1034)
 
 The rules of the markings that are drawn on the road surface (^21, milestone ^949, part of ^156). **This file is the specification; the code follows it.** One hat per rule; status `decided` = the user's words, `assumed` = a detail Claude filled in. Built in PR #52 (`editor/markings.ts`, `render/markings.ts`). When the markings are built, every rule gets its row in `docs/features.md` with the test that covers it (and the scope of the milestone is in its PR description).
 
@@ -65,3 +65,21 @@ The markings of this file with their meters (^954, ^973) are the **physical** on
 3. `render/markings.ts` draws them with a dash pattern in meters (`setLineDash`), above `drawSurface` in `drawScene`.
 4. Tests (`editor/markings.test.ts`), one per row of the examples above, plus: the number of lines is the number of neighbouring pairs; mirroring the road (swapping every segment's direction) swaps solid and dashed only through the direction; adding a lane mid-way changes the style at its node; random sequences of operations leave the markings equal to the markings of a fresh build.
 5. Hats ^950 to ^956 get their rows in `docs/features.md`; the README glossary has *Centerline marking* and *Group* (this file).
+
+## Junction markings (^1025): catalog and rules, proposed
+
+Part 2 of the junctions (^157). The markings are the German ones (StVO; the picture table of the signs since 2017, sections *Markierungen*: Zeichen 293 to 299 and 340, 341). **Catalog first, then one rule per marking: which part of the road layout (`docs/junctions.md`, ^1012) causes it.** Everything here is `proposed` until the user agrees to the scope; nothing is built. The trick is not to overdo it: a marking is in only if a rule can decide it from the graph.
+
+| Hat | Marking (Zeichen) | What it is | Caused by (rule) | Status |
+| --- | --- | --- | --- | --- |
+| ^1026 | **Leitlinie** (340) | the dashed line between lanes | exists: ^950, ^951 (a pair of parallel segments running the same way, or a 1+1) | built (^949) |
+| ^1027 | **Fahrstreifenbegrenzung** (295) | the solid line | exists: ^951 (opposite ways in a group of three or more). New, proposed: nothing more for now | built (^949) |
+| ^1028 | **Pfeilmarkierungen** (297) | arrows painted on a lane: straight, left, right and their combinations | the sign of the lane (^1012) at the end of a branch that leads into a junction, when it is anything but plain *straight*: one arrow shortly before the last node of the branch. A lane that is a *left* or *right* leg (a turn lane, ^1013) gets its turn arrow. Not on the segments inside the junction (^1032) | proposed |
+| ^1029 | **Vorankündigungspfeil für ein Fahrstreifenende** (297.1-21) | the slanted arrow on a lane that ends | the sign *merge into left / right* (^1012): one arrow on the lane that ends, pointing to the lane it merges into | proposed |
+| ^1030 | **Wartelinie** (341) | the broken line across a lane where traffic gives way | across the lanes in of an arm whose road **ends** in the junction: none of its lanes goes straight on (the sign of every lane is a split or a turn). An arm that goes straight on has none. Where every arm goes straight on (an X of equal roads) there is none at all, as in Germany without signs (right before left) | proposed; see the question below |
+| ^1031 | **Haltlinie** (294) | the solid line across a lane where traffic stops | needs a stop sign or a traffic light, which the model does not have | catalogued, not generated |
+| ^1032 | **Where a junction is, for the markings** | lines end at a junction and arrows stand before it | the precise reading of ^1005 that the markings need: the segments that cross another segment, together with every segment that starts and ends in the towers those start or end in (a right turn crosses nothing but belongs to the junction), are **inside** the junction. The lines of ^950 are not drawn between segments inside a junction; the lines of the arms end at the towers of the junction | proposed |
+| ^1033 | **Holes and islands** | land enclosed by the surface | a hole of the surface that lies between segments inside a junction (^1032) is filled with the road colour; any other hole (the gap a turn pocket leaves, the middle of a roundabout) stays land: an island, to be customised later (^27) | proposed |
+| ^1034 | **Out of this milestone** | | Fußgängerüberweg (293, with the crossings ^158), einseitige Fahrstreifenbegrenzung (296), Vorankündigungspfeil (297.1), Sperrfläche (298, the hatching of islands), Grenzmarkierung (299); traffic lights and stop signs; yellow and highway markings (^964); guide lines for turning inside big junctions | proposed |
+
+**Questions for the user.** (1) **Arrows in pixels or meters?** The lines are logical (pixels, ^976). An arrow has to fit its lane (3 m), so a pixel size cannot hold at every zoom. Proposal: arrows are physical, 5 m long and inside the lane, and are not drawn when they would be smaller than a few pixels. (2) **Who gives way** (^1030) cannot be read from the geometry in general: the rule above only knows a road that ends. Is that enough for now? (3) **The reading of the junction** (^1032): is that what "start or end in the same tower" (^1005) means?

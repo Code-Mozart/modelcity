@@ -1,4 +1,4 @@
-next: ^1025
+next: ^1035
 
 # Hats
 
@@ -717,6 +717,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^1022 | feature | planned (user: maybe later, not needed now) | **Detecting roundabouts (user's question):** not required to be round, nor to have arms in both directions; one arm or road may have several. Claude's idea: a roundabout is a **closed directed loop** of segments (following the segments comes back to where it began) that all turn the same way, a full turn in sum, with other segments merging into it and splitting off it; found per loop, not per arm. To be designed when it is needed (markings of a roundabout: give-way lines at the entries). |
 | ^1023 | decision | decided (user agreed to Claude's proposal); done (PR #53) | **The quarter-turn rule:** of two turns to opposite sides out of a split, one of less than a quarter turn counts as going on if the other is more than a quarter turn; the sign is then straight and left, or straight and right, not a split. Rule text in `docs/junctions.md` (^1013). |
 | ^1024 | decision | decided (user); done (PR #53) | **A turn that ends in a node that also splits is a split (user):** a segment is a turn (left or right) when it ends in a node that only merges; if that node is a split as well, it shows the sign of the split, as every leg of that node does. Rule text in `docs/junctions.md` (^1013). |
+| ^1025 | milestone | in progress (scope proposed in the PR; user: "generate road markings, i.e. lines and arrows, catalog them, document which rules cause which markings; the trick is not to overdo it") | **Junction markings (part 2 of ^157):** the catalog of the German markings and the rule that causes each, in `docs/markings.md` (rented hats ^1026 to ^1034): arrows from the signs of the road layout (^1012), the lane-end arrow, give-way lines, where lines end at a junction, holes and islands. |
 
 ## Rented ranges
 
@@ -745,6 +746,7 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^978–^979 | docs/palette.md | the Feldweg colours (rented range, milestone ^964) |
 | ^932–^941 | docs/optimizations.md | the optimizations, one hat each (rented range, milestone ^927) |
 | ^950–^958 | docs/markings.md | the rules of the lane markings, one hat each (rented range, milestone ^949; ^957 is a question, ^958 the scope) |
+| ^1026–^1034 | docs/markings.md | the catalog and rules of the junction markings (rented range, milestone ^1025) |
 | ^965–^970 | docs/road-styles.md | the road styles, one hat each (rented range, milestone ^964) |
 | ^985–^1001 | docs/junctions.md | the cases of the testing ground of the junctions, one hat each (rented range, milestone ^157) |
 | ^1020–^1021 | docs/junctions.md | the user's special cases in the testing ground (rented range, milestone ^157) |
