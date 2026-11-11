@@ -166,6 +166,25 @@ function curvedExtension(s: Sketch) {
   );
 }
 
+/** The user's two lanes that merge (^1060): the lane on the right shifts left into the one on the left, and both end in the node where they merge. */
+function twoMerges(s: Sketch) {
+  drawn(
+    s,
+    cell(2, 6),
+    [
+      [-21.192, -1.192, 0],
+      [-21.192, 1.808, 0],
+      [21.255, -1.192, 6.283185307179586],
+      [1.764, -1.192, 0],
+    ],
+    [
+      [0, 3],
+      [1, 3],
+      [3, 2],
+    ],
+  );
+}
+
 export function junctionGround(): Graph {
   const s = new Sketch();
   tJunctions(s);
@@ -176,6 +195,7 @@ export function junctionGround(): Graph {
   more(s);
   special(s);
   curvedExtension(s);
+  twoMerges(s);
   return roundToMm(s.graph);
 }
 
@@ -230,4 +250,5 @@ export const GROUND_CASES: GroundCase[] = [
   named(1020, [2, 5], 'a winding lane that splits into two left turns', [80]),
   named(1021, [0, 6], 'a merge and a split at one node', [50]),
   named(1055, [1, 6], 'a lane added on the left, on curves', [60]),
+  named(1060, [2, 6], 'two lanes that merge', [60]),
 ];

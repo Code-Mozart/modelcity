@@ -3,11 +3,8 @@
   import { segmentSigns } from './editor/signs';
   import { markingsOf } from './editor/markings';
   import { dotsOf, holesOf, patched, surfaceFrom } from './editor/surface';
-  import { junctionHull, junctionOfSegment, junctionsOf } from './editor/junctions';
-  import { laneArrows, waitLines } from './editor/junctionMarkings';
-  import { guideLines } from './editor/guides';
-  import { laneChangeLines } from './editor/laneChanges';
-  import { hoveredSegment } from './hud/debugTools.svelte';
+  import { laneChangeLines, laneChangesOf } from './editor/laneChanges';
+  import { laneArrows } from './editor/laneArrows';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
   import { headingSourceOrigins } from './editor/hintState';
@@ -75,36 +72,26 @@
   const rawSurface = $derived(surfaceFrom(allHulls));
   /** The surface with its tiny holes patched (^1042). */
   const surface = $derived(patched(rawSurface));
-  /** The junctions, derived from the graph (^1003). */
-  const junctions = $derived(junctionsOf(editor.graph));
-  const waits = $derived(waitLines(editor.graph, junctions, allHulls));
-  const arrows = $derived(laneArrows(editor.graph, junctions, allHulls));
-  /** The hull of the junction of the hovered segment, in the debug layer (^1039). */
-  const hoveredJunctionHull = $derived.by(() => {
-    if (!debug) return [];
-    const j = junctionOfSegment(junctions, hoveredSegment(editor.graph, editor.hover)?.id ?? null);
-    return j ? junctionHull(editor.graph, j) : [];
-  });
+  /** The lane changes (extensions and merges, ^1056), and the arrows of the lanes that end (^1029). */
+  const changes = $derived(laneChangesOf(seen));
+  const arrows = $derived(laneArrows(seen, changes));
   const hulls = $derived(
     debug
       ? {
           hulls: allHulls.map((h) => h.hull),
           corners: cornersOf(allHulls).map((c) => c.at),
           dots: dotsOf(surface, walk),
-          signs: segmentSigns(editor.graph),
+          signs: segmentSigns(editor.graph, seen),
           holes: holesOf(rawSurface),
-          junction: hoveredJunctionHull,
         }
       : null,
   );
-  /** The dashed lines that guide traffic through junctions (^1048, ^1049). */
-  const guides = $derived(guideLines(editor.graph, junctions));
-  /** The lane markings, derived from the graph with the derived nodes in it (^956). */
+  /** The lane markings, derived from the graph with the derived nodes in it (^956), and the dashed lines through the lane changes (^1057). */
   const markings = $derived(
-    markingsOf(seen, { physical, extra: [...guides, ...laneChangeLines(editor.graph)], surface }),
+    markingsOf(seen, { physical, extra: laneChangeLines(seen, changes), surface }),
   );
-  /** Everything painted on the road surface (^949, ^1028, ^1038). */
-  const marks = $derived({ markings, waitLines: waits, arrows, physical });
+  /** Everything painted on the road surface (^949, ^1029). */
+  const marks = $derived({ markings, arrows, physical });
   const towers = $derived(
     towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
   );

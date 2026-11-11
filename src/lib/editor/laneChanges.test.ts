@@ -2,23 +2,40 @@ import { describe, expect, it } from 'vitest';
 import { loopLength } from '../curves/along';
 import { dist } from '../curves/vec';
 import { junctionGround } from '../testing/junctionGround';
-import { laneChangeLines } from './laneChanges';
+import { derivedNodes, originalOf, withDerived } from './derived';
+import { laneChangeLines, laneChangesOf } from './laneChanges';
 
 const g = junctionGround();
+const d = withDerived(g, derivedNodes(g));
+const changes = laneChangesOf(d);
 const near = (a: { x: number; y: number }, x: number, y: number) => dist(a, { x, y }) < 0.01;
+const at = (x: number, y: number) => changes.filter((c) => near(c.node, x, y));
 
-describe('the dashed lines through extensions and merges (^1057)', () => {
-  const lines = laneChangeLines(g);
-
-  it('an extension on curves (^1055): the line starts at the node where the lanes part, half a lane left of the lane that goes on', () => {
-    const line = lines.find((l) => near(l.pieces[0]!.P, 260 - 10.165, 1440 + 2.365 - 1.5));
-    expect(line?.kind).toBe('dashed');
-    // It ends where the added lane touches the lane that goes on, about 11 m on.
-    expect(loopLength(line!.pieces)).toBeGreaterThan(10);
-    expect(loopLength(line!.pieces)).toBeLessThan(13);
+describe('extensions and merges (^1056)', () => {
+  it('the curved extension (^1055): a lane added on the left, the other lane cut at the tower', () => {
+    const [c] = at(260 - 10.165, 1440 + 2.365);
+    expect(c).toMatchObject({ kind: 'extension', side: 'left' });
+    expect(originalOf(c!.going)).toBeLessThan(originalOf(c!.shifting) + 100);
+    expect(c!.going.id).toBeLessThan(0);
   });
 
-  it('the ramps (^992): one line where the on-ramp merges and one where the off-ramp leaves', () => {
-    expect(lines.length).toBeGreaterThanOrEqual(3);
+  it('two merges (^1060): one lane ends, once', () => {
+    const found = at(520 + 1.764, 1440 - 1.192);
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({ kind: 'merge', side: 'left' });
+  });
+});
+
+describe('the dashed lines through them (^1057)', () => {
+  it('the curved extension: from the node where the lanes part, half a lane to the left, as far as the tower', () => {
+    const lines = laneChangeLines(d, at(260 - 10.165, 1440 + 2.365));
+    expect(lines).toHaveLength(1);
+    expect(near(lines[0]!.pieces[0]!.P, 260 - 10.165, 1440 + 2.365 - 1.5)).toBe(true);
+    expect(loopLength(lines[0]!.pieces)).toBeGreaterThan(10);
+    expect(loopLength(lines[0]!.pieces)).toBeLessThan(13);
+  });
+
+  it('every extension and merge has one', () => {
+    expect(laneChangeLines(d, changes)).toHaveLength(changes.length);
   });
 });

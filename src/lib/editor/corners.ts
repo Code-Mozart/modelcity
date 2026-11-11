@@ -40,7 +40,7 @@ const headingAt = (piece: Piece, at: Vec) => {
  * where they have the same direction or the opposite one there (the sides of segments that meet at
  * a node, or that run side by side, ^100), judged in the position domain (^865).
  */
-export const crossAcross = (p: Piece, q: Piece): Vec[] =>
+const crossAcross = (p: Piece, q: Piece): Vec[] =>
   crossPieces(p, q).filter((at) => !alongOrAgainst(headingAt(p, at), headingAt(q, at)));
 
 /** The places where one curve (side) crosses another. */
