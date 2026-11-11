@@ -1,4 +1,4 @@
-next: ^1065
+next: ^1066
 
 # Hats
 
@@ -754,5 +754,6 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^965–^970 | docs/road-styles.md | the road styles, one hat each (rented range, milestone ^964) |
 | ^985–^1001 | docs/junctions.md | the cases of the testing ground of the junctions, one hat each (rented range, milestone ^157) |
 | ^1020–^1021 | docs/junctions.md | the user's special cases in the testing ground (rented range, milestone ^157) |
+| ^1065–^1065 | docs/junctions.md | the wedges at extensions and merges: surface, line and chevrons (rented range, milestone ^1025) |
 | ^1055–^1063 | docs/junctions.md | the curved extension, the two merges and the merge beside a cut lane cases, extension and merge by towers and distances, dashed lines through them and only on the surface, the arrow of a merge, no cascade of their sign, the parts of the milestone (rented range, milestone ^1025) |
 | ^1003–^1015 | docs/junctions.md | the rules of the junctions, one hat each (rented range, milestone ^157) |
