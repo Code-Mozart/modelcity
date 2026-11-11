@@ -12,8 +12,7 @@ import { drawCircles, drawCorners, drawGuides, drawTowerLine, type TowerShape } 
 import { LANE_WIDTH_M, outlinePx } from '../curves/lane';
 import type { Loop } from '../curves/union';
 import { drawHulls, type HullScene } from './hullGizmo';
-import type { Marking } from '../editor/markings';
-import { drawMarkings } from './markings';
+import { drawRoadMarks, type RoadMarks } from './roadMarks';
 import {
   drawBars,
   drawCapsules,
@@ -59,7 +58,7 @@ export interface RoadScene {
 }
 
 /** Everything the path renderer needs to know about the editor. */
-export interface Scene {
+export interface Scene extends RoadMarks {
   roads: RoadScene[];
   handles: RoadHandle[];
   selection: NodeRef[];
@@ -93,8 +92,6 @@ export interface Scene {
   derived: Vec[];
   /** The road surface: closed loops round all roads (^945). */
   surface: Loop[];
-  /** The lane markings on the surface (^949). */
-  markings: Marking[];
   /** The hulls and corners of the debug layer, while it is on (^925). */
   hulls: HullScene | null;
   /** The line through the control points that are interlocked with the hovered or dragged one (^344). */
@@ -308,7 +305,7 @@ function shownFlags(scene: Scene): boolean[][] {
 function drawSurface(f: Frame, scene: Scene, pal: Palette) {
   const edge = { color: pal['road-edge'], width: outlinePx(LANE_WIDTH_M * f.view.scale) };
   fillLoops(f, scene.surface, pal.road, edge);
-  drawMarkings(f, scene.markings, pal);
+  drawRoadMarks(f, scene, pal);
 }
 
 /** The nodes, real ones with their state and derived ones as hollow circles, as large and as coloured, no arrow (^821, ^805). */

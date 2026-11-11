@@ -164,9 +164,16 @@ const along = (pieces: Piece[], at: Vec): number => {
  * (the partially parallel segments of ^363). Straight segments and bends only; an S-curve or a hook
  * is left whole (^828). Its nodes and edges have negative ids. Only for looking at, never stored.
  */
+/** The segment of the stored graph each segment of a graph with derived nodes is a part of. */
+const ORIGINS = new WeakMap<Graph, Map<number, number>>();
+
+/** The segment of the stored graph that the segment `id` of `seen` (a graph of `withDerived`) is, or is a part of. */
+export const originOf = (seen: Graph, id: number): number => ORIGINS.get(seen)?.get(id) ?? id;
+
 export function withDerived(g: Graph, derived: DerivedNode[]): Graph {
   if (!derived.length) return g;
   let next = -1;
+  const origins = new Map<number, number>();
   const edges = g.edges.flatMap((e): GEdge[] => {
     const E = curveOfEdge(g, e.id);
     const mine = derived.filter((d) => d.edge === e.id && d.kind !== 'inflection');
@@ -178,7 +185,12 @@ export function withDerived(g: Graph, derived: DerivedNode[]): Graph {
       ...mine.sort((a, b) => along(E.pieces, a) - along(E.pieces, b)).map((d) => d.id),
       e.end,
     ];
-    return ids.slice(1).map((end, i) => ({ ...e, id: next--, start: ids[i]!, end, radius }));
+    return ids.slice(1).map((end, i) => {
+      origins.set(next, e.id);
+      return { ...e, id: next--, start: ids[i]!, end, radius };
+    });
   });
-  return { ...g, nodes: [...g.nodes, ...derived], edges };
+  const seen = { ...g, nodes: [...g.nodes, ...derived], edges };
+  ORIGINS.set(seen, origins);
+  return seen;
 }

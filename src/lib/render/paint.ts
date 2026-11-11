@@ -126,16 +126,16 @@ function traceLoop(f: Frame, loop: Piece[]) {
 }
 
 /**
- * Closed loops filled with the even-odd rule (a loop in a loop is a hole) and an outline round them
+ * Closed loops filled with the even-odd rule (a loop in a loop is a hole) and, if given, an outline round them
  * (^945, ^946): the outline is stroked first, centred on the loop and twice as wide as it shows, then
  * the fill covers the inner half, so only the outer half is seen and no draw order of roads is needed.
  */
-export function fillLoops(f: Frame, loops: Piece[][], fill: string, edge: Stroke) {
+export function fillLoops(f: Frame, loops: Piece[][], fill: string, edge: Stroke | null) {
   const { ctx } = f;
   ctx.beginPath();
   for (const loop of loops) traceLoop(f, loop);
   ctx.lineJoin = 'round';
-  applyStroke(ctx, { color: edge.color, width: 2 * edge.width });
+  if (edge) applyStroke(ctx, { color: edge.color, width: 2 * edge.width });
   ctx.fillStyle = fill;
   ctx.fill('evenodd');
 }

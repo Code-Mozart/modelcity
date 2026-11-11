@@ -81,7 +81,7 @@ export function hoverText(graph: Graph, hover: Hover | null): string {
 }
 
 /** The segment the pointer is on, if any. */
-function hoveredSegment(graph: Graph, hover: Hover | null) {
+export function hoveredSegment(graph: Graph, hover: Hover | null) {
   const node = hover?.kind === 'handle' && ['node', 'head'].includes(hover.handle.type);
   const id =
     hover?.kind === 'handle' && !node

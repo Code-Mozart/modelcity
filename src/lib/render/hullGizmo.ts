@@ -1,8 +1,18 @@
 import type { Hull } from '../curves/hull';
 import type { Vec } from '../curves/vec';
 import type { PlacedSign } from '../editor/signs';
+import type { Loop } from '../curves/union';
 import { drawSigns } from './signGizmo';
-import { dot, segment, strokePiece, toScreen, type Frame, type Palette } from './paint';
+import {
+  dot,
+  fillLoops,
+  segment,
+  strokeChain,
+  strokePiece,
+  toScreen,
+  type Frame,
+  type Palette,
+} from './paint';
 
 /** The hulls of the segments and the corners of their crossings, for the debug layer (^925). */
 export interface HullScene {
@@ -12,6 +22,10 @@ export interface HullScene {
   dots: Vec[];
   /** What each segment is, as a sign at its middle (^1015). */
   signs: PlacedSign[];
+  /** All holes of the surface, before the tiny ones are patched (^1042). */
+  holes: Loop[];
+  /** The hull of the junction of the hovered segment (^1039). */
+  junction: Loop[];
 }
 
 const HULL_LINE_PX = 1;
@@ -39,5 +53,23 @@ export function drawHulls(f: Frame, scene: HullScene, pal: Palette) {
     segment(f.ctx, { x: p.x - arm, y: p.y + arm }, { x: p.x + arm, y: p.y - arm }, cross);
   }
   for (const d of scene.dots) dot(f.ctx, toScreen(f, d), WALKER_PX, pal.debug);
+  drawAreas(f, scene, pal);
   drawSigns(f, scene.signs, pal);
+}
+
+/** Opacity of the fill of a hole of the surface and of the hull of a junction (^1039, ^1042). */
+const HOLE_ALPHA = 0.5;
+const JUNCTION_ALPHA = 0.12;
+const JUNCTION_LINE_PX = 2;
+
+/** All holes of the surface filled with the debug red, half see-through, and the hull of the hovered junction in orange (^1039, ^1042). */
+function drawAreas(f: Frame, scene: HullScene, pal: Palette) {
+  const { ctx } = f;
+  ctx.save();
+  ctx.globalAlpha = HOLE_ALPHA;
+  for (const hole of scene.holes) fillLoops(f, [hole], pal.debug, null);
+  ctx.globalAlpha = JUNCTION_ALPHA;
+  fillLoops(f, scene.junction, pal.orange, null);
+  ctx.restore();
+  for (const l of scene.junction) strokeChain(f, l, { color: pal.orange, width: JUNCTION_LINE_PX });
 }

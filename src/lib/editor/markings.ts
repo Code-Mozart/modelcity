@@ -4,8 +4,8 @@ import { SAME_PLACE_M } from '../curves/tolerance';
 import { dist, dot, perp, sub, type Vec } from '../curves/vec';
 import { distanceToPiece, isDegenerate, pieceLength, pointOn, reversePiece } from '../curves/piece';
 import { widthOf, type GEdge, type GNode, type Graph } from '../model/graph';
-import { FEATURES } from '../features';
 import { curveOfEdge } from './chains';
+import { originOf } from './derived';
 import { parallel } from './parallel';
 import { runsOfGraph, type Run } from './towers';
 
@@ -52,17 +52,23 @@ function pairsAt(g: Graph, run: Run, k: number): [GEdge, GEdge][] {
   return all.filter(([ea, eb]) => parallel(g, ea, eb));
 }
 
+/** What decides the lines besides the graph: the physical markings or the logical ones (^975), and whether two segments (of the stored graph) are inside one junction, where no line is drawn between them (^1032). */
+export interface Rules {
+  physical: boolean;
+  inside: (a: number, b: number) => boolean;
+}
+
 /** The pairs of neighbouring parallel segments of a run, once each. */
-function pairsOf(g: Graph, run: Run, seen: Set<string>, physical: boolean): Marking[] {
+function pairsOf(g: Graph, run: Run, seen: Set<string>, rules: Rules): Marking[] {
   const found: Marking[] = [];
   for (let k = 0; k + 1 < run.nodes.length; k++) {
     for (const [ea, eb] of pairsAt(g, run, k)) {
       const key = `${Math.min(ea.id, eb.id)},${Math.max(ea.id, eb.id)}`;
-      if (seen.has(key)) continue;
+      if (seen.has(key) || rules.inside(originOf(g, ea.id), originOf(g, eb.id))) continue;
       seen.add(key);
       const [a, b] = [run.nodes[k]!, run.nodes[k + 1]!];
       const pieces = centerline(g, ea, a, b);
-      const kind = kindOf(sameWay(ea, a, eb, b), run.nodes.length, physical);
+      const kind = kindOf(sameWay(ea, a, eb, b), run.nodes.length, rules.physical);
       if (pieces && kind) found.push({ pieces, kind });
     }
   }
@@ -135,7 +141,8 @@ export function distinct(lines: Marking[]): Marking[] {
  * neighbouring parallel segments (^950), dashed or solid by the way they run and the size of the
  * group (^951). Derived from the graph, never stored (^956).
  */
-export function markingsOf(g: Graph, physical: boolean = FEATURES.physicalMarkings): Marking[] {
+export function markingsOf(g: Graph, rules: Partial<Rules> = {}): Marking[] {
+  const all: Rules = { physical: false, inside: () => false, ...rules };
   const seen = new Set<string>();
-  return distinct(joined(runsOfGraph(g).flatMap((run) => pairsOf(g, run, seen, physical))));
+  return distinct(joined(runsOfGraph(g).flatMap((run) => pairsOf(g, run, seen, all))));
 }

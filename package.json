@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.53.0",
-  "moniker": "Junctions",
+  "version": "0.54.0",
+  "moniker": "Junction markings",
   "private": true,
   "type": "module",
   "scripts": {
