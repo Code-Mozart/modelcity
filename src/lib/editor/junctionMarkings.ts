@@ -1,12 +1,8 @@
-import { alongLoop, loopLength } from '../curves/along';
-import type { Vec } from '../curves/vec';
-import { edgesIn, edgesOut, widthOf, type GEdge, type Graph } from '../model/graph';
+import { edgesIn, nodeOf, widthOf, type Graph } from '../model/graph';
 import { anchorsOf, type Anchor } from './anchors';
-import { curveOfEdge } from './chains';
 import type { EdgeHull } from './corners';
 import { lanesIn, type Junction } from './junctions';
-import { isShift, manoeuvreOf } from './manoeuvres';
-import { paintedSign, signOf, type Sign } from './signs';
+import { lastOfBranch, paintedSign, signOf, type Sign } from './signs';
 
 /**
  * A line across a lane where traffic waits (^1038): the stop line (Zeichen 294) or the give-way
@@ -28,9 +24,6 @@ export interface LaneArrow extends Anchor {
   width: number;
   anchored: boolean;
 }
-
-/** How far before the end of its lane the middle of the arrow of a lane that ends is (meters). */
-export const ARROW_BACK_M = 6;
 
 /** The lanes in of the arms of a junction, with where each meets traffic (^1051). */
 function lanesWithAnchors(g: Graph, j: Junction, hulls: EdgeHull[]) {
@@ -79,28 +72,26 @@ function junctionArrows(g: Graph, junctions: Junction[], hulls: EdgeHull[]): Lan
   );
 }
 
-/** An arrow on a segment, `back` meters before its end (at its middle if it is shorter than twice that). */
-function arrowOn(g: Graph, e: GEdge, back: number, sign: Sign): LaneArrow[] {
-  const pieces = curveOfEdge(g, e.id)?.pieces ?? [];
-  const total = loopLength(pieces);
-  const at = alongLoop(pieces, total - Math.min(back, total / 2));
-  if (!at) return [];
-  const [pt, th]: [Vec, number] = [{ x: at.x, y: at.y }, Math.atan2(at.ty, at.tx)];
-  return [{ at: pt, th, s: 0, sign, width: widthOf(g, e), anchored: false }];
-}
-
 /**
- * The arrows of lanes that end (^1029): on the segment before the shift that merges into the
- * next lane (the lane is still whole there), or on the shift itself if nothing leads to it.
+ * The arrows of lanes that end (^1029): on the segment that merges into the next lane, at its
+ * start, the last node of the tower where the lane is still whole, drawn as the arrows before a
+ * junction are (^1051).
  */
 function laneEndArrows(g: Graph): LaneArrow[] {
   return g.edges.flatMap((e) => {
-    const sign = signOf(g, e);
-    if (sign.kind !== 'merge' || !isShift(manoeuvreOf(g, e)) || edgesIn(g, e.end).length < 2)
-      return [];
-    const before = edgesIn(g, e.start);
-    const lone = before.length === 1 && edgesOut(g, e.start).length === 1;
-    return lone ? arrowOn(g, before[0]!, ARROW_BACK_M, sign) : arrowOn(g, e, Infinity, sign);
+    const [sign, start] = [signOf(g, e), nodeOf(g, e.start)];
+    const merges = sign.kind === 'merge' && lastOfBranch(g, e).id === e.id;
+    if (!start || !merges || edgesIn(g, e.end).length < 2) return [];
+    return [
+      {
+        at: { x: start.x, y: start.y },
+        th: start.th,
+        s: 0,
+        sign,
+        width: widthOf(g, e),
+        anchored: true,
+      },
+    ];
   });
 }
 

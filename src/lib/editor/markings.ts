@@ -4,6 +4,8 @@ import { SAME_PLACE_M } from '../curves/tolerance';
 import { dist, dot, perp, sub, type Vec } from '../curves/vec';
 import { distanceToPiece, isDegenerate, pieceLength, pointOn, reversePiece } from '../curves/piece';
 import { widthOf, type GEdge, type GNode, type Graph } from '../model/graph';
+import type { Loop } from '../curves/union';
+import { clipToSurface } from './clip';
 import { curveOfEdge } from './chains';
 import { parallel } from './parallel';
 import { runsOfGraph, type Run } from './towers';
@@ -56,6 +58,8 @@ export interface Rules {
   physical: boolean;
   /** Lines of the junctions that come on top of those between parallel lanes (^1048, ^1049). */
   extra: Marking[];
+  /** The road surface: dashed lines are drawn only where their stroke lies on it; not given, they are not cut. */
+  surface?: Loop[];
 }
 
 /** The pairs of neighbouring parallel segments of a run, once each. */
@@ -145,5 +149,6 @@ export function markingsOf(g: Graph, rules: Partial<Rules> = {}): Marking[] {
   const all: Rules = { physical: false, extra: [], ...rules };
   const seen = new Set<string>();
   const pairs = runsOfGraph(g).flatMap((run) => pairsOf(g, run, seen, all));
-  return distinct(joined([...pairs, ...all.extra]));
+  const lines = distinct(joined([...pairs, ...all.extra]));
+  return all.surface ? clipToSurface(lines, all.surface) : lines;
 }

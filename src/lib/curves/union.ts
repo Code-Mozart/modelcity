@@ -153,8 +153,12 @@ export function unionOutline(regions: Piece[][]): Loop[] {
   return chain(distinct);
 }
 
-/** Whether a point is inside the loops (even-odd, so inside a hole is outside). */
-export function insideLoops(loops: Loop[], p: Vec): boolean {
+/** A test for points being inside the loops (even-odd, so inside a hole is outside), for many points. */
+export function insideOf(loops: Loop[]): (p: Vec) => boolean {
   const pieces = loops.flat();
-  return inside({ pieces, box: boxAround(pieces) }, p);
+  const region = { pieces, box: boxAround(pieces) };
+  return (p) => inside(region, p);
 }
+
+/** Whether a point is inside the loops (even-odd, so inside a hole is outside). */
+export const insideLoops = (loops: Loop[], p: Vec): boolean => insideOf(loops)(p);

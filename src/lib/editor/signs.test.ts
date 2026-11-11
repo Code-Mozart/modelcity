@@ -124,3 +124,16 @@ describe('what is painted (^1052)', () => {
     expect(painted([-86, 1.5], [-6, 1.5])).toBe('straight+right');
   });
 });
+
+describe('an extension on curves, ^1055 (^1056)', () => {
+  const [x, y] = [260, 1440];
+  const at = (dx: number, dy: number): [number, number] => [x + dx, y + dy];
+  it('a lane added beside it on the left, whose end heading is a degree off: an extension left', () => {
+    expect(sign(at(-18.836, 2.365), at(-10.165, 2.365))).toBe('extension left');
+  });
+
+  it('the lane that goes on and the added lane: straight', () => {
+    expect(sign(at(-10.165, 2.365), at(18.826, 2.983))).toBe('straight');
+    expect(sign(at(-10.165, 2.365), at(0.93, -0.54))).toBe('straight');
+  });
+});

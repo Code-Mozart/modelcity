@@ -140,6 +140,32 @@ function special(s: Sketch) {
   ]);
 }
 
+/**
+ * The user's curved extension (^1055): a lane that runs on, and beside it a lane added on the left
+ * that bends away and back, its nodes a degree off the heading of the lane (^1056).
+ */
+function curvedExtension(s: Sketch) {
+  drawn(
+    s,
+    cell(1, 6),
+    [
+      [-18.836, 2.365, 0],
+      [18.826, 2.983, 0.03441068807615733],
+      [-10.165, 2.365, 0],
+      [0.93, -0.54, 6.300390651217665],
+      [7.976, -0.38, 6.3113186364332865],
+      [17.731, -2.702, -6.778650753524812],
+    ],
+    [
+      [0, 2],
+      [2, 1],
+      [2, 3],
+      [3, 4],
+      [4, 5],
+    ],
+  );
+}
+
 export function junctionGround(): Graph {
   const s = new Sketch();
   tJunctions(s);
@@ -149,6 +175,7 @@ export function junctionGround(): Graph {
   others(s);
   more(s);
   special(s);
+  curvedExtension(s);
   return roundToMm(s.graph);
 }
 
@@ -202,4 +229,5 @@ export const GROUND_CASES: GroundCase[] = [
   named(1001, [1, 5], 'roundabout, two lanes', [90]),
   named(1020, [2, 5], 'a winding lane that splits into two left turns', [80]),
   named(1021, [0, 6], 'a merge and a split at one node', [50]),
+  named(1055, [1, 6], 'a lane added on the left, on curves', [60]),
 ];

@@ -6,6 +6,7 @@
   import { junctionHull, junctionOfSegment, junctionsOf } from './editor/junctions';
   import { laneArrows, waitLines } from './editor/junctionMarkings';
   import { guideLines } from './editor/guides';
+  import { laneChangeLines } from './editor/laneChanges';
   import { hoveredSegment } from './hud/debugTools.svelte';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
@@ -99,7 +100,9 @@
   /** The dashed lines that guide traffic through junctions (^1048, ^1049). */
   const guides = $derived(guideLines(editor.graph, junctions));
   /** The lane markings, derived from the graph with the derived nodes in it (^956). */
-  const markings = $derived(markingsOf(seen, { physical, extra: guides }));
+  const markings = $derived(
+    markingsOf(seen, { physical, extra: [...guides, ...laneChangeLines(editor.graph)], surface }),
+  );
   /** Everything painted on the road surface (^949, ^1028, ^1038). */
   const marks = $derived({ markings, waitLines: waits, arrows, physical });
   const towers = $derived(

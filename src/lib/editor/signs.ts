@@ -3,7 +3,7 @@ import type { Vec } from '../curves/vec';
 import { edgesIn, edgesOut, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import { alongOrAgainst } from '../curves/tolerance';
 import { curveOfEdge } from './chains';
-import { besideSibling, isShift, manoeuvreOf, turning, type Manoeuvre } from './manoeuvres';
+import { besideSide, isShift, manoeuvreOf, turning, type Manoeuvre } from './manoeuvres';
 
 /**
  * What a segment is, as a sign of the debug layer (^1012), after the German signs of the
@@ -27,7 +27,7 @@ const STRAIGHT = directions(true, false, false);
 const plain = (g: Graph, id: number) => edgesIn(g, id).length === 1 && edgesOut(g, id).length === 1;
 
 /** The last segment of the branch of a segment, going on through plain nodes (not round a ring for ever). */
-function lastOfBranch(g: Graph, e: GEdge): GEdge {
+export function lastOfBranch(g: Graph, e: GEdge): GEdge {
   const seen = new Set([e.id]);
   let last = e;
   while (plain(g, last.end)) {
@@ -47,38 +47,40 @@ function turnSide(g: Graph, e: GEdge, m: Manoeuvre | null): 'left' | 'right' | n
 }
 
 /**
- * The sign of a leg of a merge, the last segment of its branch (^1013): a right turn comes from
- * the right, so it is the right leg, and a left turn the left leg. A shift beside the leg it
- * moves towards is a lane that ends: it merges into that side. Any other shift comes from the
- * side it moves away from. Null for the leg that goes straight on.
+ * The sign of a leg of a merge, the last segment of its branch (^1013): a leg that starts beside
+ * another leg (a tower, whatever the curves between) is a lane that ends: it merges into the
+ * lane on the side away from where it comes from. A right turn comes from the right, so it is the
+ * right leg, and a left turn the left leg. Any other shift comes from the side it moves away
+ * from. Null for the leg that goes straight on.
  */
 function legSign(g: Graph, n: GNode, leg: GEdge): Sign | null {
+  const from = besideSide(g, n, leg, edgesIn(g, n.id));
+  if (from) return { kind: 'merge', side: from === 'left' ? 'right' : 'left' };
   const m = manoeuvreOf(g, leg);
   const turn = turnSide(g, leg, m);
   if (turn) return directions(false, turn === 'left', turn === 'right');
   if (!isShift(m)) return null;
   const towards = m === 'shift left' ? 'left' : 'right';
-  if (besideSibling(g, n, leg, edgesIn(g, n.id))) return { kind: 'merge', side: towards };
   return directions(false, towards === 'right', towards === 'left');
 }
 
 /**
  * The sign of what follows a split (^1012): the ways its segments leave, each by its own
- * manoeuvre. Two segments of which one shifts and ends beside the other: a lane is added on the
- * side of the shift. Nothing but segments that go on (straight or shifting), or nothing but
- * turns, whichever way (two to the left are still one further left than the other): a split.
+ * manoeuvre. Two segments of which one ends beside the other (a tower, whatever the curves
+ * between, and on the side of the other that it is on): a lane is added on that side. Nothing
+ * but segments that go on (straight or shifting), or nothing but turns, whichever way (two to
+ * the left are still one further left than the other): a split.
  */
 function splitSign(g: Graph, n: GNode, outs: GEdge[]): Sign {
   const all = outs.map((o) => ({ o, m: manoeuvreOf(g, o) }));
-  const shift = all.find(({ o, m }) => isShift(m) && besideSibling(g, n, o, outs));
-  if (outs.length === 2 && shift) {
-    return { kind: 'extension', side: shift.m === 'shift left' ? 'left' : 'right' };
-  }
-  const sides = all.map(({ o, m }) => turnSide(g, o, m));
-  const turns = sides.filter((s) => s !== null);
-  const sharp = sharperOfTwo(g, outs, sides);
+  const sides = outs.map((o) => besideSide(g, n, o, outs));
+  const added = sides.find((s) => s !== null);
+  if (outs.length === 2 && added) return { kind: 'extension', side: added };
+  const turnSides = all.map(({ o, m }) => turnSide(g, o, m));
+  const turns = turnSides.filter((s) => s !== null);
+  const sharp = sharperOfTwo(g, outs, turnSides);
   if (sharp) return directions(true, sharp === 'left', sharp === 'right');
-  if (turns.length === 0 || turns.length === sides.length) return directions(false, true, true);
+  if (turns.length === 0 || turns.length === turnSides.length) return directions(false, true, true);
   return directions(true, turns.includes('left'), turns.includes('right'));
 }
 
