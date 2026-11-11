@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loopLength } from '../curves/along';
 import { dist } from '../curves/vec';
 import { junctionGround } from '../testing/junctionGround';
-import { derivedNodes, originalOf, withDerived } from './derived';
+import { derivedNodes, withDerived } from './derived';
 import { laneChangeLines, laneChangesOf } from './laneChanges';
 
 const g = junctionGround();
@@ -15,8 +15,7 @@ describe('extensions and merges (^1056)', () => {
   it('the curved extension (^1055): a lane added on the left, the other lane cut at the tower', () => {
     const [c] = at(260 - 10.165, 1440 + 2.365);
     expect(c).toMatchObject({ kind: 'extension', side: 'left' });
-    expect(originalOf(c!.going)).toBeLessThan(originalOf(c!.shifting) + 100);
-    expect(c!.going.id).toBeLessThan(0);
+    expect(c!.going.every((e) => e.id < 0)).toBe(true);
   });
 
   it('two merges (^1060): one lane ends, once', () => {
@@ -35,7 +34,9 @@ describe('the dashed lines through them (^1057)', () => {
     expect(loopLength(lines[0]!.pieces)).toBeLessThan(13);
   });
 
-  it('every extension and merge has one', () => {
-    expect(laneChangeLines(d, changes)).toHaveLength(changes.length);
+  it('one line for each piece of the lane that goes on, from the node to the tower', () => {
+    expect(laneChangeLines(d, changes)).toHaveLength(
+      changes.reduce((n, c) => n + c.going.length, 0),
+    );
   });
 });

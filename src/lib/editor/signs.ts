@@ -122,7 +122,7 @@ function directionsOf(g: Graph, e: GEdge): Sign {
 export function signsOf(g: Graph, d: Graph = withDerived(g, derivedNodes(g))): Map<number, Sign> {
   const changes = new Map<number, Sign>();
   for (const c of laneChangesOf(d)) {
-    const ends = c.kind === 'merge' ? [c.shifting] : edgesIn(d, c.node.id);
+    const ends = c.kind === 'merge' ? [c.shifting[0]!] : edgesIn(d, c.node.id);
     for (const e of ends) changes.set(originalOf(e), { kind: c.kind, side: c.side });
   }
   return new Map(

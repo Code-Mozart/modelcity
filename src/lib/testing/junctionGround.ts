@@ -185,6 +185,33 @@ function twoMerges(s: Sketch) {
   );
 }
 
+/** The user's lane that merges beside a lane that other lanes touch (^1063): its start node is in a tower with nodes that cut the lane it merges into in pieces. */
+function mergeBesideCut(s: Sketch) {
+  drawn(
+    s,
+    cell(0, 7),
+    [
+      [-23.192, -1.192, Math.PI],
+      [32.464, 1.808, 0],
+      [19.796, -1.192, Math.PI],
+      [10.407, -4.192, Math.PI],
+      [-11.714, -4.192, Math.PI],
+      [-32.659, 1.808, 2 * Math.PI],
+      [-23.192, 4.808, 0],
+      [-1.698, 1.808, 0],
+      [-32.659, 4.808, 2 * Math.PI],
+    ],
+    [
+      [5, 7],
+      [2, 0],
+      [3, 4],
+      [7, 1],
+      [6, 7],
+      [8, 6],
+    ],
+  );
+}
+
 export function junctionGround(): Graph {
   const s = new Sketch();
   tJunctions(s);
@@ -196,6 +223,7 @@ export function junctionGround(): Graph {
   special(s);
   curvedExtension(s);
   twoMerges(s);
+  mergeBesideCut(s);
   return roundToMm(s.graph);
 }
 
@@ -251,4 +279,5 @@ export const GROUND_CASES: GroundCase[] = [
   named(1021, [0, 6], 'a merge and a split at one node', [50]),
   named(1055, [1, 6], 'a lane added on the left, on curves', [60]),
   named(1060, [2, 6], 'two lanes that merge', [60]),
+  named(1063, [0, 7], 'a lane that merges, the lane it merges into cut by other lanes', [70]),
 ];

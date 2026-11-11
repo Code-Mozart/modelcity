@@ -1,5 +1,5 @@
 import type { Vec } from '../curves/vec';
-import { edgesIn, widthOf, nodeOf, type Graph } from '../model/graph';
+import { edgesIn, widthOf, type Graph } from '../model/graph';
 import type { LaneChange } from './laneChanges';
 import type { Sign } from './signs';
 
@@ -21,9 +21,11 @@ export interface LaneArrow {
  */
 export function laneArrows(d: Graph, changes: LaneChange[]): LaneArrow[] {
   return changes.flatMap((c) => {
-    const start = nodeOf(d, c.shifting.start);
-    if (c.kind !== 'merge' || !start || !edgesIn(d, start.id).length) return [];
+    const start = c.from;
+    if (c.kind !== 'merge' || !edgesIn(d, start.id).length) return [];
     const sign: Sign = { kind: 'merge', side: c.side };
-    return [{ at: { x: start.x, y: start.y }, th: start.th, sign, width: widthOf(d, c.shifting) }];
+    return [
+      { at: { x: start.x, y: start.y }, th: start.th, sign, width: widthOf(d, c.shifting[0]!) },
+    ];
   });
 }

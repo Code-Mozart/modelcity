@@ -132,3 +132,10 @@ describe('two lanes that merge, ^1060 (^1056)', () => {
     expect(sign(left, out)).toBe('straight');
   });
 });
+
+describe('a merge beside a lane that is cut in pieces, ^1063 (^1056)', () => {
+  const at = (dx: number, dy: number): [number, number] => [0 + dx, 1680 + dy];
+  it('the lane that merges (a lane is followed on to its tower through the derived nodes): a merge into the left', () => {
+    expect(sign(at(-30.192 + 7, -41.192 + 46), at(-8.698 + 7, -44.192 + 46))).toBe('merge left');
+  });
+});

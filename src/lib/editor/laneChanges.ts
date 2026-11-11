@@ -20,16 +20,21 @@ type Side = 'left' | 'right';
 /**
  * A lane that is added beside another (an extension) or one that ends beside another (a merge):
  * decided on the graph with the derived nodes in it (^822), by towers and distances (^1056). The
- * `shifting` segment is the one that moves across, the `going` one the one that goes on beside it.
+ * `shifting` segments are the lane that moves across, the `going` ones the lane that goes on
+ * beside it, each from the node `node` to its node of the tower (`from`, `beside`); a lane is
+ * followed along through nodes with one segment in and one out, since derived nodes cut it up.
  */
 export interface LaneChange {
   kind: 'extension' | 'merge';
-  /** The side of the lane that is added, or of the lane that ends: left or right of the one that goes on (^1056). */
+  /** The side of the lane that is added, or the side a lane that ends merges into (^1056). */
   side: Side;
   /** The node where the lanes part or join. */
   node: GNode;
-  shifting: GEdge;
-  going: GEdge;
+  shifting: GEdge[];
+  going: GEdge[];
+  /** The nodes of the tower, the last one before the lanes part or join: on the lane that shifts, and on the one that goes on. */
+  from: GNode;
+  beside: GNode;
 }
 
 /** The tower of every node, by number. */
@@ -42,43 +47,95 @@ function towerNumbers(d: Graph): Map<number, number> {
 /** Whether the node `a` is to the left of the node `b`, seen along the heading of `b`. */
 const leftOf = (a: GNode, b: GNode) => dot(sub(a, b), perp(fromAngle(b.th))) < 0;
 
+/** A node along a lane from a node, and the segments between. */
+interface Step {
+  node: GNode;
+  edges: GEdge[];
+}
+
+const isPlain = (d: Graph, n: GNode) =>
+  edgesIn(d, n.id).length === 1 && edgesOut(d, n.id).length === 1;
+
+/** The nodes along a lane that leaves (`out`) or arrives at a node by its first segment, through plain nodes. */
+function walk(d: Graph, first: GEdge, way: 'out' | 'in'): Step[] {
+  const steps: Step[] = [];
+  const [edges, seen] = [[first], new Set([first.id])];
+  for (let e = first; ;) {
+    const node = nodeOf(d, way === 'out' ? e.end : e.start);
+    if (!node) break;
+    steps.push({ node, edges: [...edges] });
+    const next = (way === 'out' ? edgesOut(d, node.id) : edgesIn(d, node.id))[0];
+    if (!isPlain(d, node) || !next || seen.has(next.id)) break;
+    [e] = [next];
+    seen.add(e.id);
+    edges.push(e);
+  }
+  return steps;
+}
+
+/** The first nodes of two lanes, nearest to where they start, that are part of one tower. */
+function sharedTower(a: Step[], b: Step[], tower: Map<number, number>): [Step, Step] | null {
+  for (const x of a) {
+    const mate = b.find(
+      (y) => tower.has(x.node.id) && tower.get(y.node.id) === tower.get(x.node.id),
+    );
+    if (mate) return [x, mate];
+  }
+  return null;
+}
+
 /**
  * The extension at a node `B` (^1056): two segments leave it, B->C and B->D, C to the left of D,
- * and C and D (their far nodes) are part of one tower. The lane that is added is the one that
- * reaches farther, in a straight line from B: if that is C, a left extension, else a right one.
+ * and C and D (the first nodes of the lanes that are part of one tower) are. The lane that is
+ * added is the one that reaches farther, in a straight line from B: if that is C, a left
+ * extension, else a right one.
  */
 function extensionAt(d: Graph, b: GNode, tower: Map<number, number>): LaneChange | null {
   const outs = edgesOut(d, b.id);
-  const ends = outs.map((e) => nodeOf(d, e.end));
-  const [x, y] = ends;
-  const joined = x && y && tower.has(x.id) && tower.get(x.id) === tower.get(y.id);
-  if (outs.length !== 2 || !joined) return null;
-  const [c, dd] = leftOf(x, y) ? [0, 1] : [1, 0];
-  const side: Side = dist(b, ends[c]!) > dist(b, ends[dd]!) ? 'left' : 'right';
-  const [shifting, going] = side === 'left' ? [outs[c]!, outs[dd]!] : [outs[dd]!, outs[c]!];
-  return { kind: 'extension', side, node: b, shifting, going };
+  const pair =
+    outs.length === 2 && sharedTower(walk(d, outs[0]!, 'out'), walk(d, outs[1]!, 'out'), tower);
+  if (!pair) return null;
+  const [left, right] = leftOf(pair[0].node, pair[1].node) ? pair : [pair[1], pair[0]];
+  const side: Side = dist(b, left.node) > dist(b, right.node) ? 'left' : 'right';
+  const [shifting, going] = side === 'left' ? [left, right] : [right, left];
+  return {
+    kind: 'extension',
+    side,
+    node: b,
+    shifting: shifting.edges,
+    going: going.edges,
+    from: shifting.node,
+    beside: going.node,
+  };
 }
 
 /**
  * The merges at a node `B` (^1056): a segment A->B for which there is another one, C->B, with A
- * and C part of one tower and A farther from B than C is. A is the lane that ends; it merges into
- * the side where C is.
+ * and C (the first nodes of the lanes that are part of one tower) and A farther from B than C is.
+ * A is the lane that ends; it merges into the side where C is.
  */
 function mergesAt(d: Graph, b: GNode, tower: Map<number, number>): LaneChange[] {
   const ins = edgesIn(d, b.id);
-  const start = (e: GEdge) => nodeOf(d, e.start)!;
   return ins.flatMap((a) =>
     ins
-      .filter((c) => c.id !== a.id && tower.get(start(a).id) !== undefined)
-      .filter((c) => tower.get(start(c).id) === tower.get(start(a).id))
-      .filter((c) => dist(start(a), b) > dist(start(c), b))
-      .map((c): LaneChange => ({
-        kind: 'merge',
-        side: leftOf(start(c), start(a)) ? 'left' : 'right',
-        node: b,
-        shifting: a,
-        going: c,
-      })),
+      .filter((c) => c.id !== a.id)
+      .flatMap((c): LaneChange[] => {
+        const pair = sharedTower(walk(d, a, 'in'), walk(d, c, 'in'), tower);
+        if (!pair || dist(pair[0].node, b) <= dist(pair[1].node, b)) return [];
+        const [mine, theirs] = pair;
+        const side: Side = leftOf(theirs.node, mine.node) ? 'left' : 'right';
+        return [
+          {
+            kind: 'merge',
+            side,
+            node: b,
+            shifting: mine.edges,
+            going: theirs.edges,
+            from: mine.node,
+            beside: theirs.node,
+          },
+        ];
+      }),
   );
 }
 
@@ -97,19 +154,14 @@ export function laneChangesOf(d: Graph): LaneChange[] {
  */
 export function laneChangeLines(d: Graph, changes: LaneChange[]): Marking[] {
   return changes.flatMap((c) => {
-    const pieces = (curveOfEdge(d, c.going.id)?.pieces ?? []).filter((p) => !isDegenerate(p));
-    const towards = c.kind === 'extension' ? c.side : towardsOf(d, c);
-    const moved = pieces.map((p) =>
-      offsetPiece(p, (towards === 'right' ? 1 : -1) * (widthOf(d, c.going) / 2)),
-    );
-    return pieces.length && moved.every((p) => p !== null)
-      ? [{ pieces: moved as Piece[], kind: 'dashed' as const }]
-      : [];
+    const towards = c.kind === 'extension' ? c.side : leftOf(c.from, c.beside) ? 'left' : 'right';
+    return c.going.flatMap((e) => {
+      const pieces = (curveOfEdge(d, e.id)?.pieces ?? []).filter((p) => !isDegenerate(p));
+      const h = (towards === 'right' ? 1 : -1) * (widthOf(d, e) / 2);
+      const moved = pieces.map((p) => offsetPiece(p, h));
+      return pieces.length && moved.every((p) => p !== null)
+        ? [{ pieces: moved as Piece[], kind: 'dashed' as const }]
+        : [];
+    });
   });
 }
-
-/** The side of the lane that goes on at which the merging lane is: opposite to the side it merges into. */
-const towardsOf = (d: Graph, c: LaneChange): Side => {
-  const [a, g] = [nodeOf(d, c.shifting.start)!, nodeOf(d, c.going.start)!];
-  return leftOf(a, g) ? 'left' : 'right';
-};
