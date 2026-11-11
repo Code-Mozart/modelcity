@@ -98,5 +98,6 @@ The user entrusts the details to Claude. Principles:
 ## Commands
 - `bun install` (also enables the git hooks in `.githooks/`), `bun run dev` (app), `bun run ci` (lint + check + test + build, same as GitHub Actions).
 - `bun run e2e`: the end-to-end smoke test (Playwright drives the dev server in a real browser; ^145). It is its own CI job and not part of `bun run ci` or the pre-push hook. After `bun install` once: `bunx playwright install chromium`. The test reads the app through `window.__modelcity` (`src/lib/testHook.ts`, dev builds only).
+- `bun run shots`: pictures of every case of the testing ground of the junctions (`docs/junctions.md`) with the debug layer on, into `shots/out` (not tracked). The CI job `shots` puts them on the branch `screenshots`, in a folder named after the pushed branch (^1018).
 - `.githooks/pre-push` runs `bun run ci`, so a push only goes out green. Never bypass it (`--no-verify`).
 - TypeScript is pinned to 6.0.3, the last JS-based release: typescript-eslint and svelte-check do not support 7.0 (no stable programmatic API). Revisit when 7.1 is stable (planned 2026-11-24). (^3)

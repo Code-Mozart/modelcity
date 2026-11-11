@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cornersOf, hullsOf } from './editor/corners';
+  import { segmentSigns } from './editor/signs';
   import { markingsOf } from './editor/markings';
   import { dotsOf, surfaceFrom } from './editor/surface';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
@@ -70,6 +71,7 @@
           hulls: allHulls.map((h) => h.hull),
           corners: cornersOf(allHulls).map((c) => c.at),
           dots: dotsOf(surface, walk),
+          signs: segmentSigns(editor.graph),
         }
       : null,
   );

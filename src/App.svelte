@@ -37,6 +37,7 @@
     isCoordinatesKey,
     isWalkKey,
     nearMissLines,
+    signText,
   } from './lib/hud/debugTools.svelte';
   import { violationsOf } from './lib/editor/violations';
   import { VersionBanner } from './lib/hud/versionBanner.svelte';
@@ -236,6 +237,7 @@
   {#if debug.coordinates}<PointerCoordinates
       pt={editor.pointer?.pt}
       over={hoverText(editor.graph, editor.hover)}
+      sign={signText(editor.graph, editor.hover)}
       misses={nearMissLines(editor.graph, editor.hover)}
     />{/if}
   <div class="right">

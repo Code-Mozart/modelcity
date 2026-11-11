@@ -6,12 +6,20 @@
   let {
     pt,
     over,
+    sign = null,
     misses = [],
-  }: { pt: Vec | null | undefined; over: string; misses?: string[] } = $props();
+  }: {
+    pt: Vec | null | undefined;
+    over: string;
+    /** The sign of the hovered segment (^1017). */
+    sign?: string | null;
+    misses?: string[];
+  } = $props();
 </script>
 
 <div class="coordinates">
-  {coordinatesText(pt)}<br />{over}{#each misses as line (line)}<br />near miss, {line}{/each}
+  {coordinatesText(pt)}<br />{over}{#if sign}<br />{sign}{/if}{#each misses as line (line)}<br
+    />near miss, {line}{/each}
 </div>
 
 <style>
@@ -26,6 +34,6 @@
       sans-serif;
     white-space: nowrap;
     pointer-events: none;
-    filter: drop-shadow(0 0 2px var(--surface)) drop-shadow(0 0 2px var(--surface));
+    filter: drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 2px var(--glow));
   }
 </style>

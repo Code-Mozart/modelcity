@@ -3,6 +3,7 @@ import type { Vec } from '../curves/vec';
 import type { Hover } from '../editor/types';
 import type { Graph } from '../model/graph';
 import { nearMisses } from '../editor/nearMisses';
+import { signName, signOf } from '../editor/signs';
 
 /** The debug aids (^833, ^368): hidden, off by default, switched on with a key that has no hint. */
 export class DebugTools {
@@ -77,6 +78,24 @@ export function hoverText(graph: Graph, hover: Hover | null): string {
     return derived + segment(hover.hit.edge);
   }
   return '-';
+}
+
+/** The segment the pointer is on, if any. */
+function hoveredSegment(graph: Graph, hover: Hover | null) {
+  const node = hover?.kind === 'handle' && ['node', 'head'].includes(hover.handle.type);
+  const id =
+    hover?.kind === 'handle' && !node
+      ? hover.handle.id
+      : hover?.kind === 'candidate'
+        ? hover.hit.edge
+        : null;
+  return graph.edges.find((e) => e.id === id) ?? null;
+}
+
+/** The sign of the segment the pointer is on, by its name (^1017); null on anything else. */
+export function signText(graph: Graph, hover: Hover | null): string | null {
+  const e = hoveredSegment(graph, hover);
+  return e ? `sign: ${signName(signOf(graph, e))}` : null;
 }
 
 /** The nodes that the hovered node almost touches (^884), one line each: what it is off by. */

@@ -16,6 +16,8 @@ export interface TestHook {
   tower(): TowerLine | null;
   /** The camera as a project stores it. */
   camera(): { x: number; y: number; scale: number; rotation: number };
+  /** Moves the camera (for the pictures of the testing ground, ^1018). */
+  show(state: { x: number; y: number; scale: number; rotation: number }): void;
 }
 
 declare global {
@@ -36,6 +38,7 @@ export function installTestHook(
     session,
     scale: () => camera.view.scale,
     camera: () => camera.state,
+    show: (state) => camera.restore(state),
     tower: () => focusTower(editor.graph, editor.chains, editor.focus),
     toPage(pt) {
       const s = worldToScreen(camera.view, camera.size, pt);

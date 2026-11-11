@@ -1,5 +1,7 @@
 import type { Hull } from '../curves/hull';
 import type { Vec } from '../curves/vec';
+import type { PlacedSign } from '../editor/signs';
+import { drawSigns } from './signGizmo';
 import { dot, segment, strokePiece, toScreen, type Frame, type Palette } from './paint';
 
 /** The hulls of the segments and the corners of their crossings, for the debug layer (^925). */
@@ -8,6 +10,8 @@ export interface HullScene {
   corners: Vec[];
   /** One dot on the skin of each polygon of the surface (^948). */
   dots: Vec[];
+  /** What each segment is, as a sign at its middle (^1015). */
+  signs: PlacedSign[];
 }
 
 const HULL_LINE_PX = 1;
@@ -35,4 +39,5 @@ export function drawHulls(f: Frame, scene: HullScene, pal: Palette) {
     segment(f.ctx, { x: p.x - arm, y: p.y + arm }, { x: p.x + arm, y: p.y - arm }, cross);
   }
   for (const d of scene.dots) dot(f.ctx, toScreen(f, d), WALKER_PX, pal.debug);
+  drawSigns(f, scene.signs, pal);
 }

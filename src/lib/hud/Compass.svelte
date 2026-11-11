@@ -48,7 +48,7 @@
   /* Monochrome like the compass outline, no background; a halo keeps it readable over the map. */
   .hint {
     color: var(--ink);
-    filter: drop-shadow(0 0 1.5px var(--surface)) drop-shadow(0 0 1.5px var(--surface));
+    filter: drop-shadow(0 0 1.5px var(--glow)) drop-shadow(0 0 1.5px var(--glow));
   }
   .ring {
     position: absolute;

@@ -56,3 +56,4 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #50 | | v0.50.0: Hulls and corners | ^921 to ^941 | The road surface is removed; the hulls of the segments and the corners where they cross in the debug layer; the performance milestone is registered |
 | #51 | | v0.51.0: Road surface | ^944 to ^948 | The road surface generated as the outline of the union of the hulls |
 | #52 | | v0.52.0: Lane markings | ^949 to ^983 | Dashed and solid centerlines between parallel segments, in pixels (the meter style kept, switched off), the road styles written down, the walking dots of the debug layer |
+| #53 | | v0.53.0: Junctions | ^984 to ^1024 | Part 1 of the junctions: the testing ground, the road layout rules and the signs of the segments in the debug layer, pictures from the CI |
