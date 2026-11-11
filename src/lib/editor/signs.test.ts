@@ -57,6 +57,18 @@ describe('the sign of a segment, other cases', () => {
   });
 });
 
+describe("the user's special cases ^1020 and ^1021", () => {
+  it('a split into two left turns is a split, for every segment of the branch before it', () => {
+    expect(sign([490.862, 1220.684], [515.068, 1203.734])).toBe('left+right');
+    expect(sign([515.068, 1203.734], [523.822, 1202.522])).toBe('left+right');
+  });
+
+  it('a node that is a merge and a split: the straight leg shows the split, the leg that turns in shows its turn', () => {
+    expect(sign([-18.824, 1440], [-4.423, 1440])).toBe('left+right');
+    expect(sign([-10.802, 1449.835], [-4.423, 1440])).toBe('right');
+  });
+});
+
 describe('the signs of the debug layer (^1015)', () => {
   it('one for every segment, at its middle', () => {
     const signs = segmentSigns(g);

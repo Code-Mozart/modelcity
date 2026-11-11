@@ -64,8 +64,8 @@ function legSign(g: Graph, n: GNode, leg: GEdge): Sign | null {
 /**
  * The sign of what follows a split (^1012): the ways its segments leave, each by its own
  * manoeuvre. Two segments of which one shifts and ends beside the other: a lane is added on the
- * side of the shift. Nothing but segments that go on (straight or shifting): a split to the left
- * and the right.
+ * side of the shift. Nothing but segments that go on (straight or shifting), or nothing but
+ * turns, whichever way (two to the left are still one further left than the other): a split.
  */
 function splitSign(g: Graph, n: GNode, outs: GEdge[]): Sign {
   const all = outs.map((o) => ({ o, m: manoeuvreOf(g, o) }));
@@ -74,8 +74,9 @@ function splitSign(g: Graph, n: GNode, outs: GEdge[]): Sign {
     return { kind: 'extension', side: shift.m === 'shift left' ? 'left' : 'right' };
   }
   const sides = all.map(({ o, m }) => turnSide(g, o, m));
-  if (sides.every((s) => s === null)) return directions(false, true, true);
-  return directions(sides.includes(null), sides.includes('left'), sides.includes('right'));
+  const turns = sides.filter((s) => s !== null);
+  if (turns.length === 0 || turns.length === sides.length) return directions(false, true, true);
+  return directions(true, turns.includes('left'), turns.includes('right'));
 }
 
 /**

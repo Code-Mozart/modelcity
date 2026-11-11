@@ -95,6 +95,51 @@ function more(s: Sketch) {
   roundabout(s, cell(1, 5), { r: 18, lanes: 2 }, [E, S, W, N]);
 }
 
+/** Nodes `[x, y, heading]` around `c` and the segments between them, by index: a layout drawn by hand. */
+function drawn(s: Sketch, c: Vec, nodes: [number, number, number][], edges: [number, number][]) {
+  const ids = nodes.map(([x, y, th]) => s.node({ x: c.x + x, y: c.y + y }, th));
+  for (const [a, b] of edges) s.edge(ids[a]!, ids[b]!);
+}
+
+/**
+ * The user's special cases (^1019). A winding lane that splits into two lanes that both turn
+ * left, one of them an S-curve; and a node that is a merge and a split at once: a lane from the
+ * left and one from below that turns right into it, going on into a sharp left turn and a gentle
+ * right bend.
+ */
+function special(s: Sketch) {
+  const winding: [number, number, number][] = [
+    [-29.138, 20.684, -1.3962634015954636],
+    [-4.932, 3.734, 0.1745329251993757],
+    [3.822, 2.522, -0.44966727589695693],
+    [11.738, -7.938, -1.3962634015950905],
+    [28.975, -20.008, 3.4033920413889094],
+    [12.154, -0.971, -0.9951632041902941],
+    [29.87, -11.691, -0.09316777843712643],
+  ];
+  drawn(s, cell(2, 5), winding, [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [2, 5],
+    [5, 6],
+  ]);
+  const both: [number, number, number][] = [
+    [-18.824, 0, 0],
+    [-4.423, 0, 0],
+    [7.095, -11.518, -Math.PI / 2],
+    [18.605, 6.17, Math.PI / 6],
+    [-10.802, 9.835, -Math.PI / 2],
+  ];
+  drawn(s, cell(0, 6), both, [
+    [0, 1],
+    [1, 2],
+    [1, 3],
+    [4, 1],
+  ]);
+}
+
 export function junctionGround(): Graph {
   const s = new Sketch();
   tJunctions(s);
@@ -103,6 +148,7 @@ export function junctionGround(): Graph {
   crossingsAndRoundabout(s);
   others(s);
   more(s);
+  special(s);
   return roundToMm(s.graph);
 }
 
@@ -154,4 +200,6 @@ export const GROUND_CASES: GroundCase[] = [
   named(999, [2, 4], 'five arms', [60]),
   named(1000, [0, 5], 'staggered junction', [90]),
   named(1001, [1, 5], 'roundabout, two lanes', [90]),
+  named(1020, [2, 5], 'a winding lane that splits into two left turns', [80]),
+  named(1021, [0, 6], 'a merge and a split at one node', [50]),
 ];
