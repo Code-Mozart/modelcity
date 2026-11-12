@@ -1,0 +1,101 @@
+import { describe, expect, it } from 'vitest';
+import { PRIORITY_CASES, priorityGround } from '../testing/priorityGround';
+import { courseOf, laneFactsOf, sideOf, type LaneFacts } from './laneFacts';
+import { incompleteArrows, waitLines } from './priorityMarks';
+import { edgesOut, nodeOf } from '../model/graph';
+
+const g = priorityGround();
+const facts = laneFactsOf(g);
+
+/** The facts of the lanes in of a case of the ground, by its hat. */
+function of(hat: number): LaneFacts[] {
+  const c = PRIORITY_CASES.find((x) => x.hat === hat)!.views[0]!.center;
+  return facts.filter((f) => Math.abs(f.node.x - c.x) < 40 && Math.abs(f.node.y - c.y) < 40);
+}
+const way = (hat: number) => of(hat).filter((f) => f.givesWay).length;
+const arrows = (hat: number) =>
+  of(hat)
+    .filter((f) => f.incomplete)
+    .map((f) => f.incomplete!.join('+'));
+
+describe('the side of a node and the course of a segment (^1095, ^1101)', () => {
+  const node = { id: 0, x: 0, y: 0, th: 0 };
+  it('is left, ahead or right of the heading line, ahead within the one tolerance for places', () => {
+    expect(sideOf(node, { x: 10, y: 3 })).toBe('right');
+    expect(sideOf(node, { x: 10, y: -3 })).toBe('left');
+    expect(sideOf(node, { x: 10, y: 0.001 })).toBe('ahead');
+  });
+
+  it('the segments of a T (^1080): from the road, ahead and right; from the side road, left and right', () => {
+    const c = PRIORITY_CASES.find((x) => x.hat === 1080)!.views[0]!.center;
+    const at = (dx: number, dy: number) =>
+      g.nodes.find((n) => Math.abs(n.x - c.x - dx) < 0.01 && Math.abs(n.y - c.y - dy) < 0.01)!;
+    const courses = (n: { id: number }) =>
+      edgesOut(g, n.id)
+        .filter(
+          (e) =>
+            nodeOf(g, e.end)!.y !== undefined &&
+            Math.hypot(nodeOf(g, e.end)!.x - c.x, nodeOf(g, e.end)!.y - c.y) < 10,
+        )
+        .map((e) => courseOf(g, e))
+        .sort();
+    expect(courses(at(-6, 1.5))).toEqual(['ahead', 'right']);
+    expect(courses(at(6, -1.5))).toEqual(['ahead', 'left']);
+    expect(courses(at(1.5, 6))).toEqual(['left', 'right']);
+  });
+});
+
+describe('who gives way: a conflict with a lane that comes in from the right (^1101, ^1074, ^1075)', () => {
+  it('a T gives way on two arms, the one with no arm to its right keeps its way (^1080, ^1081)', () => {
+    expect(way(1080)).toBe(2);
+    expect(way(1081)).toBe(2);
+    const free = of(1080).find((f) => !f.givesWay)!.node;
+    expect(free.th).toBeCloseTo(Math.PI, 5);
+  });
+
+  it('an X gives way on every arm (^1084)', () => {
+    expect(way(1084)).toBe(4);
+  });
+
+  it('one-way arms: nobody comes from an arm that only leads away (^1083), and the rest still gives way (^1082, ^1085, ^1086)', () => {
+    expect(way(1083)).toBe(0);
+    expect(way(1082)).toBe(2);
+    expect(way(1085)).toBe(2);
+    expect(way(1086)).toBe(1);
+  });
+
+  it('nothing where the arms are not small (^1091)', () => {
+    expect(of(1091)).toEqual([]);
+  });
+
+  it('one line for each lane that gives way, as wide as its lane', () => {
+    const lines = waitLines(of(1084));
+    expect(lines).toHaveLength(4);
+    expect(lines.every((l) => Math.abs(l.width - 3) < 1e-9)).toBe(true);
+  });
+});
+
+describe('arrows where a turn is missing (^1076, ^1100)', () => {
+  it('none where every turn is there', () => {
+    for (const hat of [1080, 1081, 1082, 1083, 1084, 1085, 1086]) expect(arrows(hat)).toEqual([]);
+  });
+
+  it('the side road that cannot turn right shows a left arrow, the one that cannot turn left a right arrow (^1087, ^1088)', () => {
+    expect(arrows(1087)).toEqual(['left']);
+    expect(arrows(1088)).toEqual(['right']);
+  });
+
+  it('an X lane that cannot turn left shows straight and right; one that cannot go straight shows right and left (^1089, ^1090)', () => {
+    expect(arrows(1089)).toEqual(['ahead+right']);
+    expect(arrows(1090)).toEqual(['right+left']);
+  });
+
+  it('the arrow stands at the place of the line of its lane and shows its ways', () => {
+    const [arrow] = incompleteArrows(of(1087));
+    expect(arrow!.sign).toEqual({ kind: 'directions', straight: false, left: true, right: false });
+    const own = waitLines(of(1087)).filter(
+      (l) => Math.hypot(l.at.x - arrow!.at.x, l.at.y - arrow!.at.y) < 1e-6,
+    );
+    expect(own).toHaveLength(1);
+  });
+});

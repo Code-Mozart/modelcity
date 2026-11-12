@@ -5,6 +5,8 @@
   import { dotsOf, holesOf, patched, surfaceFrom } from './editor/surface';
   import { laneChangeLines, laneChangesOf } from './editor/laneChanges';
   import { laneArrows } from './editor/laneArrows';
+  import { laneFactsOf } from './editor/laneFacts';
+  import { incompleteArrows, waitLines } from './editor/priorityMarks';
   import { goresOf } from './editor/gores';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
@@ -81,7 +83,9 @@
   );
   /** The surface with its tiny holes patched (^1042). */
   const surface = $derived(patched(rawSurface));
-  const arrows = $derived(laneArrows(seen, changes));
+  /** What can be said about each lane in (^1101): the give-way lines (^1074, ^1075) and the arrows where a turn is missing (^1076). */
+  const facts = $derived(laneFactsOf(editor.graph));
+  const arrows = $derived([...laneArrows(seen, changes), ...incompleteArrows(facts)]);
   const hulls = $derived(
     debug
       ? {
@@ -102,7 +106,7 @@
     }),
   );
   /** Everything painted on the road surface (^949, ^1029). */
-  const marks = $derived({ markings, arrows, physical });
+  const marks = $derived({ markings, waitLines: waitLines(facts), arrows, physical });
   const towers = $derived(
     towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
   );
