@@ -7,6 +7,7 @@ import { widthOf, type GEdge, type GNode, type Graph } from '../model/graph';
 import type { Loop } from '../curves/union';
 import { clipToSurface } from './clip';
 import { curveOfEdge } from './chains';
+import { originalOf } from './derived';
 import { parallel } from './parallel';
 import { runsOfGraph, type Run } from './towers';
 
@@ -58,6 +59,8 @@ export interface Rules {
   physical: boolean;
   /** Lines of the junctions that come on top of those between parallel lanes (^1048, ^1049). */
   extra: Marking[];
+  /** The numbers of the segments inside junctions: no line between lanes where both of a pair are (^1104, ^1143). */
+  inside?: Set<number>;
   /** The road surface: dashed lines are drawn only where their stroke lies on it; not given, they are not cut. */
   surface?: Loop[];
 }
@@ -69,6 +72,7 @@ function pairsOf(g: Graph, run: Run, seen: Set<string>, rules: Rules): Marking[]
     for (const [ea, eb] of pairsAt(g, run, k)) {
       const key = `${Math.min(ea.id, eb.id)},${Math.max(ea.id, eb.id)}`;
       if (seen.has(key)) continue;
+      if (rules.inside && [ea, eb].every((e) => rules.inside!.has(originalOf(e)))) continue;
       seen.add(key);
       const [a, b] = [run.nodes[k]!, run.nodes[k + 1]!];
       const pieces = centerline(g, ea, a, b);

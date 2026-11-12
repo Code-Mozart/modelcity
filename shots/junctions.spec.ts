@@ -1,6 +1,9 @@
 import { test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { GROUND_CASES, junctionGround } from '../src/lib/testing/junctionGround';
+import { PRIORITY_CASES, priorityGround } from '../src/lib/testing/priorityGround';
+import { ANGLE_CASES, angleGround } from '../src/lib/testing/angleGround';
+import { T_CASES, tGround } from '../src/lib/testing/tGround';
 
 /**
  * A picture of every case of the testing ground of the junctions, with the debug layer on and, of
@@ -23,17 +26,23 @@ async function take(
   await page.screenshot({ path: `${OUT}/${name}` });
 }
 
-test('pictures of the testing ground', async ({ page }) => {
-  mkdirSync(OUT, { recursive: true });
-  await page.goto('/');
-  await page.waitForFunction(() => window.__modelcity?.session.ready);
+/** The testing grounds: the junctions (^984) and the small junctions, rechts vor links (^1078). */
+const GROUNDS = [
+  { title: 'The junctions', graph: junctionGround, cases: GROUND_CASES },
+  { title: 'Small junctions, rechts vor links', graph: priorityGround, cases: PRIORITY_CASES },
+  { title: 'Small T-junctions, the edge cases', graph: tGround, cases: T_CASES },
+  { title: 'Angles of 3-way nodes, the matrices', graph: angleGround, cases: ANGLE_CASES },
+];
+
+/** Pictures of one ground: every case with the debug layer on, then the markings only in view mode. */
+async function shootGround(page: Page, ground: (typeof GROUNDS)[number], index: string[]) {
   await page.evaluate((graph) => {
     window.__modelcity!.editor.graph = graph;
-  }, junctionGround());
+  }, ground.graph());
   await page.keyboard.press('Control+.');
   await page.mouse.move(WIDTH_PX - 5, 5);
-  const index: string[] = [];
-  for (const c of GROUND_CASES) {
+  index.push(`# ${ground.title}\n`);
+  for (const c of ground.cases) {
     index.push(`## ^${c.hat}: ${c.name}\n`);
     for (const [i, v] of c.views.entries()) {
       const name = `hat${c.hat}${i ? `-${i + 1}` : ''}.png`;
@@ -43,16 +52,26 @@ test('pictures of the testing ground', async ({ page }) => {
   }
   await page.keyboard.press('Control+.');
   await page.keyboard.press('Tab');
-  index.push('# Markings only, view mode\n');
-  for (const c of GROUND_CASES) {
+  index.push(`## ${ground.title}: markings only, view mode\n`);
+  for (const c of ground.cases) {
     await take(page, c.views[0]!, `hat${c.hat}-markings.png`);
-    index.push(`## ^${c.hat}: ${c.name}\n\n![^${c.hat}](hat${c.hat}-markings.png)\n`);
+    index.push(`### ^${c.hat}: ${c.name}\n\n![^${c.hat}](hat${c.hat}-markings.png)\n`);
   }
+  await page.keyboard.press('Tab');
+}
+
+test('pictures of the testing grounds', async ({ page }) => {
+  test.setTimeout(300_000);
+  mkdirSync(OUT, { recursive: true });
+  await page.goto('/');
+  await page.waitForFunction(() => window.__modelcity?.session.ready);
+  const index: string[] = [];
+  for (const ground of GROUNDS) await shootGround(page, ground, index);
   writeFileSync(`${OUT}/README.md`, HEAD + index.join('\n'));
 });
 
-const HEAD = `# The testing ground of the junctions
+const HEAD = `# The testing grounds of the junctions
 
-Made by the CI from \`docs/mocks/hat984.json\` (\`bun run shots\`). The cases are listed in \`docs/junctions.md\`.
+Made by the CI from \`docs/mocks/hat984.json\` and \`docs/mocks/hat1078.json\` (\`bun run shots\`). The cases are listed in \`docs/junctions.md\`.
 
 `;

@@ -144,13 +144,48 @@ function chain(pieces: Piece[]): Loop[] {
   return loops;
 }
 
+/** A box grown by the probe distance on every side. */
+const grown = (b: Box): Box => ({
+  x0: b.x0 - PROBE_M,
+  x1: b.x1 + PROBE_M,
+  y0: b.y0 - PROBE_M,
+  y1: b.y1 + PROBE_M,
+});
+
+/** Whether every place of a piece is within the probe distance of one of the pieces `by`. */
+const coveredBy = (p: Piece, by: Piece[]) =>
+  [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].every((t) => {
+    const at = pointOn(p, t);
+    return by.some((q) => distanceToPiece(q, at) < PROBE_M);
+  });
+
+/**
+ * Boundary pieces that are covered by the others are left out, the longest first: a short straight
+ * piece on a nearly straight big arc is a copy of a part of it, a long one on two short ones the
+ * same the other way round. At a joint the chain could take such a piece for the way on and run
+ * into a dead end (the outline of a road in two loops, closed by a stray line).
+ */
+function withoutCovered(pieces: Piece[]): Piece[] {
+  const boxes = new Map(pieces.map((p) => [p, boxAround([p])]));
+  const kept = new Set(pieces);
+  const longest = [...pieces].sort((a, b) => pieceLength(b) - pieceLength(a));
+  for (const p of longest) {
+    // Short pieces are within the probe distance of their neighbours, and not copies of anything.
+    if (pieceLength(p) < 4 * PROBE_M) continue;
+    const box = boxes.get(p)!;
+    const near = [...kept].filter((q) => q !== p && boxesMeet(grown(box), boxes.get(q)!));
+    if (near.length && coveredBy(p, near)) kept.delete(p);
+  }
+  return pieces.filter((p) => kept.has(p));
+}
+
 /** The outline of the union of the regions, as closed loops of pieces (^945). */
 export function unionOutline(regions: Piece[][]): Loop[] {
   const all = regions.map((pieces): Region => ({ pieces, box: boxAround(pieces) }));
   const cut = cutAll(regions.flat().filter((p) => pieceLength(p) > TINY_M));
   const boundary = cut.filter((p) => onBoundary(p, all));
   const distinct = boundary.filter((p, i) => !boundary.slice(0, i).some((q) => same(p, q)));
-  return chain(distinct);
+  return chain(withoutCovered(distinct));
 }
 
 /** A test for points being inside the loops (even-odd, so inside a hole is outside), for many points. */

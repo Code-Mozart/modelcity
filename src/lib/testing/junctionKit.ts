@@ -46,6 +46,8 @@ export interface ArmSpec {
   outShift?: boolean;
   /** Only the nodes at the junction, no road behind them: to join two junctions by hand. */
   stub?: boolean;
+  /** The numbers (in the list of arms) of arms that its lanes in do not lead to: a turn that is not allowed. */
+  skip?: number[];
 }
 
 /** The nodes of an arm at the junction, innermost lane first. */
@@ -131,7 +133,11 @@ export function junction(s: Sketch, c: Vec, specs: ArmSpec[], stop?: number): Ar
     ins: lanesIn(s, c, spec, d),
     outs: lanesOut(s, c, spec, d),
   }));
-  for (const a of arms) for (const b of arms) if (a !== b) join(s, a, b);
+  arms.forEach((a, i) =>
+    arms.forEach((b, j) => {
+      if (i !== j && !a.spec.skip?.includes(j)) join(s, a, b);
+    }),
+  );
   return arms;
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.54.0",
-  "moniker": "Extension and merge markings",
+  "version": "0.55.0",
+  "moniker": "Rechts vor links",
   "private": true,
   "type": "module",
   "scripts": {

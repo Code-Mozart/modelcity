@@ -5,6 +5,9 @@
   import { dotsOf, holesOf, patched, surfaceFrom } from './editor/surface';
   import { laneChangeLines, laneChangesOf } from './editor/laneChanges';
   import { laneArrows } from './editor/laneArrows';
+  import { junctionEdgeIds, laneFactsOf } from './editor/laneFacts';
+  import { incompleteArrows, waitLines } from './editor/priorityMarks';
+  import { laneHull } from './editor/laneHull';
   import { goresOf } from './editor/gores';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
@@ -81,7 +84,16 @@
   );
   /** The surface with its tiny holes patched (^1042). */
   const surface = $derived(patched(rawSurface));
-  const arrows = $derived(laneArrows(seen, changes));
+  /** What can be said about each lane in (^1101): the give-way lines (^1074, ^1075) and the arrows where a turn is missing (^1076). */
+  const facts = $derived(laneFactsOf(editor.graph));
+  const arrows = $derived([...laneArrows(seen, changes), ...incompleteArrows(facts)]);
+  /** The hull round what the lane in that the pointer is on meets, in the debug layer (^1102). */
+  const hoveredHull = $derived.by(() => {
+    const h = editor.hover;
+    const node = debug && h?.kind === 'handle' && h.handle.type === 'node' ? h.handle.id : null;
+    const f = facts.find((x) => x.node.id === node);
+    return f ? laneHull(editor.graph, f) : [];
+  });
   const hulls = $derived(
     debug
       ? {
@@ -90,6 +102,7 @@
           dots: dotsOf(surface, walk),
           signs: segmentSigns(editor.graph, seen),
           holes: holesOf(rawSurface),
+          junction: hoveredHull,
         }
       : null,
   );
@@ -99,10 +112,11 @@
       physical,
       extra: [...laneChangeLines(seen, changes), ...gores.flatMap((w) => w.markings)],
       surface,
+      inside: junctionEdgeIds(editor.graph),
     }),
   );
   /** Everything painted on the road surface (^949, ^1029). */
-  const marks = $derived({ markings, arrows, physical });
+  const marks = $derived({ markings, waitLines: waitLines(facts), arrows, physical });
   const towers = $derived(
     towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
   );
