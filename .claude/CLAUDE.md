@@ -46,6 +46,12 @@ Roughly, and not a fixed protocol; bend it when a milestone calls for it:
 - The stored model is specified in `docs/data-model.md`. It is fixed: any change to it needs the user's agreement, a version bump and a migration (^173).
 - Every way a project file is refused on import has a hat (^192 to ^208, rule ^209). When the import interface changes (data model extended or changed, a migration or a check added), make or update these hats in the same step.
 
+## Work timer (^1141)
+- Whenever you start working on something, start the timer first: `scripts/timer.sh 1 "<what>"` with `run_in_background: true` (no `&`, no output redirect: its message is what wakes you). It answers after 5 minutes.
+- At 5 minutes: check you are not lost in details and that this is the smallest next step. You may decide to go on; then start round 2 (`scripts/timer.sh 2 "<what>"`).
+- At 10 minutes (2 x 5): stop, give the user a status report (done, open, next, cost so far) and ask permission before sinking in more time.
+- A new request, or a new piece of work after a report, starts a new timer. Follow the workflow rules above (hats, docs, tests, PR) with every piece.
+
 ## Quality
 
 - Verify with tests (unit, integration, e2e). CI builds, lints, type-checks and tests. Keep it green at all times.

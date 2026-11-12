@@ -12,6 +12,7 @@ import {
 } from '../model/graph';
 import { crossAcross } from './corners';
 import { curvesOf } from './derived';
+import { manoeuvreOf } from './manoeuvres';
 import { towersOf } from './towers';
 
 /**
@@ -179,14 +180,18 @@ function factsOf(g: Graph, tower: Map<number, number>): LaneFacts[] {
 /**
  * The segments inside junctions, whatever their size (^1104): those of a lane in, a node that
  * leaves its tower in two or more ways or leads into two or more arms (^1101). Found per node.
+ * A lane that goes straight on and nowhere else is not inside (^1143): its centerline goes on.
  */
 export function junctionEdgeIds(g: Graph): Set<number> {
   const tower = towerIds(g);
   const near = adjacency(g, tower);
   return new Set(
-    g.nodes.flatMap((n) =>
-      segmentsOf(g, tower, n, armsOf(near, tower.get(n.id)!)).map((e) => e.id),
-    ),
+    g.nodes.flatMap((n) => {
+      const edges = segmentsOf(g, tower, n, armsOf(near, tower.get(n.id)!));
+      return edges.length === 1 && manoeuvreOf(g, edges[0]!) === 'straight'
+        ? []
+        : edges.map((e) => e.id);
+    }),
   );
 }
 

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { T_CASES, tGround } from '../testing/tGround';
-import { laneFactsOf } from './laneFacts';
+import { derivedNodes, withDerived } from './derived';
+import { junctionEdgeIds, laneFactsOf } from './laneFacts';
+import { markingsOf } from './markings';
+import { distanceToPiece } from '../curves/piece';
 import { waitLines } from './priorityMarks';
 
 const g = tGround();
@@ -71,4 +74,24 @@ describe('the small T-junctions, happy path and edge cases (^1109)', () => {
       expect(seen(hat)).toEqual({ lanes, lines, arrows });
     });
   }
+});
+
+describe('the centerline of a lane that only goes straight on (^1143)', () => {
+  const lines = markingsOf(withDerived(g, derivedNodes(g)), {
+    physical: false,
+    inside: junctionEdgeIds(g),
+  });
+  const onLine = (hat: number) => {
+    const c = T_CASES.find((x) => x.hat === hat)!.views[0]!.center;
+    return lines.some((m) => m.pieces.some((p) => distanceToPiece(p, c) < 0.05));
+  };
+
+  it('goes on through the junction in the middle of the main road', () => {
+    expect(onLine(1126)).toBe(true);
+    expect(onLine(1128)).toBe(true);
+  });
+
+  it('is not there where both lanes turn off too: the plain T', () => {
+    expect(onLine(1109)).toBe(false);
+  });
 });
