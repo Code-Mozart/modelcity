@@ -30,36 +30,39 @@ const GROUNDS = [
   { title: 'Small junctions, rechts vor links', graph: priorityGround, cases: PRIORITY_CASES },
 ];
 
+/** Pictures of one ground: every case with the debug layer on, then the markings only in view mode. */
+async function shootGround(page: Page, ground: (typeof GROUNDS)[number], index: string[]) {
+  await page.evaluate((graph) => {
+    window.__modelcity!.editor.graph = graph;
+  }, ground.graph());
+  await page.keyboard.press('Control+.');
+  await page.mouse.move(WIDTH_PX - 5, 5);
+  index.push(`# ${ground.title}\n`);
+  for (const c of ground.cases) {
+    index.push(`## ^${c.hat}: ${c.name}\n`);
+    for (const [i, v] of c.views.entries()) {
+      const name = `hat${c.hat}${i ? `-${i + 1}` : ''}.png`;
+      await take(page, v, name);
+      index.push(`![^${c.hat}, ${v.span} m across](${name})\n`);
+    }
+  }
+  await page.keyboard.press('Control+.');
+  await page.keyboard.press('Tab');
+  index.push(`## ${ground.title}: markings only, view mode\n`);
+  for (const c of ground.cases) {
+    await take(page, c.views[0]!, `hat${c.hat}-markings.png`);
+    index.push(`### ^${c.hat}: ${c.name}\n\n![^${c.hat}](hat${c.hat}-markings.png)\n`);
+  }
+  await page.keyboard.press('Tab');
+}
+
 test('pictures of the testing grounds', async ({ page }) => {
   test.setTimeout(180_000);
   mkdirSync(OUT, { recursive: true });
   await page.goto('/');
   await page.waitForFunction(() => window.__modelcity?.session.ready);
   const index: string[] = [];
-  for (const ground of GROUNDS) {
-    await page.evaluate((graph) => {
-      window.__modelcity!.editor.graph = graph;
-    }, ground.graph());
-    await page.keyboard.press('Control+.');
-    await page.mouse.move(WIDTH_PX - 5, 5);
-    index.push(`# ${ground.title}\n`);
-    for (const c of ground.cases) {
-      index.push(`## ^${c.hat}: ${c.name}\n`);
-      for (const [i, v] of c.views.entries()) {
-        const name = `hat${c.hat}${i ? `-${i + 1}` : ''}.png`;
-        await take(page, v, name);
-        index.push(`![^${c.hat}, ${v.span} m across](${name})\n`);
-      }
-    }
-    await page.keyboard.press('Control+.');
-    await page.keyboard.press('Tab');
-    index.push(`## ${ground.title}: markings only, view mode\n`);
-    for (const c of ground.cases) {
-      await take(page, c.views[0]!, `hat${c.hat}-markings.png`);
-      index.push(`### ^${c.hat}: ${c.name}\n\n![^${c.hat}](hat${c.hat}-markings.png)\n`);
-    }
-    await page.keyboard.press('Tab');
-  }
+  for (const ground of GROUNDS) await shootGround(page, ground, index);
   writeFileSync(`${OUT}/README.md`, HEAD + index.join('\n'));
 });
 
