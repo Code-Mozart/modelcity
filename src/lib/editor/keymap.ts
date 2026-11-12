@@ -1,12 +1,22 @@
 /** The one place where keys are bound to editor actions (^11), so they are easy to change. */
 export type Action =
-  'escape' | 'view' | 'pin' | 'deleteNode' | 'undo' | 'redo' | 'undoBatch' | 'redoBatch';
+  | 'escape'
+  | 'view'
+  | 'pin'
+  | 'collapse'
+  | 'deleteNode'
+  | 'undo'
+  | 'redo'
+  | 'undoBatch'
+  | 'redoBatch';
 
 const KEYMAP: Record<string, Action> = {
   Escape: 'escape',
   Tab: 'view',
   s: 'pin',
   S: 'pin',
+  c: 'collapse',
+  C: 'collapse',
   Delete: 'deleteNode',
   Backspace: 'deleteNode',
 };

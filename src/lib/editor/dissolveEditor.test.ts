@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Editor } from './editor.svelte';
 import { click, draw } from '../testing/editorHelpers';
 import { graphOf } from '../testing/graphHelpers';
-import { dissolveNodes } from './dissolve';
-import { emptyGraph, type Graph } from '../model/graph';
+import { collapseNodes } from './dissolve';
+import { type Graph } from '../model/graph';
 import { parallel } from './parallel';
 import { derivedNodes } from './derived';
 
@@ -27,7 +27,10 @@ const lanes = (n: number, cut = true): Graph =>
 
 describe('nodes that parallel segments need (^894)', () => {
   it('a tower of nodes without an effect dissolves together, the lanes stay parallel', () => {
-    const g = dissolveNodes(emptyGraph(), lanes(3));
+    const g = collapseNodes(
+      lanes(3),
+      lanes(3).nodes.map((n) => n.id),
+    );
     expect(g.nodes).toHaveLength(6);
     expect(g.edges).toHaveLength(3);
     expect(parallel(g, g.edges[0]!, g.edges[1]!)).toBe(true);
@@ -37,26 +40,46 @@ describe('nodes that parallel segments need (^894)', () => {
     const g = lanes(2);
     // The lane beside has an effect at x = 10 (another lane configuration), so only the first dissolves.
     const other = { ...g, edges: g.edges.map((e) => (e.id === 3 ? { ...e, lane: 2 } : e)) };
-    const after = dissolveNodes(emptyGraph(), other);
+    const after = collapseNodes(
+      other,
+      other.nodes.map((n) => n.id),
+    );
     expect(after.nodes).toHaveLength(5);
     expect(derivedNodes(after).some((d) => Math.abs(d.x - 10) < 0.01)).toBe(true);
   });
 });
 
-describe('dissolving in the editor (^893)', () => {
-  it('drawing a node straight on removes the one before; one undo brings it back', () => {
+describe('collapsing in the editor (^1064)', () => {
+  /** A road with a node straight on at x = 40, as drawn: nothing dissolves by itself. */
+  const drawn = () => {
     const ed = draw([
       [0, 0],
       [40, 0],
     ]);
-    expect(ed.graph.nodes).toHaveLength(2);
     click(ed, 80, 0);
+    return ed;
+  };
+
+  it('drawing a node straight on keeps the one before', () => {
+    expect(drawn().graph.nodes).toHaveLength(3);
+  });
+
+  it('the control collapses the selected node: one step, one undo brings it back', () => {
+    const ed = drawn();
+    ed.selection = [ed.graph.nodes.find((n) => n.x === 40)!.id];
+    expect(ed.key('c')).toBe(true);
     expect(ed.graph.nodes).toHaveLength(2);
     expect(ed.graph.edges).toHaveLength(1);
+    expect(ed.selection).toEqual([]);
     ed.key('z', { ctrl: true, shift: false });
-    expect(ed.graph.nodes).toHaveLength(2);
-    expect(ed.graph.edges).toHaveLength(1);
-    expect(ed.graph.nodes.some((n) => n.x === 40)).toBe(true);
+    expect(ed.graph.nodes).toHaveLength(3);
+  });
+
+  it('nothing selected: nothing happens, and no step is recorded', () => {
+    const ed = drawn();
+    ed.selection = [];
+    ed.key('c');
+    expect(ed.graph.nodes).toHaveLength(3);
   });
 });
 

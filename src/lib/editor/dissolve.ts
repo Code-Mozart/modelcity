@@ -63,39 +63,6 @@ const without = (g: Graph, b: number, join: { into: GEdge; other: GEdge }): Grap
   ),
 });
 
-const sameEdge = (a: GEdge | undefined, b: GEdge) =>
-  !!a && a.start === b.start && a.end === b.end && a.radius === b.radius && a.lane === b.lane;
-
-const movedNode = (was: GNode | undefined, n: GNode) =>
-  !was || was.x !== n.x || was.y !== n.y || was.th !== n.th;
-
-/** The ends of the segments that are new, changed or gone. */
-function endsOfChanged(before: Graph, after: Graph): number[] {
-  const [was, now] = [
-    new Map(before.edges.map((e) => [e.id, e])),
-    new Map(after.edges.map((e) => [e.id, e])),
-  ];
-  const changed = [
-    ...after.edges.filter((e) => !sameEdge(was.get(e.id), e)),
-    ...before.edges.filter((e) => !now.has(e.id)),
-  ];
-  return changed.flatMap((e) => [e.start, e.end]);
-}
-
-/** The nodes this operation touched, and the nodes next to them: only these can have lost their effect (^893). */
-function touched(before: Graph, after: Graph): Set<number> {
-  const was = new Map(before.nodes.map((n) => [n.id, n]));
-  const changed = new Set([
-    ...after.nodes.filter((n) => movedNode(was.get(n.id), n)).map((n) => n.id),
-    ...endsOfChanged(before, after),
-  ]);
-  const next = after.edges.flatMap((e) => [
-    ...(changed.has(e.start) ? [e.end] : []),
-    ...(changed.has(e.end) ? [e.start] : []),
-  ]);
-  return new Set([...changed, ...next]);
-}
-
 type Join = { into: GEdge; other: GEdge };
 
 /** How much road runs parallel to another segment, derived nodes included (the partially parallel segments, ^822): the length of the segments that have a partner. */
@@ -128,38 +95,25 @@ function groupOf(g: Graph, b: GNode, can: (n: GNode) => boolean): GNode[] {
   return tower.filter(can);
 }
 
-export interface Dissolve {
-  /** Nodes that stay: the one being drawn from (^893). */
-  keep: number[];
-  /** Selected nodes: they stay unless this operation moved them. */
-  selected: number[];
-  /** Nodes that were drawn from and are not any more: this operation looked at them too. */
-  leaving: number[];
-}
-
-const NONE: Dissolve = { keep: [], selected: [], leaving: [] };
-
 /**
- * Nodes without an effect dissolve (^829, ^891): a node with two segments that one segment from
- * neighbour to neighbour would replace without changing the curve, in the position domain. Only
- * nodes this operation touched, and not the ones drawn from or selected and not moved; never on
- * load (^893). The nodes of a tower dissolve together or not at all, so the lanes stay parallel (^894).
+ * Collapse the nodes `ids` that have no effect (^1064, ^891): a node with two segments that one
+ * segment from neighbour to neighbour would replace without changing the curve, in the position
+ * domain. The nodes of a tower collapse together or not at all, so the lanes stay parallel (^894):
+ * a tower is left as it is unless all its nodes are among `ids`. Never by itself: only by the control.
  */
-export function dissolveNodes(before: Graph, after: Graph, stay: Dissolve = NONE): Graph {
-  const was = new Map(before.nodes.map((n) => [n.id, n]));
-  const kept = (id: number) =>
-    stay.keep.includes(id) ||
-    (stay.selected.includes(id) && !movedNode(was.get(id), nodeOf(after, id)!));
-  let g = after;
+export function collapseNodes(g: Graph, ids: number[]): Graph {
+  const chosen = new Set(ids);
   const done = new Set<number>();
-  for (const id of [...touched(before, after), ...stay.leaving]) {
-    const b = nodeOf(g, id);
-    if (!b || done.has(id) || kept(id) || !joined(g, b)) continue;
-    const members = groupOf(g, b, (n) => !kept(n.id) && joined(g, n) !== null);
+  let next = g;
+  for (const id of ids) {
+    const now = next;
+    const b = nodeOf(now, id);
+    if (!b || done.has(id) || !joined(now, b)) continue;
+    const members = groupOf(now, b, (n) => joined(now, n) !== null);
     members.forEach((n) => done.add(n.id));
-    g = dissolvedTogether(g, members);
+    if (members.every((n) => chosen.has(n.id))) next = dissolvedTogether(now, members);
   }
-  return g;
+  return next;
 }
 
 /** The graph without these nodes, if that keeps what the segments beside it need (^894), else as it was. */
@@ -172,14 +126,8 @@ function dissolvedTogether(g: Graph, members: GNode[]): Graph {
   return next !== g && keepsParallels(g, next) ? next : g;
 }
 
-/** The state after an operation with its nodes without an effect dissolved (^829): the drawing and the selection decide which stay (^893). */
-export function dissolveStep(before: Snapshot, now: Snapshot): Snapshot {
-  const ids = (s: Snapshot) => [s.active, s.origin].filter((id) => id !== null);
-  const keep = ids(now);
-  const graph = dissolveNodes(before.graph, now.graph, {
-    keep,
-    selected: now.selection,
-    leaving: ids(before).filter((id) => !keep.includes(id)),
-  });
-  return { ...now, graph, selection: now.selection.filter((id) => nodeOf(graph, id)) };
+/** The state with the selected nodes collapsed (^1200); the ones that are gone leave the selection. */
+export function collapseStep(d: Snapshot): Snapshot {
+  const graph = collapseNodes(d.graph, d.selection);
+  return { ...d, graph, selection: d.selection.filter((id) => nodeOf(graph, id)) };
 }
