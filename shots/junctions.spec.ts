@@ -2,6 +2,7 @@ import { test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { GROUND_CASES, junctionGround } from '../src/lib/testing/junctionGround';
 import { PRIORITY_CASES, priorityGround } from '../src/lib/testing/priorityGround';
+import { ANGLE_CASES, angleGround } from '../src/lib/testing/angleGround';
 import { T_CASES, tGround } from '../src/lib/testing/tGround';
 
 /**
@@ -30,6 +31,7 @@ const GROUNDS = [
   { title: 'The junctions', graph: junctionGround, cases: GROUND_CASES },
   { title: 'Small junctions, rechts vor links', graph: priorityGround, cases: PRIORITY_CASES },
   { title: 'Small T-junctions, the edge cases', graph: tGround, cases: T_CASES },
+  { title: 'Angles of 3-way nodes, the matrices', graph: angleGround, cases: ANGLE_CASES },
 ];
 
 /** Pictures of one ground: every case with the debug layer on, then the markings only in view mode. */

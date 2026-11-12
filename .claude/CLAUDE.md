@@ -50,6 +50,7 @@ Roughly, and not a fixed protocol; bend it when a milestone calls for it:
 - Whenever you start working on something, start the timer first: `scripts/timer.sh 1 "<what>"` with `run_in_background: true` (no `&`, no output redirect: its message is what wakes you). It answers after 5 minutes.
 - At 5 minutes: check you are not lost in details and that this is the smallest next step. You may decide to go on; then start round 2 (`scripts/timer.sh 2 "<what>"`).
 - At 10 minutes (2 x 5): stop, give the user a status report (done, open, next, cost so far) and ask permission before sinking in more time.
+- The user may override the budget ("the time budget for this task is N minutes"): then the timer runs that long (`TIMER_SECONDS=<N*60> scripts/timer.sh 1 ...`). Said nothing: the default of 5 minutes. After the first timeout Claude may always take 5 more minutes on its own judgement (not wasteful); the report and the question come after those.
 - A new request, or a new piece of work after a report, starts a new timer. Follow the workflow rules above (hats, docs, tests, PR) with every piece.
 
 ## Quality

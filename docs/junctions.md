@@ -1,6 +1,6 @@
 # Junctions (^157): the rules, and the testing ground
 
-**This file is the one place for the rules of junctions.** Rented hats: the criteria and node patterns ^1092 to ^1104 and ^1106 to ^1108, ^1142 and ^1143, the cases of the T ground ^1109 to ^1139 and ^1140, the rules ^1003 to ^1015, the junction and marking rules ^1035 to ^1044 and ^1046 to ^1054, the cases of the testing ground ^985 to ^1001, ^1020 to ^1021 and ^1055, ^1060 and ^1063; the rules ^1056 to ^1062, ^1065 and ^1066. Status `decided` = the user's words, `assumed` = Claude filled it in.
+**This file is the one place for the rules of junctions.** Rented hats: the criteria and node patterns ^1092 to ^1104 and ^1106 to ^1108, ^1142 to ^1145, the cases of the angle ground ^1146 to ^1199, the cases of the T ground ^1109 to ^1139 and ^1140, the rules ^1003 to ^1015, the junction and marking rules ^1035 to ^1044 and ^1046 to ^1054, the cases of the testing ground ^985 to ^1001, ^1020 to ^1021 and ^1055, ^1060 and ^1063; the rules ^1056 to ^1062, ^1065 and ^1066. Status `decided` = the user's words, `assumed` = Claude filled it in.
 
 ## Principles and scope
 
@@ -29,8 +29,10 @@
 | ^1102 | **The hull round what a lane in meets, in the debug layer (user: bring back the orange hull, per node).** While a node that is a lane in (^1101) is hovered in the debug layer (`Ctrl+Period`), the outline round its segments and the segments of the lanes it meets is drawn in orange, half a lane of padding on each side, as the hull of a junction was in v0.54.0 (^1039, superseded): no junction is found, the hull shows where *this* lane has to look. Nothing for a node that is not a lane in. | decided; built |
 | ^1103 | **Marks are anchored at the nodes (user: "i changed my mind").** The give-way line of a lane stands **at its node** (its front edge on the node, the line before it): on a T at B and F (and C if it had one), likewise on an X. The **arrow** of a lane is anchored to the node too, a fixed offset **behind** the line: a gap of 10 px (logical) or 1.5 m (physical, assumed) behind the rear edge of the line, as the arrow of a lane that ends (^1059). Replaces where the first version put them (the first meeting with other traffic). | decided; built |
 | ^1104 | **No centerlines inside junctions (user, replaces ^1050).** The dashed line between two parallel lanes (^950) is not drawn where one of the two is a segment **inside a junction**: a segment of a *lane in* (^1101) in the sense of leaving its tower in two or more ways or leading into two or more arms, whatever the size of the junction (so also the T with a main road of 2+2, ^1091). Found per node, no junction is looked for; the lines of the arms stop where the segments of the junction begin, at the nodes. Segments that only cross, with no node of their own there (^994, ^995), are not inside a junction and keep their lines. | decided; built |
-| ^1142 | **What is right (user, proposal).** "Rechts vor links" depends on what *right* is. Of a bend of 1+1 with the angle α the third arm of a 3-way node has the angle β = 360 - α (a T: α = 90, β = 90 or 180; a symmetric Y: α = 120, β = 120 and 120). With β the counter-clockwise angle to the next segment: that segment is on the **right** if β < 210 degrees. Replaces the judgement by the side of the node (`sideOf`) where the two differ. Not built yet: waits for the go of the user (it is an angle as a criterion, against ^879, and 210 is a number to confirm). | decided as a proposal; not built |
+| ^1142 | **What is right (user, proposal).** "Rechts vor links" depends on what *right* is. Of a bend of 1+1 with the angle α the third arm of a 3-way node has the angle β = 360 - α (a T: α = 90, β = 90 or 180; a symmetric Y: α = 120, β = 120 and 120). With β the counter-clockwise angle to the next segment: that segment is on the **right** if β < 150 degrees (corrected by the user: 210 was a slip, ^1144). Replaces the judgement by the side of the node (`sideOf`) where the two differ. Not built yet: waits for the go of the user (it is an angle as a criterion, against ^879, the one exception the user allows, ^1144). | decided; not built, see ^1144 |
 | ^1143 | **A lane that only goes straight on keeps its centerline (user).** A lane in that has one way out only and that is straight on (it gets the arrow *ahead*, ^1100) is not inside the junction (^1104): the dashed line between its segment and the one beside it goes on through the node, e.g. between the segments 270 and 272 at node 284. Where both lanes turn off too (the plain T) there is none. Test `editor/tGroundRules.test` (cases ^1126, ^1128 against ^1109). | decided; built |
+| ^1144 | **150 degrees, and where it decides (user).** The angle of ^1142 is **150 degrees**, not 210. It decides *who gives way* and the **layout of the arrows** (^1100) only in the choice between the *split* (both ways equal) and *ahead and right* (or *ahead and left*); nothing else. The one angle that is allowed as a criterion (^879). Built after the ground ^1145 is looked at. | decided; not built |
+| ^1145 | **The angle ground (user).** A matrix of 3-way nodes with the angles alpha (15, 90, 120) and beta (15, 45, 90, 120, 135, 150, 165, 180, 210) of ^1142, the cases ^1146 to ^1172; and a second matrix of the same with connections missing, always others and sometimes several, as a stress test of the rules (^1173 to ^1199). `src/lib/testing/angleGround.ts`, project `docs/mocks/hat1145.json`, pictures by the CI job `shots`. A is the lane arm heading clockwise of B by alpha, C is beta counter-clockwise of B. | decided; built |
 | ^1106 | **The bugs of the project ^1105 (user), fixed.** *(1)* Arrows over the void behind the leaf nodes 76, 78, 104 and 111: a leaf of a road with one segment is not a lane in (^1106 below). *(2)* Arrows past the junction behind the nodes 80 and 113: nodes where lanes merge are not lanes in. *(3)* Missing surface on the segments 105, 111, 114: the union of the hulls (^1107). *(4)* Missing centerlines between the lanes 76 and 78 and between 101 and 103: they were taken for segments inside a junction because their start node counted as a lane in. | decided; built |
 | ^1107 | **The outline of the surface keeps no copy of a part of the boundary (user's bug 3).** Arcs of 209 m that are nearly on one circle gave boundary pieces that lie on each other (a short straight piece on a long arc): at the joint the chain took the copy for the way on and ran into a dead end, so the outline of the road was in two loops closed by a line across the road (the *missing surface*, a green sliver along a diagonal), and differently in the browser and in node (the last digits of the numbers decide which piece is nearer). A boundary piece that is covered by the others within the probe distance (4 mm) is left out, the longest first; pieces shorter than four probe distances are not looked at (they are covered by their neighbours). | decided; built |
 | ^1108 | **Lane in, and what a lane in does not lead to, per node (replaces the first built version of ^1101 (b) and (f)).** *Lane in:* a node at which at most one segment ends (two or more are a merge, where lanes *arrive*), and which leaves its tower in two or more ways, or has a road behind it (a segment ends at it) and leads into two or more arms; a leaf with a single segment is the end of a road, no lane in. A line or an arrow also needs a road behind the node, or it stands over the void. *What it does not lead to:* the **possible connections** of a lane are the towers that the segments of the lanes it meets lead to (the lanes that meet one another, directly or through others, ^1096), except the towers of its own arm: its own tower and the towers its road behind comes from (no U-turn). If it leads to fewer, it shows an arrow for the ways it does. This holds also where a junction is drawn with nodes of its own (a node of the road splitting, nodes where the lanes merge again, as in ^1105), where the *arms* of the towers around a node gave an arrow to lanes with all their turns. | decided; built |
@@ -218,3 +220,64 @@ The cases of the ground (rented range ^1080 to ^1091), each in a cell of 260 x 2
 
 | ^1140 | **The testing grounds have the edge cases (user).** A testing ground does not only draw the happy path: it has the cases that are likely to go wrong (junctions on bends, roads of different lengths and shapes, every combination of connections that can be missing, the limits between a T and a Y), as a unit test looks at the edge cases and not only at the usual input. Each new rule is first tried on such a ground. | decided |
 
+
+## The angle ground (^1145)
+
+Cell = column, row from the top left; 9 columns. The first matrix (rows 0 to 2) has all turns, the second (rows 3 to 5) the same angles with the connections named missing (the first letter is the arm of the lane in, the second that of the lane out).
+
+| Hat | Cell | What | Shows |
+| --- | --- | --- | --- |
+| ^1146 | 0, 0 | 3-way node, alpha 15, beta 15 | all turns: the layout of the arrows (^1144) |
+| ^1147 | 1, 0 | 3-way node, alpha 15, beta 45 | all turns: the layout of the arrows (^1144) |
+| ^1148 | 2, 0 | 3-way node, alpha 15, beta 90 | all turns: the layout of the arrows (^1144) |
+| ^1149 | 3, 0 | 3-way node, alpha 15, beta 120 | all turns: the layout of the arrows (^1144) |
+| ^1150 | 4, 0 | 3-way node, alpha 15, beta 135 | all turns: the layout of the arrows (^1144) |
+| ^1151 | 5, 0 | 3-way node, alpha 15, beta 150 | all turns: the layout of the arrows (^1144) |
+| ^1152 | 6, 0 | 3-way node, alpha 15, beta 165 | all turns: the layout of the arrows (^1144) |
+| ^1153 | 7, 0 | 3-way node, alpha 15, beta 180 | all turns: the layout of the arrows (^1144) |
+| ^1154 | 8, 0 | 3-way node, alpha 15, beta 210 | all turns: the layout of the arrows (^1144) |
+| ^1155 | 0, 1 | 3-way node, alpha 90, beta 15 | all turns: the layout of the arrows (^1144) |
+| ^1156 | 1, 1 | 3-way node, alpha 90, beta 45 | all turns: the layout of the arrows (^1144) |
+| ^1157 | 2, 1 | 3-way node, alpha 90, beta 90 | all turns: the layout of the arrows (^1144) |
+| ^1158 | 3, 1 | 3-way node, alpha 90, beta 120 | all turns: the layout of the arrows (^1144) |
+| ^1159 | 4, 1 | 3-way node, alpha 90, beta 135 | all turns: the layout of the arrows (^1144) |
+| ^1160 | 5, 1 | 3-way node, alpha 90, beta 150 | all turns: the layout of the arrows (^1144) |
+| ^1161 | 6, 1 | 3-way node, alpha 90, beta 165 | all turns: the layout of the arrows (^1144) |
+| ^1162 | 7, 1 | 3-way node, alpha 90, beta 180 | all turns: the layout of the arrows (^1144) |
+| ^1163 | 8, 1 | 3-way node, alpha 90, beta 210 | all turns: the layout of the arrows (^1144) |
+| ^1164 | 0, 2 | 3-way node, alpha 120, beta 15 | all turns: the layout of the arrows (^1144) |
+| ^1165 | 1, 2 | 3-way node, alpha 120, beta 45 | all turns: the layout of the arrows (^1144) |
+| ^1166 | 2, 2 | 3-way node, alpha 120, beta 90 | all turns: the layout of the arrows (^1144) |
+| ^1167 | 3, 2 | 3-way node, alpha 120, beta 120 | all turns: the layout of the arrows (^1144) |
+| ^1168 | 4, 2 | 3-way node, alpha 120, beta 135 | all turns: the layout of the arrows (^1144) |
+| ^1169 | 5, 2 | 3-way node, alpha 120, beta 150 | all turns: the layout of the arrows (^1144) |
+| ^1170 | 6, 2 | 3-way node, alpha 120, beta 165 | all turns: the layout of the arrows (^1144) |
+| ^1171 | 7, 2 | 3-way node, alpha 120, beta 180 | all turns: the layout of the arrows (^1144) |
+| ^1172 | 8, 2 | 3-way node, alpha 120, beta 210 | all turns: the layout of the arrows (^1144) |
+| ^1173 | 0, 3 | 3-way node, alpha 15, beta 15, without AB | turns missing: the rules stay stable (stress test) |
+| ^1174 | 1, 3 | 3-way node, alpha 15, beta 45, without CB | turns missing: the rules stay stable (stress test) |
+| ^1175 | 2, 3 | 3-way node, alpha 15, beta 90, without AC BC | turns missing: the rules stay stable (stress test) |
+| ^1176 | 3, 3 | 3-way node, alpha 15, beta 120, without CA | turns missing: the rules stay stable (stress test) |
+| ^1177 | 4, 3 | 3-way node, alpha 15, beta 135, without BC CB | turns missing: the rules stay stable (stress test) |
+| ^1178 | 5, 3 | 3-way node, alpha 15, beta 150, without BA | turns missing: the rules stay stable (stress test) |
+| ^1179 | 6, 3 | 3-way node, alpha 15, beta 165, without AB BA | turns missing: the rules stay stable (stress test) |
+| ^1180 | 7, 3 | 3-way node, alpha 15, beta 180, without AB CA BC | turns missing: the rules stay stable (stress test) |
+| ^1181 | 8, 3 | 3-way node, alpha 15, beta 210, without BC | turns missing: the rules stay stable (stress test) |
+| ^1182 | 0, 4 | 3-way node, alpha 90, beta 15, without CA CB | turns missing: the rules stay stable (stress test) |
+| ^1183 | 1, 4 | 3-way node, alpha 90, beta 45, without AC | turns missing: the rules stay stable (stress test) |
+| ^1184 | 2, 4 | 3-way node, alpha 90, beta 90, without AB AC | turns missing: the rules stay stable (stress test) |
+| ^1185 | 3, 4 | 3-way node, alpha 90, beta 120, without AB | turns missing: the rules stay stable (stress test) |
+| ^1186 | 4, 4 | 3-way node, alpha 90, beta 135, without CB | turns missing: the rules stay stable (stress test) |
+| ^1187 | 5, 4 | 3-way node, alpha 90, beta 150, without AC BC | turns missing: the rules stay stable (stress test) |
+| ^1188 | 6, 4 | 3-way node, alpha 90, beta 165, without CA | turns missing: the rules stay stable (stress test) |
+| ^1189 | 7, 4 | 3-way node, alpha 90, beta 180, without BC CB | turns missing: the rules stay stable (stress test) |
+| ^1190 | 8, 4 | 3-way node, alpha 90, beta 210, without BA | turns missing: the rules stay stable (stress test) |
+| ^1191 | 0, 5 | 3-way node, alpha 120, beta 15, without AB BA | turns missing: the rules stay stable (stress test) |
+| ^1192 | 1, 5 | 3-way node, alpha 120, beta 45, without AB CA BC | turns missing: the rules stay stable (stress test) |
+| ^1193 | 2, 5 | 3-way node, alpha 120, beta 90, without BC | turns missing: the rules stay stable (stress test) |
+| ^1194 | 3, 5 | 3-way node, alpha 120, beta 120, without CA CB | turns missing: the rules stay stable (stress test) |
+| ^1195 | 4, 5 | 3-way node, alpha 120, beta 135, without AC | turns missing: the rules stay stable (stress test) |
+| ^1196 | 5, 5 | 3-way node, alpha 120, beta 150, without AB AC | turns missing: the rules stay stable (stress test) |
+| ^1197 | 6, 5 | 3-way node, alpha 120, beta 165, without AB | turns missing: the rules stay stable (stress test) |
+| ^1198 | 7, 5 | 3-way node, alpha 120, beta 180, without CB | turns missing: the rules stay stable (stress test) |
+| ^1199 | 8, 5 | 3-way node, alpha 120, beta 210, without AC BC | turns missing: the rules stay stable (stress test) |

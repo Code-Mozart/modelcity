@@ -43,7 +43,7 @@ interface Options {
 }
 
 /** One arm: where its lanes stop, and the heading away from the junction there. */
-interface Placed {
+export interface Placed {
   at: Vec;
   h: number;
 }
@@ -69,7 +69,7 @@ function armsOf(c: Vec, o: Options): Placed[] {
 }
 
 /** The nodes of the lanes of an arm: the lane in (heading into the junction) and the lane out, and the far ends of the roads behind them. */
-interface Lanes {
+export interface Lanes {
   in: number | null;
   out: number | null;
   inFar: number | null;
@@ -77,14 +77,14 @@ interface Lanes {
 }
 
 /** How the lanes of one arm are drawn. */
-interface ArmLanes {
+export interface ArmLanes {
   stop: [number, number];
   which: 'in' | 'out' | 'both';
   bare?: boolean;
   behind?: number;
 }
 
-function lanesOf(s: Sketch, p: Placed, a: ArmLanes): Lanes {
+export function lanesOf(s: Sketch, p: Placed, a: ArmLanes): Lanes {
   const inward = p.h + Math.PI;
   // `dist` meters out along the arm from where it is, on the right of a lane that runs the way `h`.
   const at = (dist: number, h: number) =>
