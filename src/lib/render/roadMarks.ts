@@ -11,11 +11,11 @@ import { drawMarkings } from './markings';
 import { toScreen, type Frame, type Palette } from './paint';
 
 /** The length of a physical arrow (meters, Zeichen 297: about 5 m) and how wide a lane may be for it to fit. */
-export const ARROW_LENGTH_M = 5;
+const ARROW_LENGTH_M = 5;
 /** A physical arrow smaller than this many pixels along is not drawn (^1041). */
 const ARROW_MIN_PX = 12;
 /** A logical arrow is this many pixels along and as many across (^1041). */
-export const LOGICAL_ARROW_PX = 24;
+const LOGICAL_ARROW_PX = 24;
 /** Painted arrows, as the lines (^953): white, 2 px at least. */
 const ARROW_STROKE_PX = 2;
 /** The glyph spans 1.3 units along and 1.3 across. */
