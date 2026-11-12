@@ -1,4 +1,4 @@
-next: ^1109
+next: ^1141
 
 # Hats
 
@@ -760,6 +760,8 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^965–^970 | docs/road-styles.md | the road styles, one hat each (rented range, milestone ^964) |
 | ^985–^1001 | docs/junctions.md | the cases of the testing ground of the junctions, one hat each (rented range, milestone ^157) |
 | ^1020–^1021 | docs/junctions.md | the user's special cases in the testing ground (rented range, milestone ^157) |
+| ^1109–^1139 | docs/junctions.md | the cases of the testing ground of the small T-junctions, the happy path and the edge cases (rented range, milestone ^1067) |
+| ^1140–^1140 | docs/junctions.md | the testing grounds have the edge cases (rented range, milestone ^1067) |
 | ^1106–^1108 | docs/junctions.md | the bugs of the project ^1105, the outline of the surface, lane in and what it does not lead to (rented range, milestone ^1067) |
 | ^1092–^1104 | docs/junctions.md | the topological criteria and node patterns of the traffic layout, T-junction complete and incomplete, rules per node, the hull per node, marks at the nodes, no lines inside junctions (rented range, milestone ^1067) |
 | ^1072–^1079 | docs/junctions.md | the rules of the small junctions, rechts vor links (rented range, milestone ^1067) |

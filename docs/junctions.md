@@ -1,6 +1,6 @@
 # Junctions (^157): the rules, and the testing ground
 
-**This file is the one place for the rules of junctions.** Rented hats: the criteria and node patterns ^1092 to ^1104 and ^1106 to ^1108, the rules ^1003 to ^1015, the junction and marking rules ^1035 to ^1044 and ^1046 to ^1054, the cases of the testing ground ^985 to ^1001, ^1020 to ^1021 and ^1055, ^1060 and ^1063; the rules ^1056 to ^1062, ^1065 and ^1066. Status `decided` = the user's words, `assumed` = Claude filled it in.
+**This file is the one place for the rules of junctions.** Rented hats: the criteria and node patterns ^1092 to ^1104 and ^1106 to ^1108, the cases of the T ground ^1109 to ^1139 and ^1140, the rules ^1003 to ^1015, the junction and marking rules ^1035 to ^1044 and ^1046 to ^1054, the cases of the testing ground ^985 to ^1001, ^1020 to ^1021 and ^1055, ^1060 and ^1063; the rules ^1056 to ^1062, ^1065 and ^1066. Status `decided` = the user's words, `assumed` = Claude filled it in.
 
 ## Principles and scope
 
@@ -175,4 +175,44 @@ The cases of the ground (rented range ^1080 to ^1091), each in a cell of 260 x 2
 | ^1089 | 2, 2 | X-junction where one road cannot turn left | arrow of a lane with a missing turn in an X |
 | ^1090 | 3, 2 | X-junction where one road cannot go straight on | arrow of a lane with a missing straight on |
 | ^1091 | 0, 3 | T-junction with a main road of 2+2 | not small (^1072): none of these rules |
+
+## The testing ground of the small T-junctions (^1109 to ^1139, ^1140)
+
+`docs/mocks/hat1109.json`, made by `src/lib/testing/tGround.ts` (`UPDATE_MOCKS=1 bunx vitest run src/lib/testing/tGround.test.ts` writes it again; pictures by the CI job `shots`). **Not only the happy path** (^1140): as a unit test looks at the edge cases, the ground has the plain T and then what can go wrong, one case in a cell of 260 x 240 meters (column, row from the top left): stop nodes that are not at one place, roads with nothing behind them, other angles and bends, one-way arms, every connection that can be missing, junctions next to each other. What the rules give on each is pinned in `editor/tGroundRules.test`; the rows marked *?* there are what the rules give and a judgement of the user is wanted.
+
+| Hat | Cell | What | Shows |
+| --- | --- | --- | --- |
+| ^1109 | 0, 0 | T-junction, three 1+1 arms | the plain T: two give-way lines, no arrows |
+| ^1110 | 1, 0 | T-junction with nothing behind the stop nodes | a road that ends at the junction: nothing is drawn over the void |
+| ^1111 | 2, 0 | T-junction with short roads behind the stop nodes | a line and an arrow need road behind the node: 2 m of it |
+| ^1112 | 3, 0 | T-junction, the lane out of the side road further away | lanes in and out of one arm that do not touch |
+| ^1113 | 4, 0 | T-junction, the lane out of the east arm further away | a main road with unequal stop nodes |
+| ^1114 | 5, 0 | T-junction, the side road moved 3 m east | a side road that is not in the middle |
+| ^1115 | 6, 0 | T-junction, the side road at 45 degrees | a T that is nearly a Y: the sides of the nodes |
+| ^1116 | 0, 1 | T-junction, the side road at 120 degrees | a side road that leans away |
+| ^1117 | 1, 1 | Y-junction, the main road to the west, two arms at 30 degrees | a fork where no arm goes straight on |
+| ^1118 | 2, 1 | T-junction on a bend, the side road on the inside | headings that differ at every stop node (radius 60 m) |
+| ^1119 | 3, 1 | T-junction on a bend, the side road on the outside | the same bent the other way |
+| ^1120 | 4, 1 | T-junction on a tight bend | a main road that turns 22 degrees on each side of the junction (radius 25 m) |
+| ^1121 | 5, 1 | T-junction, the main road one way | lanes in on one side, lanes out on the other |
+| ^1122 | 6, 1 | T-junction, the side road one way in | an arm that only brings traffic |
+| ^1123 | 0, 2 | T-junction, the side road one way out | an arm that only takes traffic away |
+| ^1124 | 1, 2 | T-junction, main road and side road one way | every arm a single lane |
+| ^1125 | 2, 2 | T-junction without west to east | the west lane cannot go straight: a right arrow |
+| ^1126 | 3, 2 | T-junction without west to the side road | the west lane cannot turn right: a straight arrow |
+| ^1127 | 4, 2 | T-junction without east to west | the east lane cannot go straight: a left arrow |
+| ^1128 | 5, 2 | T-junction without east to the side road | the east lane cannot turn left: a straight arrow |
+| ^1129 | 6, 2 | T-junction without side road to west | the side road cannot turn left: a right arrow |
+| ^1130 | 0, 3 | T-junction without side road to east | the side road cannot turn right: a left arrow |
+| ^1131 | 1, 3 | T-junction where the west lane leads nowhere | a lane in with no connection at all: no arrow, nothing to show |
+| ^1132 | 2, 3 | T-junction where the east lane leads nowhere | the same for the other arm of the main road |
+| ^1133 | 3, 3 | T-junction where the side road leads nowhere | the same for the side road |
+| ^1134 | 4, 3 | T-junction without the side road turns right and the east lane turns left | two connections missing at two arms |
+| ^1135 | 5, 3 | Two T-junctions 34 m apart on one road, joined | two junctions near each other: each reads only its own lanes |
+| ^1136 | 6, 3 | T-junction, a bend and an angle | the two edge cases at once: on a bend, side road at 60 degrees |
+| ^1137 | 0, 4 | T-junction, a bare T with a missing turn | a lane that needs an arrow but has no road behind it: none is drawn |
+| ^1138 | 1, 4 | T-junction with an extra-wide stop distance | long junction segments: all stop nodes 12 m out |
+| ^1139 | 2, 4 | T-junction with an extra-small stop distance | segments of 3 m: the lines and the arrows are close to each other |
+
+| ^1140 | **The testing grounds have the edge cases (user).** A testing ground does not only draw the happy path: it has the cases that are likely to go wrong (junctions on bends, roads of different lengths and shapes, every combination of connections that can be missing, the limits between a T and a Y), as a unit test looks at the edge cases and not only at the usual input. Each new rule is first tried on such a ground. | decided |
 

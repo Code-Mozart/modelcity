@@ -123,13 +123,21 @@ function segmentsOf(g: Graph, tower: Map<number, number>, n: GNode, arms: number
   const behind = edgesIn(g, n.id).length;
   const leaving = edgesOut(g, n.id).filter((e) => tower.get(e.end) !== tower.get(n.id));
   if (behind > 1) return [];
-  if (arms.length >= 2)
+  if (arms.length >= 2) {
     return behind
       ? leaving.filter((e) => arms.includes(tower.get(e.end)!))
       : leaving.length >= 2
         ? leaving
         : [];
-  return leaving.length >= 2 ? leaving : [];
+  }
+  return leaving.length >= 2 || (behind && leaving.some((e) => joinedByOtherRoad(g, tower, n, e)))
+    ? leaving
+    : [];
+}
+
+/** Whether another road ends where the segment `e` of the node `n` ends: a segment from a node of another tower (a lane merging with a lane of its own tower is a lane change, ^1056). */
+function joinedByOtherRoad(g: Graph, tower: Map<number, number>, n: GNode, e: GEdge): boolean {
+  return edgesIn(g, e.end).some((o) => o.id !== e.id && tower.get(o.start) !== tower.get(n.id));
 }
 
 /**
@@ -210,10 +218,15 @@ function withIncomplete(g: Graph, tower: Map<number, number>, facts: LaneFacts[]
   }
   return facts.map((f) => {
     const roads = edgesIn(g, f.node.id).map((e) => tower.get(e.start)!);
-    const own = new Set([tower.get(f.node.id)!, ...roads]);
+    const own = new Set([tower.get(f.node.id)!, ...roads, ...leadingBack(g, tower, roads)]);
     const reached = new Set(f.edges.map((e) => tower.get(e.end)!));
     const possible = [...targets.get(group.get(f.node.id)!)!].filter((t) => !own.has(t));
     const missing = possible.some((t) => !reached.has(t));
     return { ...f, incomplete: missing ? f.edges.flatMap((e) => courseOf(g, e) ?? []) : null };
   });
+}
+
+/** The towers whose lanes lead on into the towers `roads`: the lane out of an arm whose lane in is not at the same place (^1100). */
+function leadingBack(g: Graph, tower: Map<number, number>, roads: number[]): number[] {
+  return g.edges.filter((e) => roads.includes(tower.get(e.end)!)).map((e) => tower.get(e.start)!);
 }

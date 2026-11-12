@@ -2,6 +2,7 @@ import { test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { GROUND_CASES, junctionGround } from '../src/lib/testing/junctionGround';
 import { PRIORITY_CASES, priorityGround } from '../src/lib/testing/priorityGround';
+import { T_CASES, tGround } from '../src/lib/testing/tGround';
 
 /**
  * A picture of every case of the testing ground of the junctions, with the debug layer on and, of
@@ -28,6 +29,7 @@ async function take(
 const GROUNDS = [
   { title: 'The junctions', graph: junctionGround, cases: GROUND_CASES },
   { title: 'Small junctions, rechts vor links', graph: priorityGround, cases: PRIORITY_CASES },
+  { title: 'Small T-junctions, the edge cases', graph: tGround, cases: T_CASES },
 ];
 
 /** Pictures of one ground: every case with the debug layer on, then the markings only in view mode. */
@@ -57,7 +59,7 @@ async function shootGround(page: Page, ground: (typeof GROUNDS)[number], index: 
 }
 
 test('pictures of the testing grounds', async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   mkdirSync(OUT, { recursive: true });
   await page.goto('/');
   await page.waitForFunction(() => window.__modelcity?.session.ready);
