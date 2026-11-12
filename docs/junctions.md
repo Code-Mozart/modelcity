@@ -118,3 +118,36 @@ Seen by drawing the surface and the markings of the ground (v0.52.0):
 - **Violations.** The validator counts 26 violations in the ground: in a junction a node is often one lane width from a turning curve that heads another way (^818). The rule is right between junctions and wrong inside them.
 - **Crossings without a node** (^994, ^995) are one surface with all markings drawn across each other; they belong to the milestone of the crossings (^158).
 - **Speed.** The surface of the whole ground takes about 0.2 s and its markings 0.07 s on every change of the graph (the performance milestone, ^927).
+
+## Small junctions: rechts vor links (milestone ^1067)
+
+The user's words, recorded as hats (rented range ^1072 to ^1079); the pictures are ^1068 and ^1069 (`docs/mocks/hat1068.png`, `hat1069.png`). **Not built yet:** the rules are to be discussed first, where they say so.
+
+| Hat | Rule | Status |
+| --- | --- | --- |
+| ^1072 | **A small junction (user).** Each arm is **1+1, or a single one-way lane**. Later this likely depends on the lane configuration (^26); the user's suggestion: by the speed limit, at most 30 km/h. | decided (the arms); proposal (the speed limit, later) |
+| ^1073 | **Small junctions are *rechts vor links* (user).** In English: *right before left* (priority to the right): traffic from the right has the right of way. Their markings are as in the two pictures ^1068 and ^1069. | decided |
+| ^1074 | **X-junctions: give-way lines (user, picture ^1068).** The *Wartelinie* (Zeichen 341, give-way line) is drawn as a dashed line across the lane, **right where the straight segments intersect**; the crosswalk in the picture is ignored (^1045). Logical markings: the dashed line as the logical dashes (^976). Physical markings: **thicker dashes with smaller gaps** (see ^1079). | decided; dimensions open (^1079) |
+| ^1075 | **T-junctions: give-way lines on the two arms that have an arm to their right (user, picture ^1069).** Of the three arms of a T, one has no arm to its right: it keeps its way; the other two get the give-way line (^1074). | decided |
+| ^1076 | **Arrows only where a turn is missing (user).** A lane in shows an arrow only if **not all possible connections are in place**: with the arms of a T called A (left, out of the junction, the upper lane), B (right, into it), C (left, into it), D (right, out of it), E (below, out of it) and F (below, into it), the six possible connections are B->A, B->E, C->D, C->E, F->A and F->D. If one is not there (F->D, say), a lane shows an arrow for the ways it still leads to (a left arrow on F), **at the place of the give-way line** (the asterisk of the user's sketch, on the lane F just before the junction). The same for T and X junctions. | decided; details to discuss |
+| ^1077 | **No hard rules for "T" and "X" (user).** Both are *detected*, not coded: there are no junctions in the app, they are derived from the segments (^1003, ^1035). To be discussed with the testing ground ^1078 as the reference. | decided |
+| ^1078 | **The testing ground of the small junctions (user).** `docs/mocks/hat1078.json`, made by `src/lib/testing/priorityGround.ts` (`UPDATE_MOCKS=1 bunx vitest run src/lib/testing/priorityGround.test.ts`); pictures by the CI job `shots` (`bun run shots`) with the cases below. | decided |
+| ^1079 | **Question: the dimensions of the Wartelinie.** The user asked to take them from the Wikipedia article for Zeichen 341; that host is not reachable from the session and a web search gave no number for it. Until then: *assumed*, a line 0.5 m wide in dashes of 0.6 m with gaps of 0.4 m (as built in v0.54.0 for the wait lines, since removed); for the logical markings 2 px wide, dashes of 5 px. Open: the real numbers. | open |
+
+The cases of the ground (rented range ^1080 to ^1091), each in a cell of 260 x 240 meters (column, row from the top left):
+
+| Hat | Cell | What | Shows |
+| --- | --- | --- | --- |
+| ^1080 | 0, 0 | T-junction, three 1+1 arms | the plain T: two give-way lines (^1075), no arrows |
+| ^1081 | 1, 0 | T-junction at 60 degrees | "to its right" for arms that are not square |
+| ^1082 | 2, 0 | T-junction, the side road one-way towards the junction | an arm with lanes in only |
+| ^1083 | 3, 0 | T-junction, the side road one-way away from the junction | an arm with lanes out only: nobody comes from it |
+| ^1084 | 0, 1 | X-junction, 1+1 with 1+1 | the plain X (^1074) |
+| ^1085 | 1, 1 | X-junction, a one-way street across a 1+1 road | one-way arms in an X |
+| ^1086 | 2, 1 | X-junction, two one-way streets | an X where every arm is one-way |
+| ^1087 | 0, 2 | T-junction where the side road cannot turn right | the left arrow (^1076) |
+| ^1088 | 1, 2 | T-junction where the side road cannot turn left | the right arrow (^1076) |
+| ^1089 | 2, 2 | X-junction where one road cannot turn left | arrow of a lane with a missing turn in an X |
+| ^1090 | 3, 2 | X-junction where one road cannot go straight on | arrow of a lane with a missing straight on |
+| ^1091 | 0, 3 | T-junction with a main road of 2+2 | not small (^1072): none of these rules |
+

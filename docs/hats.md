@@ -1,4 +1,4 @@
-next: ^1067
+next: ^1092
 
 # Hats
 
@@ -720,6 +720,11 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^1025 | milestone | in progress (PR #54, ready to merge as *Extension and merge markings*: the milestone is done in several parts, ^1062; the other parts are not planned yet) | **Junction markings (part 2 of ^157), done in parts (^1062); this part: extension and merge markings (^1056 to ^1061, ^1065), the two marking styles (^1040, ^1041), holes by size (^1042, ^1054):** the catalog of the German markings and the rule that causes each, in `docs/markings.md` (rented hats ^1026 to ^1034): arrows from the signs of the road layout (^1012), the lane-end arrow, give-way and stop lines, holes and islands; the junction rules in `docs/junctions.md` (rented hats ^1035 to ^1044). |
 | ^1045 | milestone | planned (user: compose it already; depends on lane configurations ^26) | **Crossings and paths:** zebra crossings (Zeichen 293, ^158 crossings, ^25), pedestrian paths and bike paths, with the lane configurations (^26) they need; what the markings of the junctions do where a path crosses a road. Scope is written when the milestone starts. |
 | ^1064 | feature | planned, unassigned (candidate: milestone ^829, with ^299) | **Collapse the selected nodes by a control, not automatically (user):** the idea that nodes without an effect collapse by themselves (^299) is dropped; instead a control collapses all nodes without an effect in the selection (the effect test of ^299 stays: a node is removed if one segment from its neighbour to its neighbour would draw the same curve and the two agree in everything else). One history step, so one undo. Open: the key, what the hint says (^181), what happens to selected nodes that must stay (parallel nodes, ^281). Origin: ^299. |
+| ^1067 | milestone | in progress (PR for `feature/rechts-vor-links`; scope in its description) | **Small junctions, *rechts vor links* (user):** small T and X junctions (each arm 1+1 or a single one-way lane, ^1072) are right before left (^1073) and marked like the pictures ^1068 and ^1069: give-way lines (^1074, ^1075) and arrows where a turn is missing (^1076), detected and not coded as "T" and "X" (^1077), tried out in a testing ground (^1078). Rules and cases: `docs/junctions.md`. Depends on: ^1025 (done), the rules ^1035 to ^1054 that were taken out of it. |
+| ^1068 | image | reference (user) | **A junction of four arms with give-way lines (user):** `docs/mocks/hat1068.png`: an aerial picture of a junction of Wartbergstraße and Nordstraße; ignore the crosswalk; the *Wartelinien* are the short dashed lines across the lanes of the arms; where they stand and how they look is the model for ^1074. |
+| ^1069 | image | reference (user) | **A T-junction with give-way lines (user):** `docs/mocks/hat1069.png`: an aerial picture of the T of Metzer Straße and Malenfelser Weg; two of its three arms have a give-way line, the one with no arm to its right has none: the model for ^1075. |
+| ^1070 | image | reference (user) | **Sketch of a gore (user):** `docs/mocks/hat1070.png`: a picture of the testing ground with the surface to add drawn in red and the chevrons and the outline in cyan; the model for ^1065. (Registered late, in ^1067.) |
+| ^1071 | image | reference (user) | **The A6 near Untereisesheim (user):** `docs/mocks/hat1071.webp`: a satellite picture of the gores of a ramp with chevrons, proof of the direction of the chevrons (the apex against the traffic, ^1065). (Registered late, in ^1067.) |
 
 ## Rented ranges
 
@@ -754,6 +759,8 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^965–^970 | docs/road-styles.md | the road styles, one hat each (rented range, milestone ^964) |
 | ^985–^1001 | docs/junctions.md | the cases of the testing ground of the junctions, one hat each (rented range, milestone ^157) |
 | ^1020–^1021 | docs/junctions.md | the user's special cases in the testing ground (rented range, milestone ^157) |
+| ^1072–^1079 | docs/junctions.md | the rules of the small junctions, rechts vor links (rented range, milestone ^1067) |
+| ^1080–^1091 | docs/junctions.md | the cases of the testing ground of the small junctions (rented range, milestone ^1067) |
 | ^1065–^1066 | docs/junctions.md | the gores at extensions and merges: surface, line and chevrons, and the noses case (rented range, milestone ^1025) |
 | ^1055–^1063 | docs/junctions.md | the curved extension, the two merges and the merge beside a cut lane cases, extension and merge by towers and distances, dashed lines through them and only on the surface, the arrow of a merge, no cascade of their sign, the parts of the milestone (rented range, milestone ^1025) |
 | ^1003–^1015 | docs/junctions.md | the rules of the junctions, one hat each (rented range, milestone ^157) |
