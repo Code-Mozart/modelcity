@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { PRIORITY_CASES, priorityGround } from '../testing/priorityGround';
-import { courseOf, laneFactsOf, sideOf, type LaneFacts } from './laneFacts';
+import { derivedNodes, withDerived } from './derived';
+import { junctionGround } from '../testing/junctionGround';
+import { pointOn } from '../curves/piece';
+import { markingsOf, type Marking } from './markings';
+import { courseOf, junctionEdgeIds, laneFactsOf, sideOf, type LaneFacts } from './laneFacts';
 import { laneHull } from './laneHull';
 import { incompleteArrows, waitLines } from './priorityMarks';
 import { insideLoops } from '../curves/union';
@@ -120,5 +124,43 @@ describe('the hull round what a lane in meets, for the debug layer (^1102)', () 
     expect(hull.length).toBeGreaterThan(0);
     expect(insideLoops(hull, { x: c.x + 1, y: c.y + 1 })).toBe(true);
     expect(insideLoops(hull, { x: c.x + 1, y: c.y - 30 })).toBe(false);
+  });
+});
+
+describe('no centerlines inside junctions (^1104)', () => {
+  const d = withDerived(g, derivedNodes(g));
+  const inside = junctionEdgeIds(g);
+  const c = PRIORITY_CASES.find((x) => x.hat === 1080)!.views[0]!.center;
+  /** Whether the middle of any piece of a line is in the square of the junction (the arms stop 6 m from the center). */
+  const within = (m: Marking) =>
+    m.pieces.some((p) => {
+      const v = pointOn(p, 0.5);
+      return Math.abs(v.x - c.x) < 5.9 && Math.abs(v.y - c.y) < 5.9;
+    });
+
+  it('a T has lines on its arms and none through it', () => {
+    const lines = markingsOf(d, { physical: false, inside });
+    const here = lines.filter((m) =>
+      m.pieces.some((p) => Math.hypot(p.P.x - c.x, p.P.y - c.y) < 60),
+    );
+    expect(here.length).toBeGreaterThan(0);
+    expect(here.some(within)).toBe(false);
+  });
+
+  it('without the rule the lines run through it', () => {
+    const lines = markingsOf(d, { physical: false });
+    expect(lines.some(within)).toBe(true);
+  });
+
+  it('the segments of lanes that only cross are not inside a junction (^995)', () => {
+    const ground = junctionGround();
+    const ids = junctionEdgeIds(ground);
+    const longAcross = (e: { start: number; end: number }) => {
+      const [a, b] = [nodeOf(ground, e.start)!, nodeOf(ground, e.end)!];
+      return Math.abs(a.x - 260) < 100 && Math.abs(a.y - 720) < 30 && Math.abs(b.x - a.x) > 100;
+    };
+    const crossing = ground.edges.filter(longAcross);
+    expect(crossing.length).toBeGreaterThan(0);
+    expect(crossing.every((e) => !ids.has(e.id))).toBe(true);
   });
 });

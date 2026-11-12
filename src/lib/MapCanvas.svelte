@@ -5,7 +5,7 @@
   import { dotsOf, holesOf, patched, surfaceFrom } from './editor/surface';
   import { laneChangeLines, laneChangesOf } from './editor/laneChanges';
   import { laneArrows } from './editor/laneArrows';
-  import { laneFactsOf } from './editor/laneFacts';
+  import { junctionEdgeIds, laneFactsOf } from './editor/laneFacts';
   import { incompleteArrows, waitLines } from './editor/priorityMarks';
   import { laneHull } from './editor/laneHull';
   import { goresOf } from './editor/gores';
@@ -112,6 +112,7 @@
       physical,
       extra: [...laneChangeLines(seen, changes), ...gores.flatMap((w) => w.markings)],
       surface,
+      inside: junctionEdgeIds(editor.graph),
     }),
   );
   /** Everything painted on the road surface (^949, ^1029). */

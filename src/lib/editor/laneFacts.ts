@@ -147,3 +147,17 @@ export function laneFactsOf(g: Graph): LaneFacts[] {
     ];
   });
 }
+
+/**
+ * The segments inside junctions, whatever their size (^1104): those of a lane in, a node that
+ * leaves its tower in two or more ways or leads into two or more arms (^1101). Found per node.
+ */
+export function junctionEdgeIds(g: Graph): Set<number> {
+  const tower = towerIds(g);
+  const near = adjacency(g, tower);
+  return new Set(
+    g.nodes.flatMap((n) =>
+      segmentsOf(g, tower, n, armsOf(near, tower.get(n.id)!)).map((e) => e.id),
+    ),
+  );
+}
