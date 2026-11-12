@@ -140,6 +140,107 @@ function special(s: Sketch) {
   ]);
 }
 
+/**
+ * The user's curved extension (^1055): a lane that runs on, and beside it a lane added on the left
+ * that bends away and back, its nodes a degree off the heading of the lane (^1056).
+ */
+function curvedExtension(s: Sketch) {
+  drawn(
+    s,
+    cell(1, 6),
+    [
+      [-18.836, 2.365, 0],
+      [18.826, 2.983, 0.03441068807615733],
+      [-10.165, 2.365, 0],
+      [0.93, -0.54, 6.300390651217665],
+      [7.976, -0.38, 6.3113186364332865],
+      [17.731, -2.702, -6.778650753524812],
+    ],
+    [
+      [0, 2],
+      [2, 1],
+      [2, 3],
+      [3, 4],
+      [4, 5],
+    ],
+  );
+}
+
+/** The user's two lanes that merge (^1060): the lane on the right shifts left into the one on the left, and both end in the node where they merge. */
+function twoMerges(s: Sketch) {
+  drawn(
+    s,
+    cell(2, 6),
+    [
+      [-21.192, -1.192, 0],
+      [-21.192, 1.808, 0],
+      [21.255, -1.192, 6.283185307179586],
+      [1.764, -1.192, 0],
+    ],
+    [
+      [0, 3],
+      [1, 3],
+      [3, 2],
+    ],
+  );
+}
+
+/** The user's lane that merges beside a lane that other lanes touch (^1063): its start node is in a tower with nodes that cut the lane it merges into in pieces. */
+function mergeBesideCut(s: Sketch) {
+  drawn(
+    s,
+    cell(0, 7),
+    [
+      [-23.192, -1.192, Math.PI],
+      [32.464, 1.808, 0],
+      [19.796, -1.192, Math.PI],
+      [10.407, -4.192, Math.PI],
+      [-11.714, -4.192, Math.PI],
+      [-32.659, 1.808, 2 * Math.PI],
+      [-23.192, 4.808, 0],
+      [-1.698, 1.808, 0],
+      [-32.659, 4.808, 2 * Math.PI],
+    ],
+    [
+      [5, 7],
+      [2, 0],
+      [3, 4],
+      [7, 1],
+      [6, 7],
+      [8, 6],
+    ],
+  );
+}
+
+/** The top of the user's project *noses* (^1066): a lane that leaves a lane and one that arrives, crossing, with segments cut in pieces by derived nodes where they cross. */
+function noses(s: Sketch) {
+  drawn(
+    s,
+    cell(1, 7),
+    [
+      [-55.473, -2.135, 6.283185307179586],
+      [20.54, -1.389, 0.03441068807615733],
+      [-12.165, -2.135, 6.123233995736766e-17],
+      [-1.07, -5.04, 6.300390651217665],
+      [5.976, -4.88, 6.3113186364332865],
+      [36.38, -18.362, -0.49546544634522566],
+      [-27.147, 21.054, 5.672320068981571],
+      [7.309, 1.162, 0.03050413446830908],
+      [44.832, -0.553, 0.03441068807615733],
+    ],
+    [
+      [0, 2],
+      [2, 1],
+      [2, 3],
+      [3, 4],
+      [4, 5],
+      [6, 7],
+      [7, 1],
+      [1, 8],
+    ],
+  );
+}
+
 export function junctionGround(): Graph {
   const s = new Sketch();
   tJunctions(s);
@@ -149,6 +250,10 @@ export function junctionGround(): Graph {
   others(s);
   more(s);
   special(s);
+  curvedExtension(s);
+  twoMerges(s);
+  mergeBesideCut(s);
+  noses(s);
   return roundToMm(s.graph);
 }
 
@@ -202,4 +307,13 @@ export const GROUND_CASES: GroundCase[] = [
   named(1001, [1, 5], 'roundabout, two lanes', [90]),
   named(1020, [2, 5], 'a winding lane that splits into two left turns', [80]),
   named(1021, [0, 6], 'a merge and a split at one node', [50]),
+  named(1055, [1, 6], 'a lane added on the left, on curves', [60]),
+  named(1060, [2, 6], 'two lanes that merge', [60]),
+  named(
+    1066,
+    [1, 7],
+    'a lane that leaves and one that arrives, crossing: gores, not slivers',
+    [90],
+  ),
+  named(1063, [0, 7], 'a lane that merges, the lane it merges into cut by other lanes', [70]),
 ];

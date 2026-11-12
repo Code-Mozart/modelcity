@@ -26,7 +26,8 @@ function lanes(rows: [number, number, number, 1 | -1][]): Graph {
   );
 }
 
-const marked = (g: Graph, physical = true) => markingsOf(withDerived(g, derivedNodes(g)), physical);
+const marked = (g: Graph, physical = true) =>
+  markingsOf(withDerived(g, derivedNodes(g)), { physical });
 const xs = (m: Marking) => m.pieces.flatMap((p) => [p.P.x, p.Q.x]);
 const span = (m: Marking): [number, number] => [Math.min(...xs(m)), Math.max(...xs(m))];
 const yOf = (m: Marking) => m.pieces[0]!.P.y;

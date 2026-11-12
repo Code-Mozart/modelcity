@@ -158,6 +158,9 @@ const along = (pieces: Piece[], at: Vec): number => {
   return i.k + nearestParam(pieces[i.k]!, at);
 };
 
+/** The segment of the graph a segment of the graph with derived nodes in it is part of (itself, if it was not cut). */
+export const originalOf = (e: GEdge): number => ('of' in e ? (e.of as number) : e.id);
+
 /**
  * The graph with the derived nodes in it (^822): the segments they are on are cut at them, so
  * that what is parallel, touching and a tower is found for the pieces too, as for any segments
@@ -178,7 +181,9 @@ export function withDerived(g: Graph, derived: DerivedNode[]): Graph {
       ...mine.sort((a, b) => along(E.pieces, a) - along(E.pieces, b)).map((d) => d.id),
       e.end,
     ];
-    return ids.slice(1).map((end, i) => ({ ...e, id: next--, start: ids[i]!, end, radius }));
+    return ids
+      .slice(1)
+      .map((end, i) => ({ ...e, id: next--, start: ids[i]!, end, radius, of: e.id }));
   });
   return { ...g, nodes: [...g.nodes, ...derived], edges };
 }

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { curveOfEdge } from './chains';
 import { alongLoop, loopLength } from '../curves/along';
 import { junctionGround } from '../testing/junctionGround';
-import { segmentSigns, signName, signOf, type Sign } from './signs';
+import { segmentSigns, signName, signsOf, type Sign } from './signs';
 
 const g = junctionGround();
+const signs = signsOf(g);
 const node = (x: number, y: number) =>
   g.nodes.find((n) => Math.abs(n.x - x) < 0.01 && Math.abs(n.y - y) < 0.01)!.id;
 /** The segment between two places. */
@@ -14,7 +15,7 @@ const say = (s: Sign) =>
   s.kind === 'directions'
     ? [s.straight && 'straight', s.left && 'left', s.right && 'right'].filter(Boolean).join('+')
     : `${s.kind} ${s.side}`;
-const sign = (from: [number, number], to: [number, number]) => say(signOf(g, seg(from, to)));
+const sign = (from: [number, number], to: [number, number]) => say(signs.get(seg(from, to).id)!);
 
 describe('the sign of a segment, T-junction ^985 (^1012, ^1013)', () => {
   it('the main road towards the junction: straight and right, or straight and left', () => {
@@ -44,7 +45,7 @@ describe('the sign of a segment, other cases', () => {
 
   it('lane drop and gain ^991: the lane that ends merges into the left, a lane is added on the right', () => {
     expect(sign([-70, 483], [-30, 480])).toBe('merge left');
-    expect(sign([-110, 483], [-70, 483])).toBe('merge left');
+    expect(sign([-110, 483], [-70, 483])).toBe('straight');
     expect(sign([-30, 480], [30, 480])).toBe('extension right');
   });
 
@@ -58,9 +59,9 @@ describe('the sign of a segment, other cases', () => {
 });
 
 describe("the user's special cases ^1020 and ^1021", () => {
-  it('a split into two left turns is a split, for every segment of the branch before it', () => {
-    expect(sign([490.862, 1220.684], [515.068, 1203.734])).toBe('left+right');
-    expect(sign([515.068, 1203.734], [523.822, 1202.522])).toBe('left+right');
+  it('two left turns in a tower are an extension, shown by the last segment of the branch only (^1056, ^1060)', () => {
+    expect(sign([490.862, 1220.684], [515.068, 1203.734])).toBe('straight');
+    expect(sign([515.068, 1203.734], [523.822, 1202.522])).toMatch(/^extension/);
   });
 
   it('a node that is a merge and a split: every leg shows the split, also the one that turns in (^1024)', () => {
@@ -86,24 +87,55 @@ describe('the quarter-turn rule (^1023)', () => {
 
 describe('the signs of the debug layer (^1015)', () => {
   it('one for every segment, at its middle', () => {
-    const signs = segmentSigns(g);
-    expect(signs).toHaveLength(g.edges.length);
+    const placed = segmentSigns(g);
+    expect(placed).toHaveLength(g.edges.length);
     const e = g.edges[0]!;
     const pieces = curveOfEdge(g, e.id)!.pieces;
     const mid = alongLoop(pieces, loopLength(pieces) / 2)!;
-    expect(signs[0]!.at).toEqual({ x: mid.x, y: mid.y });
+    expect(placed[0]!.at).toEqual({ x: mid.x, y: mid.y });
   });
 });
 
 describe('the name of a sign (^1017)', () => {
   it('says what it is and the German sign it is after', () => {
     const name = (from: [number, number], to: [number, number]) =>
-      signName(signOf(g, seg(from, to)));
+      signName(signs.get(seg(from, to).id)!);
     expect(name([-86, 1.5], [-6, 1.5])).toBe('straight and right (214)');
     expect(name([1.5, 86], [1.5, 6])).toBe('split (214-30)');
     expect(name([-6, 1.5], [-1.5, 6])).toBe('right (209)');
     expect(name([-70, 483], [-30, 480])).toBe('merge into left (after 531-10)');
     expect(name([-30, 480], [30, 480])).toBe('extension right (after 541-20)');
     expect(name([6, 1.5], [86, 1.5])).toBe('straight (209-30)');
+  });
+});
+
+describe('an extension on curves, ^1055 (^1056)', () => {
+  const [x, y] = [260, 1440];
+  const at = (dx: number, dy: number): [number, number] => [x + dx, y + dy];
+  it('a lane added beside it on the left, whose end heading is a degree off: an extension left', () => {
+    expect(sign(at(-18.836, 2.365), at(-10.165, 2.365))).toBe('extension left');
+  });
+
+  it('the lane that goes on and the added lane: straight', () => {
+    expect(sign(at(-10.165, 2.365), at(18.826, 2.983))).toBe('straight');
+    expect(sign(at(-10.165, 2.365), at(0.93, -0.54))).toBe('straight');
+  });
+});
+
+describe('two lanes that merge, ^1060 (^1056)', () => {
+  const [x, y] = [520, 1440];
+  const at = (dx: number, dy: number): [number, number] => [x + dx, y + dy];
+  const [left, right, out] = [at(-21.192, -1.192), at(-21.192, 1.808), at(1.764, -1.192)];
+
+  it('only the lane that is farther from the node where they merge ends: the other goes straight on', () => {
+    expect(sign(right, out)).toBe('merge left');
+    expect(sign(left, out)).toBe('straight');
+  });
+});
+
+describe('a merge beside a lane that is cut in pieces, ^1063 (^1056)', () => {
+  const at = (dx: number, dy: number): [number, number] => [0 + dx, 1680 + dy];
+  it('the lane that merges (a lane is followed on to its tower through the derived nodes): a merge into the left', () => {
+    expect(sign(at(-30.192 + 7, -41.192 + 46), at(-8.698 + 7, -44.192 + 46))).toBe('merge left');
   });
 });

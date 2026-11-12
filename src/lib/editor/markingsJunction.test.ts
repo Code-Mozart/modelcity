@@ -32,11 +32,11 @@ describe('the simple T-junction (^962): a main road and a side road, each 1+1', 
   const length = (m: Marking) => m.pieces.reduce((n, p) => n + pieceLength(p), 0);
 
   it('physical: no centerline on an Ortsstraße (^972)', () => {
-    expect(markingsOf(seen, true)).toEqual([]);
+    expect(markingsOf(seen, { physical: true })).toEqual([]);
   });
 
   it('logical: the main line is one line over its whole length, no short line restarts its dashes (^974)', () => {
-    const m = markingsOf(seen, false);
+    const m = markingsOf(seen, { physical: false });
     expect(m).toHaveLength(2);
     expect(m.map(length).sort((a, b) => b - a)[0]).toBeCloseTo(36.6, 1);
     expect(m.every((x) => length(x) > 5)).toBe(true);

@@ -2,7 +2,10 @@
   import { cornersOf, hullsOf } from './editor/corners';
   import { segmentSigns } from './editor/signs';
   import { markingsOf } from './editor/markings';
-  import { dotsOf, surfaceFrom } from './editor/surface';
+  import { dotsOf, holesOf, patched, surfaceFrom } from './editor/surface';
+  import { laneChangeLines, laneChangesOf } from './editor/laneChanges';
+  import { laneArrows } from './editor/laneArrows';
+  import { goresOf } from './editor/gores';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
   import { headingSourceOrigins } from './editor/hintState';
@@ -27,6 +30,7 @@
     onUse,
     debug = false,
     walk = 0,
+    physical = false,
   }: {
     editor: Editor;
     camera: Camera;
@@ -35,6 +39,8 @@
     debug?: boolean;
     /** How far the dots of the debug layer have walked along their polygons, in meters (^948). */
     walk?: number;
+    /** Physical lane markings (meters) instead of the logical ones (pixels), ^1040. */
+    physical?: boolean;
   } = $props();
 
   const LINE_PX = 16;
@@ -64,19 +70,39 @@
   const bars = $derived(barsOf(seen));
   /** The hulls of the segments, the road surface round them (^945) and, while the debug layer is on, the hulls and corners (^925). */
   const allHulls = $derived(hullsOf(editor.graph));
-  const surface = $derived(surfaceFrom(allHulls));
+  /** The lane changes (extensions and merges, ^1056), the gores between their lanes (^1065) and the arrows of the lanes that end (^1029). */
+  const changes = $derived(laneChangesOf(seen));
+  const gores = $derived(goresOf(seen, changes, allHulls));
+  const rawSurface = $derived(
+    surfaceFrom(
+      allHulls,
+      gores.map((w) => w.loop),
+    ),
+  );
+  /** The surface with its tiny holes patched (^1042). */
+  const surface = $derived(patched(rawSurface));
+  const arrows = $derived(laneArrows(seen, changes));
   const hulls = $derived(
     debug
       ? {
           hulls: allHulls.map((h) => h.hull),
           corners: cornersOf(allHulls).map((c) => c.at),
           dots: dotsOf(surface, walk),
-          signs: segmentSigns(editor.graph),
+          signs: segmentSigns(editor.graph, seen),
+          holes: holesOf(rawSurface),
         }
       : null,
   );
-  /** The lane markings, derived from the graph with the derived nodes in it (^956). */
-  const markings = $derived(markingsOf(seen));
+  /** The lane markings, derived from the graph with the derived nodes in it (^956), and the dashed lines through the lane changes (^1057). */
+  const markings = $derived(
+    markingsOf(seen, {
+      physical,
+      extra: [...laneChangeLines(seen, changes), ...gores.flatMap((w) => w.markings)],
+      surface,
+    }),
+  );
+  /** Everything painted on the road surface (^949, ^1029). */
+  const marks = $derived({ markings, arrows, physical });
   const towers = $derived(
     towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
   );
@@ -114,7 +140,7 @@
       towers: towers,
       derived: derivedAll,
       surface,
-      markings,
+      ...marks,
       hulls,
       tower: followingTower(editor.graph, editor.chains, editor.focus, editor.selection),
       turning: turningOf(editor.chains, editor.press),

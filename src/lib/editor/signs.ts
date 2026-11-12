@@ -1,9 +1,11 @@
 import { alongLoop, loopLength } from '../curves/along';
 import type { Vec } from '../curves/vec';
-import { edgesIn, edgesOut, nodeOf, type GEdge, type GNode, type Graph } from '../model/graph';
+import { edgesIn, edgesOut, nodeOf, type GEdge, type Graph } from '../model/graph';
 import { alongOrAgainst } from '../curves/tolerance';
 import { curveOfEdge } from './chains';
-import { besideSibling, isShift, manoeuvreOf, turning, type Manoeuvre } from './manoeuvres';
+import { derivedNodes, originalOf, withDerived } from './derived';
+import { laneChangesOf } from './laneChanges';
+import { isShift, manoeuvreOf, turning, type Manoeuvre } from './manoeuvres';
 
 /**
  * What a segment is, as a sign of the debug layer (^1012), after the German signs of the
@@ -48,33 +50,27 @@ function turnSide(g: Graph, e: GEdge, m: Manoeuvre | null): 'left' | 'right' | n
 
 /**
  * The sign of a leg of a merge, the last segment of its branch (^1013): a right turn comes from
- * the right, so it is the right leg, and a left turn the left leg. A shift beside the leg it
- * moves towards is a lane that ends: it merges into that side. Any other shift comes from the
- * side it moves away from. Null for the leg that goes straight on.
+ * the right, so it is the right leg, and a left turn the left leg. Any shift comes from the side
+ * it moves away from. Null for the leg that goes straight on. (A lane that ends beside another is
+ * a merge, ^1056.)
  */
-function legSign(g: Graph, n: GNode, leg: GEdge): Sign | null {
+function legSign(g: Graph, leg: GEdge): Sign | null {
   const m = manoeuvreOf(g, leg);
   const turn = turnSide(g, leg, m);
   if (turn) return directions(false, turn === 'left', turn === 'right');
   if (!isShift(m)) return null;
   const towards = m === 'shift left' ? 'left' : 'right';
-  if (besideSibling(g, n, leg, edgesIn(g, n.id))) return { kind: 'merge', side: towards };
   return directions(false, towards === 'right', towards === 'left');
 }
 
 /**
  * The sign of what follows a split (^1012): the ways its segments leave, each by its own
- * manoeuvre. Two segments of which one shifts and ends beside the other: a lane is added on the
- * side of the shift. Nothing but segments that go on (straight or shifting), or nothing but
- * turns, whichever way (two to the left are still one further left than the other): a split.
+ * manoeuvre. Nothing but segments that go on (straight or shifting), or nothing but turns,
+ * whichever way (two to the left are still one further left than the other): a split. (A lane
+ * added beside another is an extension, ^1056.)
  */
-function splitSign(g: Graph, n: GNode, outs: GEdge[]): Sign {
-  const all = outs.map((o) => ({ o, m: manoeuvreOf(g, o) }));
-  const shift = all.find(({ o, m }) => isShift(m) && besideSibling(g, n, o, outs));
-  if (outs.length === 2 && shift) {
-    return { kind: 'extension', side: shift.m === 'shift left' ? 'left' : 'right' };
-  }
-  const sides = all.map(({ o, m }) => turnSide(g, o, m));
+function splitSign(g: Graph, outs: GEdge[]): Sign {
+  const sides = outs.map((o) => turnSide(g, o, manoeuvreOf(g, o)));
   const turns = sides.filter((s) => s !== null);
   const sharp = sharperOfTwo(g, outs, sides);
   if (sharp) return directions(true, sharp === 'left', sharp === 'right');
@@ -108,19 +104,34 @@ function sharperOfTwo(
   return q0 === 1 && q1 === -1 ? sides[0]! : null;
 }
 
-/**
- * The sign of a segment (^1012): that of its branch, read at the last node of the branch. If
- * that node is a split, also one that is a merge as well, the sign of the split: what follows
- * matters more than how the node is reached (^1024). Else, if it is a merge and the branch
- * reaches it as a leg that is not straight on, the sign of the leg; else straight on.
- */
-export function signOf(g: Graph, e: GEdge): Sign {
-  const last = lastOfBranch(g, e);
-  const n = nodeOf(g, last.end);
+/** The sign of a segment (^1012) by the direction its branch takes: that of the last node of the branch, where it is a split or a leg of a merge; else straight on (^1024). */
+function directionsOf(g: Graph, e: GEdge): Sign {
+  const n = nodeOf(g, lastOfBranch(g, e).end);
   if (!n) return STRAIGHT;
   const outs = edgesOut(g, n.id);
-  if (outs.length > 1) return splitSign(g, n, outs);
-  return (edgesIn(g, n.id).length > 1 ? legSign(g, n, last) : null) ?? STRAIGHT;
+  if (outs.length > 1) return splitSign(g, outs);
+  return (edgesIn(g, n.id).length > 1 ? legSign(g, lastOfBranch(g, e)) : null) ?? STRAIGHT;
+}
+
+/**
+ * The sign of every segment of a graph (^1012), by number. An extension or a merge (^1056) is the
+ * sign of the segment that ends at the node where it is, and of no other segment of its branch
+ * (^1060): the others go straight on. The rest is as the branch reads at its last node (^1024).
+ * Takes the graph with its derived nodes in it, which a caller that has it can hand over.
+ */
+export function signsOf(g: Graph, d: Graph = withDerived(g, derivedNodes(g))): Map<number, Sign> {
+  const changes = new Map<number, Sign>();
+  for (const c of laneChangesOf(d)) {
+    const ends = c.kind === 'merge' ? [c.shifting[0]!] : edgesIn(d, c.node.id);
+    for (const e of ends) changes.set(originalOf(e), { kind: c.kind, side: c.side });
+  }
+  return new Map(
+    g.edges.map((e) => {
+      const last = lastOfBranch(g, e);
+      const cascaded = last.id !== e.id && changes.has(last.id);
+      return [e.id, changes.get(e.id) ?? (cascaded ? STRAIGHT : directionsOf(g, e))];
+    }),
+  );
 }
 
 /** A sign at the middle of its segment (^1015). */
@@ -129,12 +140,12 @@ export interface PlacedSign {
   sign: Sign;
 }
 
-export function segmentSigns(g: Graph): PlacedSign[] {
+export function segmentSigns(g: Graph, d?: Graph): PlacedSign[] {
+  const signs = signsOf(g, d);
   return g.edges.flatMap((e): PlacedSign[] => {
     const pieces = curveOfEdge(g, e.id)?.pieces ?? [];
     const mid = alongLoop(pieces, loopLength(pieces) / 2);
-    if (!mid) return [];
-    return [{ at: { x: mid.x, y: mid.y }, sign: signOf(g, e) }];
+    return mid ? [{ at: { x: mid.x, y: mid.y }, sign: signs.get(e.id)! }] : [];
   });
 }
 

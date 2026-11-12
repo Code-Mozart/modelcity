@@ -1,6 +1,5 @@
 import { DASH_GAP_M, DASH_M, MARKING_MIN_PX, MARKING_WIDTH_M } from '../curves/lane';
 import type { Marking } from '../editor/markings';
-import { FEATURES } from '../features';
 import { strokeChain, type Frame, type Palette, type Stroke } from './paint';
 
 /** Logical markings (^976): a dash and the gap after it are equal, in pixels, and so is the width. The same for every road style and zoom. */
@@ -33,14 +32,9 @@ export function markingStroke(
 }
 
 /** The lane markings on the surface (^949 to ^955): all white for now (^953). */
-export function drawMarkings(f: Frame, markings: Marking[], pal: Palette) {
+export function drawMarkings(f: Frame, markings: Marking[], pal: Palette, physical: boolean) {
   for (const m of markings) {
-    const stroke = markingStroke(
-      m.kind,
-      f.view.scale,
-      pal['marking-white'],
-      FEATURES.physicalMarkings,
-    );
+    const stroke = markingStroke(m.kind, f.view.scale, pal['marking-white'], physical);
     strokeChain(f, m.pieces, stroke);
   }
 }

@@ -39,6 +39,7 @@
     nearMissLines,
     signText,
   } from './lib/hud/debugTools.svelte';
+  import { MarkingStyle, isMarkingStyleKey } from './lib/hud/markingStyle.svelte';
   import { violationsOf } from './lib/editor/violations';
   import { VersionBanner } from './lib/hud/versionBanner.svelte';
   import { TAB_TITLE } from './lib/version';
@@ -49,6 +50,7 @@
   // The version and the moniker show at load and after a while without input (^787); the tab says it too (^788).
   const banner = new VersionBanner();
   const debug = new DebugTools();
+  const markingStyle = new MarkingStyle();
   document.title = TAB_TITLE;
   const session = new ProjectSession(editor, camera, new IndexedDbStorage(), {
     notify: (kind, text) => toasts.show(kind, text),
@@ -202,6 +204,10 @@
       debug.toggleCoordinates();
       return e.preventDefault();
     }
+    if (isMarkingStyleKey(e)) {
+      markingStyle.toggle();
+      return e.preventDefault();
+    }
     if (isWalkKey(e) && debug.holdWalk(e.key, true)) return e.preventDefault();
     noHistory(e);
     if (projectKey(e) || camera.key(e.key) || editor.key(keyOf(e), modsOf(e))) e.preventDefault();
@@ -229,6 +235,7 @@
     {camera}
     debug={debug.coordinates}
     walk={debug.walk}
+    physical={markingStyle.physical}
     onUse={(id) => usage.mark(id)}
   />
   <ModeFrame phase={editor.phase} />
