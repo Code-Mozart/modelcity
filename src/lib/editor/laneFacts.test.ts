@@ -138,11 +138,12 @@ describe('no centerlines inside junctions (^1104)', () => {
       return Math.abs(v.x - c.x) < 5.9 && Math.abs(v.y - c.y) < 5.9;
     });
 
+  const nearCenter = (m: Marking) =>
+    m.pieces.some((p) => Math.hypot(p.P.x - c.x, p.P.y - c.y) < 60);
+
   it('a T has lines on its arms and none through it', () => {
     const lines = markingsOf(d, { physical: false, inside });
-    const here = lines.filter((m) =>
-      m.pieces.some((p) => Math.hypot(p.P.x - c.x, p.P.y - c.y) < 60),
-    );
+    const here = lines.filter(nearCenter);
     expect(here.length).toBeGreaterThan(0);
     expect(here.some(within)).toBe(false);
   });
