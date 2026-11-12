@@ -5,7 +5,7 @@
   import { dotsOf, holesOf, patched, surfaceFrom } from './editor/surface';
   import { laneChangeLines, laneChangesOf } from './editor/laneChanges';
   import { laneArrows } from './editor/laneArrows';
-  import { wedgesOf } from './editor/wedges';
+  import { goresOf } from './editor/gores';
   import { dropOf, dropPreview, roadsShown } from './editor/drop';
   import { turningOf } from './editor/turning';
   import { headingSourceOrigins } from './editor/hintState';
@@ -70,13 +70,13 @@
   const bars = $derived(barsOf(seen));
   /** The hulls of the segments, the road surface round them (^945) and, while the debug layer is on, the hulls and corners (^925). */
   const allHulls = $derived(hullsOf(editor.graph));
-  /** The lane changes (extensions and merges, ^1056), the wedges between their lanes (^1065) and the arrows of the lanes that end (^1029). */
+  /** The lane changes (extensions and merges, ^1056), the gores between their lanes (^1065) and the arrows of the lanes that end (^1029). */
   const changes = $derived(laneChangesOf(seen));
-  const wedges = $derived(wedgesOf(seen, changes));
+  const gores = $derived(goresOf(seen, changes, allHulls));
   const rawSurface = $derived(
     surfaceFrom(
       allHulls,
-      wedges.map((w) => w.loop),
+      gores.map((w) => w.loop),
     ),
   );
   /** The surface with its tiny holes patched (^1042). */
@@ -97,7 +97,7 @@
   const markings = $derived(
     markingsOf(seen, {
       physical,
-      extra: [...laneChangeLines(seen, changes), ...wedges.flatMap((w) => w.markings)],
+      extra: [...laneChangeLines(seen, changes), ...gores.flatMap((w) => w.markings)],
       surface,
     }),
   );

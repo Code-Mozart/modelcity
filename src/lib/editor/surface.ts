@@ -12,7 +12,7 @@ import { hullsOf, type EdgeHull } from './corners';
 /** The pieces of the outline of a hull, in no particular order (^945). */
 export const hullPieces = (h: Hull): Piece[] => [...h.sides[0], ...h.sides[1], ...h.caps];
 
-/** The road surface (^945): the outline of the union of the hulls of all segments and of the `extra` loops (the wedges, ^1065), as closed loops of pieces. */
+/** The road surface (^945): the outline of the union of the hulls of all segments and of the `extra` loops (the gores, ^1065), as closed loops of pieces. */
 export const surfaceFrom = (hulls: EdgeHull[], extra: Loop[] = []): Loop[] =>
   unionOutline([...hulls.map((h) => hullPieces(h.hull)), ...extra]);
 

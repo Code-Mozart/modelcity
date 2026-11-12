@@ -312,7 +312,7 @@ export const GROUND_CASES: GroundCase[] = [
   named(
     1066,
     [1, 7],
-    'a lane that leaves and one that arrives, crossing: wedges, not slivers',
+    'a lane that leaves and one that arrives, crossing: gores, not slivers',
     [90],
   ),
   named(1063, [0, 7], 'a lane that merges, the lane it merges into cut by other lanes', [70]),
