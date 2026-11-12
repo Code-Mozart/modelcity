@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { PRIORITY_CASES, priorityGround } from '../testing/priorityGround';
 import { courseOf, laneFactsOf, sideOf, type LaneFacts } from './laneFacts';
+import { laneHull } from './laneHull';
 import { incompleteArrows, waitLines } from './priorityMarks';
+import { insideLoops } from '../curves/union';
 import { edgesOut, nodeOf } from '../model/graph';
 
 const g = priorityGround();
@@ -97,5 +99,26 @@ describe('arrows where a turn is missing (^1076, ^1100)', () => {
       (l) => Math.hypot(l.at.x - arrow!.at.x, l.at.y - arrow!.at.y) < 1e-6,
     );
     expect(own).toHaveLength(1);
+  });
+});
+
+describe('where the marks are anchored (^1103)', () => {
+  it('the give-way line of a lane is at its node, the way it runs there', () => {
+    for (const f of of(1084)) {
+      const line = waitLines([f])[0]!;
+      expect(line.at).toEqual({ x: f.node.x, y: f.node.y });
+      expect(line.th).toBe(f.node.th);
+    }
+  });
+});
+
+describe('the hull round what a lane in meets, for the debug layer (^1102)', () => {
+  it('is round its own segments and the lanes it meets, so a place in the middle of a T is in it', () => {
+    const c = PRIORITY_CASES.find((x) => x.hat === 1080)!.views[0]!.center;
+    const [west] = of(1080).filter((f) => f.node.x < c.x - 1);
+    const hull = laneHull(g, west!);
+    expect(hull.length).toBeGreaterThan(0);
+    expect(insideLoops(hull, { x: c.x + 1, y: c.y + 1 })).toBe(true);
+    expect(insideLoops(hull, { x: c.x + 1, y: c.y - 30 })).toBe(false);
   });
 });

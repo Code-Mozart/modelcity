@@ -1,4 +1,3 @@
-import { alongLoop, lengthTo, loopLength } from '../curves/along';
 import { boxesMeet } from '../curves/hull';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import { dot, fromAngle, perp, sub, type Vec } from '../curves/vec';
@@ -28,19 +27,21 @@ export function courseOf(g: Graph, e: GEdge): Course | null {
   return a && b ? sideOf(a, b) : null;
 }
 
-/** A place where a segment of a node meets a segment of another lane in (^1096): they cross, or end at the same node. `along` is how far from the node, in meters. */
+/** Where a segment of a node meets a segment of another lane in (^1096): they cross, or end at the same node. */
 export interface Conflict {
+  /** The node the other lane comes in at. */
   from: GNode;
-  at: Vec;
-  th: number;
-  along: number;
+  mine: GEdge;
+  theirs: GEdge;
 }
 
 export interface LaneFacts {
   node: GNode;
+  /** Its segments that count (^1101). */
+  edges: GEdge[];
   /** The width of its lane. */
   width: number;
-  /** Where it meets another lane first, if it does. */
+  /** The other lanes it meets. */
   conflicts: Conflict[];
   /** One of the conflicts is with a lane that comes in from its right (^1101). */
   givesWay: boolean;
@@ -75,23 +76,11 @@ function adjacency(g: Graph, tower: Map<number, number>): Map<number, Set<number
 const shares = (a: GEdge, b: GEdge) =>
   a.start === b.start || a.end === b.end || a.start === b.end || a.end === b.start;
 
-/** The first place a segment crosses another that shares no node with it (^1096), as the distance from the start and the heading there. */
-function crossing(a: Curve, b: Curve): { at: Vec; th: number; along: number } | null {
-  if (!boxesMeet(a.box, b.box)) return null;
-  const found = a.pieces.flatMap((p) => b.pieces.flatMap((q) => crossAcross(p, q)));
-  const hits = found.map((at) => ({ at, along: lengthTo(a.pieces, at) }));
-  const first = hits.sort((x, y) => x.along - y.along)[0];
-  const s = first && alongLoop(a.pieces, first.along);
-  return first && s ? { at: first.at, th: Math.atan2(s.ty, s.tx), along: first.along } : null;
-}
-
-/** Where the segment `mine` meets the segment `theirs`: they end at the same node, or cross (^1096). */
-function meeting(g: Graph, mine: Curve, theirs: Curve): Omit<Conflict, 'from'> | null {
-  if (mine.edge.end === theirs.edge.end) {
-    const end = nodeOf(g, mine.edge.end)!;
-    return { at: { x: end.x, y: end.y }, th: end.th, along: loopLength(mine.pieces) };
-  }
-  return shares(mine.edge, theirs.edge) ? null : crossing(mine, theirs);
+/** Whether two segments meet (^1096): they end at the same node, or they cross and share no node. */
+function meet(a: Curve, b: Curve): boolean {
+  if (a.edge.end === b.edge.end) return true;
+  if (shares(a.edge, b.edge) || !boxesMeet(a.box, b.box)) return false;
+  return a.pieces.some((p) => b.pieces.some((q) => crossAcross(p, q).length > 0));
 }
 
 /** The towers that are arms of the pattern a node is in (^1101): adjacent to its tower and to another tower that is adjacent to it, so that a plain road, whose towers behind and ahead do not touch, has none. */
@@ -107,7 +96,7 @@ const hasOut = (g: Graph, tower: Map<number, number>, t: number, pattern: number
       tower.get(e.end) === t && tower.get(e.start) !== t && pattern.includes(tower.get(e.start)!),
   );
 
-/** Where the segments `edges` of a node meet the segments of lanes in other towers (^1096). */
+/** The segments of other lanes (in other towers) that the segments `edges` of a node meet (^1096). */
 function conflictsOf(g: Graph, tower: Map<number, number>, n: GNode, edges: GEdge[]): Conflict[] {
   const curves = curvesOf(g);
   const own = tower.get(n.id);
@@ -115,11 +104,8 @@ function conflictsOf(g: Graph, tower: Map<number, number>, n: GNode, edges: GEdg
     .filter((b) => tower.get(b.edge.start) !== own)
     .flatMap((b) =>
       curves
-        .filter((a) => edges.includes(a.edge))
-        .flatMap((a) => {
-          const hit = meeting(g, a, b);
-          return hit ? [{ ...hit, from: nodeOf(g, b.edge.start)! }] : [];
-        }),
+        .filter((a) => edges.includes(a.edge) && meet(a, b))
+        .map((a) => ({ from: nodeOf(g, b.edge.start)!, mine: a.edge, theirs: b.edge })),
     );
 }
 
@@ -152,6 +138,7 @@ export function laneFactsOf(g: Graph): LaneFacts[] {
     return [
       {
         node: n,
+        edges,
         width: widthOf(g, edges[0]!),
         conflicts,
         givesWay: conflicts.some((c) => sideOf(n, c.from) === 'right'),
