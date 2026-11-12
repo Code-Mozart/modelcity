@@ -186,10 +186,10 @@ export class Editor {
     this.timeline.clear();
   }
 
-  /** Collapse the selected nodes that have no effect (^1064): one step, so one undo; nothing selected, nothing happens. */
+  canCollapse = () => collapseStep(this.snapshot()).graph !== this.graph;
+  /** Collapse the selected nodes without an effect (^1064), in one step; `canCollapse`: is there one. */
   collapseSelected() {
-    if (!this.selection.length) return;
-    this.use('collapse-selected');
+    if (this.selection.length) this.use('collapse-selected');
     this.edit('collapse nodes', collapseStep);
   }
 

@@ -75,6 +75,17 @@ describe('collapsing in the editor (^1064)', () => {
     expect(ed.graph.nodes).toHaveLength(3);
   });
 
+  it('canCollapse is true only if a selected node has no effect (the toast of ^1200 says why not)', () => {
+    const ed = drawn();
+    const [a, b] = [ed.graph.nodes[0]!.id, ed.graph.nodes.find((n) => n.x === 40)!.id];
+    ed.selection = [a];
+    expect(ed.canCollapse()).toBe(false);
+    ed.selection = [b];
+    expect(ed.canCollapse()).toBe(true);
+    ed.selection = [];
+    expect(ed.canCollapse()).toBe(false);
+  });
+
   it('nothing selected: nothing happens, and no step is recorded', () => {
     const ed = drawn();
     ed.selection = [];

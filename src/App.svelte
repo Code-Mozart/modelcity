@@ -17,6 +17,7 @@
   import { hintsFor, viewHints } from './lib/hints/hints';
   import { PIN_TIP } from './lib/hints/pinTip';
   import { HEADING_TIP } from './lib/hints/headingTip';
+  import { COLLAPSE_TIP } from './lib/hints/collapseTip';
   import { REACH_WARN } from './lib/snap/engine';
   import { Usage } from './lib/hints/usage.svelte';
   import { actionFor, keyOf } from './lib/editor/keymap';
@@ -169,6 +170,14 @@
     }
   }
 
+  /** Collapsing with nothing that can collapse says why and how (^1200), instead of doing nothing. */
+  function noCollapse(e: KeyboardEvent) {
+    const action = actionFor(keyOf(e), { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey });
+    if (action === 'collapse' && editor.selection.length && !editor.canCollapse()) {
+      toasts.show('info', COLLAPSE_TIP);
+    }
+  }
+
   const modsOf = (e: KeyboardEvent) => ({
     alt: e.altKey,
     shift: e.shiftKey,
@@ -210,6 +219,7 @@
     }
     if (isWalkKey(e) && debug.holdWalk(e.key, true)) return e.preventDefault();
     noHistory(e);
+    noCollapse(e);
     if (projectKey(e) || camera.key(e.key) || editor.key(keyOf(e), modsOf(e))) e.preventDefault();
   }
 </script>
