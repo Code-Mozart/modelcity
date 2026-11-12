@@ -1,5 +1,5 @@
 import { boxesMeet } from '../curves/hull';
-import { SAME_PLACE_M } from '../curves/tolerance';
+import { SAME_PLACE_M, sameWay } from '../curves/tolerance';
 import { dot, fromAngle, perp, sub, type Vec } from '../curves/vec';
 import {
   edgesIn,
@@ -30,10 +30,30 @@ export function sideOf(from: GNode, to: Vec): Course {
   return lateral > 0 ? 'right' : 'left';
 }
 
-/** What a segment does (^1101): the side of its end node of the heading line of its start node. */
+/** The angle from which on an arm is no longer on the right, counter-clockwise from the arm one comes in by (^1144): the one angle that is allowed as a criterion (^879). */
+const RIGHT_BELOW = (5 * Math.PI) / 6;
+
+/**
+ * Where the arm that points away from the junction at the heading `them` lies, seen from the arm
+ * one comes in by (the heading `mine` pointing away from the junction), by the counter-clockwise
+ * angle between them (^1142, ^1144): under 150 degrees is right (a T has 90, a Y 120), over 210
+ * left, in between ahead.
+ */
+function armCourse(mine: number, them: number): Course {
+  const turn = (((mine - them) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  if (turn < RIGHT_BELOW) return 'right';
+  return turn > 2 * Math.PI - RIGHT_BELOW ? 'left' : 'ahead';
+}
+
+/** The course of an arm that points away at the node `to`, seen from the lane in `from`: by position where the headings are the same (parallel arms have no angle to tell them apart), else by the angle (^1144). */
+function courseAt(from: GNode, to: GNode, away: number): Course {
+  return sameWay(from, to) ? sideOf(from, to) : armCourse(from.th + Math.PI, away);
+}
+
+/** What a segment does (^1101): where the arm of its end node is, seen from the arm of its start node. */
 export function courseOf(g: Graph, e: GEdge): Course | null {
   const [a, b] = [nodeOf(g, e.start), nodeOf(g, e.end)];
-  return a && b ? sideOf(a, b) : null;
+  return a && b ? courseAt(a, b, b.th) : null;
 }
 
 /** Where a segment of a node meets a segment of another lane in (^1096): they cross, or end at the same node. */
@@ -170,7 +190,7 @@ function factsOf(g: Graph, tower: Map<number, number>): LaneFacts[] {
         behind: edgesIn(g, n.id).length > 0,
         width: widthOf(g, edges[0]!),
         conflicts,
-        givesWay: conflicts.some((c) => sideOf(n, c.from) === 'right'),
+        givesWay: conflicts.some((c) => courseAt(n, c.from, c.from.th + Math.PI) === 'right'),
         incomplete: null,
       },
     ];
