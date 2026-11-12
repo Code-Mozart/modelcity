@@ -1,4 +1,4 @@
-next: ^1105
+next: ^1109
 
 # Hats
 
@@ -725,6 +725,7 @@ Meta hats (about how we work, not about the app): ^3, ^12, ^36, ^39, ^67, ^96, ^
 | ^1069 | image | reference (user) | **A T-junction with give-way lines (user):** `docs/mocks/hat1069.png`: an aerial picture of the T of Metzer Straße and Malenfelser Weg; two of its three arms have a give-way line, the one with no arm to its right has none: the model for ^1075. |
 | ^1070 | image | reference (user) | **Sketch of a gore (user):** `docs/mocks/hat1070.png`: a picture of the testing ground with the surface to add drawn in red and the chevrons and the outline in cyan; the model for ^1065. (Registered late, in ^1067.) |
 | ^1071 | image | reference (user) | **The A6 near Untereisesheim (user):** `docs/mocks/hat1071.webp`: a satellite picture of the gores of a ramp with chevrons, proof of the direction of the chevrons (the apex against the traffic, ^1065). (Registered late, in ^1067.) |
+| ^1105 | mock | reference (user) | **The project *t-junction-bugs* (user):** `docs/mocks/hat1105.json`: three small junctions of single segments, a T with nodes of its own for the turns, a Y and a T on a bend with arcs of 209 m; where the first version of the markings of the small junctions was wrong (the bugs ^1106, regression test `editor/tJunctionBugs.test`). |
 
 ## Rented ranges
 
@@ -759,6 +760,7 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^965–^970 | docs/road-styles.md | the road styles, one hat each (rented range, milestone ^964) |
 | ^985–^1001 | docs/junctions.md | the cases of the testing ground of the junctions, one hat each (rented range, milestone ^157) |
 | ^1020–^1021 | docs/junctions.md | the user's special cases in the testing ground (rented range, milestone ^157) |
+| ^1106–^1108 | docs/junctions.md | the bugs of the project ^1105, the outline of the surface, lane in and what it does not lead to (rented range, milestone ^1067) |
 | ^1092–^1104 | docs/junctions.md | the topological criteria and node patterns of the traffic layout, T-junction complete and incomplete, rules per node, the hull per node, marks at the nodes, no lines inside junctions (rented range, milestone ^1067) |
 | ^1072–^1079 | docs/junctions.md | the rules of the small junctions, rechts vor links (rented range, milestone ^1067) |
 | ^1080–^1091 | docs/junctions.md | the cases of the testing ground of the small junctions (rented range, milestone ^1067) |

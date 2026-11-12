@@ -16,15 +16,20 @@ export interface WaitLine {
 /** The node of a lane, with the way it runs there: where its line and its arrow are anchored (^1103). */
 const anchorOf = (f: LaneFacts) => ({ at: { x: f.node.x, y: f.node.y } as Vec, th: f.node.th });
 
+/** The lanes that have a road behind their node (a segment ends at it): a line and an arrow stand before the node, and over the void if there is none (^1105). */
+const roadBehind = (f: LaneFacts) => f.behind;
+
 /** The give-way lines of the lanes that give way (^1101). */
 export function waitLines(facts: LaneFacts[]): WaitLine[] {
-  return facts.filter((f) => f.givesWay).map((f) => ({ ...anchorOf(f), width: f.width }));
+  return facts
+    .filter((f) => f.givesWay && roadBehind(f))
+    .map((f) => ({ ...anchorOf(f), width: f.width }));
 }
 
 /** The arrows of the lanes that do not lead everywhere that is typical (^1076, ^1100): one for the ways they do lead. */
 export function incompleteArrows(facts: LaneFacts[]): LaneArrow[] {
   return facts.flatMap((f) =>
-    f.incomplete
+    f.incomplete && roadBehind(f)
       ? [
           {
             ...anchorOf(f),

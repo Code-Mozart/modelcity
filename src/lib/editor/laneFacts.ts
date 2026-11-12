@@ -1,7 +1,15 @@
 import { boxesMeet } from '../curves/hull';
 import { SAME_PLACE_M } from '../curves/tolerance';
 import { dot, fromAngle, perp, sub, type Vec } from '../curves/vec';
-import { edgesOut, nodeOf, widthOf, type GEdge, type GNode, type Graph } from '../model/graph';
+import {
+  edgesIn,
+  edgesOut,
+  nodeOf,
+  widthOf,
+  type GEdge,
+  type GNode,
+  type Graph,
+} from '../model/graph';
 import { crossAcross } from './corners';
 import { curvesOf } from './derived';
 import { towersOf } from './towers';
@@ -39,6 +47,8 @@ export interface LaneFacts {
   node: GNode;
   /** Its segments that count (^1101). */
   edges: GEdge[];
+  /** A segment ends at the node: there is road before it (^1105). */
+  behind: boolean;
   /** The width of its lane. */
   width: number;
   /** The other lanes it meets. */
@@ -89,13 +99,6 @@ function armsOf(near: Map<number, Set<number>>, own: number): number[] {
   return around.filter((t) => around.some((u) => u !== t && near.get(t)?.has(u)));
 }
 
-/** Whether a lane goes out of the tower `t` into the pattern: a segment from another of its towers ends at a node of it (^1099). */
-const hasOut = (g: Graph, tower: Map<number, number>, t: number, pattern: number[]) =>
-  g.edges.some(
-    (e) =>
-      tower.get(e.end) === t && tower.get(e.start) !== t && pattern.includes(tower.get(e.start)!),
-  );
-
 /** The segments of other lanes (in other towers) that the segments `edges` of a node meet (^1096). */
 function conflictsOf(g: Graph, tower: Map<number, number>, n: GNode, edges: GEdge[]): Conflict[] {
   const curves = curvesOf(g);
@@ -109,10 +112,23 @@ function conflictsOf(g: Graph, tower: Map<number, number>, n: GNode, edges: GEdg
     );
 }
 
-/** The segments of a node that count for the rules (^1101): those that lead into its arms, or, if there are fewer than two arms, all that leave its tower, if there are two or more. */
+/**
+ * The segments of a node that count for the rules (^1101): none if the node is not a lane in, the
+ * place a lane comes in at (^1105): a node that segments end at (two or more are a merge, which is
+ * a place lanes arrive at) or that is the end of a road with nothing behind it (one that leaves
+ * in a single way is only the end of a road). Else those that lead into its arms, or, if there
+ * are fewer than two arms, all that leave its tower, if there are two or more.
+ */
 function segmentsOf(g: Graph, tower: Map<number, number>, n: GNode, arms: number[]): GEdge[] {
+  const behind = edgesIn(g, n.id).length;
   const leaving = edgesOut(g, n.id).filter((e) => tower.get(e.end) !== tower.get(n.id));
-  if (arms.length >= 2) return leaving.filter((e) => arms.includes(tower.get(e.end)!));
+  if (behind > 1) return [];
+  if (arms.length >= 2)
+    return behind
+      ? leaving.filter((e) => arms.includes(tower.get(e.end)!))
+      : leaving.length >= 2
+        ? leaving
+        : [];
   return leaving.length >= 2 ? leaving : [];
 }
 
@@ -124,6 +140,11 @@ function segmentsOf(g: Graph, tower: Map<number, number>, n: GNode, arms: number
  */
 export function laneFactsOf(g: Graph): LaneFacts[] {
   const tower = towerIds(g);
+  return withIncomplete(g, tower, factsOf(g, tower));
+}
+
+/** The facts of the lanes in, without what is missing (^1101). */
+function factsOf(g: Graph, tower: Map<number, number>): LaneFacts[] {
   const near = adjacency(g, tower);
   const size = (t: number) => [...tower.values()].filter((x) => x === t).length;
   return g.nodes.flatMap((n): LaneFacts[] => {
@@ -133,16 +154,15 @@ export function laneFactsOf(g: Graph): LaneFacts[] {
     const towers = [own, ...edges.map((e) => tower.get(e.end)!)];
     if (!edges.length || towers.some((t) => size(t) > 2)) return [];
     const conflicts = conflictsOf(g, tower, n, edges);
-    const reached = new Set(edges.map((e) => tower.get(e.end)));
-    const typical = arms.some((t) => hasOut(g, tower, t, [own, ...arms]) && !reached.has(t));
     return [
       {
         node: n,
         edges,
+        behind: edgesIn(g, n.id).length > 0,
         width: widthOf(g, edges[0]!),
         conflicts,
         givesWay: conflicts.some((c) => sideOf(n, c.from) === 'right'),
-        incomplete: arms.length >= 2 && typical ? edges.flatMap((e) => courseOf(g, e) ?? []) : null,
+        incomplete: null,
       },
     ];
   });
@@ -160,4 +180,40 @@ export function junctionEdgeIds(g: Graph): Set<number> {
       segmentsOf(g, tower, n, armsOf(near, tower.get(n.id)!)).map((e) => e.id),
     ),
   );
+}
+
+/** Which of the lanes in meet one another, directly or through others (^1096): by their nodes. */
+function groupsOf(facts: LaneFacts[]): Map<number, number> {
+  const parent = new Map(facts.map((f) => [f.node.id, f.node.id]));
+  const find = (x: number): number => (parent.get(x) === x ? x : find(parent.get(x)!));
+  for (const f of facts) {
+    for (const c of f.conflicts) {
+      if (parent.has(c.from.id)) parent.set(find(c.from.id), find(f.node.id));
+    }
+  }
+  return new Map(facts.map((f) => [f.node.id, find(f.node.id)]));
+}
+
+/**
+ * What each lane does not lead to that it typically would (^1100, ^1076): the possible connections
+ * of a lane are the towers the segments of the lanes it meets lead to, except those of its own
+ * arm (its tower and the towers its road comes from: no U-turn). Judged per node: no junction is
+ * looked for, only who meets whom.
+ */
+function withIncomplete(g: Graph, tower: Map<number, number>, facts: LaneFacts[]): LaneFacts[] {
+  const group = groupsOf(facts);
+  const targets = new Map<number, Set<number>>();
+  for (const f of facts) {
+    const set = targets.get(group.get(f.node.id)!) ?? new Set<number>();
+    f.edges.forEach((e) => set.add(tower.get(e.end)!));
+    targets.set(group.get(f.node.id)!, set);
+  }
+  return facts.map((f) => {
+    const roads = edgesIn(g, f.node.id).map((e) => tower.get(e.start)!);
+    const own = new Set([tower.get(f.node.id)!, ...roads]);
+    const reached = new Set(f.edges.map((e) => tower.get(e.end)!));
+    const possible = [...targets.get(group.get(f.node.id)!)!].filter((t) => !own.has(t));
+    const missing = possible.some((t) => !reached.has(t));
+    return { ...f, incomplete: missing ? f.edges.flatMap((e) => courseOf(g, e) ?? []) : null };
+  });
 }
