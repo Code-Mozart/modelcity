@@ -1,5 +1,5 @@
 import { boxAround, boxesMeet, type Box } from '../curves/hull';
-import type { RoadScene } from './scene';
+import type { RoadScene, Scene } from './scene';
 import { viewBox, type Frame } from './paint';
 
 /** Which segments show their scaffold, and which roads reach the screen (^939). */
@@ -16,8 +16,18 @@ function roadBoxOf(road: RoadScene): Box {
   return box;
 }
 
-/** Which roads reach the screen, a little more than the canvas (their gizmos are a few pixels wide) (^939): the others are not drawn and not looked at. */
-export const roadsOnScreen = (f: Frame, roads: RoadScene[]) => {
+/** Which roads reach the screen, a little more than the canvas (^939): the others are not drawn and not looked at. A road that is being worked with (`keep`: its scaffold is shown, it is selected, focused or turned) is drawn whole, for its guides and circles reach far from its curve. */
+export const roadsOnScreen = (f: Frame, roads: RoadScene[], keep: (road: number) => boolean) => {
   const shown = viewBox(f, 60 / f.view.scale);
-  return roads.map((r) => boxesMeet(roadBoxOf(r), shown));
+  return roads.map((r, i) => keep(i) || boxesMeet(roadBoxOf(r), shown));
 };
+
+/** Which segments show their scaffold, and which roads are drawn (^939): those that reach the screen and those that are being worked with. */
+export function shownOf(f: Frame, scene: Scene, active: boolean[][]): Shown {
+  const working = (i: number) =>
+    active[i]!.some(Boolean) ||
+    [...scene.selection, ...scene.pinned].some((n) => n.road === i) ||
+    scene.focus?.road === i ||
+    scene.turning?.road === i;
+  return { active, on: roadsOnScreen(f, scene.roads, working) };
+}

@@ -36,7 +36,7 @@ import {
   type Frame,
   type Palette,
 } from './paint';
-import { roadsOnScreen, type Shown } from './roadsOnScreen';
+import { shownOf, type Shown } from './roadsOnScreen';
 import type { Band } from '../editor/selection';
 import type { Pointer } from '../editor/proximity';
 import { drawOutlines } from './outline';
@@ -352,7 +352,7 @@ function drawRoads(f: Frame, scene: Scene, { active, on }: Shown, pal: Palette) 
  * a segment (everything else) only while it is needed, all or nothing, see `scaffold.ts`.
  * Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
-  const shown = { active: shownFlags(scene), on: roadsOnScreen(f, scene.roads) };
+  const shown = shownOf(f, scene, shownFlags(scene));
   drawSurface(f, scene, pal);
   if (scene.viewing) return;
   drawRoads(f, scene, shown, pal);
