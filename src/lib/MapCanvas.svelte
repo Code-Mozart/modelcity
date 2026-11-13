@@ -121,44 +121,50 @@
     towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
   );
 
+  /** Where a node would be dropped, if one is being dragged. */
+  const drop = $derived(dropOf(editor.graph, editor.press, editor.snapped));
+  /** The zoom alone: panning changes the view but not this, so what depends on it only is not made again (^940). */
+  const scale = $derived(camera.view.scale);
+  const handles = $derived(editor.handles(scale));
+  /** Everything of the scene that does not depend on the camera: made when the editor changes, not every frame of a pan (^940). */
+  const sceneBase = $derived({
+    roads: roadsShown(editor.chains, editor.graph, editor.press, drop),
+    selection: chainSelection(editor.chains, editor.selection),
+    band: editor.band,
+    drawing: editor.drawing,
+    viewing: editor.viewing,
+    selectedSegments: editor.selectedSegments,
+    outline: editor.hoverSegments,
+    hideScaffold: scaffoldHidden({
+      phase: editor.phase,
+      movingGroup: editor.movingGroup,
+      ctrl: editor.pointer?.ctrl === true,
+      dropping: drop !== null,
+    }),
+    hover: editor.hover,
+    mergePreview: editor.mergePreview,
+    focus: editor.focus,
+    pointer: editor.pointer,
+    snap: editor.snapped,
+    previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
+    nearby: editor.nearbyPoints,
+    dropPreview: dropPreview(editor.graph, editor.press, drop),
+    pinned: chainSelection(editor.chains, editor.pins.list),
+    headingFrom: headingSourceOrigins(editor),
+    snapFrom: snapOrigins(editor.snapped),
+    bars: bars,
+    towers: towers,
+    derived: derivedAll,
+    surface,
+    ...marks,
+    hulls,
+    tower: followingTower(editor.graph, editor.chains, editor.focus, editor.selection),
+    turning: turningOf(editor.chains, editor.press),
+  });
+
   // Redraw whenever the camera or anything the editor exposes changes.
   $effect(() => {
-    const drop = dropOf(editor.graph, editor.press, editor.snapped);
-    const scene = {
-      roads: roadsShown(editor.chains, editor.graph, editor.press, drop),
-      handles: editor.handles(camera.view.scale),
-      selection: chainSelection(editor.chains, editor.selection),
-      band: editor.band,
-      drawing: editor.drawing,
-      viewing: editor.viewing,
-      selectedSegments: editor.selectedSegments,
-      outline: editor.hoverSegments,
-      hideScaffold: scaffoldHidden({
-        phase: editor.phase,
-        movingGroup: editor.movingGroup,
-        ctrl: editor.pointer?.ctrl === true,
-        dropping: drop !== null,
-      }),
-      hover: editor.hover,
-      mergePreview: editor.mergePreview,
-      focus: editor.focus,
-      pointer: editor.pointer,
-      snap: editor.snapped,
-      previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
-      nearby: editor.nearbyPoints,
-      dropPreview: dropPreview(editor.graph, editor.press, drop),
-      pinned: chainSelection(editor.chains, editor.pins.list),
-      headingFrom: headingSourceOrigins(editor),
-      snapFrom: snapOrigins(editor.snapped),
-      bars: bars,
-      towers: towers,
-      derived: derivedAll,
-      surface,
-      ...marks,
-      hulls,
-      tower: followingTower(editor.graph, editor.chains, editor.focus, editor.selection),
-      turning: turningOf(editor.chains, editor.press),
-    };
+    const scene = { ...sceneBase, handles };
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
   });
