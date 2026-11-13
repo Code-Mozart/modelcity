@@ -16,7 +16,7 @@ const MAPS = [
   { name: 'tiled map, 1000 cells (12000 nodes)', graph: () => tiledMap(1000) },
 ];
 
-/** Runs in the page: the three times, in milliseconds. */
+/** Runs in the page: the times, in milliseconds. */
 async function measure(g: Graph) {
   const hook = window.__modelcity!;
   function nextFrame() {
@@ -41,16 +41,16 @@ async function measure(g: Graph) {
   const base = hook.camera();
   hook.show({ ...base, scale: 3 });
   await frames();
-  const first = await timed(() => (hook.editor.graph = { ...g }), 1);
   const pan = await timed(
     (i) => hook.show({ x: base.x + i * 2, y: base.y + i, scale: 3, rotation: 0 }),
     30,
   );
-  const edit = await timed(() => (hook.editor.graph = { ...g, nodes: g.nodes.map(copy) }), 3);
-  function copy<T extends object>(n: T) {
-    return { ...n };
-  }
-  return { first, pan, edit };
+  const canvas = document.querySelector('canvas')!;
+  const move = (i: number) =>
+    new PointerEvent('pointermove', { clientX: 300 + i * 7, clientY: 300 + i * 5 });
+  const hover = await timed((i) => canvas.dispatchEvent(move(i)), 30);
+  const edit = await timed(() => (hook.editor.graph = { ...g, nodes: [...g.nodes] }), 3);
+  return { pan, hover, edit };
 }
 
 test('frame times', async ({ page }) => {
@@ -59,7 +59,7 @@ test('frame times', async ({ page }) => {
   for (const map of MAPS) {
     const r = await page.evaluate(measure, map.graph());
     console.log(
-      `${map.name}: first paint ${r.first.toFixed(0)} ms, pan ${r.pan.toFixed(0)} ms/frame (two frames: 33 ms is 60 FPS), edit ${r.edit.toFixed(0)} ms`,
+      `${map.name}: pan ${r.pan.toFixed(0)} ms/frame (two frames: 33 ms is 60 FPS), pointer move ${r.hover.toFixed(0)} ms, edit ${r.edit.toFixed(0)} ms`,
     );
   }
 });

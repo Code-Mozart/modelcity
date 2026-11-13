@@ -25,12 +25,15 @@ An optimization (^930) is a change to the code that leads to the same behaviour,
 
 The pipeline now grows about linearly with the number of nodes, but an edit still derives everything again, so it grows with the map. Measured with `bun run bench` (node, median of three, ms) and `bun run frames` (browser, dev build):
 
-| Map | surface (the union) | lines clipped to the surface | an edit in the browser | panning a frame |
-| --- | --- | --- | --- | --- |
-| T ground, 358 nodes | | | 135 | 33 (60 FPS) |
-| angle ground, 648 nodes | 88 | 87 | 205 | 33 (60 FPS) |
-| tiled map, 3000 nodes | 299 | 369 | 917 | 48 |
-| tiled map, 12000 nodes | 1228 | 1403 | 3822 | 133 |
+| Map | surface (the union) | lines clipped to the surface | an edit in the browser | panning, a frame | moving the pointer |
+| --- | --- | --- | --- | --- | --- |
+| T ground, 358 nodes | | | 150 | 33 (60 FPS) | 33 |
+| angle ground, 648 nodes | 88 | 87 | 217 | 33 (60 FPS) | 33 |
+| tiled map, 3000 nodes | 299 | 369 | 935 | 49 | 33 |
+| tiled map, 12000 nodes | 1228 | 1403 | 4217 | 134 | 33 |
+| tiled map, 96000 nodes (in node only) | 10745 | 13156 | | | |
+
+The times of a frame are for two painted frames, so 33 ms is the display's 60 FPS. Before this milestone the angle ground took 5085 ms to clip the lines alone (in node) and 600 ms for an edit in the browser, and a map of 3000 nodes 8785 ms.
 
 Ideas, in the order of what they would give: **^941** (only what changed is derived again, by a region of the map, so that an edit costs what the edit touches and not the map: the union, the lane facts and the clip are all per region), the roads, handles and nodes of the scene off the screen not built each frame (^939, the rest of it: the camera pan still grows with the map), and a cheaper union (the cutting of all pieces by each other is the bulk of the surface).
 
