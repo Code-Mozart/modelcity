@@ -13,7 +13,7 @@ describe('the derived nodes of the testing ground of the junctions (^940)', () =
         ),
       )
       .digest('hex');
-    // Made by the code of main before the performance milestone (PR #57).
+    // Made by the code of main before the performance milestone (PR #58).
     expect([sum, d.length]).toEqual(['a1adcfc2c016bb0e4a1f81505bf5820c615c908a', 125]);
   });
 });
