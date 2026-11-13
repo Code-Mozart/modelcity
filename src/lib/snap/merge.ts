@@ -1,3 +1,4 @@
+import { Grid } from '../curves/grid';
 import type { Piece } from '../curves/types';
 import { SAME_PLACE_M, alongOrAgainst } from '../curves/tolerance';
 import { angleOf, dist, dot, perp, sub, unitOr, type Vec } from '../curves/vec';
@@ -21,14 +22,37 @@ function sameLine(a: SnapCurve, b: SnapCurve): boolean {
   return parallel && Math.abs(dot(perp(y.u), sub(x.p, y.p))) < SAME_PLACE_M;
 }
 
+/** How the lines are sorted into buckets to be compared (^938): by direction (radians) and by the distance of the line from the origin (meters); a line is compared with those in the buckets next to its own, so a question costs what is alike and not all the lines. */
+const DIRECTION_BUCKET = 0.002;
+const OFFSET_BUCKET_M = 4;
+const DIRECTIONS = Math.ceil(Math.PI / DIRECTION_BUCKET);
+
+/** The buckets (direction, offset) of a line, as the pair of numbers of its own bucket; the direction taken modulo a half turn, so that the two ways of a line are one. */
+function bucketOf(c: SnapCurve): [number, number] {
+  const { p, u } = straightOf(c);
+  const turn = (angleOf(u) + 2 * Math.PI) % Math.PI;
+  const flat = { x: Math.cos(turn), y: Math.sin(turn) };
+  return [
+    Math.floor(turn / DIRECTION_BUCKET) % DIRECTIONS,
+    Math.floor(dot(perp(flat), p) / OFFSET_BUCKET_M),
+  ];
+}
+
 /** Two lines that coincide are one suggestion that keeps all origins and all they give (^275, ^792). */
 function mergeLines(list: SnapCurve[]): SnapCurve[] {
   const out: SnapCurve[] = [];
+  const buckets = new Map<string, number[]>();
+  const key = (d: number, o: number) => `${(d + DIRECTIONS) % DIRECTIONS},${o}`;
   for (const c of list) {
-    const twin = out.find((o) => sameLine(o, c));
-    if (!twin)
+    const [d, o] = bucketOf(c);
+    const near = [-1, 0, 1].flatMap((dd) =>
+      [-1, 0, 1].flatMap((oo) => buckets.get(key(d + dd, o + oo)) ?? []),
+    );
+    const twin = out[Math.min(...near.filter((i) => sameLine(out[i]!, c)), Infinity)];
+    if (!twin) {
       out.push({ ...c, origins: [...c.origins], from: [...c.from], gives: [...(c.gives ?? [])] });
-    else {
+      buckets.set(key(d, o), [...(buckets.get(key(d, o)) ?? []), out.length - 1]);
+    } else {
       twin.origins.push(...c.origins);
       twin.from = [...new Set([...twin.from, ...c.from])];
       twin.gives = [...(twin.gives ?? []), ...(c.gives ?? [])];
@@ -40,12 +64,25 @@ function mergeLines(list: SnapCurve[]): SnapCurve[] {
 /** Points at the same place (within the tolerance, ^865) are one suggestion (the first one wins, its heading too). */
 function mergePoints(list: SnapPoint[]): SnapPoint[] {
   const out: SnapPoint[] = [];
+  const grid = new Grid<number>(1);
   // The one that ranks best comes first, so it is the one that stays (^880).
   const ranked = [...list].sort((a, b) => (a.rank ?? RANK.crossing) - (b.rank ?? RANK.crossing));
   for (const p of ranked) {
-    const twin = out.find((o) => dist(o.at, p.at) < SAME_PLACE_M);
-    if (!twin) out.push({ ...p, from: [...p.from] });
-    else {
+    const box = {
+      x0: p.at.x - SAME_PLACE_M,
+      x1: p.at.x + SAME_PLACE_M,
+      y0: p.at.y - SAME_PLACE_M,
+      y1: p.at.y + SAME_PLACE_M,
+    };
+    const hit = Math.min(
+      ...[...grid.near(box)].filter((i) => dist(out[i]!.at, p.at) < SAME_PLACE_M),
+      Infinity,
+    );
+    const twin = out[hit];
+    if (!twin) {
+      out.push({ ...p, from: [...p.from] });
+      grid.add(out.length - 1, { x0: p.at.x, x1: p.at.x, y0: p.at.y, y1: p.at.y });
+    } else {
       twin.from = [...new Set([...twin.from, ...p.from])];
       twin.node ??= p.node;
     }
@@ -123,6 +160,9 @@ function samePiece(a: Piece, b: Piece): boolean {
  * first offset curve, which keeps all origins and nodes and covers all spans. Two curves of
  * segments stay two: each is a segment to merge into.
  */
+/** The size of a cell of the grid of the boxes of snap curves (meters). */
+const CURVE_CELL_M = 50;
+
 function mergeCurves(list: SnapCurve[]): SnapCurve[] {
   const apart = (a: SnapCurve, b: SnapCurve) => {
     const [p, q] = [boxOf(a.pieces), boxOf(b.pieces)];
@@ -130,20 +170,39 @@ function mergeCurves(list: SnapCurve[]): SnapCurve[] {
     return p.x1 < q.x0 - m || q.x1 < p.x0 - m || p.y1 < q.y0 - m || q.y1 < p.y0 - m;
   };
   const out: SnapCurve[] = [];
+  const grid = new Grid<number>(CURVE_CELL_M);
+  const numbers = new Map<SnapCurve, number>();
+  const put = (c: SnapCurve, i: number) => {
+    numbers.set(c, i);
+    grid.add(i, boxOf(c.pieces));
+  };
   for (const c of [...list].sort(
     (a, b) => Number(b.rule === 'curve') - Number(a.rule === 'curve'),
   )) {
-    const twin = out.find(
-      (o) => !(o.rule === 'curve' && c.rule === 'curve') && !apart(o, c) && sameCurve(o, c),
-    );
-    if (!twin) out.push({ ...c, origins: [...c.origins], from: [...c.from] });
-    else {
+    const box = boxOf(c.pieces);
+    // Only the curves whose box is near this one's can be the same curve (^938), the first in order wins.
+    const near = [
+      ...grid.near({
+        x0: box.x0 - SAME_PLACE_M,
+        x1: box.x1 + SAME_PLACE_M,
+        y0: box.y0 - SAME_PLACE_M,
+        y1: box.y1 + SAME_PLACE_M,
+      }),
+    ].sort((a, b) => a - b);
+    const twin = near
+      .map((i) => out[i]!)
+      .find((o) => !(o.rule === 'curve' && c.rule === 'curve') && !apart(o, c) && sameCurve(o, c));
+    if (!twin) {
+      out.push({ ...c, origins: [...c.origins], from: [...c.from] });
+      put(out.at(-1)!, out.length - 1);
+    } else {
       twin.origins.push(...c.origins);
       twin.from = [...new Set([...twin.from, ...c.from])];
       twin.pieces = [
         ...twin.pieces,
         ...c.pieces.filter((p) => !twin.pieces.some((q) => samePiece(p, q))),
       ];
+      put(twin, numbers.get(twin)!);
     }
   }
   return out;

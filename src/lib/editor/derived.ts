@@ -87,6 +87,15 @@ export function curvesOf(g: Graph): Curves {
   return curves;
 }
 
+const curveNumbers = new WeakMap<Graph, Map<GEdge, number>>();
+
+/** Where the curve of a segment is in `curvesOf` (^938). */
+export function curveNumberOf(g: Graph, e: GEdge): number | undefined {
+  let numbers = curveNumbers.get(g);
+  if (!numbers) curveNumbers.set(g, (numbers = new Map(curvesOf(g).map((c, i) => [c.edge, i]))));
+  return numbers.get(e);
+}
+
 const curveGrids = new WeakMap<Graph, Grid<number>>();
 /** The size of a cell of the grids of segments and nodes (meters): a few lane widths. */
 const GRID_CELL_M = 20;

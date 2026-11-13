@@ -11,7 +11,7 @@ import {
   type Graph,
 } from '../model/graph';
 import { crossAcross } from './corners';
-import { curveGridOf, curvesOf } from './derived';
+import { curveGridOf, curveNumberOf, curvesOf } from './derived';
 import { manoeuvreOf } from './manoeuvres';
 import { towersOf } from './towers';
 
@@ -124,13 +124,15 @@ function armsOf(near: Map<number, Set<number>>, own: number): number[] {
 function conflictsOf(g: Graph, tower: Map<number, number>, n: GNode, edges: GEdge[]): Conflict[] {
   const [curves, grid, own] = [curvesOf(g), curveGridOf(g), tower.get(n.id)];
   const found: { bi: number; ai: number }[] = [];
-  curves.forEach((a, ai) => {
-    if (!edges.includes(a.edge)) return;
+  for (const e of edges) {
+    const ai = curveNumberOf(g, e);
+    if (ai === undefined) continue;
+    const a = curves[ai]!;
     for (const bi of grid.near(a.box)) {
       const b = curves[bi]!;
       if (tower.get(b.edge.start) !== own && meet(a, b)) found.push({ bi, ai });
     }
-  });
+  }
   return found
     .sort((x, y) => x.bi - y.bi || x.ai - y.ai)
     .map(({ bi, ai }) => ({
