@@ -17,7 +17,7 @@
   import { followingTower } from './editor/sharedRadius';
   import { barsOf, towersOf } from './editor/towers';
   import { withDerived } from './editor/derived';
-  import { boxOfKey, windowOf } from './editor/window.svelte';
+  import { windowOf } from './editor/window.svelte';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
@@ -70,9 +70,8 @@
 
   /** The window on the map (^1216): the view with room round it, in steps, so that panning a little does not make the road again. A text, so that an equal window is not a new value. */
   const windowKey = $derived(windowOf(camera.view, camera.size));
-  $effect(() => {
-    const key = windowKey;
-    untrack(() => (editor.view.box = boxOfKey(key)));
+  $effect.pre(() => {
+    editor.view.source = () => windowKey;
   });
 
   /** The derived nodes, the graph with them in it, and the towers and bars of that, all derived from the graph (^350, ^822). */

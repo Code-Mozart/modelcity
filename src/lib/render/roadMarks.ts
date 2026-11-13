@@ -116,6 +116,8 @@ function drawWaitLines(f: Frame, lines: WaitLine[], pal: Palette, physical: bool
     : [LOGICAL_DASH_PX, LOGICAL_DASH_PX];
   // Marks off the screen are not drawn (^939): a mark is within 20 m of its node and a few pixels wide.
   const shown = viewBox(f, 20 + 20 / f.view.scale);
+  // Dashes have square ends (^977); not what a line drawn before it left behind (^941).
+  [f.ctx.lineCap, f.ctx.lineJoin] = ['butt', 'round'];
   for (const l of lines) {
     if (!onScreen(shown, l.at)) continue;
     const middle = before(f, l.at, l.th, width / 2);

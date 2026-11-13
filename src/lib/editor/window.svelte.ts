@@ -27,12 +27,17 @@ export function boxOfKey(key: string): Box {
   return { x0: x0!, x1: x1!, y0: y0!, y1: y1! };
 }
 
-/** The window on the map that is shown (a world box, or null for all of it) and the part of the graph in it (^1216): what is made from the graph is made for this part only. */
+/**
+ * The window on the map that is shown (a world box as a text, from where the view is) and the part
+ * of the graph in it (^1216): what is made from the graph is made for this part only. The window is
+ * read where the part is made, not copied in an effect, so that it is never a frame behind the view.
+ */
 export class GraphWindow {
-  box = $state<Box | null>(null);
+  /** Where the window comes from; none (all of the graph) until the view says. */
+  source = $state<(() => string) | null>(null);
   shown = $derived.by(() => {
-    const g = this.graph();
-    return this.box ? partOf(g, this.box) : g;
+    const [g, key] = [this.graph(), this.source?.()];
+    return key ? partOf(g, boxOfKey(key)) : g;
   });
 
   /** The derived nodes of that part (^822, ^823), never stored. */
