@@ -69,6 +69,8 @@ function inflections(g: Graph): { edge: GEdge; at: Placed }[] {
   });
 }
 
+import { Grid } from '../curves/grid';
+
 type Curves = { edge: GEdge; pieces: Piece[]; box: ReturnType<typeof boxOf> }[];
 const curvesCache = new WeakMap<Graph, Curves>();
 
@@ -85,21 +87,54 @@ export function curvesOf(g: Graph): Curves {
   return curves;
 }
 
+const curveGrids = new WeakMap<Graph, Grid<number>>();
+/** The size of a cell of the grids of segments and nodes (meters): a few lane widths. */
+const GRID_CELL_M = 20;
+
+/** The curves of a graph (by their place in `curvesOf`) in a grid, made once per graph (^938): which segments are near a place. */
+export function curveGridOf(g: Graph): Grid<number> {
+  let grid = curveGrids.get(g);
+  if (!grid) {
+    grid = new Grid<number>(GRID_CELL_M);
+    curvesOf(g).forEach((c, i) => grid!.add(i, c.box));
+    curveGrids.set(g, grid);
+  }
+  return grid;
+}
+
+/** A box of the reach of a touch round a place. */
+const reachBox = (at: Vec) => {
+  const r = LANE_WIDTH_M + SAME_PLACE_M;
+  return { x0: at.x - r, x1: at.x + r, y0: at.y - r, y1: at.y + r };
+};
+
+/** What the questions of a graph about places ask: its curves, and the grids of the curves and the nodes. */
+interface Where {
+  curves: Curves;
+  grid: Grid<number>;
+  nodes: Grid<Placed>;
+}
+
+/** The curves near a place, in the order of the graph. */
+const curvesNear = (w: Where, at: Vec) =>
+  [...w.grid.near(reachBox(at))].sort((a, b) => a - b).map((i) => w.curves[i]!);
+
 /**
  * Whether `edge` is touched at `at` by a node or a segment that does not run parallel to it
  * (^818): an end of an arc is a derived node where a straight piece of another segment runs beside
  * it, not where the two segments are parallel all along anyway (^858, user).
  */
-function isTouched(g: Graph, curves: ReturnType<typeof curvesOf>, edge: GEdge, at: Placed) {
-  const node = (n: GNode) =>
+function isTouched(g: Graph, w: Where, edge: GEdge, at: Placed) {
+  const node = (n: Placed) =>
+    'id' in n &&
     Math.abs(dist(n, at) - LANE_WIDTH_M) < SAME_PLACE_M &&
     alongOrAgainst(n, at) &&
-    !edgesAt(g, n.id).some((e) => parallel(g, edge, e));
-  const segment = (c: ReturnType<typeof curvesOf>[number]) =>
+    !edgesAt(g, (n as GNode).id).some((e) => parallel(g, edge, e));
+  const segment = (c: Curves[number]) =>
     near(c.box, at, LANE_WIDTH_M + SAME_PLACE_M) &&
     touchPoint(c.pieces, at) &&
     !parallel(g, edge, c.edge);
-  return g.nodes.some(node) || curves.some(segment);
+  return [...w.nodes.near(reachBox(at))].some(node) || curvesNear(w, at).some(segment);
 }
 
 /** The ends of the arcs of the segments, with the way the segment runs there. */
@@ -116,11 +151,11 @@ function arcEnds(curves: ReturnType<typeof curvesOf>): { edge: GEdge; at: Placed
 
 /** The nodes a node derives: one on each segment it touches (^822). */
 function touched(
-  curves: { edge: GEdge; pieces: Piece[]; box: ReturnType<typeof boxOf> }[],
+  w: Where,
   n: Placed,
   add: (edge: GEdge, at: Placed, kind: DerivedNode['kind']) => DerivedNode | null,
 ): DerivedNode[] {
-  return curves.flatMap(({ edge, pieces, box }) => {
+  return curvesNear(w, n).flatMap(({ edge, pieces, box }) => {
     const at = near(box, n, LANE_WIDTH_M + SAME_PLACE_M) ? touchPoint(pieces, n) : null;
     const node = at && add(edge, at, 'touch');
     return node ? [node] : [];
@@ -136,21 +171,24 @@ function touched(
 export function derivedNodes(g: Graph): DerivedNode[] {
   const curves = curvesOf(g);
   const out: DerivedNode[] = [];
+  const nodes = new Grid<Placed>(GRID_CELL_M);
+  const place = (n: Placed) => nodes.add(n, { x0: n.x, x1: n.x, y0: n.y, y1: n.y });
+  g.nodes.forEach(place);
+  const w: Where = { curves, grid: curveGridOf(g), nodes };
   const known = (at: Placed) =>
-    g.nodes.some((n) => dist(n, at) < SAME_PLACE_M) || out.some((n) => dist(n, at) < SAME_PLACE_M);
+    [...nodes.near(reachBox(at))].some((n) => dist(n, at) < SAME_PLACE_M);
   const add = (edge: GEdge, at: Placed, kind: DerivedNode['kind']) => {
     if (known(at)) return null;
     const node = { id: -(out.length + 1), ...at, edge: edge.id, kind };
     out.push(node);
+    place(node);
     return node;
   };
   inflections(g).forEach(({ edge, at }) => add(edge, at, 'inflection'));
-  arcEnds(curves).forEach(
-    ({ edge, at }) => isTouched(g, curves, edge, at) && add(edge, at, 'radius'),
-  );
+  arcEnds(curves).forEach(({ edge, at }) => isTouched(g, w, edge, at) && add(edge, at, 'radius'));
   let frontier: Placed[] = [...g.nodes, ...out];
   for (let round = 0; round < MAX_ROUNDS && frontier.length; round++) {
-    frontier = frontier.flatMap((n) => touched(curves, n, add));
+    frontier = frontier.flatMap((n) => touched(w, n, add));
   }
   return out;
 }

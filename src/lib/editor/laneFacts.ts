@@ -11,10 +11,9 @@ import {
   type Graph,
 } from '../model/graph';
 import { crossAcross } from './corners';
-import { curvesOf } from './derived';
+import { curveGridOf, curvesOf } from './derived';
 import { manoeuvreOf } from './manoeuvres';
 import { towersOf } from './towers';
-import { Grid } from '../curves/grid';
 
 /**
  * What can be said about a lane that comes in at a node, from the six topological criteria alone
@@ -121,23 +120,9 @@ function armsOf(near: Map<number, Set<number>>, own: number): number[] {
   return around.filter((t) => around.some((u) => u !== t && near.get(t)?.has(u)));
 }
 
-/** The curves of a graph in a grid, made once per graph (^938): which segments are near a place. */
-const curveGrids = new WeakMap<Graph, Grid<number>>();
-const GRID_CELL_M = 20;
-
-function curveGrid(g: Graph): Grid<number> {
-  let grid = curveGrids.get(g);
-  if (!grid) {
-    grid = new Grid<number>(GRID_CELL_M);
-    curvesOf(g).forEach((c, i) => grid!.add(i, c.box));
-    curveGrids.set(g, grid);
-  }
-  return grid;
-}
-
 /** The segments of other lanes (in other towers) that the segments `edges` of a node meet (^1096), in the order of the graph. */
 function conflictsOf(g: Graph, tower: Map<number, number>, n: GNode, edges: GEdge[]): Conflict[] {
-  const [curves, grid, own] = [curvesOf(g), curveGrid(g), tower.get(n.id)];
+  const [curves, grid, own] = [curvesOf(g), curveGridOf(g), tower.get(n.id)];
   const found: { bi: number; ai: number }[] = [];
   curves.forEach((a, ai) => {
     if (!edges.includes(a.edge)) return;
@@ -265,9 +250,14 @@ function withIncomplete(g: Graph, tower: Map<number, number>, facts: LaneFacts[]
     f.edges.forEach((e) => set.add(tower.get(e.end)!));
     targets.set(group.get(f.node.id)!, set);
   }
+  const leading = new Map<number, number[]>();
+  for (const e of g.edges) {
+    const end = tower.get(e.end)!;
+    leading.set(end, [...(leading.get(end) ?? []), tower.get(e.start)!]);
+  }
   return facts.map((f) => {
     const roads = edgesIn(g, f.node.id).map((e) => tower.get(e.start)!);
-    const own = new Set([tower.get(f.node.id)!, ...roads, ...leadingBack(g, tower, roads)]);
+    const own = new Set([tower.get(f.node.id)!, ...roads, ...leadingBack(leading, roads)]);
     const reached = new Set(f.edges.map((e) => tower.get(e.end)!));
     const possible = [...targets.get(group.get(f.node.id)!)!].filter((t) => !own.has(t));
     const missing = possible.some((t) => !reached.has(t));
@@ -276,6 +266,6 @@ function withIncomplete(g: Graph, tower: Map<number, number>, facts: LaneFacts[]
 }
 
 /** The towers whose lanes lead on into the towers `roads`: the lane out of an arm whose lane in is not at the same place (^1100). */
-function leadingBack(g: Graph, tower: Map<number, number>, roads: number[]): number[] {
-  return g.edges.filter((e) => roads.includes(tower.get(e.end)!)).map((e) => tower.get(e.start)!);
+function leadingBack(leading: Map<number, number[]>, roads: number[]): number[] {
+  return roads.flatMap((r) => leading.get(r) ?? []);
 }

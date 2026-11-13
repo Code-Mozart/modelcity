@@ -1,3 +1,5 @@
+import { Grid } from '../curves/grid';
+import { boxAround } from '../curves/hull';
 import { offsetPiece } from '../curves/offset';
 import type { Piece } from '../curves/types';
 import { SAME_PLACE_M } from '../curves/tolerance';
@@ -105,19 +107,56 @@ function linked(a: Marking, b: Marking): Marking | null {
   return first && second ? { kind: a.kind, pieces: [...first.pieces, ...second.pieces] } : null;
 }
 
-/** Lines that meet end to end and have the same style are one line (^954: the dashes run on across the nodes), whichever way each was found. */
+/** The size of a cell of the grids of the ends and the boxes of lines (meters). */
+const LINE_CELL_M = 8;
+
+const endBoxOf = (m: Marking) => {
+  const ends = [m.pieces[0]!.P, m.pieces.at(-1)!.Q];
+  return {
+    x0: Math.min(...ends.map((e) => e.x)) - SAME_PLACE_M,
+    x1: Math.max(...ends.map((e) => e.x)) + SAME_PLACE_M,
+    y0: Math.min(...ends.map((e) => e.y)) - SAME_PLACE_M,
+    y1: Math.max(...ends.map((e) => e.y)) + SAME_PLACE_M,
+  };
+};
+
+/**
+ * Lines that meet end to end and have the same style are one line (^954: the dashes run on across
+ * the nodes), whichever way each was found. A line is only looked at against the later ones that
+ * have an end near one of its ends (^938: a grid of the ends), the first that links is joined.
+ */
 function joined(markings: Marking[]): Marking[] {
-  const lines = [...markings];
+  const lines: (Marking | null)[] = [...markings];
+  const ends = new Grid<number>(LINE_CELL_M);
+  const put = (m: Marking, i: number) => {
+    for (const e of [m.pieces[0]!.P, m.pieces.at(-1)!.Q])
+      ends.add(i, { x0: e.x, x1: e.x, y0: e.y, y1: e.y });
+  };
+  markings.forEach(put);
   for (let i = 0; i < lines.length; i++) {
-    for (let j = i + 1; j < lines.length; j++) {
-      const one = linked(lines[i]!, lines[j]!);
-      if (!one) continue;
-      lines[i] = one;
-      lines.splice(j, 1);
-      j = i;
+    for (let again = true; again && lines[i];) {
+      again = false;
+      const here = lines[i]!;
+      const box = (e: Vec) => ({
+        x0: e.x - 2 * SAME_PLACE_M,
+        x1: e.x + 2 * SAME_PLACE_M,
+        y0: e.y - 2 * SAME_PLACE_M,
+        y1: e.y + 2 * SAME_PLACE_M,
+      });
+      const candidates = new Set<number>();
+      for (const e of [here.pieces[0]!.P, here.pieces.at(-1)!.Q])
+        for (const j of ends.near(box(e))) if (j > i) candidates.add(j);
+      for (const j of [...candidates].sort((a, b) => a - b)) {
+        const other = lines[j];
+        const one = other && linked(here, other);
+        if (!one) continue;
+        [lines[i], lines[j], again] = [one, null, true];
+        put(one, i);
+        break;
+      }
     }
   }
-  return lines;
+  return lines.filter((m): m is Marking => m !== null);
 }
 
 const POINTS = [0, 0.25, 0.5, 0.75, 1];
@@ -137,8 +176,13 @@ const lengthOf = (m: Marking) => m.pieces.reduce((n, p) => n + pieceLength(p), 0
 export function distinct(lines: Marking[]): Marking[] {
   const longest = [...lines].sort((a, b) => lengthOf(b) - lengthOf(a));
   const kept: Marking[] = [];
+  const grid = new Grid<Marking>(LINE_CELL_M);
   for (const m of longest) {
-    if (!kept.some((k) => k.kind === m.kind && liesOn(m, k))) kept.push(m);
+    const box = boxAround(m.pieces);
+    const covered = [...grid.near(box)].some((k) => k.kind === m.kind && liesOn(m, k));
+    if (covered) continue;
+    kept.push(m);
+    grid.add(m, boxAround(m.pieces));
   }
   return kept;
 }
