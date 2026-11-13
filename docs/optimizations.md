@@ -37,3 +37,12 @@ The times of a frame are for two painted frames, so 33 ms is the display's 60 FP
 
 Panning and moving the pointer no longer grow with the map (^939, ^940). Ideas, in the order of what they would give: **^941** (only what changed is derived again, by a region of the map, so that an edit costs what the edit touches and not the map: the union, the lane facts and the clip are all per region), a cheaper union (the cutting of all pieces by each other is the bulk of the surface).
 
+
+## Is the picture the same? (`bun run identity`)
+
+`scripts/identity.ts` paints 411 views (the cases of the four testing grounds in the logical markings, with the debug layer and some in the physical markings, a view half a cell off each, and one of the whole ground, and a tiled map) with the base branch (`origin/main`) and with this one and compares the canvases byte for byte (`FILTER` takes some views, `SELF=1` paints the base twice: no noise, the two are identical).
+
+What it found, and what was done:
+
+- **Two real changes of behaviour**, both of the optimizations and both fixed: derived nodes were counted as touching nodes, and the point-in-surface test counted the crossings of the loops that hold the point only (it now also takes the box and the band of the ray with the tolerance). The test `editor/derivedOrder.test` and the 8000 random points of `curves/insideOf.test` keep them from coming back. The derived nodes, towers, bars, hulls, surface, lane facts, give-way lines, arrows and markings (logical and physical) of the junction, priority and small T grounds are now **identical to the base, to the last digit**.
+- **The pictures are not pixel for pixel the same**, only because of what is not drawn off the screen (^939): the surface fill of fewer loops gives anti-aliasing that differs by one level of 255 on a few pixels in about 180 of the 411 views, and leaving out marks and lines off the screen changes the state the canvas keeps for the next one (the dash pattern), so that a dash of a give-way line starts a fraction of a pixel elsewhere in 13 views. With that culling switched off the 411 views are identical.
