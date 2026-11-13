@@ -8,18 +8,28 @@ test('profile of an edit', async ({ page }) => {
   const graph = tiledMap(Number(process.env.CELLS ?? 120));
   await page.evaluate(async (g) => {
     window.__modelcity!.editor.graph = g;
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
   }, graph);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Profiler.enable');
   await cdp.send('Profiler.start');
   await page.evaluate(async (g) => {
     window.__modelcity!.editor.graph = { ...g, nodes: g.nodes.map((n) => ({ ...n })) };
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
   }, graph);
-  const { profile } = (await cdp.send('Profiler.stop')) as { profile: { nodes: any[]; samples: number[]; timeDeltas: number[] } };
+  const { profile } = (await cdp.send('Profiler.stop')) as {
+    profile: {
+      nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[];
+      samples: number[];
+      timeDeltas: number[];
+    };
+  };
   const self = new Map<number, number>();
-  profile.samples.forEach((id, i) => self.set(id, (self.get(id) ?? 0) + (profile.timeDeltas[i] ?? 0)));
+  profile.samples.forEach((id, i) =>
+    self.set(id, (self.get(id) ?? 0) + (profile.timeDeltas[i] ?? 0)),
+  );
   const byName = new Map<string, number>();
   for (const n of profile.nodes) {
     const f = n.callFrame;

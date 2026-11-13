@@ -160,6 +160,16 @@ function samePiece(a: Piece, b: Piece): boolean {
  * first offset curve, which keeps all origins and nodes and covers all spans. Two curves of
  * segments stay two: each is a segment to merge into.
  */
+/** The curve `c` is the same as `twin`: its origins, nodes and pieces are added to it (^881). */
+function absorb(twin: SnapCurve, c: SnapCurve) {
+  twin.origins.push(...c.origins);
+  twin.from = [...new Set([...twin.from, ...c.from])];
+  twin.pieces = [
+    ...twin.pieces,
+    ...c.pieces.filter((p) => !twin.pieces.some((q) => samePiece(p, q))),
+  ];
+}
+
 /** The size of a cell of the grid of the boxes of snap curves (meters). */
 const CURVE_CELL_M = 50;
 
@@ -196,12 +206,7 @@ function mergeCurves(list: SnapCurve[]): SnapCurve[] {
       out.push({ ...c, origins: [...c.origins], from: [...c.from] });
       put(out.at(-1)!, out.length - 1);
     } else {
-      twin.origins.push(...c.origins);
-      twin.from = [...new Set([...twin.from, ...c.from])];
-      twin.pieces = [
-        ...twin.pieces,
-        ...c.pieces.filter((p) => !twin.pieces.some((q) => samePiece(p, q))),
-      ];
+      absorb(twin, c);
       put(twin, numbers.get(twin)!);
     }
   }
