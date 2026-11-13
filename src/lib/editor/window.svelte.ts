@@ -27,6 +27,15 @@ export function boxOfKey(key: string): Box {
   return { x0: x0!, x1: x1!, y0: y0!, y1: y1! };
 }
 
+/** What the window needs to know of the editor. */
+interface Subject {
+  graph: Graph;
+  pins: { list: readonly number[] };
+  selection: readonly number[];
+  active: number | null;
+  press: unknown;
+}
+
 /**
  * The window on the map that is shown (a world box as a text, from where the view is) and the part
  * of the graph in it (^1216): what is made from the graph is made for this part only. The window is
@@ -35,13 +44,29 @@ export function boxOfKey(key: string): Box {
 export class GraphWindow {
   /** Where the window comes from; none (all of the graph) until the view says. */
   source = $state<(() => string) | null>(null);
-  shown = $derived.by(() => {
-    const [g, key] = [this.graph(), this.source?.()];
-    return key ? partOf(g, boxOfKey(key)) : g;
+  /** The window as it was when it was last free: while a node is pressed it stays (the roads are numbered in it). */
+  private held: string | undefined;
+  private key = $derived.by(() => {
+    const now = this.source?.();
+    if (this.locked()) return this.held ?? now;
+    return (this.held = now);
   });
 
-  /** The derived nodes of that part (^822, ^823), never stored. */
-  derived = $derived(derivedNodes(this.shown));
+  /** The part of a graph that is in the window (the graph itself when there is no window). */
+  of = (g: Graph): Graph => (this.key ? partOf(g, boxOfKey(this.key), this.keep()) : g);
+  shown = $derived.by(() => this.of(this.graph()));
 
-  constructor(private graph: () => Graph) {}
+  /** The derived nodes of that part (^822, ^823), never stored. */
+  derived = $derived.by(() => derivedNodes(this.shown));
+
+  constructor(private editor: Subject) {}
+
+  private graph = () => this.editor.graph;
+  /** The nodes the window must hold, wherever they are: pinned, selected, being extended. */
+  private keep = () => [
+    ...this.editor.pins.list,
+    ...this.editor.selection,
+    ...(this.editor.active === null ? [] : [this.editor.active]),
+  ];
+  private locked = () => this.editor.press !== null;
 }

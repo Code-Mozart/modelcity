@@ -83,15 +83,19 @@ export class Editor {
   drawing = $derived(this.mode === 'draw');
   private hoverRaw = $derived<Hover | null>(this.hoverNow());
   readonly pins = new Pins((id) => nodeOf(this.graph, id) !== undefined);
+  readonly view = new GraphWindow(this);
   /** The graph the pointer snaps to: while a node is pressed, the graph before it moved. */
-  private snapGraph = $derived(this.press ? this.press.undo.graph : this.graph);
-  private base = $derived(snapBase(this.snapGraph, this.press, this.drawing ? this.active : null));
+  private snapGraph = $derived(this.press ? this.view.of(this.press.undo.graph) : this.view.shown);
+  private base = $derived(
+    snapBase(this.snapGraph, this.press, this.drawing ? this.active : null, this.view.of),
+  );
   /** What the pointer is pulled to while it places or moves a node (^101): derived like the hover. */
   private snapArgs = $derived({
     info: this.lastInfo,
     press: this.press,
     hover: this.hoverRaw,
     drawing: this.drawing,
+    partOf: this.view.of,
     pinned: this.active === null ? this.pins.list : [...this.pins.list, this.active],
   });
   snapped = $derived(snapFor(this.base, this.snapArgs));
@@ -107,11 +111,10 @@ export class Editor {
   /** The three modes (^120): extend mode is draw mode while a node is being extended. */
   phase = $derived(phaseOf(this.mode, this.active, this.viewing));
   /** The chains of the graph, the shape the curve code and the drawing work on (^106). */
-  chains = $derived(chainsOf(this.graph));
+  chains = $derived(chainsOf(this.view.shown));
   edges = $derived(this.chains.map((c) => c.edges));
-  readonly view = new GraphWindow(() => this.graph);
   /** The skeleton of all roads, for the camera bounds (^37, ^62). */
-  anchors = $derived(skeletonAnchors(this.chains));
+  anchors = $derived(skeletonAnchors(chainsOf(this.graph)));
   cursor = $derived(cursorOf(this.hover, this.drawing));
   /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
   focus = $derived(focusOf(this.chains, this.press, this.hover));
@@ -371,7 +374,7 @@ export class Editor {
 
   /** Left button released. */
   pointerUp() {
-    const drop = dropOf(this.graph, this.press, this.snapped);
+    const drop = dropOf(this.graph, this.press, this.snapped, this.view.of);
     const press = this.endPress();
     if (!press) return;
     this.batching = true;

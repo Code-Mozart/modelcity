@@ -6,15 +6,20 @@ import { chainsOf } from './chains';
  * The part of a graph that a window on the map needs (^1216): everything made from the graph (the
  * surface, markings, lane facts, derived nodes) is only made for what is shown, so that what it
  * costs depends on the window and not on the map. The part holds every chain with a segment whose
- * curve meets the box, and every chain that meets those at a node (the lanes of a junction look at
+ * curve meets the box or holds a node of `keep`, and every chain that meets those at a node (the lanes of a junction look at
  * each other), with the nodes and segments in the order of the graph. A graph that is all inside is
  * returned as it is.
  */
-export function windowOf(g: Graph, box: Box): Graph {
+export function windowOf(g: Graph, box: Box, keep: readonly number[] = []): Graph {
   const chains = chainsOf(g);
   const hit = chains.map((c) => c.edges.some((r) => boxesMeet(curveBox(r.E.pieces), box)));
+  // Nodes that must be in it (pinned, selected, being extended) bring their chains, wherever they are.
+  const wanted = new Set(keep);
   const nodes = new Set<number>();
-  chains.forEach((c, i) => hit[i] && c.nodeIds.forEach((id) => nodes.add(id)));
+  chains.forEach((c, i) => {
+    hit[i] ||= c.nodeIds.some((id) => wanted.has(id));
+    if (hit[i]) c.nodeIds.forEach((id) => nodes.add(id));
+  });
   const edges = new Set<number>();
   chains.forEach((c, i) => {
     if (hit[i] || c.nodeIds.some((id) => nodes.has(id))) {

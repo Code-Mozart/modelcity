@@ -129,7 +129,7 @@
   );
 
   /** Where a node would be dropped, if one is being dragged. */
-  const drop = $derived(dropOf(editor.graph, editor.press, editor.snapped));
+  const drop = $derived(dropOf(editor.graph, editor.press, editor.snapped, editor.view.of));
   /** The zoom alone: panning changes the view but not this, so what depends on it only is not made again (^940). */
   const scale = $derived(camera.view.scale);
   const handles = $derived(editor.handles(scale));
