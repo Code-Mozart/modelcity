@@ -53,7 +53,16 @@ async function measure(g: Graph) {
     new PointerEvent('pointermove', { clientX: 300 + i * 7, clientY: 300 + i * 5 });
   const hover = await timed((i) => canvas.dispatchEvent(move(i)), 30);
   const edit = await timed(() => (hook.editor.graph = { ...g, nodes: [...g.nodes] }), 3);
-  return { pan, hover, edit };
+  const moved = await timed(() => {
+    // From the graph the editor holds (the way an edit is made), so that what did not change is the same object.
+    const cur = hook.editor.graph;
+    const mid = Math.floor(cur.nodes.length / 2);
+    hook.editor.graph = {
+      ...cur,
+      nodes: cur.nodes.map((n, k) => (k === mid ? { ...n, x: n.x + 0.5 } : n)),
+    };
+  }, 5);
+  return { pan, hover, edit, moved };
 }
 
 test('frame times', async ({ page }) => {
@@ -62,7 +71,7 @@ test('frame times', async ({ page }) => {
   for (const map of MAPS.filter((m) => new RegExp(process.env.ONLY ?? '').test(m.name))) {
     const r = await page.evaluate(measure, map.graph());
     console.log(
-      `${map.name}: pan ${r.pan.toFixed(0)} ms/frame (two frames: 33 ms is 60 FPS), pointer move ${r.hover.toFixed(0)} ms, edit ${r.edit.toFixed(0)} ms`,
+      `${map.name}: pan ${r.pan.toFixed(0)} ms/frame (two frames: 33 ms is 60 FPS), pointer move ${r.hover.toFixed(0)} ms, edit (a copy) ${r.edit.toFixed(0)} ms, one node moved ${r.moved.toFixed(0)} ms`,
     );
   }
 });

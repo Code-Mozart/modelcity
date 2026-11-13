@@ -26,16 +26,29 @@ interface Live {
 }
 
 const cache = new WeakMap<Graph, Chain[]>();
-let live: Live | null = null;
+/** The graphs whose chains were made last, a few: the whole map, the part of it in the window, the part before a drag... Each edit goes on from the one it has the same shape as. */
+const lives: Live[] = [];
+const KEPT = 6;
 
 export function chainsOf(g: Graph): Chain[] {
   let chains = cache.get(g);
   if (!chains) {
-    live = (live && changed(live, g)) ?? whole(g);
-    chains = live.chains;
+    const next = remembered(g);
+    lives.unshift(next);
+    lives.length = Math.min(lives.length, KEPT);
+    chains = next.chains;
     cache.set(g, chains);
   }
   return chains;
+}
+
+/** The chains of a graph made from those of a graph of the same shape that was seen last, or from nothing. */
+function remembered(g: Graph): Live {
+  for (const was of lives) {
+    const next = changed(was, g);
+    if (next) return next;
+  }
+  return whole(g);
 }
 
 /** All the chains of a graph, from nothing. */

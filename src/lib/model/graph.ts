@@ -43,7 +43,9 @@ export const emptyGraph = (): Graph => ({
 
 const indexOfNodes = new WeakMap<Graph, Map<number, GNode>>();
 /** The graph whose index was made last: the index of the next graph of the same shape is that one with the changes made in it (^941). */
-let lastNodes: Graph | null = null;
+const lastNodes: Graph[] = [];
+/** How many graphs of different shape (the map, the part of it in the window...) keep their indexes at once. */
+const KEPT = 6;
 
 /** The node with this id (nodes are looked up through an index kept per graph). */
 export function nodeOf(g: Graph, id: number): GNode | undefined {
@@ -51,19 +53,24 @@ export function nodeOf(g: Graph, id: number): GNode | undefined {
   if (!index) {
     index = patchedNodes(g) ?? new Map(g.nodes.map((n) => [n.id, n]));
     indexOfNodes.set(g, index);
-    lastNodes = g;
+    lastNodes.unshift(g);
+    lastNodes.length = Math.min(lastNodes.length, KEPT);
   }
   return index.get(id);
 }
 
 /** The index of the last graph, changed to be the index of `g`, if `g` differs from it in some nodes only. The last graph loses its index (it is made again if that graph is asked again). */
 function patchedNodes(g: Graph): Map<number, GNode> | null {
-  const was = lastNodes && indexOfNodes.get(lastNodes);
-  const changes = lastNodes && was ? changesBetween(lastNodes, g) : null;
-  if (!lastNodes || !was || !changes) return null;
-  for (const i of changes.nodes) was.set(g.nodes[i]!.id, g.nodes[i]!);
-  indexOfNodes.delete(lastNodes);
-  return was;
+  for (const last of lastNodes) {
+    const was = indexOfNodes.get(last);
+    const changes = was && changesBetween(last, g);
+    if (!was || !changes) continue;
+    for (const i of changes.nodes) was.set(g.nodes[i]!.id, g.nodes[i]!);
+    indexOfNodes.delete(last);
+    lastNodes.splice(lastNodes.indexOf(last), 1);
+    return was;
+  }
+  return null;
 }
 
 /** The segments of a graph by number and by node, found once per graph (^938): graphs are never changed, so the index never goes stale. */
@@ -76,14 +83,15 @@ interface EdgeIndex {
 const indexOfEdges = new WeakMap<Graph, EdgeIndex>();
 
 /** The graph whose index of segments was made last (see `lastNodes`). */
-let lastEdges: Graph | null = null;
+const lastEdges: Graph[] = [];
 
 function edgeIndex(g: Graph): EdgeIndex {
   let index = indexOfEdges.get(g);
   if (index) return index;
   index = patchedEdges(g) ?? builtEdges(g);
   indexOfEdges.set(g, index);
-  lastEdges = g;
+  lastEdges.unshift(g);
+  lastEdges.length = Math.min(lastEdges.length, KEPT);
   return index;
 }
 
@@ -106,24 +114,28 @@ function builtEdges(g: Graph): EdgeIndex {
 
 /** The index of the last graph changed into that of `g`, when only segments differ (their ends are the same, so only the objects in the lists are replaced, ^941). */
 function patchedEdges(g: Graph): EdgeIndex | null {
-  const was = lastEdges && indexOfEdges.get(lastEdges);
-  const changes = lastEdges && was ? changesBetween(lastEdges, g) : null;
-  if (!lastEdges || !was || !changes) return null;
-  const swap = (m: Map<number, GEdge[]>, id: number, from: GEdge, to: GEdge) => {
-    const list = m.get(id);
-    const i = list ? list.indexOf(from) : -1;
-    if (list && i >= 0) list[i] = to;
-  };
-  for (const i of changes.edges) {
-    const [from, to] = [lastEdges.edges[i]!, g.edges[i]!];
-    was.byId.set(to.id, to);
-    swap(was.into, to.end, from, to);
-    swap(was.out, to.start, from, to);
-    swap(was.at, to.start, from, to);
-    if (to.end !== to.start) swap(was.at, to.end, from, to);
+  for (const last of lastEdges) {
+    const was = indexOfEdges.get(last);
+    const changes = was && changesBetween(last, g);
+    if (!was || !changes) continue;
+    const swap = (m: Map<number, GEdge[]>, id: number, from: GEdge, to: GEdge) => {
+      const list = m.get(id);
+      const i = list ? list.indexOf(from) : -1;
+      if (list && i >= 0) list[i] = to;
+    };
+    for (const i of changes.edges) {
+      const [from, to] = [last.edges[i]!, g.edges[i]!];
+      was.byId.set(to.id, to);
+      swap(was.into, to.end, from, to);
+      swap(was.out, to.start, from, to);
+      swap(was.at, to.start, from, to);
+      if (to.end !== to.start) swap(was.at, to.end, from, to);
+    }
+    indexOfEdges.delete(last);
+    lastEdges.splice(lastEdges.indexOf(last), 1);
+    return was;
   }
-  indexOfEdges.delete(lastEdges);
-  return was;
+  return null;
 }
 
 export const edgeOfId = (g: Graph, id: number): GEdge | undefined => edgeIndex(g).byId.get(id);

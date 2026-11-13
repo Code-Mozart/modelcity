@@ -82,7 +82,12 @@ test('profile of an edit', async ({ page }) => {
     });
   } else {
     await page.evaluate(async (g) => {
-      window.__modelcity!.editor.graph = { ...g, nodes: g.nodes.map((n) => ({ ...n })) };
+      const cur = window.__modelcity!.editor.graph;
+      const mid = Math.floor(cur.nodes.length / 2);
+      window.__modelcity!.editor.graph = {
+        ...cur,
+        nodes: cur.nodes.map((n, k) => (k === mid ? { ...n, x: n.x + 0.5 } : n)),
+      };
       await new Promise((r) => requestAnimationFrame(r));
       await new Promise((r) => requestAnimationFrame(r));
     }, graph);
