@@ -242,6 +242,8 @@ export function unionOutline(regions: Piece[][]): Loop[] {
 
 /** The size of a cell of the grid of the pieces of the loops (meters): about the size of a lane junction. */
 const CELL_M = 50;
+/** The height of a cell of that grid (meters): the ray of a point runs almost along x, so a thin row holds only the pieces it can meet (^941). */
+const ROW_M = 1;
 
 /**
  * A test for points being inside the loops (even-odd, so inside a hole is outside), for many
@@ -249,12 +251,13 @@ const CELL_M = 50;
  * question costs what lies along the ray and not all the pieces of the surface.
  */
 export function insideOf(loops: Loop[]): (p: Vec) => boolean {
-  const grid = new Grid<{ piece: Piece; box: Box }>(CELL_M);
+  const grid = new Grid<{ piece: Piece; box: Box; seen: number }>(CELL_M, ROW_M);
+  let query = 0;
   const boxes = new Grid<Box>(CELL_M);
   for (const loop of loops) {
     const box = boxAround(loop);
     boxes.add(box, box);
-    for (const piece of loop) grid.add({ piece, box }, boxAround([piece]));
+    for (const piece of loop) grid.add({ piece, box, seen: 0 }, boxAround([piece]));
   }
   return (p) => {
     // A loop whose box does not hold the point crosses the ray an even number of times and does not count; the boxes that hold it decide how far the ray needs to go.
@@ -286,8 +289,12 @@ export function insideOf(loops: Loop[]): (p: Vec) => boolean {
       y1: p.y + (reach - p.x) * RAY_SLOPE + SAME_PLACE_M,
     };
     let n = 0;
-    for (const { piece, box } of grid.near(to))
-      if (held.has(box)) n += crossPieces(ray, piece).length;
+    query++;
+    grid.each(to, (e) => {
+      if (e.seen === query || !held.has(e.box)) return;
+      e.seen = query;
+      n += crossPieces(ray, e.piece).length;
+    });
     return n % 2 === 1;
   };
 }

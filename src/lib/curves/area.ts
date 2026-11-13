@@ -1,7 +1,7 @@
 import { boxAround } from './hull';
 import { distanceToPiece } from './piece';
 import type { Piece } from './types';
-import { insideLoops } from './union';
+import { insideOf } from './union';
 import { cross, type Vec } from './vec';
 
 /**
@@ -33,10 +33,11 @@ const clearance = (loop: Piece[], p: Vec) =>
  */
 export function inscribedRadius(loop: Piece[], enough = Infinity): number {
   const box = boxAround(loop);
+  const inside = insideOf([loop]);
   let best = { p: { x: (box.x0 + box.x1) / 2, y: (box.y0 + box.y1) / 2 }, r: 0 };
   let reach = Math.max(box.x1 - box.x0, box.y1 - box.y0) / 2;
   for (let round = 0; round <= REFINE_ROUNDS; round++) {
-    best = widestAround(loop, best, reach, enough);
+    best = widestAround(loop, inside, best, reach, enough);
     if (best.r >= enough) break;
     reach = ((2 * reach) / SEARCH_GRID) * 1.5;
   }
@@ -44,7 +45,13 @@ export function inscribedRadius(loop: Piece[], enough = Infinity): number {
 }
 
 /** The widest of a grid of places inside a loop round `from`, `reach` meters to each side, or `from` if none is wider. */
-function widestAround(loop: Piece[], from: { p: Vec; r: number }, reach: number, enough: number) {
+function widestAround(
+  loop: Piece[],
+  inside: (p: Vec) => boolean,
+  from: { p: Vec; r: number },
+  reach: number,
+  enough: number,
+) {
   const step = (2 * reach) / SEARCH_GRID;
   let best = from;
   for (let k = 0; k < (SEARCH_GRID + 1) ** 2; k++) {
@@ -52,7 +59,7 @@ function widestAround(loop: Piece[], from: { p: Vec; r: number }, reach: number,
       x: from.p.x - reach + (k % (SEARCH_GRID + 1)) * step,
       y: from.p.y - reach + Math.floor(k / (SEARCH_GRID + 1)) * step,
     };
-    const r = insideLoops([loop], p) ? clearance(loop, p) : 0;
+    const r = inside(p) ? clearance(loop, p) : 0;
     if (r > best.r) best = { p, r };
     if (best.r >= enough) break;
   }

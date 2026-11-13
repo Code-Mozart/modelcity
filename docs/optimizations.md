@@ -1,4 +1,4 @@
-# The optimizations (^932 to ^941, ^1204 to ^1209 and ^1211 to ^1212, milestone ^927)
+# The optimizations (^932 to ^941, ^1204 to ^1209 and ^1211 to ^1213, milestone ^927)
 
 An optimization (^930) is a change to the code that leads to the same behaviour, proven by tests, with better performance, or at least usually better. One hat each; the gain is **measured** with the setup of ^928 once it exists (until then: `not measured`). Status: `done`, `idea` (a guess, to be proven).
 
@@ -22,6 +22,7 @@ An optimization (^930) is a change to the code that leads to the same behaviour,
 | ^1209 | The violations (touching nodes, touching segments) are looked for near each node, not among all pairs | done | `editor/violations.ts` | unit `editor/violations.test` | part of an edit of a map of 3000 nodes in the browser: 8785 ms to 917 ms (with the others) |
 | ^1211 | A hole of the surface is patched or not by looking for a circle of the size of the test, and the search stops at the first place where one fits (`inscribedRadius` with `enough`); the full radius was found for every hole | done (PR #59) | `curves/area.ts`, `editor/surface.ts` | unit `editor/surface.test`, `curves/area.test` (a boolean that is the same as before) | connected map, 648 nodes: patched 5023 ms (324 nodes: 306 ms) to 24 ms |
 | ^1212 | A benchmark map that is one connected network (`connectedMap`, `MAP=connected bun run bench`): the isolated cells of the tiled map hid what a real map costs (big holes, one huge loop) | done (PR #59) | `testing/samples.ts`, `scripts/bench.ts` | n/a (a benchmark) | showed ^1211 |
+| ^1213 | The point-in-surface test (`insideOf`) looks at the pieces along its ray only: the grid of the pieces has thin rows (50 by 1 m, the ray runs almost along x), no set is made per question, and the test of a hole is built once, not for each place tried (`Grid.each`, `inscribedRadius`) | done (PR #59) | `curves/grid.ts`, `curves/union.ts`, `curves/area.ts` | unit `curves/insideOf.test` (the 8000 random points still agree with the test against every piece) | connected map, 3000 nodes: dashed lines clipped 2083 ms to 1021 ms, patched 137 ms to 106 ms |
 
 ## What is left (measured, not yet done)
 
