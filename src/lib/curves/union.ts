@@ -245,6 +245,20 @@ const CELL_M = 50;
 /** The height of a cell of that grid (meters): the ray of a point runs almost along x, so a thin row holds only the pieces it can meet (^941). */
 const ROW_M = 1;
 
+/** The boxes of loops that hold the point, and how far to the right they reach. A loop whose box does not hold the point crosses the ray an even number of times and does not count; the boxes that hold it decide how far the ray needs to go. */
+function holding(boxes: Grid<Box>, p: Vec): { held: Set<Box>; reach: number } {
+  const held = new Set<Box>();
+  let reach = p.x;
+  // A point on the skin of a loop may lie a hair outside its box: the box is looked at with the tolerance.
+  const m = SAME_PLACE_M;
+  for (const b of boxes.near({ x0: p.x - m, x1: p.x + m, y0: p.y - m, y1: p.y + m })) {
+    if (p.x < b.x0 - m || p.x > b.x1 + m || p.y < b.y0 - m || p.y > b.y1 + m) continue;
+    reach = Math.max(reach, b.x1 + m);
+    held.add(b);
+  }
+  return { held, reach };
+}
+
 /**
  * A test for points being inside the loops (even-odd, so inside a hole is outside), for many
  * points: the pieces are in a grid and the ray of a point only meets those near it (^938), so a
@@ -260,21 +274,7 @@ export function insideOf(loops: Loop[]): (p: Vec) => boolean {
     for (const piece of loop) grid.add({ piece, box, seen: 0 }, boxAround([piece]));
   }
   return (p) => {
-    // A loop whose box does not hold the point crosses the ray an even number of times and does not count; the boxes that hold it decide how far the ray needs to go.
-    const held = new Set<Box>();
-    let reach = p.x;
-    for (const b of boxes.near({
-      x0: p.x - SAME_PLACE_M,
-      x1: p.x + SAME_PLACE_M,
-      y0: p.y - SAME_PLACE_M,
-      y1: p.y + SAME_PLACE_M,
-    })) {
-      // A point on the skin of a loop may lie a hair outside its box: the box is looked at with the tolerance.
-      const m = SAME_PLACE_M;
-      if (p.x < b.x0 - m || p.x > b.x1 + m || p.y < b.y0 - m || p.y > b.y1 + m) continue;
-      reach = Math.max(reach, b.x1 + m);
-      held.add(b);
-    }
+    const { held, reach } = holding(boxes, p);
     if (!held.size) return false;
     const ray: Piece = {
       type: 'line',

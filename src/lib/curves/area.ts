@@ -37,7 +37,7 @@ export function inscribedRadius(loop: Piece[], enough = Infinity): number {
   let best = { p: { x: (box.x0 + box.x1) / 2, y: (box.y0 + box.y1) / 2 }, r: 0 };
   let reach = Math.max(box.x1 - box.x0, box.y1 - box.y0) / 2;
   for (let round = 0; round <= REFINE_ROUNDS; round++) {
-    best = widestAround(loop, inside, best, reach, enough);
+    best = widestAround({ loop, inside, enough }, best, reach);
     if (best.r >= enough) break;
     reach = ((2 * reach) / SEARCH_GRID) * 1.5;
   }
@@ -46,11 +46,9 @@ export function inscribedRadius(loop: Piece[], enough = Infinity): number {
 
 /** The widest of a grid of places inside a loop round `from`, `reach` meters to each side, or `from` if none is wider. */
 function widestAround(
-  loop: Piece[],
-  inside: (p: Vec) => boolean,
+  { loop, inside, enough }: { loop: Piece[]; inside: (p: Vec) => boolean; enough: number },
   from: { p: Vec; r: number },
   reach: number,
-  enough: number,
 ) {
   const step = (2 * reach) / SEARCH_GRID;
   let best = from;
