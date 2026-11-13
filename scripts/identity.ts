@@ -144,12 +144,14 @@ async function main() {
       return { name: g.name, graph, views: viewsOf(g) };
     })(),
   ];
+  const only = process.env.FILTER ? new RegExp(process.env.FILTER) : null;
+  if (only) sets.forEach((set) => (set.views = set.views.filter((v) => only.test(v.name))));
   const total = sets.reduce((n, s) => n + s.views.length, 0);
   if (!existsSync(BASE_DIR))
     execSync(`git worktree add --detach ${BASE_DIR} ${base}`, { stdio: 'inherit' });
   if (!existsSync(`${BASE_DIR}/node_modules`))
     symlinkSync(`${process.cwd()}/node_modules`, `${BASE_DIR}/node_modules`);
-  const servers = [serve(BASE_DIR, 5174), serve(process.cwd(), 5175)];
+  const servers = [serve(BASE_DIR, 5174), serve(process.env.SELF ? BASE_DIR : process.cwd(), 5175)];
   try {
     await Promise.all([ready('http://localhost:5174'), ready('http://localhost:5175')]);
     console.log(`${total} views, base ${base}`);

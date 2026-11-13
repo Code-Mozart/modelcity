@@ -181,16 +181,21 @@ export function derivedNodes(g: Graph): DerivedNode[] {
   const curves = curvesOf(g);
   const out: DerivedNode[] = [];
   const nodes = new Grid<Placed>(GRID_CELL_M);
-  const place = (n: Placed) => nodes.add(n, { x0: n.x, x1: n.x, y0: n.y, y1: n.y });
-  g.nodes.forEach(place);
+  const taken = new Grid<Placed>(GRID_CELL_M);
+  const box = (n: Placed) => ({ x0: n.x, x1: n.x, y0: n.y, y1: n.y });
+  for (const n of g.nodes) {
+    nodes.add(n, box(n));
+    taken.add(n, box(n));
+  }
   const w: Where = { curves, grid: curveGridOf(g), nodes };
+  // A place is known if a real node or a derived one is there; only the real ones touch (^822).
   const known = (at: Placed) =>
-    [...nodes.near(reachBox(at))].some((n) => dist(n, at) < SAME_PLACE_M);
+    [...taken.near(reachBox(at))].some((n) => dist(n, at) < SAME_PLACE_M);
   const add = (edge: GEdge, at: Placed, kind: DerivedNode['kind']) => {
     if (known(at)) return null;
     const node = { id: -(out.length + 1), ...at, edge: edge.id, kind };
     out.push(node);
-    place(node);
+    taken.add(node, box(node));
     return node;
   };
   inflections(g).forEach(({ edge, at }) => add(edge, at, 'inflection'));
