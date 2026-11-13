@@ -1,5 +1,6 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import type { PathNode } from '../curves/types';
+import { changesBetween } from './changes';
 
 /**
  * The stored data model as the editor holds it (^106, ^170, `docs/data-model.md`): a directed
@@ -41,12 +42,28 @@ export const emptyGraph = (): Graph => ({
 });
 
 const indexOfNodes = new WeakMap<Graph, Map<number, GNode>>();
+/** The graph whose index was made last: the index of the next graph of the same shape is that one with the changes made in it (^941). */
+let lastNodes: Graph | null = null;
 
 /** The node with this id (nodes are looked up through an index kept per graph). */
 export function nodeOf(g: Graph, id: number): GNode | undefined {
   let index = indexOfNodes.get(g);
-  if (!index) indexOfNodes.set(g, (index = new Map(g.nodes.map((n) => [n.id, n]))));
+  if (!index) {
+    index = patchedNodes(g) ?? new Map(g.nodes.map((n) => [n.id, n]));
+    indexOfNodes.set(g, index);
+    lastNodes = g;
+  }
   return index.get(id);
+}
+
+/** The index of the last graph, changed to be the index of `g`, if `g` differs from it in some nodes only. The last graph loses its index (it is made again if that graph is asked again). */
+function patchedNodes(g: Graph): Map<number, GNode> | null {
+  const was = lastNodes && indexOfNodes.get(lastNodes);
+  const changes = lastNodes && was ? changesBetween(lastNodes, g) : null;
+  if (!lastNodes || !was || !changes) return null;
+  for (const i of changes.nodes) was.set(g.nodes[i]!.id, g.nodes[i]!);
+  indexOfNodes.delete(lastNodes);
+  return was;
 }
 
 /** The segments of a graph by number and by node, found once per graph (^938): graphs are never changed, so the index never goes stale. */
@@ -58,10 +75,20 @@ interface EdgeIndex {
 }
 const indexOfEdges = new WeakMap<Graph, EdgeIndex>();
 
+/** The graph whose index of segments was made last (see `lastNodes`). */
+let lastEdges: Graph | null = null;
+
 function edgeIndex(g: Graph): EdgeIndex {
   let index = indexOfEdges.get(g);
   if (index) return index;
-  index = { byId: new Map(), into: new Map(), out: new Map(), at: new Map() };
+  index = patchedEdges(g) ?? builtEdges(g);
+  indexOfEdges.set(g, index);
+  lastEdges = g;
+  return index;
+}
+
+function builtEdges(g: Graph): EdgeIndex {
+  const index: EdgeIndex = { byId: new Map(), into: new Map(), out: new Map(), at: new Map() };
   const push = (m: Map<number, GEdge[]>, id: number, e: GEdge) => {
     const list = m.get(id);
     if (list) list.push(e);
@@ -74,8 +101,29 @@ function edgeIndex(g: Graph): EdgeIndex {
     push(index.at, e.start, e);
     if (e.end !== e.start) push(index.at, e.end, e);
   }
-  indexOfEdges.set(g, index);
   return index;
+}
+
+/** The index of the last graph changed into that of `g`, when only segments differ (their ends are the same, so only the objects in the lists are replaced, ^941). */
+function patchedEdges(g: Graph): EdgeIndex | null {
+  const was = lastEdges && indexOfEdges.get(lastEdges);
+  const changes = lastEdges && was ? changesBetween(lastEdges, g) : null;
+  if (!lastEdges || !was || !changes) return null;
+  const swap = (m: Map<number, GEdge[]>, id: number, from: GEdge, to: GEdge) => {
+    const list = m.get(id);
+    const i = list ? list.indexOf(from) : -1;
+    if (list && i >= 0) list[i] = to;
+  };
+  for (const i of changes.edges) {
+    const [from, to] = [lastEdges.edges[i]!, g.edges[i]!];
+    was.byId.set(to.id, to);
+    swap(was.into, to.end, from, to);
+    swap(was.out, to.start, from, to);
+    swap(was.at, to.start, from, to);
+    if (to.end !== to.start) swap(was.at, to.end, from, to);
+  }
+  indexOfEdges.delete(lastEdges);
+  return was;
 }
 
 export const edgeOfId = (g: Graph, id: number): GEdge | undefined => edgeIndex(g).byId.get(id);
