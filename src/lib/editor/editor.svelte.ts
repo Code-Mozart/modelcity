@@ -5,7 +5,7 @@ import { dropOf } from './drop';
 import { placedAt, snapBase, snapFor, snapPreview } from './snapping';
 import { pointsAround } from './nearby';
 import { tipWays } from './ways';
-import { skeletonAnchors } from '../camera/skeletonAnchors';
+import { reducedAnchors } from '../camera/reducedAnchors';
 import { cursorOf, mergePreview, targetOf } from './targets';
 import { actionFor, type Action, type KeyMods } from './keymap';
 import { Pins } from './pins.svelte';
@@ -114,7 +114,7 @@ export class Editor {
   chains = $derived(chainsOf(this.view.shown));
   edges = $derived(this.chains.map((c) => c.edges));
   /** The skeleton of all roads, for the camera bounds (^37, ^62). */
-  anchors = $derived(skeletonAnchors(chainsOf(this.graph)));
+  anchors = $derived(reducedAnchors(chainsOf(this.graph)));
   cursor = $derived(cursorOf(this.hover, this.drawing));
   /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
   focus = $derived(focusOf(this.chains, this.press, this.hover));
