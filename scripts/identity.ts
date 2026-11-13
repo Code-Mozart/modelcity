@@ -157,6 +157,8 @@ async function main() {
   const total = sets.reduce((n, s) => n + s.views.length, 0);
   if (!existsSync(BASE_DIR))
     execSync(`git worktree add --detach ${BASE_DIR} ${base}`, { stdio: 'inherit' });
+  // The folder of an earlier run holds the base of that run: put the base of this one in it.
+  else execSync(`git -C ${BASE_DIR} checkout --detach ${base}`, { stdio: 'inherit' });
   if (!existsSync(`${BASE_DIR}/node_modules`))
     symlinkSync(`${process.cwd()}/node_modules`, `${BASE_DIR}/node_modules`);
   const servers = [serve(BASE_DIR, 5174), serve(process.env.SELF ? BASE_DIR : process.cwd(), 5175)];
