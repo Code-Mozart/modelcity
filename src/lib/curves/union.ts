@@ -1,5 +1,6 @@
 import { crossPieces } from '../snap/geometry';
 import { boxAround, boxesMeet, type Box } from './hull';
+import { Grid } from './grid';
 import { distanceToPiece, nearestParam, pieceLength, pointOn, reversePiece } from './piece';
 import { SAME_PLACE_M } from './tolerance';
 import type { Piece } from './types';
@@ -55,12 +56,22 @@ function cutsOf(piece: Piece, others: Piece[]): number[] {
   return sorted.filter((t, i) => i === 0 || (t - sorted[i - 1]!) * length > TINY_M);
 }
 
+/** The size of a cell of the grids of the pieces of the outlines (meters): a lane width and a bit. */
+const PIECE_CELL_M = 4;
+
 /** All the pieces cut at each other, those with no length left out. */
 function cutAll(pieces: Piece[]): Piece[] {
   const boxes = pieces.map((p) => boxAround([p]));
+  const grid = new Grid<number>(PIECE_CELL_M);
+  boxes.forEach((b, i) => grid.add(i, b));
   return pieces.flatMap((p, i) => {
-    const near = pieces.filter((_, j) => j !== i && boxesMeet(boxes[i]!, boxes[j]!));
-    const ts = cutsOf(p, near);
+    const nearby = [...grid.near(boxes[i]!)].filter(
+      (j) => j !== i && boxesMeet(boxes[i]!, boxes[j]!),
+    );
+    const ts = cutsOf(
+      p,
+      nearby.sort((a, b) => a - b).map((j) => pieces[j]!),
+    );
     return ts
       .slice(1)
       .map((t, k) => subPiece(p, ts[k]!, t))
@@ -89,10 +100,11 @@ function normalAtMiddle(p: Piece): Vec {
 }
 
 /** Whether a cut piece is on the boundary of the union: inside on one side, not on the other. */
-function onBoundary(p: Piece, regions: Region[]): boolean {
+function onBoundary(p: Piece, regions: Grid<Region>): boolean {
   const [m, n] = [pointOn(p, 0.5), normalAtMiddle(p)];
   const probe = (side: 1 | -1) => add(m, mul(n, side * PROBE_M));
-  const covered = (pt: Vec) => regions.some((r) => inside(r, pt));
+  const covered = (pt: Vec) =>
+    [...regions.near({ x0: pt.x, x1: pt.x, y0: pt.y, y1: pt.y })].some((r) => inside(r, pt));
   return covered(probe(1)) !== covered(probe(-1));
 }
 
@@ -105,39 +117,55 @@ function same(a: Piece, b: Piece): boolean {
   return ends && dist(ma, mb) < SAME_PLACE_M;
 }
 
+/** A grid of the places where pieces end, to find the one that goes on from a place (^938). */
+function endsGrid(pieces: Piece[]): Grid<number> {
+  const grid = new Grid<number>(PIECE_CELL_M);
+  pieces.forEach((p, i) => {
+    for (const e of [p.P, p.Q]) grid.add(i, { x0: e.x, x1: e.x, y0: e.y, y1: e.y });
+  });
+  return grid;
+}
+
 /**
- * Takes out of `rest` the piece that goes on from `at`: the one with an end nearest to it, within
- * reach, turned round if it is its far end. None when the loop is back at its `start` (or nothing
- * is in reach). The nearest end is asked for, not a numbered place: ends that are the same place
+ * The index in `pieces` of the piece, not yet `taken`, that goes on from `at`: the one with an end
+ * nearest to it (the first of them if there are several), within reach. None (-1) when nothing is
+ * in reach. The nearest end is asked for, not a numbered place: ends that are the same place
  * within the tolerance do not always fall into the same group of three or more (^1002).
  */
-function takeNext(rest: Piece[], at: Vec, start: Vec): Piece | null {
-  let [best, reach, turned] = [-1, PROBE_M, false];
-  rest.forEach((p, j) => {
-    const [dP, dQ] = [dist(p.P, at), dist(p.Q, at)];
-    if (Math.min(dP, dQ) >= reach) return;
-    [best, reach, turned] = [j, Math.min(dP, dQ), dQ < dP];
-  });
-  if (best < 0 || dist(start, at) <= reach) return null;
-  const [piece] = rest.splice(best, 1);
-  return turned ? reversePiece(piece!) : piece!;
+function takeNext(pieces: Piece[], ends: Grid<number>, taken: boolean[], at: Vec): number {
+  let [best, reach] = [-1, PROBE_M];
+  const box = { x0: at.x - PROBE_M, x1: at.x + PROBE_M, y0: at.y - PROBE_M, y1: at.y + PROBE_M };
+  for (const j of ends.near(box)) {
+    if (taken[j]) continue;
+    const d = Math.min(dist(pieces[j]!.P, at), dist(pieces[j]!.Q, at));
+    if (d < reach || (d === reach && best >= 0 && j < best)) [best, reach] = [j, d];
+  }
+  return best;
 }
 
 /**
  * The pieces chained into closed loops: each one starts where the one before ends. A piece shorter
  * than the tolerance is no edge of the outline: its two ends are one place (^1002).
  */
-function chain(pieces: Piece[]): Loop[] {
-  const rest = pieces.filter((p) => pieceLength(p) >= SAME_PLACE_M);
+function chain(all: Piece[]): Loop[] {
+  const pieces = all.filter((p) => pieceLength(p) >= SAME_PLACE_M);
+  const [ends, taken] = [endsGrid(pieces), pieces.map(() => false)];
   const loops: Loop[] = [];
-  for (let first = rest.shift(); first; first = rest.shift()) {
+  for (let i = 0; i < pieces.length; i++) {
+    if (taken[i]) continue;
+    taken[i] = true;
+    const first = pieces[i]!;
     const loop: Loop = [first];
     for (
-      let next = takeNext(rest, first.Q, first.P);
-      next;
-      next = takeNext(rest, next.Q, first.P)
+      let at = first.Q, j = takeNext(pieces, ends, taken, at);
+      j >= 0;
+      j = takeNext(pieces, ends, taken, at)
     ) {
-      loop.push(next);
+      taken[j] = true;
+      const piece = pieces[j]!;
+      const turned = dist(piece.Q, at) < dist(piece.P, at);
+      loop.push(turned ? reversePiece(piece) : piece);
+      at = turned ? piece.P : piece.Q;
     }
     loops.push(loop);
   }
@@ -167,32 +195,76 @@ const coveredBy = (p: Piece, by: Piece[]) =>
  */
 function withoutCovered(pieces: Piece[]): Piece[] {
   const boxes = new Map(pieces.map((p) => [p, boxAround([p])]));
+  const grid = new Grid<Piece>(PIECE_CELL_M);
+  boxes.forEach((b, p) => grid.add(p, b));
   const kept = new Set(pieces);
   const longest = [...pieces].sort((a, b) => pieceLength(b) - pieceLength(a));
   for (const p of longest) {
     // Short pieces are within the probe distance of their neighbours, and not copies of anything.
     if (pieceLength(p) < 4 * PROBE_M) continue;
     const box = boxes.get(p)!;
-    const near = [...kept].filter((q) => q !== p && boxesMeet(grown(box), boxes.get(q)!));
+    const near = [...grid.near(grown(box))].filter(
+      (q) => q !== p && kept.has(q) && boxesMeet(grown(box), boxes.get(q)!),
+    );
     if (near.length && coveredBy(p, near)) kept.delete(p);
   }
   return pieces.filter((p) => kept.has(p));
 }
 
-/** The outline of the union of the regions, as closed loops of pieces (^945). */
-export function unionOutline(regions: Piece[][]): Loop[] {
-  const all = regions.map((pieces): Region => ({ pieces, box: boxAround(pieces) }));
-  const cut = cutAll(regions.flat().filter((p) => pieceLength(p) > TINY_M));
-  const boundary = cut.filter((p) => onBoundary(p, all));
-  const distinct = boundary.filter((p, i) => !boundary.slice(0, i).some((q) => same(p, q)));
-  return chain(withoutCovered(distinct));
+/** The pieces without the ones that are the same curve as an earlier one (^938: only those near its middle are compared). */
+function distinctPieces(boundary: Piece[]): Piece[] {
+  const grid = new Grid<Piece>(PIECE_CELL_M);
+  return boundary.filter((p) => {
+    const m = pointOn(p, 0.5);
+    const box = {
+      x0: m.x - SAME_PLACE_M,
+      x1: m.x + SAME_PLACE_M,
+      y0: m.y - SAME_PLACE_M,
+      y1: m.y + SAME_PLACE_M,
+    };
+    const twin = [...grid.near(box)].some((q) => same(p, q));
+    grid.add(p, box);
+    return !twin;
+  });
 }
 
-/** A test for points being inside the loops (even-odd, so inside a hole is outside), for many points. */
+/** The outline of the union of the regions, as closed loops of pieces (^945). */
+export function unionOutline(regions: Piece[][]): Loop[] {
+  const all = new Grid<Region>(PIECE_CELL_M);
+  for (const pieces of regions) {
+    const box = boxAround(pieces);
+    all.add({ pieces, box }, box);
+  }
+  const cut = cutAll(regions.flat().filter((p) => pieceLength(p) > TINY_M));
+  const boundary = cut.filter((p) => onBoundary(p, all));
+  return chain(withoutCovered(distinctPieces(boundary)));
+}
+
+/** The size of a cell of the grid of the pieces of the loops (meters): about the size of a lane junction. */
+const CELL_M = 50;
+
+/**
+ * A test for points being inside the loops (even-odd, so inside a hole is outside), for many
+ * points: the pieces are in a grid and the ray of a point only meets those near it (^938), so a
+ * question costs what lies along the ray and not all the pieces of the surface.
+ */
 export function insideOf(loops: Loop[]): (p: Vec) => boolean {
   const pieces = loops.flat();
-  const region = { pieces, box: boxAround(pieces) };
-  return (p) => inside(region, p);
+  const all = boxAround(pieces);
+  const grid = new Grid<Piece>(CELL_M);
+  for (const p of pieces) grid.add(p, boxAround([p]));
+  return (p) => {
+    if (p.x < all.x0 || p.x > all.x1 || p.y < all.y0 || p.y > all.y1) return false;
+    const ray: Piece = {
+      type: 'line',
+      P: p,
+      Q: { x: p.x + RAY_REACH_M, y: p.y + RAY_REACH_M * RAY_SLOPE },
+    };
+    const to = { x0: p.x, x1: all.x1, y0: p.y, y1: p.y + (all.x1 - p.x) * RAY_SLOPE };
+    let n = 0;
+    for (const q of grid.near(to)) n += crossPieces(ray, q).length;
+    return n % 2 === 1;
+  };
 }
 
 /** Whether a point is inside the loops (even-odd, so inside a hole is outside). */

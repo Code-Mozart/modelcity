@@ -116,10 +116,16 @@ function extremes(p: Piece): Vec[] {
 
 /** The box that holds the pieces (tight round arcs, unlike the box of a whole circle). */
 export function boxAround(pieces: Piece[]): Box {
-  const pts = pieces.flatMap(extremes);
-  const xs = pts.map((p) => p.x);
-  const ys = pts.map((p) => p.y);
-  return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+  const box = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity };
+  for (const p of pieces) {
+    for (const e of extremes(p)) {
+      box.x0 = Math.min(box.x0, e.x);
+      box.x1 = Math.max(box.x1, e.x);
+      box.y0 = Math.min(box.y0, e.y);
+      box.y1 = Math.max(box.y1, e.y);
+    }
+  }
+  return box;
 }
 
 /** Whether two boxes meet or overlap. */

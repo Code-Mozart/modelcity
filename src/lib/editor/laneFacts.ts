@@ -14,6 +14,7 @@ import { crossAcross } from './corners';
 import { curvesOf } from './derived';
 import { manoeuvreOf } from './manoeuvres';
 import { towersOf } from './towers';
+import { Grid } from '../curves/grid';
 
 /**
  * What can be said about a lane that comes in at a node, from the six topological criteria alone
@@ -120,17 +121,38 @@ function armsOf(near: Map<number, Set<number>>, own: number): number[] {
   return around.filter((t) => around.some((u) => u !== t && near.get(t)?.has(u)));
 }
 
-/** The segments of other lanes (in other towers) that the segments `edges` of a node meet (^1096). */
+/** The curves of a graph in a grid, made once per graph (^938): which segments are near a place. */
+const curveGrids = new WeakMap<Graph, Grid<number>>();
+const GRID_CELL_M = 20;
+
+function curveGrid(g: Graph): Grid<number> {
+  let grid = curveGrids.get(g);
+  if (!grid) {
+    grid = new Grid<number>(GRID_CELL_M);
+    curvesOf(g).forEach((c, i) => grid!.add(i, c.box));
+    curveGrids.set(g, grid);
+  }
+  return grid;
+}
+
+/** The segments of other lanes (in other towers) that the segments `edges` of a node meet (^1096), in the order of the graph. */
 function conflictsOf(g: Graph, tower: Map<number, number>, n: GNode, edges: GEdge[]): Conflict[] {
-  const curves = curvesOf(g);
-  const own = tower.get(n.id);
-  return curves
-    .filter((b) => tower.get(b.edge.start) !== own)
-    .flatMap((b) =>
-      curves
-        .filter((a) => edges.includes(a.edge) && meet(a, b))
-        .map((a) => ({ from: nodeOf(g, b.edge.start)!, mine: a.edge, theirs: b.edge })),
-    );
+  const [curves, grid, own] = [curvesOf(g), curveGrid(g), tower.get(n.id)];
+  const found: { bi: number; ai: number }[] = [];
+  curves.forEach((a, ai) => {
+    if (!edges.includes(a.edge)) return;
+    for (const bi of grid.near(a.box)) {
+      const b = curves[bi]!;
+      if (tower.get(b.edge.start) !== own && meet(a, b)) found.push({ bi, ai });
+    }
+  });
+  return found
+    .sort((x, y) => x.bi - y.bi || x.ai - y.ai)
+    .map(({ bi, ai }) => ({
+      from: nodeOf(g, curves[bi]!.edge.start)!,
+      mine: curves[ai]!.edge,
+      theirs: curves[bi]!.edge,
+    }));
 }
 
 /**
@@ -175,7 +197,9 @@ export function laneFactsOf(g: Graph): LaneFacts[] {
 /** The facts of the lanes in, without what is missing (^1101). */
 function factsOf(g: Graph, tower: Map<number, number>): LaneFacts[] {
   const near = adjacency(g, tower);
-  const size = (t: number) => [...tower.values()].filter((x) => x === t).length;
+  const sizes = new Map<number, number>();
+  for (const t of tower.values()) sizes.set(t, (sizes.get(t) ?? 0) + 1);
+  const size = (t: number) => sizes.get(t) ?? 0;
   return g.nodes.flatMap((n): LaneFacts[] => {
     const own = tower.get(n.id)!;
     const arms = armsOf(near, own);

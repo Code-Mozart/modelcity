@@ -69,12 +69,21 @@ function inflections(g: Graph): { edge: GEdge; at: Placed }[] {
   });
 }
 
-/** The segments of a graph with their pieces and the box that holds them. */
-export const curvesOf = (g: Graph) =>
-  g.edges.flatMap((edge) => {
-    const pieces = curveOfEdge(g, edge.id)?.pieces;
-    return pieces ? [{ edge, pieces, box: boxOf(pieces) }] : [];
-  });
+type Curves = { edge: GEdge; pieces: Piece[]; box: ReturnType<typeof boxOf> }[];
+const curvesCache = new WeakMap<Graph, Curves>();
+
+/** The segments of a graph with their pieces and the box that holds them, made once per graph (^938: graphs are never changed). */
+export function curvesOf(g: Graph): Curves {
+  let curves = curvesCache.get(g);
+  if (!curves) {
+    curves = g.edges.flatMap((edge) => {
+      const pieces = curveOfEdge(g, edge.id)?.pieces;
+      return pieces ? [{ edge, pieces, box: boxOf(pieces) }] : [];
+    });
+    curvesCache.set(g, curves);
+  }
+  return curves;
+}
 
 /**
  * Whether `edge` is touched at `at` by a node or a segment that does not run parallel to it
