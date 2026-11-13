@@ -260,9 +260,16 @@ export function insideOf(loops: Loop[]): (p: Vec) => boolean {
     // A loop whose box does not hold the point crosses the ray an even number of times and does not count; the boxes that hold it decide how far the ray needs to go.
     const held = new Set<Box>();
     let reach = p.x;
-    for (const b of boxes.near({ x0: p.x, x1: p.x, y0: p.y, y1: p.y })) {
-      if (p.x < b.x0 || p.x > b.x1 || p.y < b.y0 || p.y > b.y1) continue;
-      [reach] = [Math.max(reach, b.x1)];
+    for (const b of boxes.near({
+      x0: p.x - SAME_PLACE_M,
+      x1: p.x + SAME_PLACE_M,
+      y0: p.y - SAME_PLACE_M,
+      y1: p.y + SAME_PLACE_M,
+    })) {
+      // A point on the skin of a loop may lie a hair outside its box: the box is looked at with the tolerance.
+      const m = SAME_PLACE_M;
+      if (p.x < b.x0 - m || p.x > b.x1 + m || p.y < b.y0 - m || p.y > b.y1 + m) continue;
+      reach = Math.max(reach, b.x1 + m);
       held.add(b);
     }
     if (!held.size) return false;
@@ -271,7 +278,13 @@ export function insideOf(loops: Loop[]): (p: Vec) => boolean {
       P: p,
       Q: { x: p.x + RAY_REACH_M, y: p.y + RAY_REACH_M * RAY_SLOPE },
     };
-    const to = { x0: p.x, x1: reach, y0: p.y, y1: p.y + (reach - p.x) * RAY_SLOPE };
+    // The band of the ray, a hair wider: a piece that ends on the ray within the tolerance counts as crossing it.
+    const to = {
+      x0: p.x - SAME_PLACE_M,
+      x1: reach,
+      y0: p.y - SAME_PLACE_M,
+      y1: p.y + (reach - p.x) * RAY_SLOPE + SAME_PLACE_M,
+    };
     let n = 0;
     for (const { piece, box } of grid.near(to))
       if (held.has(box)) n += crossPieces(ray, piece).length;
