@@ -2,12 +2,44 @@ import { test } from '@playwright/test';
 import { connectedMap, tiledMap } from '../src/lib/testing/samples';
 
 interface Profile {
-  nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[];
+  nodes: {
+    id: number;
+    children?: number[];
+    callFrame: { functionName: string; url: string; lineNumber: number };
+  }[];
   samples: number[];
   timeDeltas: number[];
 }
 
 /** The functions with the most time of their own, as lines of text. */
+function inclusiveOf(profile: Profile): string {
+  const self = new Map<number, number>();
+  profile.samples.forEach((id, i) =>
+    self.set(id, (self.get(id) ?? 0) + (profile.timeDeltas[i] ?? 0)),
+  );
+  const byId = new Map(profile.nodes.map((n) => [n.id, n]));
+  const total = new Map<number, number>();
+  const walk = (id: number): number => {
+    const n = byId.get(id)!;
+    const t = (self.get(id) ?? 0) + (n.children ?? []).reduce((a, c) => a + walk(c), 0);
+    total.set(id, t);
+    return t;
+  };
+  if (profile.nodes.length) walk(profile.nodes[0]!.id);
+  const byName = new Map<string, number>();
+  for (const n of profile.nodes) {
+    const f = n.callFrame;
+    if (!f.url.includes('/src/')) continue;
+    const key = `${f.functionName || '(anonymous)'} ${f.url.split('/').slice(-2).join('/')}:${f.lineNumber}`;
+    byName.set(key, Math.max(byName.get(key) ?? 0, total.get(n.id) ?? 0));
+  }
+  return [...byName]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 25)
+    .map(([k, us]) => `${(us / 1000).toFixed(0)} ms total  ${k}`)
+    .join('\n');
+}
+
 function topOf(profile: Profile): string {
   const self = new Map<number, number>();
   profile.samples.forEach((id, i) =>
@@ -62,5 +94,5 @@ test('profile of an edit', async ({ page }) => {
       timeDeltas: number[];
     };
   };
-  console.log(topOf(profile));
+  console.log(`${topOf(profile)}\nINCLUSIVE\n${inclusiveOf(profile)}`);
 });

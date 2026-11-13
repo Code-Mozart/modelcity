@@ -152,9 +152,9 @@
     return action !== null;
   }
 
-  /** While the map has violations of the rules of touching nodes, a red message says how many (^827). */
+  /** While the part of the map near the view has violations of the rules of touching nodes, a red message says how many (^827, ^941: the count of all of a big map would scale with it). */
   $effect(() => {
-    const n = violationsOf(editor.graph).length;
+    const n = violationsOf(editor.view.shown).length;
     const text = n === 1 ? '1 violation' : `${n} violations`;
     untrack(() => toasts.keep('violations', n ? { kind: 'error', text } : null));
   });
