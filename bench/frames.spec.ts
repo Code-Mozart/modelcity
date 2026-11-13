@@ -22,13 +22,8 @@ const MAPS = [
 /** Runs in the page: the times, in milliseconds. */
 async function measure(g: Graph) {
   const hook = window.__modelcity!;
-  function nextFrame() {
-    return new Promise<void>((r) => requestAnimationFrame(() => r()));
-  }
-  async function frames() {
-    await nextFrame();
-    await nextFrame();
-  }
+  const frames = () =>
+    new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
   const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
   async function timed(step: (i: number) => void, n: number) {
     const times: number[] = [];
@@ -52,7 +47,6 @@ async function measure(g: Graph) {
   const move = (i: number) =>
     new PointerEvent('pointermove', { clientX: 300 + i * 7, clientY: 300 + i * 5 });
   const hover = await timed((i) => canvas.dispatchEvent(move(i)), 30);
-  const edit = await timed(() => (hook.editor.graph = { ...g, nodes: [...g.nodes] }), 3);
   const moved = await timed(() => {
     // From the graph the editor holds (the way an edit is made), so that what did not change is the same object.
     const cur = hook.editor.graph;
@@ -62,7 +56,7 @@ async function measure(g: Graph) {
       nodes: cur.nodes.map((n, k) => (k === mid ? { ...n, x: n.x + 0.5 } : n)),
     };
   }, 5);
-  return { pan, hover, edit, moved };
+  return { pan, hover, moved };
 }
 
 test('frame times', async ({ page }) => {
@@ -71,7 +65,7 @@ test('frame times', async ({ page }) => {
   for (const map of MAPS.filter((m) => new RegExp(process.env.ONLY ?? '').test(m.name))) {
     const r = await page.evaluate(measure, map.graph());
     console.log(
-      `${map.name}: pan ${r.pan.toFixed(0)} ms/frame (two frames: 33 ms is 60 FPS), pointer move ${r.hover.toFixed(0)} ms, edit (a copy) ${r.edit.toFixed(0)} ms, one node moved ${r.moved.toFixed(0)} ms`,
+      `${map.name}: pan ${r.pan.toFixed(0)} ms/frame (two frames: 33 ms is 60 FPS), pointer move ${r.hover.toFixed(0)} ms, one node moved ${r.moved.toFixed(0)} ms`,
     );
   }
 });

@@ -64,8 +64,7 @@ test('profile of an edit', async ({ page }) => {
   );
   await page.evaluate(async (g) => {
     window.__modelcity!.editor.graph = g;
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   }, graph);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Profiler.enable');
@@ -76,28 +75,20 @@ test('profile of an edit', async ({ page }) => {
       const base = hook.camera();
       for (let i = 0; i < 20; i++) {
         hook.show({ x: base.x + i * 2, y: base.y + i, scale: 3, rotation: 0 });
-        await new Promise((r) => requestAnimationFrame(r));
-        await new Promise((r) => requestAnimationFrame(r));
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       }
     });
   } else {
-    await page.evaluate(async (g) => {
+    await page.evaluate(async () => {
       const cur = window.__modelcity!.editor.graph;
       const mid = Math.floor(cur.nodes.length / 2);
       window.__modelcity!.editor.graph = {
         ...cur,
         nodes: cur.nodes.map((n, k) => (k === mid ? { ...n, x: n.x + 0.5 } : n)),
       };
-      await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => requestAnimationFrame(r));
-    }, graph);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    });
   }
-  const { profile } = (await cdp.send('Profiler.stop')) as {
-    profile: {
-      nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[];
-      samples: number[];
-      timeDeltas: number[];
-    };
-  };
+  const { profile } = (await cdp.send('Profiler.stop')) as { profile: Profile };
   console.log(`${topOf(profile)}\nINCLUSIVE\n${inclusiveOf(profile)}`);
 });
