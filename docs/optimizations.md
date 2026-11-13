@@ -11,7 +11,7 @@ An optimization (^930) is a change to the code that leads to the same behaviour,
 | ^936 | Towers are found through a grid of cells instead of comparing every pair of nodes | done | `editor/towers.ts` | unit `editor/towers.test` | not measured |
 | ^937 | Snap curves far from the pointer are rejected by a bounding box before the nearest point on them is computed | idea | `snap/engine.ts` | | |
 | ^938 | A grid (`curves/grid.ts`) for every question that asks what is near: the pieces of the surface in the point-in-surface test of the dashed lines (`insideOf`), the segments for the conflicts of lanes and the touches (`curveGridOf`), the pieces of the union, the ends of the lines, the snap suggestions, the nodes | done | `curves/grid.ts`, `curves/union.ts`, `editor/derived.ts`, `editor/laneFacts.ts`, `editor/markings.ts`, `editor/violations.ts`, `snap/merge.ts` | unit `curves/insideOf.test` (the grid test says what the test against every piece says), and the existing tests of every place it is used, unchanged | dashed lines clipped to the surface on the angle ground (648 nodes): 5085 ms to 87 ms; on 3000 nodes: 3105 ms to 369 ms |
-| ^939 | What is outside the screen is not drawn and not looked at: the loops of the surface, the dashed lines, the give-way lines and arrows, the towers and derived nodes | done (the roads and their handles are not yet) | `render/paint.ts`, `render/markings.ts`, `render/roadMarks.ts`, `render/towerGizmo.ts` | unit `render/towerGizmo.test`; the even-odd fill counts per loop, so a loop off the screen cannot change what is shown | panning a map of 12000 nodes in the browser: 434 ms to 133 ms a frame (with ^940) |
+| ^939 | What is outside the screen is not drawn and not looked at: the loops of the surface, the dashed lines, the give-way lines and arrows, the towers and derived nodes | done | `render/paint.ts`, `render/markings.ts`, `render/roadMarks.ts`, `render/towerGizmo.ts`, `render/scene.ts`, `render/roadsOnScreen.ts`, `MapCanvas.svelte` | unit `render/towerGizmo.test`; the even-odd fill counts per loop, so a loop off the screen cannot change what is shown | panning a map of 12000 nodes in the browser: 434 ms to 33 ms a frame, the display's 60 FPS, the same as on the small grounds (with ^940) |
 | ^940 | What only depends on the graph is not computed again when only the camera or the pointer moved: the curves of a graph with their boxes (`curvesOf`), its segments by number and node (`edgesIn`, `edgesOut`, `edgesAt`), the bounds of the content (moved, not found again, when the camera pans) | done | `editor/derived.ts`, `model/graph.ts`, `camera/bounds.ts` | unit: the whole suite, unchanged (the graphs are never changed, so a cache per graph object never goes stale); `camera/bounds.test` | with ^938, the lane facts of 3000 nodes: 34238 ms to 31 ms |
 | ^941 | Hulls and corners of a segment are cached with the curve, and only the segments that changed are computed again | idea | | | |
 | ^1204 | The segments of a graph are found by number and by node through an index kept per graph, not by looking at every segment (`edgeOfId`, `edgesIn`, `edgesOut`, `edgesAt`) | done | `model/graph.ts` | unit `model/graph.test` and the whole suite | part of the lane facts figure of ^940 |
@@ -27,13 +27,13 @@ The pipeline now grows about linearly with the number of nodes, but an edit stil
 
 | Map | surface (the union) | lines clipped to the surface | an edit in the browser | panning, a frame | moving the pointer |
 | --- | --- | --- | --- | --- | --- |
-| T ground, 358 nodes | | | 150 | 33 (60 FPS) | 33 |
-| angle ground, 648 nodes | 88 | 87 | 217 | 33 (60 FPS) | 33 |
-| tiled map, 3000 nodes | 299 | 369 | 935 | 49 | 33 |
-| tiled map, 12000 nodes | 1228 | 1403 | 4217 | 134 | 33 |
+| T ground, 358 nodes | | | 151 | 33 (60 FPS) | 33 |
+| angle ground, 648 nodes | 88 | 87 | 184 | 33 (60 FPS) | 33 |
+| tiled map, 3000 nodes | 299 | 369 | 767 | 33 (60 FPS) | 33 |
+| tiled map, 12000 nodes | 1228 | 1403 | 3650 | 33 (60 FPS) | 33 |
 | tiled map, 96000 nodes (in node only) | 10745 | 13156 | | | |
 
 The times of a frame are for two painted frames, so 33 ms is the display's 60 FPS. Before this milestone the angle ground took 5085 ms to clip the lines alone (in node) and 600 ms for an edit in the browser, and a map of 3000 nodes 8785 ms.
 
-Ideas, in the order of what they would give: **^941** (only what changed is derived again, by a region of the map, so that an edit costs what the edit touches and not the map: the union, the lane facts and the clip are all per region), the roads, handles and nodes of the scene off the screen not built each frame (^939, the rest of it: the camera pan still grows with the map), and a cheaper union (the cutting of all pieces by each other is the bulk of the surface).
+Panning and moving the pointer no longer grow with the map (^939, ^940). Ideas, in the order of what they would give: **^941** (only what changed is derived again, by a region of the map, so that an edit costs what the edit touches and not the map: the union, the lane facts and the clip are all per region), a cheaper union (the cutting of all pieces by each other is the bulk of the surface).
 
