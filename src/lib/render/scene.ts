@@ -339,6 +339,8 @@ function drawSnapPoints(f: Frame, scene: Scene, pal: Palette) {
 function drawRoads(f: Frame, scene: Scene, { active, on }: Shown, pal: Palette) {
   scene.roads.forEach((road, i) => {
     if (!on[i]) return;
+    // A road drawn before leaves its caps and joins for the next, also one not drawn (^939).
+    if (i > 0) [f.ctx.lineCap, f.ctx.lineJoin] = ['round', 'round'];
     const selected = road.edges.map((_, k) =>
       scene.selectedSegments.some((s) => s.road === i && s.i === k),
     );
