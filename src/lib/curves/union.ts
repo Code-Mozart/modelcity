@@ -249,21 +249,23 @@ const CELL_M = 50;
  * question costs what lies along the ray and not all the pieces of the surface.
  */
 export function insideOf(loops: Loop[]): (p: Vec) => boolean {
-  const grid = new Grid<Piece>(CELL_M);
+  const grid = new Grid<{ piece: Piece; box: Box }>(CELL_M);
   const boxes = new Grid<Box>(CELL_M);
   for (const loop of loops) {
     const box = boxAround(loop);
     boxes.add(box, box);
-    for (const p of loop) grid.add(p, boxAround([p]));
+    for (const piece of loop) grid.add({ piece, box }, boxAround([piece]));
   }
   return (p) => {
-    // A loop whose box does not hold the point crosses the ray an even number of times: only the boxes that do decide how far the ray needs to go.
-    let [reach, held] = [p.x, false];
+    // A loop whose box does not hold the point crosses the ray an even number of times and does not count; the boxes that hold it decide how far the ray needs to go.
+    const held = new Set<Box>();
+    let reach = p.x;
     for (const b of boxes.near({ x0: p.x, x1: p.x, y0: p.y, y1: p.y })) {
       if (p.x < b.x0 || p.x > b.x1 || p.y < b.y0 || p.y > b.y1) continue;
-      [reach, held] = [Math.max(reach, b.x1), true];
+      [reach] = [Math.max(reach, b.x1)];
+      held.add(b);
     }
-    if (!held) return false;
+    if (!held.size) return false;
     const ray: Piece = {
       type: 'line',
       P: p,
@@ -271,7 +273,8 @@ export function insideOf(loops: Loop[]): (p: Vec) => boolean {
     };
     const to = { x0: p.x, x1: reach, y0: p.y, y1: p.y + (reach - p.x) * RAY_SLOPE };
     let n = 0;
-    for (const q of grid.near(to)) n += crossPieces(ray, q).length;
+    for (const { piece, box } of grid.near(to))
+      if (held.has(box)) n += crossPieces(ray, piece).length;
     return n % 2 === 1;
   };
 }
