@@ -1,6 +1,28 @@
 import { test } from '@playwright/test';
 import { tiledMap } from '../src/lib/testing/samples';
 
+interface Profile {
+  nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[];
+  samples: number[];
+  timeDeltas: number[];
+}
+
+/** The functions with the most time of their own, as lines of text. */
+function topOf(profile: Profile): string {
+  const self = new Map<number, number>();
+  profile.samples.forEach((id, i) =>
+    self.set(id, (self.get(id) ?? 0) + (profile.timeDeltas[i] ?? 0)),
+  );
+  const byName = new Map<string, number>();
+  for (const n of profile.nodes) {
+    const f = n.callFrame;
+    const key = `${f.functionName || '(anonymous)'} ${f.url.split('/').slice(-2).join('/')}:${f.lineNumber}`;
+    byName.set(key, (byName.get(key) ?? 0) + (self.get(n.id) ?? 0));
+  }
+  const top = [...byName].sort((a, b) => b[1] - a[1]).slice(0, 22);
+  return top.map(([k, us]) => `${(us / 1000).toFixed(0)} ms  ${k}`).join('\n');
+}
+
 /** Where the time of an edit goes in the browser (^928): the CPU profile of replacing the graph of a map of 250 cells, the functions with the most time of their own. */
 test('profile of an edit', async ({ page }) => {
   await page.goto('/');
@@ -38,16 +60,5 @@ test('profile of an edit', async ({ page }) => {
       timeDeltas: number[];
     };
   };
-  const self = new Map<number, number>();
-  profile.samples.forEach((id, i) =>
-    self.set(id, (self.get(id) ?? 0) + (profile.timeDeltas[i] ?? 0)),
-  );
-  const byName = new Map<string, number>();
-  for (const n of profile.nodes) {
-    const f = n.callFrame;
-    const key = `${f.functionName || '(anonymous)'} ${f.url.split('/').slice(-2).join('/')}:${f.lineNumber}`;
-    byName.set(key, (byName.get(key) ?? 0) + (self.get(n.id) ?? 0));
-  }
-  const top = [...byName].sort((a, b) => b[1] - a[1]).slice(0, 22);
-  console.log(top.map(([k, us]) => `${(us / 1000).toFixed(0)} ms  ${k}`).join('\n'));
+  console.log(topOf(profile));
 });
