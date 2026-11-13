@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.56.0",
-  "moniker": "Collapse by control",
+  "version": "0.57.0",
+  "moniker": "Performance",
   "private": true,
   "type": "module",
   "scripts": {
