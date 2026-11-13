@@ -17,6 +17,7 @@ import { ANGLE_CASES, angleGround } from '../src/lib/testing/angleGround';
 import { T_CASES, tGround } from '../src/lib/testing/tGround';
 import { tiledMap } from '../src/lib/testing/samples';
 import type { Graph } from '../src/lib/model/graph';
+import { scenes } from './identityScenes';
 
 interface View {
   name: string;
@@ -123,6 +124,13 @@ async function paint(url: string, sets: { name: string; graph: Graph; views: Vie
         ),
       );
     }
+  }
+  for (const set of sets) {
+    const centers = [0, 0.5, 1]
+      .map((f) => set.views[Math.floor(f * (set.views.length - 1))]!)
+      .filter(Boolean);
+    for (const [name, data] of await scenes(page, { name: set.name, graph: set.graph, centers }))
+      pictures.set(name, data);
   }
   await browser.close();
   return pictures;
