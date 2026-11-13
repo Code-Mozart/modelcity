@@ -41,4 +41,9 @@ export function drawMarkings(f: Frame, markings: Marking[], pal: Palette, physic
     const stroke = markingStroke(m.kind, f.view.scale, pal['marking-white'], physical);
     strokeChain(f, m.pieces, stroke);
   }
+  // Whatever is drawn after them (the give-way lines) takes the caps and joins of the last line (^939): as if it had been stroked, also when it is off the screen.
+  if (markings.length) {
+    f.ctx.lineCap = 'butt';
+    f.ctx.lineJoin = 'round';
+  }
 }
