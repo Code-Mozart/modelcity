@@ -1,4 +1,4 @@
-# The optimizations (^932 to ^941, ^1204 to ^1209 and ^1211 to ^1219, milestone ^927)
+# The optimizations (^932 to ^941, ^1204 to ^1209 and ^1211 to ^1214 and ^1218 to ^1219, milestone ^927)
 
 An optimization (^930) is a change to the code that leads to the same behaviour, proven by tests, with better performance, or at least usually better. One hat each; the gain is **measured** with the setup of ^928 once it exists (until then: `not measured`). Status: `done`, `idea` (a guess, to be proven).
 
