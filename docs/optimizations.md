@@ -1,4 +1,4 @@
-# The optimizations (^932 to ^941 and ^1204 to ^1209, milestone ^927)
+# The optimizations (^932 to ^941, ^1204 to ^1209 and ^1211 to ^1212, milestone ^927)
 
 An optimization (^930) is a change to the code that leads to the same behaviour, proven by tests, with better performance, or at least usually better. One hat each; the gain is **measured** with the setup of ^928 once it exists (until then: `not measured`). Status: `done`, `idea` (a guess, to be proven).
 
@@ -20,6 +20,8 @@ An optimization (^930) is a change to the code that leads to the same behaviour,
 | ^1207 | The holes of the surface: a loop is only tested against the loops whose box holds it | done | `editor/surface.ts` | unit `editor/surface.test` | the patching of the holes, 3000 nodes: 338 ms to 2 ms |
 | ^1208 | Dashed and solid lines are joined and made distinct by a grid of their ends and boxes | done | `editor/markings.ts` | unit `editor/markings.test` and the grounds | markings, 12000 nodes: 2444 ms to 146 ms |
 | ^1209 | The violations (touching nodes, touching segments) are looked for near each node, not among all pairs | done | `editor/violations.ts` | unit `editor/violations.test` | part of an edit of a map of 3000 nodes in the browser: 8785 ms to 917 ms (with the others) |
+| ^1211 | A hole of the surface is patched or not by looking for a circle of the size of the test, and the search stops at the first place where one fits (`inscribedRadius` with `enough`); the full radius was found for every hole | done (PR #59) | `curves/area.ts`, `editor/surface.ts` | unit `editor/surface.test`, `curves/area.test` (a boolean that is the same as before) | connected map, 648 nodes: patched 5023 ms (324 nodes: 306 ms) to 24 ms |
+| ^1212 | A benchmark map that is one connected network (`connectedMap`, `MAP=connected bun run bench`): the isolated cells of the tiled map hid what a real map costs (big holes, one huge loop) | done (PR #59) | `testing/samples.ts`, `scripts/bench.ts` | n/a (a benchmark) | showed ^1211 |
 
 ## What is left (measured, not yet done)
 

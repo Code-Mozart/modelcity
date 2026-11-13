@@ -14,7 +14,7 @@ import { markingsOf } from '../src/lib/editor/markings';
 import { patched, surfaceFrom } from '../src/lib/editor/surface';
 import { signsOf } from '../src/lib/editor/signs';
 import { towersOf } from '../src/lib/editor/towers';
-import { SIZES, tiledMap } from '../src/lib/testing/samples';
+import { SIZES, connectedMap, tiledMap } from '../src/lib/testing/samples';
 
 const maxCells = Number(process.argv[2] ?? 1000);
 const budgetMs = Number(process.argv[3] ?? 10) * 1000;
@@ -38,7 +38,7 @@ function time(stage: string, run: () => unknown): { value: unknown; ms: number |
 }
 
 for (const cells of SIZES.filter((c) => c <= maxCells)) {
-  const g = tiledMap(cells);
+  const g = (process.env.MAP === 'connected' ? connectedMap : tiledMap)(cells);
   const row: string[] = [];
   const stage = <T>(name: string, run: () => T, ...need: unknown[]): T | undefined => {
     if (need.some((n) => n === undefined)) return undefined;

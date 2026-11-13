@@ -28,21 +28,23 @@ const clearance = (loop: Piece[], p: Vec) =>
  * The radius of the largest circle that fits inside a loop (^1054): the width of the loop at its
  * widest place, half of it. Found by looking at a grid of places inside the loop and then at finer
  * grids round the best one (a few hundred distances to its pieces): a loop is a few pieces, and
- * there are few holes.
+ * there are few holes. With `enough`, the search stops as soon as a circle that big fits (the answer
+ * is then only known to be at least that, which is all a caller that compares with it needs, ^941).
  */
-export function inscribedRadius(loop: Piece[]): number {
+export function inscribedRadius(loop: Piece[], enough = Infinity): number {
   const box = boxAround(loop);
   let best = { p: { x: (box.x0 + box.x1) / 2, y: (box.y0 + box.y1) / 2 }, r: 0 };
   let reach = Math.max(box.x1 - box.x0, box.y1 - box.y0) / 2;
   for (let round = 0; round <= REFINE_ROUNDS; round++) {
-    best = widestAround(loop, best, reach);
+    best = widestAround(loop, best, reach, enough);
+    if (best.r >= enough) break;
     reach = ((2 * reach) / SEARCH_GRID) * 1.5;
   }
   return best.r;
 }
 
 /** The widest of a grid of places inside a loop round `from`, `reach` meters to each side, or `from` if none is wider. */
-function widestAround(loop: Piece[], from: { p: Vec; r: number }, reach: number) {
+function widestAround(loop: Piece[], from: { p: Vec; r: number }, reach: number, enough: number) {
   const step = (2 * reach) / SEARCH_GRID;
   let best = from;
   for (let k = 0; k < (SEARCH_GRID + 1) ** 2; k++) {
@@ -52,6 +54,7 @@ function widestAround(loop: Piece[], from: { p: Vec; r: number }, reach: number)
     };
     const r = insideLoops([loop], p) ? clearance(loop, p) : 0;
     if (r > best.r) best = { p, r };
+    if (best.r >= enough) break;
   }
   return best;
 }

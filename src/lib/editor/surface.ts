@@ -54,6 +54,8 @@ const PATCH_RADIUS_M = LANE_WIDTH_M / 4;
 
 /** The surface without its narrow holes (^1054): they are road. Wider holes stay land, islands. */
 export function patched(loops: Loop[]): Loop[] {
-  const narrow = new Set(holesOf(loops).filter((h) => inscribedRadius(h) < PATCH_RADIUS_M));
+  const narrow = new Set(
+    holesOf(loops).filter((h) => inscribedRadius(h, PATCH_RADIUS_M) < PATCH_RADIUS_M),
+  );
   return loops.filter((l) => !narrow.has(l));
 }
