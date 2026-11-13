@@ -1,4 +1,4 @@
-next: ^1218
+next: ^1220
 
 # Hats
 
@@ -763,7 +763,7 @@ A range of hats whose rows are written in another file instead of here (^392). T
 | ^978–^979 | docs/palette.md | the Feldweg colours (rented range, milestone ^964) |
 | ^932–^941 | docs/optimizations.md | the optimizations, one hat each (rented range, milestone ^927) |
 | ^1204–^1209 | docs/optimizations.md | more optimizations, one hat each (rented range, milestone ^927) |
-| ^1211–^1214 | docs/optimizations.md | more optimizations, PR #59 (rented range, milestone ^927) |
+| ^1211–^1219 | docs/optimizations.md | more optimizations, PR #59 (rented range, milestone ^927) |
 | ^950–^958 | docs/markings.md | the rules of the lane markings, one hat each (rented range, milestone ^949; ^957 is a question, ^958 the scope) |
 | ^1026–^1034 | docs/markings.md | the catalog and rules of the junction markings (rented range, milestone ^1025) |
 | ^1035–^1044 | docs/junctions.md | what a junction is and how it is ruled, the control, wait lines, arrows, holes, one hat each (rented range, milestone ^1025) |

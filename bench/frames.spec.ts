@@ -16,6 +16,7 @@ const MAPS = [
   { name: 'tiled map, 1000 cells (12000 nodes)', graph: () => tiledMap(1000) },
   { name: 'connected map, 250 cells (3000 nodes)', graph: () => connectedMap(250) },
   { name: 'connected map, 1000 cells (12000 nodes)', graph: () => connectedMap(1000) },
+  { name: 'connected map, 8000 cells (96000 nodes)', graph: () => connectedMap(8000) },
 ];
 
 /** Runs in the page: the times, in milliseconds. */
