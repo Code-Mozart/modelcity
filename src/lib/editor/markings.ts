@@ -110,15 +110,23 @@ function linked(a: Marking, b: Marking): Marking | null {
 /** The size of a cell of the grids of the ends and the boxes of lines (meters). */
 const LINE_CELL_M = 8;
 
-const endBoxOf = (m: Marking) => {
-  const ends = [m.pieces[0]!.P, m.pieces.at(-1)!.Q];
-  return {
-    x0: Math.min(...ends.map((e) => e.x)) - SAME_PLACE_M,
-    x1: Math.max(...ends.map((e) => e.x)) + SAME_PLACE_M,
-    y0: Math.min(...ends.map((e) => e.y)) - SAME_PLACE_M,
-    y1: Math.max(...ends.map((e) => e.y)) + SAME_PLACE_M,
-  };
-};
+/** The two ends of a line. */
+const endsOf = (m: Marking): Vec[] => [m.pieces[0]!.P, m.pieces.at(-1)!.Q];
+
+/** A box round a place, a little more than the tolerance in every direction. */
+const aroundEnd = (e: Vec) => ({
+  x0: e.x - 2 * SAME_PLACE_M,
+  x1: e.x + 2 * SAME_PLACE_M,
+  y0: e.y - 2 * SAME_PLACE_M,
+  y1: e.y + 2 * SAME_PLACE_M,
+});
+
+/** The numbers of the lines after `i` that have an end near an end of `here`, in order. */
+function laterNear(ends: Grid<number>, i: number, here: Marking): number[] {
+  const found = new Set<number>();
+  for (const e of endsOf(here)) for (const j of ends.near(aroundEnd(e))) if (j > i) found.add(j);
+  return [...found].sort((a, b) => a - b);
+}
 
 /**
  * Lines that meet end to end and have the same style are one line (^954: the dashes run on across
@@ -128,34 +136,21 @@ const endBoxOf = (m: Marking) => {
 function joined(markings: Marking[]): Marking[] {
   const lines: (Marking | null)[] = [...markings];
   const ends = new Grid<number>(LINE_CELL_M);
-  const put = (m: Marking, i: number) => {
-    for (const e of [m.pieces[0]!.P, m.pieces.at(-1)!.Q])
-      ends.add(i, { x0: e.x, x1: e.x, y0: e.y, y1: e.y });
-  };
+  const put = (m: Marking, i: number) =>
+    endsOf(m).forEach((e) => ends.add(i, { x0: e.x, x1: e.x, y0: e.y, y1: e.y }));
   markings.forEach(put);
-  for (let i = 0; i < lines.length; i++) {
-    for (let again = true; again && lines[i];) {
-      again = false;
-      const here = lines[i]!;
-      const box = (e: Vec) => ({
-        x0: e.x - 2 * SAME_PLACE_M,
-        x1: e.x + 2 * SAME_PLACE_M,
-        y0: e.y - 2 * SAME_PLACE_M,
-        y1: e.y + 2 * SAME_PLACE_M,
-      });
-      const candidates = new Set<number>();
-      for (const e of [here.pieces[0]!.P, here.pieces.at(-1)!.Q])
-        for (const j of ends.near(box(e))) if (j > i) candidates.add(j);
-      for (const j of [...candidates].sort((a, b) => a - b)) {
-        const other = lines[j];
-        const one = other && linked(here, other);
-        if (!one) continue;
-        [lines[i], lines[j], again] = [one, null, true];
-        put(one, i);
-        break;
-      }
+  /** Joins the line `i` with the first later one that links; whether it did. */
+  const joinOne = (i: number): boolean => {
+    for (const j of laterNear(ends, i, lines[i]!)) {
+      const one = lines[j] && linked(lines[i]!, lines[j]!);
+      if (!one) continue;
+      [lines[i], lines[j]] = [one, null];
+      put(one, i);
+      return true;
     }
-  }
+    return false;
+  };
+  for (let i = 0; i < lines.length; i++) while (lines[i] && joinOne(i));
   return lines.filter((m): m is Marking => m !== null);
 }
 
