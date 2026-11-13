@@ -1,6 +1,6 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import { add, fromAngle, mul, type Vec } from '../curves/vec';
-import { addEdge, addNode, emptyGraph, type Graph } from '../model/graph';
+import { DEFAULT_LANE, emptyGraph, type GEdge, type GNode, type Graph } from '../model/graph';
 
 /**
  * A kit for drawing junctions as a graph, for the testing ground of the junctions (^984): arms
@@ -8,16 +8,29 @@ import { addEdge, addNode, emptyGraph, type Graph } from '../model/graph';
  * is `(-sin h, cos h)`.
  */
 export class Sketch {
-  graph: Graph = emptyGraph();
+  // Plain lists that grow: a graph is made when asked for. (Adding to a graph copies it, so a map of
+  // 100k nodes would take minutes to draw, ^1216.)
+  private nodes: GNode[] = [];
+  private edges: GEdge[] = [];
+
+  get graph(): Graph {
+    return { ...emptyGraph(), nodes: this.nodes, edges: this.edges };
+  }
 
   node(at: Vec, th: number): number {
-    const r = addNode(this.graph, { x: at.x, y: at.y, th });
-    this.graph = r.graph;
-    return r.id;
+    const id = this.nodes.length;
+    this.nodes.push({ id, x: at.x, y: at.y, th });
+    return id;
   }
 
   edge(from: number, to: number) {
-    this.graph = addEdge(this.graph, from, to, null);
+    this.edges.push({
+      id: this.edges.length,
+      start: from,
+      end: to,
+      radius: null,
+      lane: DEFAULT_LANE,
+    });
   }
 
   /** Nodes joined in a row. */

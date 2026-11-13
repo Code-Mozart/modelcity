@@ -1,6 +1,6 @@
 import { dragPress, emptyPress } from './press';
 import * as ops from './ops';
-import { derivedNodes } from './derived';
+import { GraphWindow } from './window.svelte';
 import { dropOf } from './drop';
 import { placedAt, snapBase, snapFor, snapPreview } from './snapping';
 import { pointsAround } from './nearby';
@@ -83,13 +83,9 @@ export class Editor {
   drawing = $derived(this.mode === 'draw');
   private hoverRaw = $derived<Hover | null>(this.hoverNow());
   readonly pins = new Pins((id) => nodeOf(this.graph, id) !== undefined);
-  private base = $derived(
-    snapBase(
-      this.press ? this.press.undo.graph : this.graph,
-      this.press,
-      this.drawing ? this.active : null,
-    ),
-  );
+  /** The graph the pointer snaps to: while a node is pressed, the graph before it moved. */
+  private snapGraph = $derived(this.press ? this.press.undo.graph : this.graph);
+  private base = $derived(snapBase(this.snapGraph, this.press, this.drawing ? this.active : null));
   /** What the pointer is pulled to while it places or moves a node (^101): derived like the hover. */
   private snapArgs = $derived({
     info: this.lastInfo,
@@ -113,8 +109,7 @@ export class Editor {
   /** The chains of the graph, the shape the curve code and the drawing work on (^106). */
   chains = $derived(chainsOf(this.graph));
   edges = $derived(this.chains.map((c) => c.edges));
-  /** The derived nodes of the graph (^822, ^823), never stored. */
-  derived = $derived(derivedNodes(this.graph));
+  readonly view = new GraphWindow(() => this.graph);
   /** The skeleton of all roads, for the camera bounds (^37, ^62). */
   anchors = $derived(skeletonAnchors(this.chains));
   cursor = $derived(cursorOf(this.hover, this.drawing));
@@ -315,7 +310,8 @@ export class Editor {
   private hoverNow(): Hover | null {
     const info = this.lastInfo;
     if (this.press || !info || this.viewing) return null;
-    const hits = { handles: this.handles(info.scale), chains: this.chains, derived: this.derived };
+    const { chains, view } = this;
+    const hits = { handles: this.handles(info.scale), chains, derived: view.derived };
     return hoverAt(this.snapshot(), hits, info, this.drawing);
   }
 

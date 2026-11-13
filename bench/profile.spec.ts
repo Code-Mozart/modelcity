@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { tiledMap } from '../src/lib/testing/samples';
+import { connectedMap, tiledMap } from '../src/lib/testing/samples';
 
 interface Profile {
   nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[];
@@ -27,7 +27,9 @@ function topOf(profile: Profile): string {
 test('profile of an edit', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => window.__modelcity?.session.ready);
-  const graph = tiledMap(Number(process.env.CELLS ?? 120));
+  const graph = (process.env.MAP === 'connected' ? connectedMap : tiledMap)(
+    Number(process.env.CELLS ?? 120),
+  );
   await page.evaluate(async (g) => {
     window.__modelcity!.editor.graph = g;
     await new Promise((r) => requestAnimationFrame(r));

@@ -1,6 +1,6 @@
 import { test } from '@playwright/test';
 import { angleGround } from '../src/lib/testing/angleGround';
-import { tiledMap } from '../src/lib/testing/samples';
+import { connectedMap, tiledMap } from '../src/lib/testing/samples';
 import { tGround } from '../src/lib/testing/tGround';
 import type { Graph } from '../src/lib/model/graph';
 
@@ -14,6 +14,8 @@ const MAPS = [
   { name: 'angle ground (648 nodes)', graph: () => angleGround() },
   { name: 'tiled map, 250 cells (3000 nodes)', graph: () => tiledMap(250) },
   { name: 'tiled map, 1000 cells (12000 nodes)', graph: () => tiledMap(1000) },
+  { name: 'connected map, 250 cells (3000 nodes)', graph: () => connectedMap(250) },
+  { name: 'connected map, 1000 cells (12000 nodes)', graph: () => connectedMap(1000) },
 ];
 
 /** Runs in the page: the times, in milliseconds. */
@@ -56,7 +58,7 @@ async function measure(g: Graph) {
 test('frame times', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => window.__modelcity?.session.ready);
-  for (const map of MAPS) {
+  for (const map of MAPS.filter((m) => new RegExp(process.env.ONLY ?? '').test(m.name))) {
     const r = await page.evaluate(measure, map.graph());
     console.log(
       `${map.name}: pan ${r.pan.toFixed(0)} ms/frame (two frames: 33 ms is 60 FPS), pointer move ${r.hover.toFixed(0)} ms, edit ${r.edit.toFixed(0)} ms`,

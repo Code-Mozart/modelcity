@@ -17,6 +17,7 @@
   import { followingTower } from './editor/sharedRadius';
   import { barsOf, towersOf } from './editor/towers';
   import { withDerived } from './editor/derived';
+  import { boxOfKey, windowOf } from './editor/window.svelte';
   import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
@@ -67,12 +68,19 @@
     untrack(() => camera.setAnchors(anchors));
   });
 
+  /** The window on the map (^1216): the view with room round it, in steps, so that panning a little does not make the road again. A text, so that an equal window is not a new value. */
+  const windowKey = $derived(windowOf(camera.view, camera.size));
+  $effect(() => {
+    const key = windowKey;
+    untrack(() => (editor.view.box = boxOfKey(key)));
+  });
+
   /** The derived nodes, the graph with them in it, and the towers and bars of that, all derived from the graph (^350, ^822). */
-  const derivedAll = $derived(editor.derived);
-  const seen = $derived(withDerived(editor.graph, derivedAll));
+  const derivedAll = $derived(editor.view.derived);
+  const seen = $derived(withDerived(editor.view.shown, derivedAll));
   const bars = $derived(barsOf(seen));
   /** The hulls of the segments, the road surface round them (^945) and, while the debug layer is on, the hulls and corners (^925). */
-  const allHulls = $derived(hullsOf(editor.graph));
+  const allHulls = $derived(hullsOf(editor.view.shown));
   /** The lane changes (extensions and merges, ^1056), the gores between their lanes (^1065) and the arrows of the lanes that end (^1029). */
   const changes = $derived(laneChangesOf(seen));
   const gores = $derived(goresOf(seen, changes, allHulls));
@@ -85,14 +93,14 @@
   /** The surface with its tiny holes patched (^1042). */
   const surface = $derived(patched(rawSurface));
   /** What can be said about each lane in (^1101): the give-way lines (^1074, ^1075) and the arrows where a turn is missing (^1076). */
-  const facts = $derived(laneFactsOf(editor.graph));
+  const facts = $derived(laneFactsOf(editor.view.shown));
   const arrows = $derived([...laneArrows(seen, changes), ...incompleteArrows(facts)]);
   /** The hull round what the lane in that the pointer is on meets, in the debug layer (^1102). */
   const hoveredHull = $derived.by(() => {
     const h = editor.hover;
     const node = debug && h?.kind === 'handle' && h.handle.type === 'node' ? h.handle.id : null;
     const f = facts.find((x) => x.node.id === node);
-    return f ? laneHull(editor.graph, f) : [];
+    return f ? laneHull(editor.view.shown, f) : [];
   });
   const hulls = $derived(
     debug
@@ -100,7 +108,7 @@
           hulls: allHulls.map((h) => h.hull),
           corners: cornersOf(allHulls).map((c) => c.at),
           dots: dotsOf(surface, walk),
-          signs: segmentSigns(editor.graph, seen),
+          signs: segmentSigns(editor.view.shown, seen),
           holes: holesOf(rawSurface),
           junction: hoveredHull,
         }
@@ -112,7 +120,7 @@
       physical,
       extra: [...laneChangeLines(seen, changes), ...gores.flatMap((w) => w.markings)],
       surface,
-      inside: junctionEdgeIds(editor.graph),
+      inside: junctionEdgeIds(editor.view.shown),
     }),
   );
   /** Everything painted on the road surface (^949, ^1029). */
