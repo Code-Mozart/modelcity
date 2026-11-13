@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { emptyGraph, type Graph } from '../model/graph';
+import { type Graph } from '../model/graph';
 import { graphOf } from '../testing/graphHelpers';
-import { dissolveNodes } from './dissolve';
+import { collapseNodes } from './dissolve';
 
 const R = 10;
 const c = Math.SQRT1_2;
@@ -32,10 +32,10 @@ const straight = (y = 0, th = 0): Graph =>
     ],
   );
 
-const run = (g: Graph, keep: number[] = []) =>
-  dissolveNodes(emptyGraph(), g, { keep, selected: [], leaving: [] });
+/** The graph with the nodes `ids` collapsed (default: all of them, as if all were selected). */
+const run = (g: Graph, ids: number[] = g.nodes.map((n) => n.id)) => collapseNodes(g, ids);
 
-describe('nodes without an effect dissolve (^829)', () => {
+describe('collapsing nodes without an effect (^829, ^1064)', () => {
   it('a node straight on dissolves (^891, figure ^814)', () => {
     const g = run(straight());
     expect(g.nodes).toHaveLength(2);
@@ -70,27 +70,15 @@ describe('what is the same curve (^891, ^892)', () => {
   });
 });
 
-describe('when and which nodes dissolve (^893, ^892)', () => {
-  it('a node drawn from stays (^893)', () => {
-    expect(run(straight(), [1]).nodes).toHaveLength(3);
+describe('which nodes collapse (^1064, ^893)', () => {
+  it('only the selected ones: a node that is not selected stays (^1064)', () => {
+    expect(run(straight(), [0, 2]).nodes).toHaveLength(3);
+    expect(run(straight(), [1]).nodes).toHaveLength(2);
   });
 
-  it('a selected node stays unless the operation moved it (^893)', () => {
+  it('nothing collapses by itself: no selection, no change', () => {
     const g = straight();
-    const stay = { keep: [], selected: [1], leaving: [] };
-    expect(dissolveNodes(g, g, { ...stay, leaving: [1] }).nodes).toHaveLength(3);
-    const moved = { ...g, nodes: g.nodes.map((n) => (n.id === 1 ? { ...n, y: 0.001 } : n)) };
-    expect(dissolveNodes(g, moved, stay).nodes).toHaveLength(2);
-  });
-
-  it('a node that was drawn from and is not any more is looked at, though nothing changed (^893)', () => {
-    const g = straight();
-    expect(dissolveNodes(g, g, { keep: [], selected: [], leaving: [1] }).nodes).toHaveLength(2);
-  });
-
-  it('a node the operation did not touch stays: nothing dissolves on load (^893)', () => {
-    const g = straight();
-    expect(dissolveNodes(g, g)).toBe(g);
+    expect(collapseNodes(g, [])).toBe(g);
   });
 });
 

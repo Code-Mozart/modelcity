@@ -157,7 +157,7 @@ export const factsOf = (ed: Editor): Facts => ({
 /** Do the input of a control with the pointer where the scenario has it. */
 function press(ed: Editor, c: C, s: Scenario) {
   const input = Array.isArray(c.input) ? c.input[0]! : c.input;
-  if (input.kind === 'key') return ed.key(input.label === 'Esc' ? 'Escape' : 'Delete', KEYS);
+  if (input.kind === 'key') return ed.key(KEY_OF[input.label] ?? 'Delete', KEYS);
   if (input.kind !== 'mouse') throw new Error('a key or the mouse');
   const mods = { shift: !!input.shift, alt: !!input.alt };
   const from = where(s, ed);
@@ -173,6 +173,9 @@ function press(ed: Editor, c: C, s: Scenario) {
   ed.pointerUp();
 }
 
+/** The key a key input of the tables presses (^783); the others are Del. */
+const KEY_OF: Record<string, string> = { Esc: 'Escape', C: 'c' };
+
 /** Whether an input changed anything: the map, the selection, the history, the mode or the road drawn. */
 export function effect(ed: Editor, c: C, s: Scenario): boolean {
   const was = {
@@ -181,7 +184,10 @@ export function effect(ed: Editor, c: C, s: Scenario): boolean {
     steps: ed.timeline.history.past.length,
     phase: ed.phase,
     active: ed.active,
+    used: ed.used?.seq,
   };
+  // The collapse control is on whenever something is selected (^1200), though maybe no node can collapse: using it is its effect.
+  const counts = c.id === 'collapse-selected';
   press(ed, c, s);
   const now = [...ed.selection].sort().join();
   return (
@@ -189,7 +195,8 @@ export function effect(ed: Editor, c: C, s: Scenario): boolean {
     now !== was.selection ||
     ed.timeline.history.past.length !== was.steps ||
     ed.phase !== was.phase ||
-    ed.active !== was.active
+    ed.active !== was.active ||
+    (counts && ed.used?.seq !== was.used)
   );
 }
 

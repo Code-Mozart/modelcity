@@ -13,7 +13,7 @@ import {
   handle,
   type C,
 } from './facts';
-import { DEL, ESC, mouse } from './inputs';
+import { DEL, ESC, KEY_C, mouse } from './inputs';
 
 /** The void of select mode and the selection box (^393, ^684, ^495, ^685). */
 export const SELECT_HEAD: C[] = [
@@ -135,5 +135,14 @@ export const SELECT_TAIL: C[] = [
     on: select,
     listens: (f) => some(f) || isNode(f) || onCurve(f),
     says: (f) => (some(f) ? 'delete selected' : null),
+  },
+  // Something selected: collapse its nodes that have no effect (^1064, ^1200).
+  {
+    hat: 1200,
+    input: KEY_C,
+    id: 'collapse-selected',
+    on: select,
+    listens: some,
+    says: (f) => (some(f) ? 'collapse selected nodes without an effect' : null),
   },
 ];

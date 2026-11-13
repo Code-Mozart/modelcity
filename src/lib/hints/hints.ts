@@ -22,6 +22,7 @@ export type ControlId =
   | 'select-lane'
   | 'deselect-all'
   | 'delete-selected'
+  | 'collapse-selected'
   | 'undo'
   | 'redo'
   | 'view'

@@ -27,5 +27,6 @@ export const hint = (input: Input | Input[], text: string, id?: ControlId): Hint
 
 export const ESC: Input = { kind: 'key', label: 'Esc' };
 export const ENTER: Input = { kind: 'key', label: 'Enter' };
+export const KEY_C: Input = { kind: 'key', label: 'C' };
 export const DEL: Input = { kind: 'key', label: 'Del' };
 export const keys = (...labels: string[]): Input => ({ kind: 'keys', labels });

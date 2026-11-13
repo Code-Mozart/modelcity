@@ -44,24 +44,26 @@ describe('radius points in draw mode (^278)', () => {
   });
 });
 
-describe('a node inserted by a split (^276, ^298, changed by ^829)', () => {
-  it('a click on it keeps it as the node being drawn from, and it dissolves when drawing ends: it has no effect', () => {
+describe('a node inserted by a split (^276, ^298, changed by ^1064)', () => {
+  it('a click on it keeps it as the node being drawn from: nothing dissolves by itself', () => {
     const ed = bend();
     const h = middle(ed);
     click(ed, h.x, h.y);
     expect(ed.graph.nodes).toHaveLength(3);
     click(ed, h.x, h.y);
     expect(ed.phase).toBe('draw');
-    expect(ed.graph.nodes).toHaveLength(2);
-    expect(ed.graph.edges).toHaveLength(1);
+    expect(ed.graph.nodes).toHaveLength(3);
   });
 
-  it('Esc finishing it dissolves it as well', () => {
+  it('Esc finishing it leaves it, and the control collapses it: it has no effect', () => {
     const ed = bend();
     const h = middle(ed);
     click(ed, h.x, h.y);
     click(ed, h.x, h.y);
     ed.key('Escape');
+    expect(ed.graph.nodes).toHaveLength(3);
+    ed.selection = ed.graph.nodes.filter((n) => Math.abs(n.x - h.x) < 0.5).map((n) => n.id);
+    ed.key('c');
     expect(ed.graph.nodes).toHaveLength(2);
   });
 

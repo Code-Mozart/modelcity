@@ -69,6 +69,7 @@ The review table of the project owner (`docs/please-remove-me.md`, removed), wit
 | = ^684 | select mode | mouse over void & something selected | LMB or Esc | deselect all | deselect all | control hints panel | yes |
 | = ^686 | select mode | mouse over node, control point or segment & something selected | Esc | deselect all | deselect all | control hints panel | yes |
 | = ^687 | select mode | something selected | Del | delete selected | delete nodes | control hints panel | yes, but it shouldn't |
+| = ^1200 | select mode | something selected | C | collapse selected nodes without an effect | collapse nodes | control hints panel | no |
 | = ^417 | select mode | something selected | S | pin snap suggestions | pin snap suggestions | control hints panel | no |
 | = ^721 | select mode | nothing selected & some snap suggestions pinned | S | unpin all snap suggestions | pin snap suggestions | control hints panel | no |
 | = ^488 | select mode | node hovered | LMB drag | move node | move nodes | control hints panel | no |
@@ -144,6 +145,7 @@ Found by the sweep of the code (the hints, the key and pointer dispatch, the mod
 | ^685 | select mode, the void, something selected | `Shift` + `LMB` drag | add to selection (^682) | `Shift`+`LMB` drag: add to selection | unit `editor/selection.test` (strong), `editor/controls.test` (strong), `editor/modes.test` (strong) |
 | ^686 | select mode, something selected | `Esc` | deselect all (^557) | `Esc`: deselect all (^218) | unit `editor/branchSelect.test` (weak), `editor/controls.test` (weak), `editor/editor.test` (weak) |
 | ^687 | any mode, something selected | `Del` or `Backspace` | ^434 | `Del`: delete selected | unit `editor/controls.test` (weak), `editor/editor.test` (weak), `editor/modes.test` (weak) |
+| ^1200 | select mode, something selected | `C` | collapse the selected nodes that have no effect (^1064): one history step | `C`: collapse selected nodes without an effect | unit `editor/dissolveEditor.test` (strong), `editor/controls.test` (weak) |
 | = ^757 | select mode, nothing selected, pointer on a node | `Del` | delete the hovered node (operation ^434; milestone ^914) | `Del`: delete node | n/a | the history step is `delete node` | unit `editor/deleteHovered.test` |
 | ^688 | select mode, pointer on a node, something selected | `Shift` + `LMB` click | add to selection (^682); deselect (^683) | `Shift`+`LMB`: select or deselect | unit `editor/controls.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
 | ^689 | select mode, pointer on a node, something selected | `Alt` + `Shift` + `LMB` click | select branch (^487); deselect (^683) | `Alt`+`Shift`+`LMB`: add branch to selection (or deselect branch) | unit `editor/branchSelect.test` (strong), `editor/editor.test` (strong), `editor/extend.test` (strong) |
