@@ -38,6 +38,16 @@ The pipeline now grows about linearly with the number of nodes, but an edit stil
 
 The times of a frame are for two painted frames, so 33 ms is the display's 60 FPS. Before this milestone the angle ground took 5085 ms to clip the lines alone (in node) and 600 ms for an edit in the browser, and a map of 3000 nodes 8785 ms.
 
+**A connected network is worse than isolated cells (^1212)**, and it is the shape of a real map. `MAP=connected bun run bench` (node, ms), after ^1211 and ^1213:
+
+| Map | surface | holes patched | lines clipped | derived nodes | lane facts |
+| --- | --- | --- | --- | --- | --- |
+| 648 nodes | 131 | 16 | 147 | 12 | 7 |
+| 3000 nodes | 805 | 117 | 1113 | 75 | 37 |
+| 12000 nodes | 4097 | 444 | 7134 | 191 | 180 |
+
+Before ^1211 the holes alone took 5023 ms at 648 nodes. What is left grows faster than the map (the ray of the point-in-surface test is as long as the loop is wide, and a connected network has one huge loop), and only deriving by region (^941: tiles with a margin, the loops joined at the seams) takes that out: an edit then costs what it touches. The graph edits themselves (copying the arrays, ^934) are below 1% of an edit and wait until the stages are local.
+
 Panning and moving the pointer no longer grow with the map (^939, ^940). Ideas, in the order of what they would give: **^941** (only what changed is derived again, by a region of the map, so that an edit costs what the edit touches and not the map: the union, the lane facts and the clip are all per region), a cheaper union (the cutting of all pieces by each other is the bulk of the surface).
 
 
