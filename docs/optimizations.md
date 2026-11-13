@@ -49,6 +49,15 @@ The times of a frame are for two painted frames, so 33 ms is the display's 60 FP
 
 Before ^1211 the holes alone took 5023 ms at 648 nodes. What is left grows faster than the map (the ray of the point-in-surface test is as long as the loop is wide, and a connected network has one huge loop), and only deriving by region (^941: tiles with a margin, the loops joined at the seams) takes that out: an edit then costs what it touches. The graph edits themselves (copying the arrays, ^934) are below 1% of an edit and wait until the stages are local.
 
+**One node moved on the connected map (`bun scripts/benchEdit.ts [cells]`, node, ms, the surface and markings pipeline), before and after ^1214:**
+
+| Map | cold | edit before | edit after |
+| --- | --- | --- | --- |
+| 3000 nodes | 2588 (before) / about 3000 (after) | 2443 | about 900 |
+| 12000 nodes | about 12500 (before) / 15946 (after) | about 12500 | 5700 |
+
+An edit is now about a third of a cold run and no longer grows with the lines clipped, but it still grows with the map: what is left is the bookkeeping that finds out what did not change (the keys of every piece, the grids, `withoutCovered`, the derived nodes, the lane facts), all linear in the map. A cold run got slower by the keys (about 20%). To make an edit cost what it touches, the graph edit itself must say what changed (the changed segments and nodes) so that none of those stages has to look at the rest; that is the next step, and `bun run identity` (all 411 views identical to `main`, pixel for pixel, after ^1211 to ^1214) is the check for it.
+
 Panning and moving the pointer no longer grow with the map (^939, ^940). Ideas, in the order of what they would give: **^941** (only what changed is derived again, by a region of the map, so that an edit costs what the edit touches and not the map: the union, the lane facts and the clip are all per region), a cheaper union (the cutting of all pieces by each other is the bulk of the surface).
 
 
