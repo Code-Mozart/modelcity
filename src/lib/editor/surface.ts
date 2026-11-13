@@ -4,7 +4,7 @@ import type { Piece } from '../curves/types';
 import { inscribedRadius } from '../curves/area';
 import { LANE_WIDTH_M } from '../curves/lane';
 import { pointOn } from '../curves/piece';
-import { insideOf, unionOutline, type Loop } from '../curves/union';
+import { insideOf, unionOutline, UnionMemory, type Loop } from '../curves/union';
 import { Grid } from '../curves/grid';
 import { boxAround, type Box } from '../curves/hull';
 import type { Vec } from '../curves/vec';
@@ -16,7 +16,10 @@ export const hullPieces = (h: Hull): Piece[] => [...h.sides[0], ...h.sides[1], .
 
 /** The road surface (^945): the outline of the union of the hulls of all segments and of the `extra` loops (the gores, ^1065), as closed loops of pieces. */
 export const surfaceFrom = (hulls: EdgeHull[], extra: Loop[] = []): Loop[] =>
-  unionOutline([...hulls.map((h) => hullPieces(h.hull)), ...extra]);
+  unionOutline([...hulls.map((h) => hullPieces(h.hull)), ...extra], remembered);
+
+/** What the union remembers from one edit to the next (^941). */
+const remembered = new UnionMemory();
 
 export const surfaceOf = (g: Graph): Loop[] => surfaceFrom(hullsOf(g));
 
