@@ -36,6 +36,7 @@ import {
   type Frame,
   type Palette,
 } from './paint';
+import { shownOf, type Shown } from './roadsOnScreen';
 import type { Band } from '../editor/selection';
 import type { Pointer } from '../editor/proximity';
 import { drawOutlines } from './outline';
@@ -265,9 +266,9 @@ const isFocused = (h: RoadHandle, focus: Focus | null) =>
     (v, n) => v === [focus.road, focus.type, focus.i, focus.k, focus.t][n],
   );
 
-function drawHandles(f: Frame, scene: Scene, active: boolean[][], pal: Palette) {
+function drawHandles(f: Frame, scene: Scene, { active, on }: Shown, pal: Palette) {
   for (const h of scene.handles) {
-    if (h.type === 'node') continue;
+    if (h.type === 'node' || !on[h.road]) continue;
     const segs = active[h.road] ?? [];
     const shown = h.type === 'head' ? arrowShown(segs, h.i) : segs[h.i] === true;
     // The point that is hovered or dragged is as large as a selected node (^230).
@@ -309,8 +310,9 @@ function drawSurface(f: Frame, scene: Scene, pal: Palette) {
 }
 
 /** The nodes, real ones with their state and derived ones as hollow circles, as large and as coloured, no arrow (^821, ^805). */
-function drawAllNodes(f: Frame, scene: Scene, active: boolean[][], pal: Palette) {
+function drawAllNodes(f: Frame, scene: Scene, { active, on }: Shown, pal: Palette) {
   scene.roads.forEach((road, i) => {
+    if (!on[i]) return;
     const turning = scene.turning?.road === i ? scene.turning : null;
     const state = {
       active: active[i]!,
@@ -320,7 +322,7 @@ function drawAllNodes(f: Frame, scene: Scene, active: boolean[][], pal: Palette)
     };
     drawNodes(f, road, state, pal);
   });
-  const real = scene.roads.flatMap((r) => r.path.nodes);
+  const real = scene.roads.flatMap((r, i) => (on[i] ? r.path.nodes : []));
   for (const d of shownDerived(f, scene.derived, real, NODE_DOT_PX))
     ring(f.ctx, toScreen(f, d), NODE_DOT_PX, { color: pal.ink, width: DERIVED_LINE_PX });
 }
@@ -333,22 +335,30 @@ function drawSnapPoints(f: Frame, scene: Scene, pal: Palette) {
   }
 }
 
+/** The roads that reach the screen, each with the scaffolds that are shown (^939). */
+function drawRoads(f: Frame, scene: Scene, { active, on }: Shown, pal: Palette) {
+  scene.roads.forEach((road, i) => {
+    if (!on[i]) return;
+    // A road drawn before leaves its caps and joins for the next, also one not drawn (^939).
+    if (i > 0) [f.ctx.lineCap, f.ctx.lineJoin] = ['round', 'round'];
+    const selected = road.edges.map((_, k) =>
+      scene.selectedSegments.some((s) => s.road === i && s.i === k),
+    );
+    const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;
+    drawRoad(f, road, { active: active[i]!, selected, rad }, pal);
+  });
+}
+
 /**
  * Two levels of gizmo (^60): the skeleton (curves and node dots) is always drawn; the scaffold of
  * a segment (everything else) only while it is needed, all or nothing, see `scaffold.ts`.
  * Draw all roads with the scaffolds that are needed and the current hover feedback. */
 export function drawScene(f: Frame, scene: Scene, pal: Palette) {
-  const active = shownFlags(scene);
-  const selected = scene.roads.map((r, road) =>
-    r.edges.map((_, k) => scene.selectedSegments.some((s) => s.road === road && s.i === k)),
-  );
+  const shown = shownOf(f, scene, shownFlags(scene));
   drawSurface(f, scene, pal);
   if (scene.viewing) return;
-  scene.roads.forEach((road, i) => {
-    const rad = scene.focus?.type === 'rad' && scene.focus.road === i ? scene.focus : null;
-    drawRoad(f, road, { active: active[i]!, selected: selected[i]!, rad }, pal);
-  });
-  drawHandles(f, scene, active, pal);
+  drawRoads(f, scene, shown, pal);
+  drawHandles(f, scene, shown, pal);
   drawHover(f, scene.hover, scene.drawing, pal);
   if (scene.tower) drawTowerLine(f, scene.tower, pal);
   drawSnap(f, scene.snap, pal);
@@ -361,7 +371,7 @@ export function drawScene(f: Frame, scene: Scene, pal: Palette) {
   drawBars(f, barsOn(scene.bars, scene.towers, towers), pal);
   // The arrows of what the snap takes its heading from are under the dots, the snap points of what it is made of over them (^795, ^803).
   for (const o of scene.headingFrom) drawArrow(f, { ...o.at, th: o.th }, pal.turquoise);
-  drawAllNodes(f, scene, active, pal);
+  drawAllNodes(f, scene, shown, pal);
   if (scene.hulls) drawHulls(f, scene.hulls, pal);
   for (const o of scene.snapFrom) drawSnapPoint(f, o.at, pal);
   // The outline of the hovered segment (or branch) is on top of everything (^99).

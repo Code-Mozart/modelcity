@@ -52,6 +52,8 @@ describe('a derived node under a real one is hidden (^899)', () => {
   ];
   it('when their circles overlap on the screen, which depends on the zoom', () => {
     expect(shownDerived(frame(10), derived, real, 5.5)).toEqual([derived[1]]);
-    expect(shownDerived(frame(100), derived, real, 5.5)).toEqual(derived);
+    expect(shownDerived(frame(50), derived, real, 5.5)).toEqual(derived);
+    // A derived node off the canvas is not looked at and not drawn (^939).
+    expect(shownDerived(frame(500), derived, real, 5.5)).toEqual([derived[0]]);
   });
 });

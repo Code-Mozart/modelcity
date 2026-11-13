@@ -1,6 +1,7 @@
 import { DASH_GAP_M, DASH_M, MARKING_MIN_PX, MARKING_WIDTH_M } from '../curves/lane';
 import type { Marking } from '../editor/markings';
-import { strokeChain, type Frame, type Palette, type Stroke } from './paint';
+import { boxesMeet } from '../curves/hull';
+import { boxOfPieces, strokeChain, viewBox, type Frame, type Palette, type Stroke } from './paint';
 
 /** Logical markings (^976): a dash and the gap after it are equal, in pixels, and so is the width. The same for every road style and zoom. */
 export const LOGICAL_DASH_PX = 10;
@@ -33,8 +34,16 @@ export function markingStroke(
 
 /** The lane markings on the surface (^949 to ^955): all white for now (^953). */
 export function drawMarkings(f: Frame, markings: Marking[], pal: Palette, physical: boolean) {
+  // Lines off the screen are not stroked (^939); a stroke reaches a few pixels over its box.
+  const shown = viewBox(f, 20 / f.view.scale);
   for (const m of markings) {
+    if (!boxesMeet(boxOfPieces(m.pieces), shown)) continue;
     const stroke = markingStroke(m.kind, f.view.scale, pal['marking-white'], physical);
     strokeChain(f, m.pieces, stroke);
+  }
+  // Whatever is drawn after them (the give-way lines) takes the caps and joins of the last line (^939): as if it had been stroked, also when it is off the screen.
+  if (markings.length) {
+    f.ctx.lineCap = 'butt';
+    f.ctx.lineJoin = 'round';
   }
 }

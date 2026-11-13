@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.56.0",
-  "moniker": "Collapse by control",
+  "version": "0.58.0",
+  "moniker": "Performance",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,6 +13,9 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "e2e": "playwright test",
+    "bench": "bun scripts/bench.ts",
+    "identity": "bun scripts/identity.ts",
+    "frames": "playwright test -c playwright.bench.config.ts",
     "shots": "playwright test -c playwright.shots.config.ts",
     "ci": "bun run lint && bun run check && bun run test && bun run build",
     "prepare": "git config core.hooksPath .githooks"

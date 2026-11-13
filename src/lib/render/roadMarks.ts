@@ -9,7 +9,7 @@ import {
   type GlyphStroke,
 } from './arrowGlyph';
 import { LOGICAL_DASH_PX, LOGICAL_WIDTH_PX, drawMarkings } from './markings';
-import { segment, toScreen, type Frame, type Palette } from './paint';
+import { onScreen, segment, toScreen, viewBox, type Frame, type Palette } from './paint';
 
 /** The length of a physical arrow (meters, Zeichen 297: about 5 m) and how wide a lane may be for it to fit. */
 const ARROW_LENGTH_M = 5;
@@ -84,7 +84,9 @@ function anchorBack(scale: number, physical: boolean, along: number): number {
 function drawArrows(f: Frame, arrows: LaneArrow[], pal: Palette, physical: boolean) {
   const { ctx } = f;
   const scale = f.view.scale;
+  const seen = viewBox(f, 20 + 20 / f.view.scale);
   for (const a of arrows) {
+    if (!onScreen(seen, a.at)) continue;
     const { along, across, shown } = arrowSize(a.width, scale, physical);
     if (!shown) continue;
     const back = anchorBack(f.view.scale, physical, along);
@@ -112,7 +114,10 @@ function drawWaitLines(f: Frame, lines: WaitLine[], pal: Palette, physical: bool
   const dash = physical
     ? [WAIT_DASH_M * scale, WAIT_GAP_M * scale]
     : [LOGICAL_DASH_PX, LOGICAL_DASH_PX];
+  // Marks off the screen are not drawn (^939): a mark is within 20 m of its node and a few pixels wide.
+  const shown = viewBox(f, 20 + 20 / f.view.scale);
   for (const l of lines) {
+    if (!onScreen(shown, l.at)) continue;
     const middle = before(f, l.at, l.th, width / 2);
     const across = (l.width * scale) / 2;
     const a = l.th + f.view.rot + Math.PI / 2;

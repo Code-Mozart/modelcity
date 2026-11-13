@@ -1,4 +1,12 @@
-import { rotateVec, worldToScreen, type Point, type Size, type View } from '../camera/view';
+import {
+  rotateVec,
+  screenToWorld,
+  worldToScreen,
+  type Point,
+  type Size,
+  type View,
+} from '../camera/view';
+import { boxAround, boxesMeet, type Box } from '../curves/hull';
 import type { Piece } from '../curves/types';
 
 /** Canvas 2D primitives in screen pixels, plus the world-to-screen mapping of a frame. */
@@ -133,12 +141,45 @@ function traceLoop(f: Frame, loop: Piece[]) {
 export function fillLoops(f: Frame, loops: Piece[][], fill: string, edge: Stroke | null) {
   const { ctx } = f;
   ctx.beginPath();
-  for (const loop of loops) traceLoop(f, loop);
+  // Only the loops that reach the screen: one that does not cannot change the fill of what is shown, for the even-odd rule counts per loop (^939).
+  const shown = viewBox(f, edge ? edge.width / f.view.scale : 0);
+  for (const loop of loops) if (boxesMeet(boxOfPieces(loop), shown)) traceLoop(f, loop);
   ctx.lineJoin = 'round';
   if (edge) applyStroke(ctx, { color: edge.color, width: 2 * edge.width });
   ctx.fillStyle = fill;
   ctx.fill('evenodd');
 }
+
+/** The world box that the screen shows, with `extra` meters round it (a stroke or a mark reaches over the edge) (^939). */
+export function viewBox(f: Frame, extraM = 0): Box {
+  const { width, height } = f.size;
+  const corners = [
+    { x: 0, y: 0 },
+    { x: width, y: 0 },
+    { x: 0, y: height },
+    { x: width, y: height },
+  ].map((c) => screenToWorld(f.view, f.size, c));
+  const xs = corners.map((c) => c.x);
+  const ys = corners.map((c) => c.y);
+  return {
+    x0: Math.min(...xs) - extraM,
+    x1: Math.max(...xs) + extraM,
+    y0: Math.min(...ys) - extraM,
+    y1: Math.max(...ys) + extraM,
+  };
+}
+
+/** The box of a bag of pieces, found once for each (loops and lines are the same objects frame after frame) (^939). */
+const boxes = new WeakMap<object, Box>();
+export function boxOfPieces(key: Piece[]): Box {
+  let box = boxes.get(key);
+  if (!box) boxes.set(key, (box = boxAround(key)));
+  return box;
+}
+
+/** Whether a place is on the screen, or within `extraM` meters of it. */
+export const onScreen = (view: Box, at: Point) =>
+  at.x >= view.x0 && at.x <= view.x1 && at.y >= view.y0 && at.y <= view.y1;
 
 /** Stroke one piece. */
 export const strokePiece = (f: Frame, piece: Piece, s: Stroke) => strokeChain(f, [piece], s);

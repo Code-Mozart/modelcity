@@ -49,16 +49,43 @@ export function nodeOf(g: Graph, id: number): GNode | undefined {
   return index.get(id);
 }
 
-export const edgeOfId = (g: Graph, id: number): GEdge | undefined =>
-  g.edges.find((e) => e.id === id);
+/** The segments of a graph by number and by node, found once per graph (^938): graphs are never changed, so the index never goes stale. */
+interface EdgeIndex {
+  byId: Map<number, GEdge>;
+  into: Map<number, GEdge[]>;
+  out: Map<number, GEdge[]>;
+  at: Map<number, GEdge[]>;
+}
+const indexOfEdges = new WeakMap<Graph, EdgeIndex>();
+
+function edgeIndex(g: Graph): EdgeIndex {
+  let index = indexOfEdges.get(g);
+  if (index) return index;
+  index = { byId: new Map(), into: new Map(), out: new Map(), at: new Map() };
+  const push = (m: Map<number, GEdge[]>, id: number, e: GEdge) => {
+    const list = m.get(id);
+    if (list) list.push(e);
+    else m.set(id, [e]);
+  };
+  for (const e of g.edges) {
+    index.byId.set(e.id, e);
+    push(index.into, e.end, e);
+    push(index.out, e.start, e);
+    push(index.at, e.start, e);
+    if (e.end !== e.start) push(index.at, e.end, e);
+  }
+  indexOfEdges.set(g, index);
+  return index;
+}
+
+export const edgeOfId = (g: Graph, id: number): GEdge | undefined => edgeIndex(g).byId.get(id);
 
 const nextId = (items: { id: number }[]) => items.reduce((m, x) => Math.max(m, x.id), -1) + 1;
 
-/** The edges that run into a node and out of it. */
-export const edgesIn = (g: Graph, id: number) => g.edges.filter((e) => e.end === id);
-export const edgesOut = (g: Graph, id: number) => g.edges.filter((e) => e.start === id);
-export const edgesAt = (g: Graph, id: number) =>
-  g.edges.filter((e) => e.start === id || e.end === id);
+/** The edges that run into a node and out of it, in the order of the graph (a new list each time, so that a caller may change it). */
+export const edgesIn = (g: Graph, id: number) => [...(edgeIndex(g).into.get(id) ?? [])];
+export const edgesOut = (g: Graph, id: number) => [...(edgeIndex(g).out.get(id) ?? [])];
+export const edgesAt = (g: Graph, id: number) => [...(edgeIndex(g).at.get(id) ?? [])];
 
 /** The lane width, in meters, of an edge. */
 export const widthOf = (g: Graph, e: GEdge) => g.lanes[e.lane]?.width ?? LANE_WIDTH_M;

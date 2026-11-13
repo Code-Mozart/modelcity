@@ -37,6 +37,10 @@ function pointToLine(p: Vec, [a, b]: Line2): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
+/** Whether a screen point is on the canvas, or within `margin` px of it (^939): what is further out is not drawn and is not looked at. */
+const onCanvas = (f: Frame, p: Vec, margin: number) =>
+  p.x >= -margin && p.x <= f.size.width + margin && p.y >= -margin && p.y <= f.size.height + margin;
+
 /** Whether two capsules overlap on the screen: their lines are nearer than two radii. */
 const overlap = (a: Line2, b: Line2) =>
   Math.min(...a.map((p) => pointToLine(p, b)), ...b.map((p) => pointToLine(p, a))) < 2 * CAPSULE_PX;
@@ -46,10 +50,13 @@ const overlap = (a: Line2, b: Line2) =>
  * left out, as the real node is there (the circles are `radius` px, that of the node dot).
  */
 export function shownDerived(f: Frame, derived: Vec[], real: Vec[], radius: number): Vec[] {
-  const dots = real.map((n) => toScreen(f, n));
+  const margin = 2 * radius;
+  const dots = real.map((n) => toScreen(f, n)).filter((p) => onCanvas(f, p, margin));
   return derived.filter((d) => {
     const p = toScreen(f, d);
-    return !dots.some((q) => Math.hypot(p.x - q.x, p.y - q.y) < 2 * radius);
+    return (
+      onCanvas(f, p, margin) && !dots.some((q) => Math.hypot(p.x - q.x, p.y - q.y) < 2 * radius)
+    );
   });
 }
 
@@ -59,8 +66,10 @@ export function shownDerived(f: Frame, derived: Vec[], real: Vec[], radius: numb
  * with a short straight piece before the arc has the derived nodes of its arc ends close to the real ones).
  */
 export function shownTowers(f: Frame, towers: TowerCapsule[]): TowerCapsule[] {
-  const real = towers.filter((t) => !t.derived).map((t) => toLine(f, t));
-  return towers.filter((t) => !t.derived || !real.some((r) => overlap(toLine(f, t), r)));
+  // Only the towers with an end on the canvas are looked at and drawn (^939).
+  const here = towers.filter((t) => toLine(f, t).some((p) => onCanvas(f, p, 2 * CAPSULE_PX)));
+  const real = here.filter((t) => !t.derived).map((t) => toLine(f, t));
+  return here.filter((t) => !t.derived || !real.some((r) => overlap(toLine(f, t), r)));
 }
 
 /**
@@ -88,8 +97,11 @@ export function drawCapsules(f: Frame, towers: TowerCapsule[], pal: Palette) {
 
 /** The bars of the towers that are shown: a hidden tower has no bars on its skin (^897). */
 export function barsOn(bars: BarShape[], all: TowerCapsule[], shown: TowerCapsule[]): BarShape[] {
-  const hidden = all.filter((t) => !shown.includes(t)).flatMap((t) => t.nodes);
-  return bars.filter((b) => !hidden.some((p) => p.x === b.from.x && p.y === b.from.y));
+  const kept = new Set(shown);
+  const hidden = new Set(
+    all.filter((t) => !kept.has(t)).flatMap((t) => t.nodes.map((p) => `${p.x},${p.y}`)),
+  );
+  return bars.filter((b) => !hidden.has(`${b.from.x},${b.from.y}`));
 }
 
 /** The bars, on the skin of the capsules, below the nodes so that selected nodes stay blue (^350, ^820). */

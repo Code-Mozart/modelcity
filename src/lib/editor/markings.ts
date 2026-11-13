@@ -1,3 +1,5 @@
+import { Grid } from '../curves/grid';
+import { boxAround } from '../curves/hull';
 import { offsetPiece } from '../curves/offset';
 import type { Piece } from '../curves/types';
 import { SAME_PLACE_M } from '../curves/tolerance';
@@ -105,19 +107,51 @@ function linked(a: Marking, b: Marking): Marking | null {
   return first && second ? { kind: a.kind, pieces: [...first.pieces, ...second.pieces] } : null;
 }
 
-/** Lines that meet end to end and have the same style are one line (^954: the dashes run on across the nodes), whichever way each was found. */
+/** The size of a cell of the grids of the ends and the boxes of lines (meters). */
+const LINE_CELL_M = 8;
+
+/** The two ends of a line. */
+const endsOf = (m: Marking): Vec[] => [m.pieces[0]!.P, m.pieces.at(-1)!.Q];
+
+/** A box round a place, a little more than the tolerance in every direction. */
+const aroundEnd = (e: Vec) => ({
+  x0: e.x - 2 * SAME_PLACE_M,
+  x1: e.x + 2 * SAME_PLACE_M,
+  y0: e.y - 2 * SAME_PLACE_M,
+  y1: e.y + 2 * SAME_PLACE_M,
+});
+
+/** The numbers of the lines after `i` that have an end near an end of `here`, in order. */
+function laterNear(ends: Grid<number>, i: number, here: Marking): number[] {
+  const found = new Set<number>();
+  for (const e of endsOf(here)) for (const j of ends.near(aroundEnd(e))) if (j > i) found.add(j);
+  return [...found].sort((a, b) => a - b);
+}
+
+/**
+ * Lines that meet end to end and have the same style are one line (^954: the dashes run on across
+ * the nodes), whichever way each was found. A line is only looked at against the later ones that
+ * have an end near one of its ends (^938: a grid of the ends), the first that links is joined.
+ */
 function joined(markings: Marking[]): Marking[] {
-  const lines = [...markings];
-  for (let i = 0; i < lines.length; i++) {
-    for (let j = i + 1; j < lines.length; j++) {
-      const one = linked(lines[i]!, lines[j]!);
+  const lines: (Marking | null)[] = [...markings];
+  const ends = new Grid<number>(LINE_CELL_M);
+  const put = (m: Marking, i: number) =>
+    endsOf(m).forEach((e) => ends.add(i, { x0: e.x, x1: e.x, y0: e.y, y1: e.y }));
+  markings.forEach(put);
+  /** Joins the line `i` with the first later one that links; whether it did. */
+  const joinOne = (i: number): boolean => {
+    for (const j of laterNear(ends, i, lines[i]!)) {
+      const one = lines[j] && linked(lines[i]!, lines[j]!);
       if (!one) continue;
-      lines[i] = one;
-      lines.splice(j, 1);
-      j = i;
+      [lines[i], lines[j]] = [one, null];
+      put(one, i);
+      return true;
     }
-  }
-  return lines;
+    return false;
+  };
+  for (let i = 0; i < lines.length; i++) while (lines[i] && joinOne(i));
+  return lines.filter((m): m is Marking => m !== null);
 }
 
 const POINTS = [0, 0.25, 0.5, 0.75, 1];
@@ -137,8 +171,13 @@ const lengthOf = (m: Marking) => m.pieces.reduce((n, p) => n + pieceLength(p), 0
 export function distinct(lines: Marking[]): Marking[] {
   const longest = [...lines].sort((a, b) => lengthOf(b) - lengthOf(a));
   const kept: Marking[] = [];
+  const grid = new Grid<Marking>(LINE_CELL_M);
   for (const m of longest) {
-    if (!kept.some((k) => k.kind === m.kind && liesOn(m, k))) kept.push(m);
+    const box = boxAround(m.pieces);
+    const covered = [...grid.near(box)].some((k) => k.kind === m.kind && liesOn(m, k));
+    if (covered) continue;
+    kept.push(m);
+    grid.add(m, boxAround(m.pieces));
   }
   return kept;
 }
