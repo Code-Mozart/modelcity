@@ -14,11 +14,23 @@ test('profile of an edit', async ({ page }) => {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Profiler.enable');
   await cdp.send('Profiler.start');
-  await page.evaluate(async (g) => {
-    window.__modelcity!.editor.graph = { ...g, nodes: g.nodes.map((n) => ({ ...n })) };
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
-  }, graph);
+  if (process.env.PAN) {
+    await page.evaluate(async () => {
+      const hook = window.__modelcity!;
+      const base = hook.camera();
+      for (let i = 0; i < 20; i++) {
+        hook.show({ x: base.x + i * 2, y: base.y + i, scale: 3, rotation: 0 });
+        await new Promise((r) => requestAnimationFrame(r));
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+    });
+  } else {
+    await page.evaluate(async (g) => {
+      window.__modelcity!.editor.graph = { ...g, nodes: g.nodes.map((n) => ({ ...n })) };
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+    }, graph);
+  }
   const { profile } = (await cdp.send('Profiler.stop')) as {
     profile: {
       nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[];

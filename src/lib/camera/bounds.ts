@@ -1,6 +1,6 @@
 import { TAU, mod, onCircle } from '../curves/vec';
 import type { Piece } from '../curves/types';
-import { panBy, worldToScreen, type Point, type Size, type View } from './view';
+import { panBy, rotateVec, worldToScreen, type Point, type Size, type View } from './view';
 
 /**
  * The content bounds (^37, ^38, ^62): the tight box around the skeleton, the curves and the node
@@ -51,15 +51,35 @@ function anchorBox(view: View, size: Size, a: Anchor): Box {
   return boxOf(pieceExtremes(view, size, a.piece), a.r);
 }
 
+/** The box of a list of anchors as it was found, with the view it was found for (^938): panning only moves it, so it is not found again. */
+const found = new WeakMap<Anchor[], { view: View; size: Size; box: Box }>();
+
 /** The tight screen-space box around all anchors, including their own sizes. */
 export function screenBox(view: View, size: Size, anchors: Anchor[]): Box {
-  const boxes = anchors.map((a) => anchorBox(view, size, a));
-  return {
-    minX: Math.min(...boxes.map((b) => b.minX)),
-    maxX: Math.max(...boxes.map((b) => b.maxX)),
-    minY: Math.min(...boxes.map((b) => b.minY)),
-    maxY: Math.max(...boxes.map((b) => b.maxY)),
-  };
+  const was = found.get(anchors);
+  if (
+    was &&
+    was.view.scale === view.scale &&
+    was.view.rot === view.rot &&
+    was.size.width === size.width &&
+    was.size.height === size.height
+  ) {
+    // The same zoom and turn: the box only moves, opposite to the centre of the view.
+    const d = rotateVec({ x: view.cx - was.view.cx, y: view.cy - was.view.cy }, view.rot);
+    const [dx, dy] = [-d.x * view.scale, -d.y * view.scale];
+    const { box } = was;
+    return { minX: box.minX + dx, maxX: box.maxX + dx, minY: box.minY + dy, maxY: box.maxY + dy };
+  }
+  const box = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+  for (const a of anchors) {
+    const b = anchorBox(view, size, a);
+    box.minX = Math.min(box.minX, b.minX);
+    box.maxX = Math.max(box.maxX, b.maxX);
+    box.minY = Math.min(box.minY, b.minY);
+    box.maxY = Math.max(box.maxY, b.maxY);
+  }
+  found.set(anchors, { view, size, box });
+  return box;
 }
 
 /** How far the box must move along one axis to reach MIN_VISIBLE_PX into a viewport of `length`. */
