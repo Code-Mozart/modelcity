@@ -7,6 +7,12 @@ import { countOf, idsOf, rangeOfIds, type ChunkRange } from './chunks';
 export const MAX_CHUNKS = 400;
 /** How many chunks are read at the same time. */
 export const PARALLEL_READS = 4;
+/** How many rows (nodes and segments) the chunks that are loaded may hold: provisional, to be set by measuring memory (^1246). */
+export const ROW_BUDGET = 500_000;
+/** What an eviction frees: the loaded chunks are let go down to this share of the budget, so that a chunk at the edge does not load and unload on every frame. */
+export const EVICT_TO = 0.8;
+/** What a chunk costs besides its rows (so that empty chunks count a little). */
+const CHUNK_COST = 1;
 
 /** A chunk that is on its way, with how far (0 to 1, real: rows read of rows there are), or there. */
 export type ChunkState =
@@ -35,6 +41,8 @@ export class MapMemory {
   project = $state('');
   /** More than `MAX_CHUNKS` were asked for. */
   tooMuch = $state(false);
+  /** The rows that the loaded chunks may hold. */
+  budgetRows = ROW_BUDGET;
   /** Milliseconds each read waits before it starts: for the tests that want to see a chunk that is not there yet. */
   latencyMs = 0;
   private loader: ChunkLoader | null = null;
@@ -42,6 +50,15 @@ export class MapMemory {
   private wanted = new SvelteSet<string>();
   private queue: string[] = [];
   private reading = new SvelteMap<string, AbortController>();
+  /** When each chunk was last asked for (a count of the requests), for the order in which they are let go. */
+  private lastWanted = new SvelteMap<string, number>();
+  private requests = 0;
+  /** Where the middle of the view was at the last request, in chunks. */
+  private middle = { x: 0, y: 0 };
+  /** The rows the loaded chunks hold now. */
+  private rows = 0;
+  /** Chunks that must stay whatever the budget says: those with changes that are not saved yet, those of selected and pinned nodes (^1246). */
+  readonly pinned = new SvelteSet<string>();
   /** Counts the projects that were open: what a read of an earlier one finds is let go. */
   private generation = 0;
 
@@ -57,6 +74,9 @@ export class MapMemory {
     this.project = project;
     this.loader = project ? new ChunkLoader(this.storage, project) : null;
     this.chunks.clear();
+    this.lastWanted.clear();
+    this.pinned.clear();
+    this.rows = 0;
     this.tooMuch = false;
   }
 
@@ -69,17 +89,49 @@ export class MapMemory {
     for (const [id, state] of this.chunks) {
       if (state.status === 'loading' && !this.wanted.has(id)) this.drop(id);
     }
-    const middle = { x: (range.cx0 + range.cx1) / 2, y: (range.cy0 + range.cy1) / 2 };
-    const apart = (id: string) => {
-      const { cx0, cy0 } = rangeOfIds([id]);
-      return Math.hypot(cx0 - middle.x, cy0 - middle.y);
-    };
+    this.middle = { x: (range.cx0 + range.cx1) / 2, y: (range.cy0 + range.cy1) / 2 };
+    this.requests++;
+    this.wanted.forEach((id) => this.lastWanted.set(id, this.requests));
     this.queue = [...this.wanted].filter((id) => !this.chunks.has(id) || this.waiting(id));
-    this.queue.sort((a, b) => apart(a) - apart(b));
+    this.queue.sort((a, b) => this.apart(a) - this.apart(b));
     this.queue.forEach(
       (id) => this.chunks.has(id) || this.chunks.set(id, { status: 'loading', progress: 0 }),
     );
+    this.evict();
     this.pump();
+  }
+
+  /** How far a chunk is from the middle of the view, in chunks. */
+  private apart(id: string) {
+    const { cx0, cy0 } = rangeOfIds([id]);
+    return Math.hypot(cx0 - this.middle.x, cy0 - this.middle.y);
+  }
+
+  private costOf = (c: Chunk) => c.nodes.length + c.edges.length + CHUNK_COST;
+
+  /**
+   * Over the budget: let go of loaded chunks that are not asked for and not pinned, the one asked
+   * for longest ago first and, of those, the one farthest from the view (^1246), down to `EVICT_TO`
+   * of the budget. If what is asked for alone is more than the budget, nothing more is asked for
+   * and the view says so, as with too many chunks.
+   */
+  private evict() {
+    if (this.rows <= this.budgetRows) return;
+    const gone = [...this.chunks]
+      .filter(([id, s]) => s.status === 'ready' && !this.wanted.has(id) && !this.pinned.has(id))
+      .sort(
+        ([a], [b]) =>
+          (this.lastWanted.get(a) ?? 0) - (this.lastWanted.get(b) ?? 0) ||
+          this.apart(b) - this.apart(a),
+      );
+    for (const [id, state] of gone) {
+      if (this.rows <= this.budgetRows * EVICT_TO) break;
+      if (state.status === 'ready') this.rows -= this.costOf(state.chunk);
+      this.chunks.delete(id);
+      this.lastWanted.delete(id);
+    }
+    this.tooMuch = this.rows > this.budgetRows;
+    if (this.tooMuch) this.queue = [];
   }
 
   private waiting = (id: string) =>
@@ -110,8 +162,11 @@ export class MapMemory {
         signal: control.signal,
         onProgress: (progress) => generation === this.generation && this.progress(id, progress),
       });
-      if (generation === this.generation && this.wanted.has(id))
+      if (generation === this.generation && this.wanted.has(id)) {
         this.chunks.set(id, { status: 'ready', chunk });
+        this.rows += this.costOf(chunk);
+        this.evict();
+      }
     } catch (e) {
       if (generation === this.generation && !aborted(e)) {
         console.error(`[modelcity] chunk ${id} could not be read`, e);
