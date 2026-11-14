@@ -31,12 +31,12 @@ function chain(count: number, g: Graph = emptyGraph()) {
 }
 
 describe('the graph (^106)', () => {
-  it('gives new nodes and edges the largest id plus one', () => {
+  it('gives new nodes and edges the next id of the counter, and never reuses one (^1224)', () => {
     const { graph, ids } = chain(3);
     expect(ids).toEqual([0, 1, 2]);
     expect(graph.edges.map((e) => e.id)).toEqual([0, 1]);
     const after = removeNodes(graph, [2], null);
-    expect(addNode(after, { x: 0, y: 5, th: 0 }).id).toBe(2);
+    expect(addNode(after, { x: 0, y: 5, th: 0 }).id).toBe(3);
   });
 
   it('inserts a node on an edge: two edges with the same radius, the same curve', () => {

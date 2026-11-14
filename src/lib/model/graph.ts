@@ -31,6 +31,9 @@ export interface Graph {
   nodes: GNode[];
   edges: GEdge[];
   lanes: Record<number, Lane>;
+  /** The id the next node and the next edge get (^1224): ids are never reused and an insert needs no scan. Larger than every id in use. */
+  nextNodeId: number;
+  nextEdgeId: number;
 }
 
 export const DEFAULT_LANE = 1;
@@ -39,6 +42,8 @@ export const emptyGraph = (): Graph => ({
   nodes: [],
   edges: [],
   lanes: { [DEFAULT_LANE]: { name: 'default', width: LANE_WIDTH_M } },
+  nextNodeId: 0,
+  nextEdgeId: 0,
 });
 
 const indexOfNodes = new WeakMap<Graph, Map<number, GNode>>();
@@ -140,8 +145,6 @@ function patchedEdges(g: Graph): EdgeIndex | null {
 
 export const edgeOfId = (g: Graph, id: number): GEdge | undefined => edgeIndex(g).byId.get(id);
 
-const nextId = (items: { id: number }[]) => items.reduce((m, x) => Math.max(m, x.id), -1) + 1;
-
 /** The edges that run into a node and out of it, in the order of the graph (a new list each time, so that a caller may change it). */
 export const edgesIn = (g: Graph, id: number) => [...(edgeIndex(g).into.get(id) ?? [])];
 export const edgesOut = (g: Graph, id: number) => [...(edgeIndex(g).out.get(id) ?? [])];
@@ -151,13 +154,14 @@ export const edgesAt = (g: Graph, id: number) => [...(edgeIndex(g).at.get(id) ??
 export const widthOf = (g: Graph, e: GEdge) => g.lanes[e.lane]?.width ?? LANE_WIDTH_M;
 
 export function addNode(g: Graph, at: PathNode): { graph: Graph; id: number } {
-  const id = nextId(g.nodes);
-  return { graph: { ...g, nodes: [...g.nodes, { id, x: at.x, y: at.y, th: at.th }] }, id };
+  const id = g.nextNodeId;
+  const nodes = [...g.nodes, { id, x: at.x, y: at.y, th: at.th }];
+  return { graph: { ...g, nodes, nextNodeId: id + 1 }, id };
 }
 
 export function addEdge(g: Graph, start: number, end: number, radius: number | null = null): Graph {
-  const edge: GEdge = { id: nextId(g.edges), start, end, radius, lane: DEFAULT_LANE };
-  return { ...g, edges: [...g.edges, edge] };
+  const edge: GEdge = { id: g.nextEdgeId, start, end, radius, lane: DEFAULT_LANE };
+  return { ...g, edges: [...g.edges, edge], nextEdgeId: edge.id + 1 };
 }
 
 export function withNode(g: Graph, id: number, patch: Partial<PathNode>): Graph {
@@ -204,9 +208,10 @@ export function insertNode(g: Graph, edge: number, at: PathNode): { graph: Graph
   const e = edgeOfId(g, edge);
   if (!e) return { graph: g, id: -1 };
   const added = addNode(g, at);
-  const second: GEdge = { ...e, id: nextId(g.edges), start: added.id };
+  const second: GEdge = { ...e, id: g.nextEdgeId, start: added.id };
   const edges = g.edges.map((x) => (x.id === edge ? { ...x, end: added.id } : x));
-  return { graph: { ...added.graph, edges: [...edges, second] }, id: added.id };
+  const graph = { ...added.graph, edges: [...edges, second], nextEdgeId: second.id + 1 };
+  return { graph, id: added.id };
 }
 
 /** Remove one node: a node with one edge in and one out joins its neighbours, otherwise its edges go. */
@@ -281,5 +286,5 @@ export function roundToMm(g: Graph): Graph {
     nodes.every((n, i) => n === g.nodes[i]) &&
     edges.every((e, i) => e === g.edges[i]) &&
     Object.entries(lanes).every(([id, l]) => l === g.lanes[Number(id)]);
-  return same ? g : { nodes, edges, lanes };
+  return same ? g : { ...g, nodes, edges, lanes };
 }

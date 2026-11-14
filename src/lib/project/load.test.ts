@@ -38,7 +38,7 @@ describe('projects from the browser storage go through the same checks as an imp
     const { session, storage } = setup(tellMe);
     await storage.put(stored({ version: 99 }));
     await session.start();
-    expect(told).toEqual([['error', REFUSAL_TEXT.newer({ version: 99, current: 1 })]]);
+    expect(told).toEqual([['error', REFUSAL_TEXT.newer({ version: 99, current: 2 })]]);
     expect(session.noProject).toBe(true);
     expect(session.ready).toBe(true);
     expect((await storage.list()).map((p) => p.id)).toEqual(['broken']);
