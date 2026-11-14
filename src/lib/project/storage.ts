@@ -35,6 +35,20 @@ export interface ProjectStorage {
   /** Write the header of a stored project and, if given, what changed on its map. Only that is written. */
   patch(id: string, header: Header, change?: MapChange): Promise<void>;
   remove(id: string): Promise<void>;
+  /** The nodes of a project inside a box (millimeters, both ends included): the part of the map that is looked at. */
+  nodesIn(id: string, box: BoxMm): Promise<NodeRow[]>;
+  /** The nodes with these ids. */
+  nodesByIds(id: string, ids: number[]): Promise<NodeRow[]>;
+  /** The segments that start or end at one of these nodes. */
+  edgesOf(id: string, nodeIds: number[]): Promise<EdgeRow[]>;
+}
+
+/** A box in millimeters, the unit of what is stored. */
+export interface BoxMm {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
 }
 
 export const headerOf = (file: ProjectFile | Header): Header =>
@@ -89,5 +103,20 @@ export class MemoryStorage implements ProjectStorage {
 
   async remove(id: string) {
     this.items.delete(id);
+  }
+
+  async nodesIn(id: string, b: BoxMm) {
+    const inBox = ([, x, y]: NodeRow) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
+    return this.items.get(id)?.file.nodes.filter(inBox) ?? [];
+  }
+
+  async nodesByIds(id: string, ids: number[]) {
+    const want = new Set(ids);
+    return this.items.get(id)?.file.nodes.filter((n) => want.has(n[0])) ?? [];
+  }
+
+  async edgesOf(id: string, nodeIds: number[]) {
+    const want = new Set(nodeIds);
+    return this.items.get(id)?.file.edges.filter((e) => want.has(e[1]) || want.has(e[2])) ?? [];
   }
 }

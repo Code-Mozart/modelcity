@@ -1,4 +1,12 @@
-import type { EdgeRow, Header, MapChange, NodeRow, ProjectStorage, StoredProject } from './storage';
+import type {
+  BoxMm,
+  EdgeRow,
+  Header,
+  MapChange,
+  NodeRow,
+  ProjectStorage,
+  StoredProject,
+} from './storage';
 import { applyChange, headerOf } from './storage';
 import type { ProjectFile } from './file';
 
@@ -11,7 +19,7 @@ const [PROJECTS, NODES, EDGES] = ['projects', 'nodes', 'edges'];
  * x, and by project and y; segments by project and start, and by project and end node: a part of
  * the map is read without reading the rest. There are no chunks in what is stored. A record of the
  * first layout (`{id, file}`: the whole file in one record) is read as before and written in this
- * layout when it is saved.
+ * layout when it is read.
  */
 type Stored = { id: string; header: Header } | { id: string; file: ProjectFile };
 
@@ -28,6 +36,8 @@ const done = (tx: IDBTransaction) =>
   });
 
 const ofProject = (p: string) => IDBKeyRange.bound([p, -Infinity], [p, Infinity]);
+
+const between = (p: string, lo: number, hi: number) => IDBKeyRange.bound([p, lo], [p, hi]);
 
 const node = (p: string, [id, x, y, th]: NodeRow) => ({ p, id, x, y, th });
 const edge = (p: string, [id, start, end, radius, lane]: EdgeRow) => ({
@@ -69,7 +79,7 @@ export class IndexedDbStorage implements ProjectStorage {
     const tx = await this.tx('readonly');
     const r = await request<Stored | undefined>(tx.objectStore(PROJECTS).get(id));
     if (!r) return undefined;
-    if ('file' in r) return r.file;
+    if ('file' in r) return this.convert(r.file, id);
     const [nodes, edges] = await Promise.all([
       request(tx.objectStore(NODES).getAll(ofProject(id))),
       request(tx.objectStore(EDGES).getAll(ofProject(id))),
@@ -79,6 +89,12 @@ export class IndexedDbStorage implements ProjectStorage {
       nodes: nodes.map((n) => [n.id, n.x, n.y, n.th]),
       edges: edges.map((e) => [e.id, e.start, e.end, e.radius, e.lane]),
     };
+  }
+
+  /** A project of the first layout is written in this one when it is read, so that it can be asked about its map; the file is what was read. */
+  private async convert(file: ProjectFile, id: string) {
+    if (isRows(file.nodes) && isRows(file.edges)) await this.put({ id, file });
+    return file;
   }
 
   async put({ id, file }: StoredProject) {
@@ -104,6 +120,39 @@ export class IndexedDbStorage implements ProjectStorage {
     this.clear(tx, id);
     tx.objectStore(PROJECTS).delete(id);
     await done(tx);
+  }
+
+  /**
+   * The nodes in a box: the index on x or the one on y finds them, the one whose range holds fewer
+   * (the count is asked of both), and the other coordinate is filtered here (^1228).
+   */
+  async nodesIn(id: string, b: BoxMm) {
+    const store = (await this.tx('readonly')).objectStore(NODES);
+    const [byX, byY] = [store.index('x'), store.index('y')];
+    const [rx, ry] = [between(id, b.x0, b.x1), between(id, b.y0, b.y1)];
+    const [nx, ny] = await Promise.all([request(byX.count(rx)), request(byY.count(ry))]);
+    const rows = await request(nx <= ny ? byX.getAll(rx) : byY.getAll(ry));
+    return rows
+      .filter((n) => n.x >= b.x0 && n.x <= b.x1 && n.y >= b.y0 && n.y <= b.y1)
+      .map((n): NodeRow => [n.id, n.x, n.y, n.th]);
+  }
+
+  async nodesByIds(id: string, ids: number[]) {
+    const store = (await this.tx('readonly')).objectStore(NODES);
+    const rows = await Promise.all(ids.map((n) => request(store.get([id, n]))));
+    return rows.filter((n) => n).map((n): NodeRow => [n.id, n.x, n.y, n.th]);
+  }
+
+  async edgesOf(id: string, nodeIds: number[]) {
+    const store = (await this.tx('readonly')).objectStore(EDGES);
+    const found = new Map<number, EdgeRow>();
+    const lists = nodeIds.flatMap((n) => [
+      request(store.index('start').getAll([id, n])),
+      request(store.index('end').getAll([id, n])),
+    ]);
+    for (const e of (await Promise.all(lists)).flat())
+      found.set(e.id, [e.id, e.start, e.end, e.radius, e.lane]);
+    return [...found.values()];
   }
 
   private clear(tx: IDBTransaction, id: string) {

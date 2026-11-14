@@ -49,7 +49,7 @@ describe('a project of the first layout in IndexedDB', () => {
     globalThis.indexedDB = new IDBFactory();
   });
 
-  it('a project of the first layout (the whole file in one record) is listed, read, and written in the new layout when saved', async () => {
+  it('a project of the first layout (the whole file in one record) is listed, and written in the new layout when it is read', async () => {
     const s = new IndexedDbStorage();
     await s.list();
     const db = await raw();
@@ -60,6 +60,7 @@ describe('a project of the first layout in IndexedDB', () => {
     });
     expect((await s.list())[0]!.file.title).toBe('Old');
     expect(await s.load('old')).toEqual(file('Old'));
+    expect(await all(db.transaction('nodes').objectStore('nodes').count())).toBe(3);
     const header = headerOf(file('Old'));
     await s.patch('old', header, { ...none, nodes: [[7, 0, 0, 0]] });
     expect(((await s.load('old')) as ProjectFile).nodes.map((n) => n[0])).toEqual([0, 1, 5, 7]);

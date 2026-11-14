@@ -36,7 +36,7 @@ The persisted data has **no chunks** and no other spatial structure of its own: 
 - `nodes`, key `[project, id]`: one record `{ p, id, x, y, th }` per node (millimeters). Indexes: `[project, x]` and `[project, y]`, so that the nodes in a range of x or of y are read without the others; the side with the smaller span is the one to range on, the other is filtered by the reader.
 - `edges`, key `[project, id]`: `{ p, id, start, end, radius, lane }`. Indexes: `[project, start]` and `[project, end]`: the segments of a node.
 - An edit writes the header and the rows that changed (found by id), not the project.
-- Records of the first layout, `{ id, file }` (the whole file in one record), are still read; they are written in this layout when the project is saved. A damaged file (rows that are not rows) stays in one record, so that it is refused when it is opened (^229).
+- Records of the first layout, `{ id, file }` (the whole file in one record), are still read; they are written in this layout when they are read. A damaged file (rows that are not rows) stays in one record, so that it is refused when it is opened (^229).
 - The nodes and segments of a project come back in the order of their ids.
 
 ## Conventions
