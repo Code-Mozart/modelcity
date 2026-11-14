@@ -46,11 +46,11 @@ describe.each(storages)('reading one chunk: %s', (_name, make) => {
     loader = new ChunkLoader(s, 'p');
   });
 
-  it('has its nodes, the segments of those, and the nodes at their far ends known', async () => {
+  it('has its nodes, the segments of those, and the nodes at their far ends', async () => {
     const chunk = await loader.load('0,0');
     expect(chunk.nodes.map((n) => n[0]).sort()).toEqual([0, 4]);
     expect(chunk.edges.map((e) => e[0]).sort()).toEqual([0, 2, 3]);
-    expect([1, 3].map((id) => loader.nodeOf(id)?.[0])).toEqual([1, 3]);
+    expect(chunk.ends.map((n) => n[0]).sort()).toEqual([1, 3]);
   });
 
   it('a segment between two chunks is in both, a node is in the one whose cell holds it', async () => {
@@ -73,7 +73,7 @@ describe.each(storages)('reading one chunk: %s', (_name, make) => {
   });
 
   it('an empty chunk is a chunk with nothing in it', async () => {
-    expect(await loader.load('5,5')).toEqual({ id: '5,5', nodes: [], edges: [] });
+    expect(await loader.load('5,5')).toEqual({ id: '5,5', nodes: [], edges: [], ends: [] });
   });
 
   it('the segment that only crosses a chunk is not found there yet (^1239)', async () => {

@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
+  import { SvelteMap } from 'svelte/reactivity';
   import type { Camera } from './camera/camera.svelte';
   import { FEATURES } from './features';
   import { render } from './render/render';
   import type { ChunkView } from './render/mapLayer';
+  import { curveOf, type SkeletonEdge } from './render/skeleton';
   import type { Point } from './camera/view';
   import type { ControlId } from './hints/hints';
   import { boxOfId, CHUNK_M, countOf, idsOf } from './map/chunks';
@@ -37,21 +39,40 @@
     untrack(() => void memory.show(range));
   });
 
-  /** The chunks the screen touches, with their nodes or as not loaded. */
-  const scene = $derived.by(() => {
+  /** The chunks the screen touches, with their nodes or as not loaded, and how far those are. */
+  const chunkViews = $derived.by(() => {
     const seen = chunksInView(camera.view, camera.size);
-    const tooMuch = countOf(seen) > MAX_CHUNKS;
-    const chunks = tooMuch
-      ? []
-      : [...idsOf(seen)].map((id): ChunkView => {
-          const state = memory.chunks.get(id);
-          return {
-            box: boxOfId(id),
-            nodes: state?.status === 'ready' ? state.chunk.nodes : null,
-            progress: state?.status === 'loading' ? state.progress : 0,
-          };
-        });
-    return { chunks, tooMuch };
+    if (countOf(seen) > MAX_CHUNKS) return [];
+    return [...idsOf(seen)].map((id): ChunkView => {
+      const state = memory.chunks.get(id);
+      return {
+        box: boxOfId(id),
+        nodes: state?.status === 'ready' ? state.chunk.nodes : null,
+        progress: memory.progress.get(id) ?? 0,
+      };
+    });
+  });
+
+  /** The segments of the chunks that are loaded, each once; what the progress of a chunk does is not looked at here. */
+  const edges = $derived.by(() => {
+    const seen = chunksInView(camera.view, camera.size);
+    if (countOf(seen) > MAX_CHUNKS) return [];
+    const found = new SvelteMap<number, SkeletonEdge>();
+    for (const id of idsOf(seen)) {
+      const state = memory.chunks.get(id);
+      if (state?.status !== 'ready') continue;
+      for (const row of state.chunk.edges) {
+        const [p, q] = [memory.index.nodeOf(row[1]), memory.index.nodeOf(row[2])];
+        if (p && q && !found.has(row[0])) found.set(row[0], curveOf(row, p, q));
+      }
+    }
+    return [...found.values()];
+  });
+
+  const scene = $derived({
+    chunks: chunkViews,
+    edges,
+    tooMuch: countOf(chunksInView(camera.view, camera.size)) > MAX_CHUNKS || memory.tooMuch,
   });
 
   // Redraw whenever the camera or the map in memory changes.

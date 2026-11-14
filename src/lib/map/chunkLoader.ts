@@ -6,6 +6,8 @@ export interface Chunk {
   id: string;
   nodes: NodeRow[];
   edges: EdgeRow[];
+  /** The nodes at the far ends of those segments that are not in this chunk. */
+  ends: NodeRow[];
 }
 
 /** How a read of a chunk goes: how far it is (0 to 1), and stopping it. */
@@ -23,19 +25,14 @@ const mm = (m: number) => Math.round(m * 1000);
 /**
  * Reads one chunk of the open project from the storage (^1231, ^1241): its nodes (the index on x
  * or on y, ^1228, counted while they are read, so that the progress is real), the segments of those
- * nodes, and the nodes at their other ends. A segment that only crosses the chunk, with both nodes
+ * nodes, and the nodes at their other ends (not shared with other chunks yet: `ChunkIndex`, ^1247). A segment that only crosses the chunk, with both nodes
  * outside it, is not found by this (^1239 is to find it). Dry: nothing is made from what it reads.
  */
 export class ChunkLoader {
-  /** Every node that was read, by id: the nodes of the chunks and the nodes at the far end of their segments. */
-  private nodes = new Map<number, NodeRow>();
-
   constructor(
     private storage: ProjectStorage,
     private project: string,
   ) {}
-
-  nodeOf = (id: number) => this.nodes.get(id);
 
   async load(id: string, { onProgress, signal }: ChunkRead = {}): Promise<Chunk> {
     const box = boxOfId(id);
@@ -49,7 +46,6 @@ export class ChunkLoader {
       { x0: mm(box.x0), x1: mm(box.x1) - 1, y0: mm(box.y0), y1: mm(box.y1) - 1 },
       read,
     );
-    nodes.forEach((n) => this.nodes.set(n[0], n));
     signal?.throwIfAborted();
     const edges = await this.storage.edgesOf(
       this.project,
@@ -57,12 +53,11 @@ export class ChunkLoader {
     );
     onProgress?.(EDGES_DONE);
     signal?.throwIfAborted();
+    const here = new Set(nodes.map((n) => n[0]));
     const away = new Set<number>();
-    for (const e of edges) for (const end of [e[1], e[2]]) if (!this.nodes.has(end)) away.add(end);
-    (await this.storage.nodesByIds(this.project, [...away])).forEach((n) =>
-      this.nodes.set(n[0], n),
-    );
+    for (const e of edges) for (const end of [e[1], e[2]]) if (!here.has(end)) away.add(end);
+    const ends = await this.storage.nodesByIds(this.project, [...away]);
     onProgress?.(1);
-    return { id, nodes, edges };
+    return { id, nodes, edges, ends };
   }
 }

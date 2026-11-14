@@ -16,8 +16,10 @@ What the app holds in memory, operation by operation. Since ^1232 (the tabula ra
 ## Chunks (^1231, ^1238)
 
 - `MapMemory` (`map/mapMemory.svelte.ts`): `chunks`, one reactive state per chunk asked for: loading (with its progress, real: rows read of rows there are) or ready (the chunk: its node and segment rows as stored), `tooMuch`, `project`. Asked for from the camera: the view and one ring. Chunks are read one at a time each, 4 at the same time, the one nearest the middle of the view first; a read of a chunk that left the view is stopped. Over a budget of rows (`ROW_BUDGET`, 500,000, provisional) chunks are let go (^1246): not asked for now, not pinned, the one asked for longest ago first, then the farthest from the view, down to 80%.
-- `ChunkLoader` (`map/chunkLoader.ts`): reads one chunk; knows the nodes it has read by id (also the far ends of segments).
-- Drawn from it, so far: the node dots, and the placeholder of a chunk that is not loaded.
+- `ChunkLoader` (`map/chunkLoader.ts`): reads one chunk (its nodes, the segments of those, the nodes at their far ends); keeps nothing.
+- `ChunkIndex` (`map/chunkIndex.ts`, as `MapMemory.index`): the rows of the loaded chunks by id, shared (one row for a segment that two chunks know, counted, let go with the last chunk that has it).
+- `curveOf` (`render/skeleton.ts`): the curve and box of a segment, kept per row (`WeakMap`); `progress` of each chunk that is loading is apart from `chunks`.
+- Drawn from it, so far: the curves of the segments with chevrons, the node dots, and the placeholder of a chunk that is not loaded.
 
 ## Not there any more (^1232)
 

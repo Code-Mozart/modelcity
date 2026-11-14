@@ -88,3 +88,17 @@ describe('what stays, and what comes back (^1246)', () => {
     expect(ready()).toContain('0,0');
   });
 });
+
+describe('the rows of what is loaded (^1247)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('are found while their chunk is loaded and forgotten when it is let go', async () => {
+    const { memory, ask } = await loaded();
+    await ask(0);
+    expect(memory.index.nodeOf(0)).toBeDefined();
+    for (const cx of [1, 2, 3]) await ask(cx);
+    expect(memory.index.nodeOf(0)).toBeUndefined();
+    expect(memory.index.nodeOf(15)).toBeDefined();
+  });
+});

@@ -1,5 +1,6 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ProjectStorage } from '../project/storage';
+import { ChunkIndex } from './chunkIndex';
 import { ChunkLoader, type Chunk } from './chunkLoader';
 import { countOf, idsOf, rangeOfIds, type ChunkRange } from './chunks';
 
@@ -15,8 +16,7 @@ export const EVICT_TO = 0.8;
 const CHUNK_COST = 1;
 
 /** A chunk that is on its way, with how far (0 to 1, real: rows read of rows there are), or there. */
-export type ChunkState =
-  { status: 'loading'; progress: number } | { status: 'ready'; chunk: Chunk };
+export type ChunkState = { status: 'loading' } | { status: 'ready'; chunk: Chunk };
 
 const aborted = (e: unknown) => e instanceof DOMException && e.name === 'AbortError';
 
@@ -37,6 +37,10 @@ const wait = (ms: number, signal: AbortSignal) =>
  */
 export class MapMemory {
   readonly chunks = new SvelteMap<string, ChunkState>();
+  /** How far each chunk that is loading is, 0 to 1 (real: rows read of rows there are); apart from `chunks` so that what is drawn from the chunks is not made again at every step. */
+  readonly progress = new SvelteMap<string, number>();
+  /** The rows of the chunks that are loaded, shared (^1247). */
+  readonly index = new ChunkIndex();
   /** The id of the open project, '' for none: read where chunks are asked for, so that they are asked for again when the project changes. */
   project = $state('');
   /** More than `MAX_CHUNKS` were asked for. */
@@ -74,6 +78,8 @@ export class MapMemory {
     this.project = project;
     this.loader = project ? new ChunkLoader(this.storage, project) : null;
     this.chunks.clear();
+    this.progress.clear();
+    this.index.clear();
     this.lastWanted.clear();
     this.pinned.clear();
     this.rows = 0;
@@ -95,7 +101,9 @@ export class MapMemory {
     this.queue = [...this.wanted].filter((id) => !this.chunks.has(id) || this.waiting(id));
     this.queue.sort((a, b) => this.apart(a) - this.apart(b));
     this.queue.forEach(
-      (id) => this.chunks.has(id) || this.chunks.set(id, { status: 'loading', progress: 0 }),
+      (id) =>
+        this.chunks.has(id) ||
+        (this.chunks.set(id, { status: 'loading' }), this.progress.set(id, 0)),
     );
     this.evict();
     this.pump();
@@ -126,7 +134,10 @@ export class MapMemory {
       );
     for (const [id, state] of gone) {
       if (this.rows <= this.budgetRows * EVICT_TO) break;
-      if (state.status === 'ready') this.rows -= this.costOf(state.chunk);
+      if (state.status === 'ready') {
+        this.rows -= this.costOf(state.chunk);
+        this.index.remove(state.chunk);
+      }
       this.chunks.delete(id);
       this.lastWanted.delete(id);
     }
@@ -141,6 +152,7 @@ export class MapMemory {
     this.reading.get(id)?.abort();
     this.reading.delete(id);
     this.chunks.delete(id);
+    this.progress.delete(id);
   }
 
   private pump() {
@@ -160,10 +172,12 @@ export class MapMemory {
       if (this.latencyMs) await wait(this.latencyMs, control.signal);
       const chunk = await loader.load(id, {
         signal: control.signal,
-        onProgress: (progress) => generation === this.generation && this.progress(id, progress),
+        onProgress: (progress) => generation === this.generation && this.step(id, progress),
       });
       if (generation === this.generation && this.wanted.has(id)) {
+        this.index.add(chunk);
         this.chunks.set(id, { status: 'ready', chunk });
+        this.progress.delete(id);
         this.rows += this.costOf(chunk);
         this.evict();
       }
@@ -171,6 +185,7 @@ export class MapMemory {
       if (generation === this.generation && !aborted(e)) {
         console.error(`[modelcity] chunk ${id} could not be read`, e);
         this.chunks.delete(id);
+        this.progress.delete(id);
       }
     } finally {
       if (generation === this.generation) {
@@ -180,8 +195,7 @@ export class MapMemory {
     }
   }
 
-  private progress(id: string, progress: number) {
-    const state = this.chunks.get(id);
-    if (state?.status === 'loading') this.chunks.set(id, { status: 'loading', progress });
+  private step(id: string, progress: number) {
+    if (this.chunks.get(id)?.status === 'loading') this.progress.set(id, progress);
   }
 }

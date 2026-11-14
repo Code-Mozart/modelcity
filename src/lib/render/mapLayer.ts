@@ -2,6 +2,7 @@ import type { Box } from '../curves/hull';
 import type { NodeRow } from '../project/storage';
 import { worldToScreen } from '../camera/view';
 import { text, type Frame, type Palette } from './paint';
+import { drawCurves, type SkeletonEdge } from './skeleton';
 
 /** One chunk of the map as it is drawn: where it is, and its nodes, or null while it is not loaded (^1238). */
 export interface ChunkView {
@@ -13,6 +14,8 @@ export interface ChunkView {
 
 export interface MapScene {
   chunks: ChunkView[];
+  /** The segments of the loaded chunks that are in view, each once (^1247). */
+  edges: readonly SkeletonEdge[];
   /** So much of the map is in view that nothing of it is loaded (no level of detail yet). */
   tooMuch: boolean;
 }
@@ -122,12 +125,11 @@ function drawNodes(f: Frame, nodes: readonly NodeRow[], pal: Palette) {
   }
 }
 
-/** The map: the chunks that are not loaded, and the nodes of those that are. */
+/** The map: the chunks that are not loaded, the curves of the segments, and the nodes of the chunks that are loaded. */
 export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
-  for (const c of scene.chunks) {
-    if (c.nodes) drawNodes(f, c.nodes, pal);
-    else drawLoading(f, c.box, c.progress, pal);
-  }
+  for (const c of scene.chunks) if (!c.nodes) drawLoading(f, c.box, c.progress, pal);
+  drawCurves(f, scene.edges, pal);
+  for (const c of scene.chunks) if (c.nodes) drawNodes(f, c.nodes, pal);
   if (scene.tooMuch)
     text(
       f.ctx,
