@@ -4,7 +4,7 @@ import { emptyGraph, roundToMm, type Graph } from '../model/graph';
  * The stored project (`docs/data-model.md`, ^170): lengths in integer millimeters, nodes and edges
  * as tuples. `Project` is the same thing as the editor holds it, in meters.
  */
-export const FILE_VERSION = 1;
+export const FILE_VERSION = 2;
 
 export interface CameraState {
   /** World point at the center of the viewport, meters. */
@@ -35,6 +35,9 @@ export interface ProjectFile {
   /** `[id, start, end, radius, laneConfigurationId]`, the radius in millimeters or null (automatic). */
   edges: [number, number, number, number | null, number][];
   laneConfigurations: Record<string, { name: string; width: number }>;
+  /** The ids the next node and the next edge get: larger than every id in use, never reused (^1224). */
+  nextNodeId: number;
+  nextEdgeId: number;
 }
 
 const toMm = (m: number) => Math.round(m * 1000);
@@ -60,6 +63,8 @@ export function toFile(p: Project): ProjectFile {
     laneConfigurations: Object.fromEntries(
       Object.entries(g.lanes).map(([id, l]) => [id, { name: l.name, width: toMm(l.width) }]),
     ),
+    nextNodeId: g.nextNodeId,
+    nextEdgeId: g.nextEdgeId,
   };
 }
 
@@ -80,6 +85,8 @@ export function fromFile(f: ProjectFile): Project {
         { name: l.name, width: toM(l.width) },
       ]),
     ),
+    nextNodeId: f.nextNodeId,
+    nextEdgeId: f.nextEdgeId,
   };
   const { x, y, scale, rotation } = f.camera;
   return {
