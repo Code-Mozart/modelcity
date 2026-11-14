@@ -46,7 +46,12 @@
   /** The cards below the list. */
   const actions = $derived([
     { target: 'import', label: 'Import file…', run: () => file?.click(), current: false },
-    { target: 'export', label: 'Export JSON', run: () => session.exportJson(), current: false },
+    {
+      target: 'export',
+      label: 'Export JSON',
+      run: () => void session.exportJson(),
+      current: false,
+    },
     {
       target: 'new',
       label: 'New project',

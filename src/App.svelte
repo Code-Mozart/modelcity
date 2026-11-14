@@ -57,7 +57,7 @@
   function projectKey(e: KeyboardEvent): boolean {
     const action = projectKeyOf(e);
     if (action === 'save') void session.saveNow();
-    else if (action === 'export') session.exportJson();
+    else if (action === 'export') void session.exportJson();
     else if (action === 'open') void session.openModal(true);
     else if (action === 'projects') void session.openModal();
     return action !== null;

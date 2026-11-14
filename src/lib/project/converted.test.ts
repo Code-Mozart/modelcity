@@ -45,3 +45,34 @@ describe('a stored project of an older data model (^1226)', () => {
     expect(told).toEqual([]);
   });
 });
+
+describe('opening reads the map only to convert it (^1236)', () => {
+  it('a project of the current version is not read, one of an older version once', async () => {
+    const { session, storage } = setup(tellMe);
+    const v1: Record<string, unknown> = { ...file(), version: 1 };
+    delete v1.nextNodeId;
+    delete v1.nextEdgeId;
+    await storage.put({ id: 'old', file: v1 as never });
+    const read = vi.spyOn(storage, 'load');
+    await session.start();
+    expect(read).toHaveBeenCalledTimes(1);
+    read.mockClear();
+    await session.open('old');
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('what was stored is kept when the project is saved again: the lane configurations and the counters', async () => {
+    const { session, storage, camera } = setup(tellMe);
+    await storage.put({ id: 'now', file: { ...file(), nextNodeId: 40, nextEdgeId: 30 } });
+    await session.start();
+    camera.restore({ x: 5, y: 6, scale: 2, rotation: 0 });
+    await session.flush();
+    await vi.runAllTimersAsync();
+    expect(await storage.load('now')).toMatchObject({
+      nextNodeId: 40,
+      nextEdgeId: 30,
+      camera: { x: 5000, y: 6000 },
+      nodes: [[0, 0, 0, 0]],
+    });
+  });
+});

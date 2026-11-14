@@ -102,6 +102,14 @@ export function mapChange(from: Graph, to: Graph): MapChange {
   };
 }
 
+/** The camera of a stored project, in meters. */
+export const cameraOf = ({ camera: { x, y, scale, rotation } }: Header): CameraState => ({
+  x: toM(x),
+  y: toM(y),
+  scale,
+  rotation,
+});
+
 export function fromFile(f: ProjectFile): Project {
   const graph = {
     ...emptyGraph(),
@@ -122,12 +130,11 @@ export function fromFile(f: ProjectFile): Project {
     nextNodeId: f.nextNodeId,
     nextEdgeId: f.nextEdgeId,
   };
-  const { x, y, scale, rotation } = f.camera;
   return {
     title: f.title,
     createdAt: f.createdAt,
     lastUpdatedAt: f.lastUpdatedAt,
-    camera: { x: toM(x), y: toM(y), scale, rotation },
+    camera: cameraOf(f),
     graph,
   };
 }

@@ -75,6 +75,16 @@ export class IndexedDbStorage implements ProjectStorage {
     return all.map((r) => ({ id: r.id, file: 'header' in r ? r.header : headerOf(r.file) }));
   }
 
+  /** The header of a project; one of the first layout is written in this layout first, so that its map can be asked about. */
+  async header(id: string) {
+    const tx = await this.tx('readonly');
+    const r = await request<Stored | undefined>(tx.objectStore(PROJECTS).get(id));
+    if (!r) return undefined;
+    if ('header' in r) return r.header;
+    await this.convert(r.file, id);
+    return headerOf(r.file);
+  }
+
   async load(id: string) {
     const tx = await this.tx('readonly');
     const r = await request<Stored | undefined>(tx.objectStore(PROJECTS).get(id));

@@ -45,18 +45,27 @@ describe('projects from the browser storage go through the same checks as an imp
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining('load refused (^195)'));
   });
 
-  it('a damaged file is told like a damaged import', async () => {
+  it('a damaged header is told like a damaged import', async () => {
+    const { session, storage } = setup(tellMe);
+    await storage.put(stored({ title: 5 }));
+    await session.start();
+    expect(told[0]![1]).toBe(REFUSAL_TEXT.damaged({}));
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('load refused (^197)'));
+  });
+
+  it('the rows of the map are not looked at when a project opens (they are checked when they are read, ^1236)', async () => {
     const { session, storage } = setup(tellMe);
     await storage.put(stored({ nodes: 'no list' }));
     await session.start();
-    expect(told[0]![1]).toBe(REFUSAL_TEXT.damaged({}));
+    expect(told).toEqual([]);
+    expect(session.id).toBe('broken');
   });
 
   it('opening a card that cannot be read tells it and stays in the project that is open', async () => {
     const s = setup(tellMe);
     await withRoad(s);
     const open = s.session.id;
-    await s.storage.put(stored({ edges: 7 }));
+    await s.storage.put(stored({ camera: 7 }));
     await s.session.openModal();
     await s.session.open('broken');
     expect(told).toHaveLength(1);

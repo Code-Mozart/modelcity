@@ -28,7 +28,9 @@ export interface MapChange {
 export interface ProjectStorage {
   /** The headers of all projects. */
   list(): Promise<StoredHeader[]>;
-  /** One project as the object of its file, not checked yet (^229), or undefined if there is none. */
+  /** The header of one project, or undefined if there is none. Reads no part of the map. */
+  header(id: string): Promise<Header | undefined>;
+  /** One whole project as the object of its file, not checked yet (^229), or undefined if there is none. */
   load(id: string): Promise<unknown>;
   /** Write a whole project, replacing what was there. */
   put(project: StoredProject): Promise<void>;
@@ -85,6 +87,11 @@ export class MemoryStorage implements ProjectStorage {
 
   async list() {
     return [...this.items.values()].map((p) => ({ id: p.id, file: headerOf(p.file) }));
+  }
+
+  async header(id: string) {
+    const p = this.items.get(id);
+    return p && structuredClone(headerOf(p.file));
   }
 
   async load(id: string) {

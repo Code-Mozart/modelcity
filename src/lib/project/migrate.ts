@@ -1,4 +1,5 @@
 import { FILE_VERSION, ProjectFileError, type ProjectFile, type RefusalKind } from './file';
+import type { Header } from './storage';
 
 /** Migration `n` turns a project of version `n` into version `n + 1`: a pure function on parsed JSON (^173). */
 export type Migrations = Record<number, (file: Record<string, unknown>) => Record<string, unknown>>;
@@ -126,19 +127,31 @@ function checkReferences(f: ProjectFile) {
   });
 }
 
-/** Check that a project of the current version has the shape of the stored model (`docs/data-model.md`). */
-export function validate(f: Record<string, unknown>): ProjectFile {
+/** Check the header of a project of the current version: what is checked without reading the map. */
+export function validateHeader(f: Record<string, unknown>): Header {
   const texts = ['title', 'createdAt', 'lastUpdatedAt'].every((k) => typeof f[k] === 'string');
   check(texts, '^197', '"title", "createdAt" and "lastUpdatedAt" must be text');
   const c = f.camera;
   const camera = isRecord(c) && ['x', 'y', 'scale', 'rotation'].every((k) => isNum(c[k]));
   check(camera, '^198', '"camera" must have the numbers x, y, scale and rotation');
+  check(isRecord(f.laneConfigurations), '^200', '"laneConfigurations" must be an object');
+  const whole = (v: unknown) => isNum(v) && Number.isInteger(v) && v >= 0;
+  check(
+    whole(f.nextNodeId) && whole(f.nextEdgeId),
+    '^1225',
+    '"nextNodeId" and "nextEdgeId" must be whole numbers',
+  );
+  return f as unknown as Header;
+}
+
+/** Check that a whole project of the current version has the shape of the stored model (`docs/data-model.md`). */
+export function validate(f: Record<string, unknown>): ProjectFile {
+  validateHeader(f);
   check(
     Array.isArray(f.nodes) && Array.isArray(f.edges),
     '^199',
     '"nodes" and "edges" must be lists',
   );
-  check(isRecord(f.laneConfigurations), '^200', '"laneConfigurations" must be an object');
   checkTuples(f);
   checkCounters(f);
   checkReferences(f as unknown as ProjectFile);

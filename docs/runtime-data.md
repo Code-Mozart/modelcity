@@ -4,8 +4,8 @@ What the app holds in memory, operation by operation. Since ^1232 (the tabula ra
 
 ## The clone of what is persisted
 
-- `Editor.graph` (`src/lib/editor/editor.svelte.ts`): the whole map of the open project, an immutable `Graph` (nodes, edges, lane configurations, the two id counters). It is the in-memory clone of the stored rows and is behind the storage only by the autosave delay.
-- `ProjectSession` (`src/lib/project/session.svelte.ts`): the header fields (`title`, `createdAt`, `lastUpdatedAt`), `id`, `saved` (the graph at the last save request, to see whether there is a change), `stored` (the map as the storage has it, to write only the rows that changed), `savedCamera`, and the timers: a change is written 0.4 s after the last change (`AUTOSAVE_MS`) and at the latest 5 s after the oldest unsaved one (`AUTOSAVE_MAX_WAIT_MS`); the camera 1 s after it rests (`CAMERA_SAVE_MS`); the page flushes on leaving.
+- `Editor.graph` (`src/lib/editor/editor.svelte.ts`): the map of the open project, an immutable `Graph`. **Empty** for now: opening a project reads no part of its map (^1236). It is to be the in-memory clone of the stored rows that are in view, behind the storage only by the autosave delay.
+- `ProjectSession` (`src/lib/project/session.svelte.ts`): the stored `header` of the open project (lane configurations and id counters are kept as stored), the header fields (`title`, `createdAt`, `lastUpdatedAt`), `id`, `saved` (the graph at the last save request, to see whether there is a change), `stored` (the map as the storage has it, to write only the rows that changed), `savedCamera`, and the timers: a change is written 0.4 s after the last change (`AUTOSAVE_MS`) and at the latest 5 s after the oldest unsaved one (`AUTOSAVE_MAX_WAIT_MS`); the camera 1 s after it rests (`CAMERA_SAVE_MS`); the page flushes on leaving.
 - `nodeOf` and `edgeIndex` in `src/lib/model/graph.ts`: an index by id (and by node for segments), made once per graph object in a `WeakMap`. The only derived data left; to be replaced when the data of the map is designed.
 
 ## State of the interface (not derived from the map)
