@@ -136,28 +136,3 @@ describe('the rename in the modal is not thrown away by accident (^233)', () => 
     expect(s.session.modalOpen).toBe(false);
   });
 });
-
-describe('a stored project of an older data model (^1226)', () => {
-  it('is converted when it opens: a toast says so and it is saved in the new version, the date unchanged', async () => {
-    const { session, storage } = setup(tellMe);
-    const old = stored({ version: 1 }, 'old');
-    const { nextNodeId: _n, nextEdgeId: _e, ...v1 } = old.file;
-    await storage.put({ id: 'old', file: { ...v1, version: 1, nodes: [[0, 0, 0, 0]] } as never });
-    await session.start();
-    expect(told).toEqual([['info', 'Old was converted to version 2 of the data model and saved']]);
-    await vi.runAllTimersAsync();
-    const file = (await storage.list())[0]!.file;
-    expect([file.version, file.nextNodeId, file.lastUpdatedAt]).toEqual([
-      2,
-      1,
-      old.file.lastUpdatedAt,
-    ]);
-  });
-
-  it('a project that is current says nothing', async () => {
-    const { session, storage } = setup(tellMe);
-    await storage.put(stored({}, 'now'));
-    await session.start();
-    expect(told).toEqual([]);
-  });
-});

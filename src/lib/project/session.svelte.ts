@@ -6,12 +6,14 @@ import { emptyGraph, type Graph } from '../model/graph';
 import {
   FILE_VERSION,
   fromFile,
+  isOlder,
   ProjectFileError,
   toFile,
   type CameraState,
   type Project,
 } from './file';
 import { lastId, remember, uid } from './browserMemory';
+import { download, exportName } from './download';
 import { parseProject, readProject } from './migrate';
 import type { ToastKind } from '../ui/toasts.svelte';
 import type { ProjectStorage, StoredProject } from './storage';
@@ -28,9 +30,6 @@ const NEW_CAMERA: CameraState = { x: 0, y: 0, scale: 4, rotation: 0 };
 
 /** Tell the user something (a toast, ^232). */
 export type Notify = (kind: ToastKind, text: string) => void;
-
-const isOlder = (file: { version?: unknown }) =>
-  typeof file.version === 'number' && file.version < FILE_VERSION;
 
 const unreadable = (e: unknown) => new ProjectFileError('unreadable', '^208', String(e));
 
@@ -132,7 +131,14 @@ export class ProjectSession {
     try {
       const p = fromFile(readProject(file));
       this.enter(id, p);
-      if (isOlder(file)) this.converted(p.title);
+      if (isOlder(file)) {
+        // Converted when it opened: say so and save it in the new version at once, the date stays (^1226).
+        this.notify(
+          'info',
+          `${p.title} was converted to version ${FILE_VERSION} of the data model and saved`,
+        );
+        void this.save(false);
+      }
       return true;
     } catch (e) {
       const refusal = e instanceof ProjectFileError ? e : unreadable(e);
@@ -140,15 +146,6 @@ export class ProjectSession {
       this.notify('error', refusal.message);
       return false;
     }
-  }
-
-  /** A stored project of an older data model was converted when it opened: say so and save it in the new version at once, the date stays (^1226). */
-  private converted(title: string) {
-    this.notify(
-      'info',
-      `${title} was converted to version ${FILE_VERSION} of the data model and saved`,
-    );
-    void this.save(false);
   }
 
   /** Forget a save that is waiting. */
@@ -376,19 +373,9 @@ export class ProjectSession {
 
   /** Let the user save the project as a file: the button `Export JSON` (^226). */
   exportJson() {
-    const name =
-      this.title
-        .trim()
-        .replace(/[^\p{L}\p{N}]+/gu, '-')
-        .replace(/^-|-$/g, '') || 'project';
-    const url = URL.createObjectURL(new Blob([this.exportText()], { type: 'application/json' }));
-    const a = Object.assign(document.createElement('a'), {
-      href: url,
-      download: `${name}.modelcity.json`,
-    });
-    a.click();
-    URL.revokeObjectURL(url);
-    this.notify('success', `exported ${name}.modelcity.json`);
+    const name = exportName(this.title);
+    download(name, this.exportText());
+    this.notify('success', `exported ${name}`);
   }
 
   /** Open the projects modal; `importFile`: and its file window (`Ctrl+O`, ^223). */

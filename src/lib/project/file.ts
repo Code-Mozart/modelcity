@@ -136,6 +136,10 @@ export class ProjectFileError extends Error {
 export const titleOf = (file: { title?: unknown }): string =>
   typeof file.title === 'string' && file.title.trim() ? file.title : '(damaged project)';
 
+/** Whether a stored project is of an older data model than `current` (it is converted when it opens, ^1226). */
+export const isOlder = (file: { version?: unknown }, current = FILE_VERSION): boolean =>
+  typeof file.version === 'number' && file.version < current;
+
 /** `version 1` for a project of an older version than this one reads, else nothing: the card says so after its title (^229). */
 export const versionLabel = (file: { version?: unknown }, current = FILE_VERSION): string =>
-  typeof file.version === 'number' && file.version < current ? `version ${file.version}` : '';
+  isOlder(file, current) ? `version ${String(file.version)}` : '';
