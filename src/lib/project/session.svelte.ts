@@ -3,7 +3,14 @@ import type { ModalTarget } from './modalHints';
 import type { Camera } from '../camera/camera.svelte';
 import type { Editor } from '../editor/editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
-import { fromFile, ProjectFileError, toFile, type CameraState, type Project } from './file';
+import {
+  FILE_VERSION,
+  fromFile,
+  ProjectFileError,
+  toFile,
+  type CameraState,
+  type Project,
+} from './file';
 import { lastId, remember, uid } from './browserMemory';
 import { parseProject, readProject } from './migrate';
 import type { ToastKind } from '../ui/toasts.svelte';
@@ -21,6 +28,9 @@ const NEW_CAMERA: CameraState = { x: 0, y: 0, scale: 4, rotation: 0 };
 
 /** Tell the user something (a toast, ^232). */
 export type Notify = (kind: ToastKind, text: string) => void;
+
+const isOlder = (file: { version?: unknown }) =>
+  typeof file.version === 'number' && file.version < FILE_VERSION;
 
 const unreadable = (e: unknown) => new ProjectFileError('unreadable', '^208', String(e));
 
@@ -120,7 +130,9 @@ export class ProjectSession {
    */
   private tryShow({ id, file }: StoredProject): boolean {
     try {
-      this.enter(id, fromFile(readProject(file)));
+      const p = fromFile(readProject(file));
+      this.enter(id, p);
+      if (isOlder(file)) this.converted(p.title);
       return true;
     } catch (e) {
       const refusal = e instanceof ProjectFileError ? e : unreadable(e);
@@ -128,6 +140,15 @@ export class ProjectSession {
       this.notify('error', refusal.message);
       return false;
     }
+  }
+
+  /** A stored project of an older data model was converted when it opened: say so and save it in the new version at once, the date stays (^1226). */
+  private converted(title: string) {
+    this.notify(
+      'info',
+      `${title} was converted to version ${FILE_VERSION} of the data model and saved`,
+    );
+    void this.save(false);
   }
 
   /** Forget a save that is waiting. */
