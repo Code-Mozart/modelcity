@@ -110,7 +110,6 @@ export class ProjectSession {
    * that).
    */
   private showCamera(camera: CameraState) {
-    this.camera.setAnchors(this.editor.anchors);
     this.camera.restore(camera);
   }
 

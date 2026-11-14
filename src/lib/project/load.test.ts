@@ -94,7 +94,7 @@ describe('what the user asked for is confirmed (^185, ^226, ^232)', () => {
       ['info', 'modelcity saves automatically'],
     ]);
     told.length = 0;
-    drawRoad(s.editor, s.camera);
+    drawRoad(s.editor);
     await s.session.saveNow();
     expect(told).toEqual([
       ['success', 'saved'],

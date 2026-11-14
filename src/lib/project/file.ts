@@ -52,13 +52,8 @@ export interface ProjectFile {
 const toMm = (m: number) => Math.round(m * 1000);
 const toM = (mm: number) => mm / 1000;
 
-export const nodeRow = (n: GNode): ProjectFile['nodes'][number] => [
-  n.id,
-  toMm(n.x),
-  toMm(n.y),
-  n.th,
-];
-export const edgeRow = (e: GEdge): ProjectFile['edges'][number] => [
+const nodeRow = (n: GNode): ProjectFile['nodes'][number] => [n.id, toMm(n.x), toMm(n.y), n.th];
+const edgeRow = (e: GEdge): ProjectFile['edges'][number] => [
   e.id,
   e.start,
   e.end,

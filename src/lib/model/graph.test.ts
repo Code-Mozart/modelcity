@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { nearestOnChains, chainsOf } from '../editor/chains';
 import {
   addEdge,
   addNode,
-  edgesAt,
   edgesIn,
   edgesOut,
   emptyGraph,
@@ -15,7 +13,6 @@ import {
   withRadius,
   type Graph,
 } from './graph';
-import { branchOfEdge, branchOfNode, curveAction, farEnd, nodeAction } from './junction';
 
 /** A chain of nodes along the x axis, 10 m apart, edges from each to the next. */
 function chain(count: number, g: Graph = emptyGraph()) {
@@ -64,65 +61,6 @@ describe('the graph (^106)', () => {
     const lone = addNode(emptyGraph(), { x: 0, y: 0, th: 0 });
     expect(removeNodes(lone.graph, [], null).nodes).toHaveLength(0);
     expect(removeNodes(lone.graph, [], lone.id).nodes).toHaveLength(1);
-  });
-});
-
-describe('chains (^106)', () => {
-  it('one chain for a road, a chain per arm at a junction, a loop is one chain', () => {
-    const { graph, ids } = chain(3);
-    expect(chainsOf(graph)).toHaveLength(1);
-    const lone = addNode(graph, { x: 10, y: 10, th: 0 });
-    const branched = addEdge(lone.graph, ids[1]!, lone.id);
-    expect(chainsOf(branched)).toHaveLength(3);
-    const loop = addEdge(chain(3).graph, 2, 0);
-    const [c] = chainsOf(loop);
-    expect(chainsOf(loop)).toHaveLength(1);
-    expect(c!.nodeIds).toEqual([0, 1, 2, 0]);
-  });
-
-  it('finds the nearest curve with its edge id', () => {
-    const { graph } = chain(3);
-    const hit = nearestOnChains(chainsOf(graph), { x: 15, y: 0.1 }, 1)!;
-    expect(hit.edge).toBe(1);
-    expect(hit.d).toBeLessThan(0.2);
-  });
-});
-
-describe('actions and branches (^23, ^128, ^162)', () => {
-  const state = (g: Graph, active: number | null, origin: number | null) => ({
-    graph: g,
-    active,
-    end: 'end' as const,
-    origin,
-  });
-
-  it('with nothing drawn: a lone end extends, any other node splits', () => {
-    const { graph, ids } = chain(3);
-    expect(nodeAction(state(graph, null, null), ids[0]!)).toBe('extend');
-    expect(nodeAction(state(graph, null, null), ids[1]!)).toBe('split');
-    expect(curveAction(state(graph, null, null))).toBe('split');
-  });
-
-  it('while drawing: the node drawn from finishes, where it started closes, others merge', () => {
-    const { graph, ids } = chain(3);
-    const d = state(graph, ids[2]!, ids[0]!);
-    expect(nodeAction(d, ids[2]!)).toBe('finish');
-    expect(nodeAction(d, ids[0]!)).toBe('close');
-    expect(nodeAction(d, ids[1]!)).toBe('merge');
-    expect(curveAction(d)).toBe('merge');
-    const other = chain(2, graph);
-    expect(curveAction(state(other.graph, ids[2]!, ids[0]!))).toBe('merge');
-  });
-
-  it('knows the far end of a road and the branch an edge or node belongs to', () => {
-    const { graph, ids } = chain(4);
-    expect(farEnd(graph, ids[0]!)).toBe(ids[3]);
-    expect(branchOfEdge(graph, 1).sort()).toEqual(ids);
-    expect(branchOfNode(graph, ids[1]!).sort()).toEqual(ids);
-    const side = addNode(graph, { x: 10, y: 10, th: 0 });
-    const tee = addEdge(side.graph, ids[1]!, side.id);
-    expect(edgesAt(tee, ids[1]!)).toHaveLength(3);
-    expect(branchOfEdge(tee, 0).sort()).toEqual([ids[0], ids[1]].sort());
   });
 });
 

@@ -1,3 +1,5 @@
+> **Since ^1232 this describes the old app, removed in the tabula rasa (PR #60). It is the list of what is to be built again; the tests it names are gone.**
+
 # Features and operations (^371)
 
 Everything the sweep of the code found that the user can see, do, wait for or that shapes what they get, by the five tests of the glossary entry *Feature* (README): *observable, distinct, intended, nameable, testable*. One row per feature or operation. A row that starts with `| ^N |` mints the hat here (rented ranges ^501–^683 and ^762–^770 in `docs/hats.md`; the next ones hold the rows added after the review of the owner); a row that starts with `| = ^N |` is an existing hat that already describes exactly this one thing (narrow reuse, ^392). Controls are in `docs/controls.md`.

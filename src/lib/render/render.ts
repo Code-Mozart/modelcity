@@ -1,6 +1,5 @@
 import { gridStep, worldToScreen } from '../camera/view';
 import { readPalette, text, type Frame, type Palette } from './paint';
-import { drawScene, type Scene } from './scene';
 
 /** Canvas 2D drawing of the map: background, grid, scale bar, then the scene. */
 
@@ -44,7 +43,7 @@ export interface RenderOptions {
 }
 
 /** Draw one frame. `dpr` is the device pixel ratio of the backing canvas. */
-export function render(frame: Frame, dpr: number, scene: Scene, options: RenderOptions) {
+export function render(frame: Frame, dpr: number, options: RenderOptions) {
   const { ctx, view, size } = frame;
   const pal = readPalette();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -61,6 +60,5 @@ export function render(frame: Frame, dpr: number, scene: Scene, options: RenderO
     drawGrid(gridFrame, minor, pal['grid-minor']);
     drawGrid(gridFrame, minor * 10, pal['grid-major']);
   }
-  drawScene(frame, scene, pal);
   if (options.showScaleBar) drawScaleBar(frame, pal);
 }

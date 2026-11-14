@@ -15,7 +15,7 @@ const nextAfter = (rows: unknown): number =>
  * The migrations of the stored model; old ones are never edited. 1 to 2 (^1224): the ids the next
  * node and edge get are stored; a version 1 project gets the ones its ids implied (the largest + 1).
  */
-export const MIGRATIONS: Migrations = {
+const MIGRATIONS: Migrations = {
   1: (f) => ({ ...f, nextNodeId: nextAfter(f.nodes), nextEdgeId: nextAfter(f.edges) }),
 };
 

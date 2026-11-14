@@ -1,6 +1,5 @@
 import { LANE_WIDTH_M } from '../curves/lane';
 import type { PathNode } from '../curves/types';
-import { changesBetween } from './changes';
 
 /**
  * The stored data model as the editor holds it (^106, ^170, `docs/data-model.md`): a directed
@@ -21,7 +20,7 @@ export interface GEdge {
 }
 
 /** A named set of lane properties that edges refer to (^26). */
-export interface Lane {
+interface Lane {
   name: string;
   /** Meters. */
   width: number;
@@ -36,7 +35,7 @@ export interface Graph {
   nextEdgeId: number;
 }
 
-export const DEFAULT_LANE = 1;
+const DEFAULT_LANE = 1;
 
 export const emptyGraph = (): Graph => ({
   nodes: [],
@@ -47,35 +46,15 @@ export const emptyGraph = (): Graph => ({
 });
 
 const indexOfNodes = new WeakMap<Graph, Map<number, GNode>>();
-/** The graph whose index was made last: the index of the next graph of the same shape is that one with the changes made in it (^941). */
-const lastNodes: Graph[] = [];
-/** How many graphs of different shape (the map, the part of it in the window...) keep their indexes at once. */
-const KEPT = 6;
 
 /** The node with this id (nodes are looked up through an index kept per graph). */
 export function nodeOf(g: Graph, id: number): GNode | undefined {
   let index = indexOfNodes.get(g);
   if (!index) {
-    index = patchedNodes(g) ?? new Map(g.nodes.map((n) => [n.id, n]));
+    index = new Map(g.nodes.map((n) => [n.id, n]));
     indexOfNodes.set(g, index);
-    lastNodes.unshift(g);
-    lastNodes.length = Math.min(lastNodes.length, KEPT);
   }
   return index.get(id);
-}
-
-/** The index of the last graph, changed to be the index of `g`, if `g` differs from it in some nodes only. The last graph loses its index (it is made again if that graph is asked again). */
-function patchedNodes(g: Graph): Map<number, GNode> | null {
-  for (const last of lastNodes) {
-    const was = indexOfNodes.get(last);
-    const changes = was && changesBetween(last, g);
-    if (!was || !changes) continue;
-    for (const i of changes.nodes) was.set(g.nodes[i]!.id, g.nodes[i]!);
-    indexOfNodes.delete(last);
-    lastNodes.splice(lastNodes.indexOf(last), 1);
-    return was;
-  }
-  return null;
 }
 
 /** The segments of a graph by number and by node, found once per graph (^938): graphs are never changed, so the index never goes stale. */
@@ -87,16 +66,12 @@ interface EdgeIndex {
 }
 const indexOfEdges = new WeakMap<Graph, EdgeIndex>();
 
-/** The graph whose index of segments was made last (see `lastNodes`). */
-const lastEdges: Graph[] = [];
-
 function edgeIndex(g: Graph): EdgeIndex {
   let index = indexOfEdges.get(g);
-  if (index) return index;
-  index = patchedEdges(g) ?? builtEdges(g);
-  indexOfEdges.set(g, index);
-  lastEdges.unshift(g);
-  lastEdges.length = Math.min(lastEdges.length, KEPT);
+  if (!index) {
+    index = builtEdges(g);
+    indexOfEdges.set(g, index);
+  }
   return index;
 }
 
@@ -117,41 +92,12 @@ function builtEdges(g: Graph): EdgeIndex {
   return index;
 }
 
-/** The index of the last graph changed into that of `g`, when only segments differ (their ends are the same, so only the objects in the lists are replaced, ^941). */
-function patchedEdges(g: Graph): EdgeIndex | null {
-  for (const last of lastEdges) {
-    const was = indexOfEdges.get(last);
-    const changes = was && changesBetween(last, g);
-    if (!was || !changes) continue;
-    const swap = (m: Map<number, GEdge[]>, id: number, from: GEdge, to: GEdge) => {
-      const list = m.get(id);
-      const i = list ? list.indexOf(from) : -1;
-      if (list && i >= 0) list[i] = to;
-    };
-    for (const i of changes.edges) {
-      const [from, to] = [last.edges[i]!, g.edges[i]!];
-      was.byId.set(to.id, to);
-      swap(was.into, to.end, from, to);
-      swap(was.out, to.start, from, to);
-      swap(was.at, to.start, from, to);
-      if (to.end !== to.start) swap(was.at, to.end, from, to);
-    }
-    indexOfEdges.delete(last);
-    lastEdges.splice(lastEdges.indexOf(last), 1);
-    return was;
-  }
-  return null;
-}
-
 export const edgeOfId = (g: Graph, id: number): GEdge | undefined => edgeIndex(g).byId.get(id);
 
 /** The edges that run into a node and out of it, in the order of the graph (a new list each time, so that a caller may change it). */
 export const edgesIn = (g: Graph, id: number) => [...(edgeIndex(g).into.get(id) ?? [])];
 export const edgesOut = (g: Graph, id: number) => [...(edgeIndex(g).out.get(id) ?? [])];
 export const edgesAt = (g: Graph, id: number) => [...(edgeIndex(g).at.get(id) ?? [])];
-
-/** The lane width, in meters, of an edge. */
-export const widthOf = (g: Graph, e: GEdge) => g.lanes[e.lane]?.width ?? LANE_WIDTH_M;
 
 export function addNode(g: Graph, at: PathNode): { graph: Graph; id: number } {
   const id = g.nextNodeId;
@@ -172,33 +118,11 @@ export function withRadius(g: Graph, id: number, radius: number | null): Graph {
   return { ...g, edges: g.edges.map((e) => (e.id === id ? { ...e, radius } : e)) };
 }
 
-/** A node moved by `delta` from where it was (what a group move starts from, ^71). */
-export interface Placed {
-  id: number;
-  x: number;
-  y: number;
-}
-
-export function placed(g: Graph, ids: number[]): Placed[] {
-  return ids.flatMap((id) => {
-    const n = nodeOf(g, id);
-    return n ? [{ id, x: n.x, y: n.y }] : [];
-  });
-}
-
-export function moveNodes(g: Graph, group: Placed[], delta: { x: number; y: number }): Graph {
-  return group.reduce((acc, p) => withNode(acc, p.id, { x: p.x + delta.x, y: p.y + delta.y }), g);
-}
-
 /** Give the listed edges the radius of edge `from`, copying its current value (^77). */
 export function shareRadius(g: Graph, from: number, to: number[]): Graph {
   const value = edgeOfId(g, from)?.radius ?? null;
   return { ...g, edges: g.edges.map((e) => (to.includes(e.id) ? { ...e, radius: value } : e)) };
 }
-
-/** The edges whose two nodes are both in `ids`: the selected segments (^133). */
-export const edgesBetween = (g: Graph, ids: number[]): GEdge[] =>
-  g.edges.filter((e) => ids.includes(e.start) && ids.includes(e.end));
 
 /**
  * Insert a node on an edge at a point of its curve with the curve's heading: the edge becomes two,
@@ -248,18 +172,6 @@ export function sameGraph(a: Graph, b: Graph): boolean {
     x.every((item, i) => Object.entries(item).every(([k, v]) => v === (y[i] as never)[k]));
   const lanes = (g: Graph) => Object.entries(g.lanes).map(([id, l]) => ({ id, ...l }));
   return same(a.nodes, b.nodes) && same(a.edges, b.edges) && same(lanes(a), lanes(b));
-}
-
-/**
- * The nodes `ids` turned around (every heading a half turn) and the edges between them reversed:
- * the same curves, running the other way (^234).
- */
-export function turnedAround(g: Graph, ids: number[]): Graph {
-  const nodes = g.nodes.map((n) => (ids.includes(n.id) ? { ...n, th: n.th + Math.PI } : n));
-  const edges = g.edges.map((e) =>
-    ids.includes(e.start) && ids.includes(e.end) ? { ...e, start: e.end, end: e.start } : e,
-  );
-  return { ...g, nodes, edges };
 }
 
 const mm = (m: number) => Math.round(m * 1000) / 1000;
