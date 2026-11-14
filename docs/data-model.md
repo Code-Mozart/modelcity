@@ -26,7 +26,18 @@ The stored model is a **directed graph with radii and headings**. What is stored
 }
 ```
 
-An export file is exactly one such project object; the browser stores one record per project in the same format (^163 to ^168).
+An export file is exactly one such project object (^163, ^164). The browser keeps the same data in another layout (^1228, below); the file format is not the storage layout.
+
+## The browser storage: IndexedDB (^1228)
+
+The persisted data has **no chunks** and no other spatial structure of its own: only records and the indexes of the database. Database `modelcity`, version 2:
+
+- `projects`, key `id`: `{ id, header }`, the header being the project without `nodes` and `edges` (title, dates, version, camera, lane configurations, the two id counters). The list of projects reads only these.
+- `nodes`, key `[project, id]`: one record `{ p, id, x, y, th }` per node (millimeters). Indexes: `[project, x]` and `[project, y]`, so that the nodes in a range of x or of y are read without the others; the side with the smaller span is the one to range on, the other is filtered by the reader.
+- `edges`, key `[project, id]`: `{ p, id, start, end, radius, lane }`. Indexes: `[project, start]` and `[project, end]`: the segments of a node.
+- An edit writes the header and the rows that changed (found by id), not the project.
+- Records of the first layout, `{ id, file }` (the whole file in one record), are still read; they are written in this layout when the project is saved. A damaged file (rows that are not rows) stays in one record, so that it is refused when it is opened (^229).
+- The nodes and segments of a project come back in the order of their ids.
 
 ## Conventions
 

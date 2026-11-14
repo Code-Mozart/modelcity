@@ -1,4 +1,13 @@
-import { emptyGraph, roundToMm, type Graph } from '../model/graph';
+import {
+  edgeOfId,
+  emptyGraph,
+  nodeOf,
+  roundToMm,
+  type GEdge,
+  type GNode,
+  type Graph,
+} from '../model/graph';
+import type { Header, MapChange } from './storage';
 
 /**
  * The stored project (`docs/data-model.md`, ^170): lengths in integer millimeters, nodes and edges
@@ -43,7 +52,22 @@ export interface ProjectFile {
 const toMm = (m: number) => Math.round(m * 1000);
 const toM = (mm: number) => mm / 1000;
 
-export function toFile(p: Project): ProjectFile {
+export const nodeRow = (n: GNode): ProjectFile['nodes'][number] => [
+  n.id,
+  toMm(n.x),
+  toMm(n.y),
+  n.th,
+];
+export const edgeRow = (e: GEdge): ProjectFile['edges'][number] => [
+  e.id,
+  e.start,
+  e.end,
+  e.radius === null ? null : toMm(e.radius),
+  e.lane,
+];
+
+/** The project without its map: the lane configurations are in it, the nodes and segments are not. */
+export function toHeader(p: Project): Header {
   const g = roundToMm(p.graph);
   const { x, y, scale, rotation } = p.camera;
   return {
@@ -52,19 +76,34 @@ export function toFile(p: Project): ProjectFile {
     createdAt: p.createdAt,
     lastUpdatedAt: p.lastUpdatedAt,
     camera: { x: toMm(x), y: toMm(y), scale, rotation },
-    nodes: g.nodes.map((n) => [n.id, toMm(n.x), toMm(n.y), n.th]),
-    edges: g.edges.map((e) => [
-      e.id,
-      e.start,
-      e.end,
-      e.radius === null ? null : toMm(e.radius),
-      e.lane,
-    ]),
     laneConfigurations: Object.fromEntries(
       Object.entries(g.lanes).map(([id, l]) => [id, { name: l.name, width: toMm(l.width) }]),
     ),
     nextNodeId: g.nextNodeId,
     nextEdgeId: g.nextEdgeId,
+  };
+}
+
+export function toFile(p: Project): ProjectFile {
+  const g = roundToMm(p.graph);
+  return { ...toHeader(p), nodes: g.nodes.map(nodeRow), edges: g.edges.map(edgeRow) };
+}
+
+/** The text of an export file (^163): a project that was never saved gets `stamp` for its dates. */
+export const exportText = (p: Project, stamp: string) =>
+  JSON.stringify(
+    toFile({ ...p, createdAt: p.createdAt || stamp, lastUpdatedAt: p.lastUpdatedAt || stamp }),
+    null,
+    2,
+  );
+
+/** The rows of the map that are different in `to` than in `from`, found by id: a row is different if its object is (an edit makes new objects only for what it changed). */
+export function mapChange(from: Graph, to: Graph): MapChange {
+  return {
+    nodes: to.nodes.filter((n) => nodeOf(from, n.id) !== n).map(nodeRow),
+    edges: to.edges.filter((e) => edgeOfId(from, e.id) !== e).map(edgeRow),
+    removedNodes: from.nodes.filter((n) => !nodeOf(to, n.id)).map((n) => n.id),
+    removedEdges: from.edges.filter((e) => !edgeOfId(to, e.id)).map((e) => e.id),
   };
 }
 
@@ -139,6 +178,10 @@ export const titleOf = (file: { title?: unknown }): string =>
 /** Whether a stored project is of an older data model than `current` (it is converted when it opens, ^1226). */
 export const isOlder = (file: { version?: unknown }, current = FILE_VERSION): boolean =>
   typeof file.version === 'number' && file.version < current;
+
+/** The toast for a project that was converted to the current data model when it opened (^1226). */
+export const convertedText = (title: string) =>
+  `${title} was converted to version ${FILE_VERSION} of the data model and saved`;
 
 /** `version 1` for a project of an older version than this one reads, else nothing: the card says so after its title (^229). */
 export const versionLabel = (file: { version?: unknown }, current = FILE_VERSION): string =>

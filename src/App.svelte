@@ -28,7 +28,7 @@
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
-  import { IndexedDbStorage } from './lib/project/storage';
+  import { IndexedDbStorage } from './lib/project/indexedDb';
   import { installTestHook } from './lib/testHook';
   import VersionText from './lib/hud/VersionText.svelte';
   import PointerCoordinates from './lib/hud/PointerCoordinates.svelte';

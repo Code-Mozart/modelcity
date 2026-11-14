@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { addNode } from '../model/graph';
 import { click } from '../testing/editorHelpers';
 import { drawRoad, resetClock, setup, two, withRoad, datesOf } from '../testing/sessionHelpers';
-import { fromFile } from './file';
+import { fromFile, type ProjectFile } from './file';
 import { AUTOSAVE_MAX_WAIT_MS, AUTOSAVE_MS } from './session.svelte';
 
 beforeEach(() => {
@@ -30,7 +30,7 @@ describe('the open project (^82, ^148, ^189)', () => {
     expect(await s.storage.list()).toHaveLength(0);
     await vi.advanceTimersByTimeAsync(2);
     const [stored] = await s.storage.list();
-    expect(stored!.file.nodes).toHaveLength(2);
+    expect(((await s.storage.load(stored!.id)) as ProjectFile).nodes).toHaveLength(2);
     expect(stored!.file.title).toBe('Untitled project');
     expect(s.session.noProject).toBe(false);
   });
@@ -262,7 +262,10 @@ describe('autosave with a maximum wait (^166, ^183)', () => {
       editor.graph = addNode(editor.graph, { x: editor.graph.nodes.length, y: 0, th: 0 }).graph;
       session.changed();
     };
-    const nodes = async () => (await storage.list())[0]?.file.nodes.length ?? 0;
+    const nodes = async () => {
+      const [first] = await storage.list();
+      return first ? ((await storage.load(first.id)) as ProjectFile).nodes.length : 0;
+    };
     for (let ms = 0; ms < AUTOSAVE_MAX_WAIT_MS - 300; ms += 300) {
       change();
       await vi.advanceTimersByTimeAsync(300);

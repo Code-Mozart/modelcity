@@ -78,7 +78,7 @@ describe('a camera that only moved is saved when it rests, without a change of t
     await s.session.start();
     await roadWithCamera(s, 0, 0, A);
     const [saved] = await s.storage.list();
-    const put = vi.spyOn(s.storage, 'put');
+    const put = vi.spyOn(s.storage, 'patch');
     s.camera.restore({ ...A, x: A.x + 30 });
     s.session.cameraMoved();
     await vi.advanceTimersByTimeAsync(CAMERA_SAVE_MS - 10);
@@ -96,7 +96,7 @@ describe('a camera that only moved is saved when it rests, without a change of t
   it('with no project and an empty map nothing is saved', async () => {
     const s = setup();
     await s.session.start();
-    const put = vi.spyOn(s.storage, 'put');
+    const put = vi.spyOn(s.storage, 'patch');
     s.camera.restore({ ...A, x: 5 });
     s.session.cameraMoved();
     await vi.advanceTimersByTimeAsync(CAMERA_SAVE_MS + 10);
