@@ -1,7 +1,7 @@
 {
   "name": "modelcity",
-  "version": "0.59.0",
-  "moniker": "Performance by region",
+  "version": "0.60.0",
+  "moniker": "Chunked map",
   "private": true,
   "type": "module",
   "scripts": {
