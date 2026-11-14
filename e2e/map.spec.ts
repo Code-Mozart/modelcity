@@ -31,7 +31,10 @@ async function open(page: Page, latencyMs = 0) {
 
 test('the nodes of a project are drawn once their chunks are loaded', async ({ page }) => {
   await open(page);
-  await page.waitForFunction(() => window.__modelcity!.memory.ready.size > 0);
+  await page.waitForFunction(() => {
+    const chunks = [...window.__modelcity!.memory.chunks.values()];
+    return chunks.length > 0 && chunks.every((c) => c.status === 'ready');
+  });
   expect(await colourAt(page, NODE)).toBe(INK);
   expect(await colourAt(page, { x: 100, y: 40 })).not.toBe(INK);
 });
@@ -40,8 +43,15 @@ test('a chunk that is not loaded yet is hatched, and the camera is free meanwhil
   page,
 }) => {
   await open(page, 60_000);
-  await page.waitForFunction(() => window.__modelcity!.memory.loading.size > 0);
-  expect(await page.evaluate(() => window.__modelcity!.memory.ready.size)).toBe(0);
+  await page.waitForFunction(() => window.__modelcity!.memory.chunks.size > 0);
+  const states = await page.evaluate(() =>
+    [...window.__modelcity!.memory.chunks.values()].map((c) => c.status),
+  );
+  expect(new Set(states)).toEqual(new Set(['loading']));
+  // Half of the rows of the chunk in the middle are read: the ring is half full.
+  await page.evaluate(() =>
+    window.__modelcity!.memory.chunks.set('0,0', { status: 'loading', progress: 0.5 }),
+  );
   expect(await colourAt(page, NODE)).not.toBe(INK);
   await page.screenshot({
     path: '/tmp/claude-0/-home-user-modelcity/4aaea4c7-3f8c-5912-8706-e9ae310b32b3/scratchpad/loading.png',

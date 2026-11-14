@@ -5,6 +5,7 @@ import type {
   MapChange,
   NodeRow,
   ProjectStorage,
+  ReadOptions,
   StoredProject,
 } from './storage';
 import { applyChange, headerOf } from './storage';
@@ -12,6 +13,8 @@ import type { ProjectFile } from './file';
 
 const DB = 'modelcity';
 const [PROJECTS, NODES, EDGES] = ['projects', 'nodes', 'edges'];
+/** A read that can say how far it is says it after this many rows. */
+const PROGRESS_STEP = 500;
 
 /**
  * A project is a record of `projects` with its header (the list reads only these), and one record
@@ -134,17 +137,35 @@ export class IndexedDbStorage implements ProjectStorage {
 
   /**
    * The nodes in a box: the index on x or the one on y finds them, the one whose range holds fewer
-   * (the count is asked of both), and the other coordinate is filtered here (^1228).
+   * (the count is asked of both), and the other coordinate is filtered here (^1228). They are read
+   * one by one so that it can say how far it is, and stop (^1241).
    */
-  async nodesIn(id: string, b: BoxMm) {
+  async nodesIn(id: string, b: BoxMm, { onProgress, signal }: ReadOptions = {}) {
+    signal?.throwIfAborted();
     const store = (await this.tx('readonly')).objectStore(NODES);
     const [byX, byY] = [store.index('x'), store.index('y')];
     const [rx, ry] = [between(id, b.x0, b.x1), between(id, b.y0, b.y1)];
     const [nx, ny] = await Promise.all([request(byX.count(rx)), request(byY.count(ry))]);
-    const rows = await request(nx <= ny ? byX.getAll(rx) : byY.getAll(ry));
-    return rows
-      .filter((n) => n.x >= b.x0 && n.x <= b.x1 && n.y >= b.y0 && n.y <= b.y1)
-      .map((n): NodeRow => [n.id, n.x, n.y, n.th]);
+    const [from, range, total] = nx <= ny ? [byX, rx, nx] : [byY, ry, ny];
+    return new Promise<NodeRow[]>((resolve, reject) => {
+      const rows: NodeRow[] = [];
+      let seen = 0;
+      const cursor = from.openCursor(range);
+      cursor.onerror = () => reject(cursor.error);
+      cursor.onsuccess = () => {
+        const at = cursor.result;
+        if (signal?.aborted) return reject(signal.reason);
+        if (!at) return resolve(rows);
+        const n = at.value;
+        if (n.x >= b.x0 && n.x <= b.x1 && n.y >= b.y0 && n.y <= b.y1)
+          rows.push([n.id, n.x, n.y, n.th]);
+        if (++seen % PROGRESS_STEP === 0) onProgress?.(seen, total);
+        at.continue();
+      };
+    }).then((rows) => {
+      onProgress?.(total, total);
+      return rows;
+    });
   }
 
   async nodesByIds(id: string, ids: number[]) {

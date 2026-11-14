@@ -38,11 +38,17 @@ export interface ProjectStorage {
   patch(id: string, header: Header, change?: MapChange): Promise<void>;
   remove(id: string): Promise<void>;
   /** The nodes of a project inside a box (millimeters, both ends included): the part of the map that is looked at. */
-  nodesIn(id: string, box: BoxMm): Promise<NodeRow[]>;
+  nodesIn(id: string, box: BoxMm, read?: ReadOptions): Promise<NodeRow[]>;
   /** The nodes with these ids. */
   nodesByIds(id: string, ids: number[]): Promise<NodeRow[]>;
   /** The segments that start or end at one of these nodes. */
   edgesOf(id: string, nodeIds: number[]): Promise<EdgeRow[]>;
+}
+
+/** What a long read can be asked: to say how far it is (rows looked at, of rows to look at), and to stop (it then fails with an `AbortError`). */
+export interface ReadOptions {
+  onProgress?: (done: number, total: number) => void;
+  signal?: AbortSignal;
 }
 
 /** A box in millimeters, the unit of what is stored. */
@@ -112,9 +118,12 @@ export class MemoryStorage implements ProjectStorage {
     this.items.delete(id);
   }
 
-  async nodesIn(id: string, b: BoxMm) {
+  async nodesIn(id: string, b: BoxMm, { onProgress, signal }: ReadOptions = {}) {
+    signal?.throwIfAborted();
     const inBox = ([, x, y]: NodeRow) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
-    return this.items.get(id)?.file.nodes.filter(inBox) ?? [];
+    const rows = this.items.get(id)?.file.nodes.filter(inBox) ?? [];
+    onProgress?.(rows.length, rows.length);
+    return rows;
   }
 
   async nodesByIds(id: string, ids: number[]) {

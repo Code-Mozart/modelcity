@@ -15,8 +15,8 @@ What the app holds in memory, operation by operation. Since ^1232 (the tabula ra
 
 ## Chunks (^1231, ^1238)
 
-- `MapMemory` (`map/mapMemory.svelte.ts`): `ready` (the loaded chunks of the open project, by id: their node and segment rows as stored), `loading` (the chunks asked for that are on their way), `tooMuch`, `project`. Chunks are asked for from the camera: the view and one ring. Nothing is let go yet (eviction is not built).
-- `ChunkLoader` (`map/chunkLoader.ts`): the chunks it has read, the nodes by id (also the far ends of segments), the chunks it is reading.
+- `MapMemory` (`map/mapMemory.svelte.ts`): `chunks`, one reactive state per chunk asked for: loading (with its progress, real: rows read of rows there are) or ready (the chunk: its node and segment rows as stored), `tooMuch`, `project`. Asked for from the camera: the view and one ring. Chunks are read one at a time each, 4 at the same time, the one nearest the middle of the view first; a read of a chunk that left the view is stopped. Nothing that is ready is let go yet (eviction is not built).
+- `ChunkLoader` (`map/chunkLoader.ts`): reads one chunk; knows the nodes it has read by id (also the far ends of segments).
 - Drawn from it, so far: the node dots, and the placeholder of a chunk that is not loaded.
 
 ## Not there any more (^1232)

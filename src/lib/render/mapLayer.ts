@@ -7,6 +7,8 @@ import { text, type Frame, type Palette } from './paint';
 export interface ChunkView {
   box: Box;
   nodes: readonly NodeRow[] | null;
+  /** How far the chunk is on its way, 0 to 1 (real: rows read of rows there are), while `nodes` is null. */
+  progress: number;
 }
 
 export interface MapScene {
@@ -22,6 +24,8 @@ const RING_MIN_PX = 40;
 const HATCH_PX = 12;
 const HATCH_ALPHA = 0.3;
 const BORDER_ALPHA = 0.5;
+/** A ring that is just starting shows this much of itself, so that it is seen. */
+const MIN_ARC = 0.02;
 /** The ring stays this far from the edge of the screen. */
 const RING_INSET_PX = 60;
 
@@ -60,8 +64,24 @@ function corners(f: Frame, b: Box) {
   ].map((p) => worldToScreen(f.view, f.size, p));
 }
 
-/** A chunk that is not loaded: hatched, with a ring in the middle that says it is on its way. */
-function drawLoading(f: Frame, b: Box, pal: Palette) {
+/** The ring in the middle of a chunk that is being read: a faint circle and the part of it that is done. */
+function drawRing(f: Frame, at: { x: number; y: number }, progress: number, pal: Palette) {
+  const { ctx } = f;
+  const start = -Math.PI / 2;
+  ctx.strokeStyle = pal.muted;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = BORDER_ALPHA;
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, RING_RADIUS_PX, 0, 2 * Math.PI);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, RING_RADIUS_PX, start, start + 2 * Math.PI * Math.max(progress, MIN_ARC));
+  ctx.stroke();
+}
+
+/** A chunk that is not loaded: hatched, with a border, and a ring in the middle that fills as it is read. */
+function drawLoading(f: Frame, b: Box, progress: number, pal: Palette) {
   const { ctx } = f;
   const quad = corners(f, b);
   ctx.beginPath();
@@ -77,14 +97,14 @@ function drawLoading(f: Frame, b: Box, pal: Palette) {
   const [a, c] = [quad[0]!, quad[2]!];
   if (Math.hypot(c.x - a.x, c.y - a.y) < RING_MIN_PX * Math.SQRT2) return;
   // In the middle of the chunk, but where it can be seen if the middle is off the screen.
-  const at = {
-    x: Math.min(Math.max((a.x + c.x) / 2, RING_INSET_PX), f.size.width - RING_INSET_PX),
-    y: Math.min(Math.max((a.y + c.y) / 2, RING_INSET_PX), f.size.height - RING_INSET_PX),
-  };
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(at.x, at.y, RING_RADIUS_PX, 0, 1.5 * Math.PI);
-  ctx.stroke();
+  const inside = (v: number, side: number) =>
+    Math.min(Math.max(v, RING_INSET_PX), side - RING_INSET_PX);
+  drawRing(
+    f,
+    { x: inside((a.x + c.x) / 2, f.size.width), y: inside((a.y + c.y) / 2, f.size.height) },
+    progress,
+    pal,
+  );
 }
 
 function drawNodes(f: Frame, nodes: readonly NodeRow[], pal: Palette) {
@@ -106,7 +126,7 @@ function drawNodes(f: Frame, nodes: readonly NodeRow[], pal: Palette) {
 export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
   for (const c of scene.chunks) {
     if (c.nodes) drawNodes(f, c.nodes, pal);
-    else drawLoading(f, c.box, pal);
+    else drawLoading(f, c.box, c.progress, pal);
   }
   if (scene.tooMuch)
     text(

@@ -3,6 +3,7 @@
   import type { Camera } from './camera/camera.svelte';
   import { FEATURES } from './features';
   import { render } from './render/render';
+  import type { ChunkView } from './render/mapLayer';
   import type { Point } from './camera/view';
   import type { ControlId } from './hints/hints';
   import { boxOfId, CHUNK_M, countOf, idsOf } from './map/chunks';
@@ -42,10 +43,14 @@
     const tooMuch = countOf(seen) > MAX_CHUNKS;
     const chunks = tooMuch
       ? []
-      : [...idsOf(seen)].map((id) => ({
-          box: boxOfId(id),
-          nodes: memory.ready.get(id)?.nodes ?? null,
-        }));
+      : [...idsOf(seen)].map((id): ChunkView => {
+          const state = memory.chunks.get(id);
+          return {
+            box: boxOfId(id),
+            nodes: state?.status === 'ready' ? state.chunk.nodes : null,
+            progress: state?.status === 'loading' ? state.progress : 0,
+          };
+        });
     return { chunks, tooMuch };
   });
 
