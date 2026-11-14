@@ -1,96 +1,20 @@
 import { expect, test } from '@playwright/test';
 import { App } from './app';
 
-const A = { x: 0, y: 0 };
-const B = { x: 20, y: 10 };
-const C = { x: 40, y: 40 };
-
-/** The main editing features in one drive, as a user would do them (^145). */
-async function firstArm(app: App) {
-  await app.click({ x: 0, y: 30 }); // empty canvas: enters draw mode
-  expect((await app.state()).mode).toBe('draw');
-  await app.page.keyboard.down('Control'); // no snapping (^101): the nodes go where they are clicked
-  await app.click(A);
-  await app.drag(B, { x: 30, y: 10 }); // B with a heading: an S-curve
-  await app.drag(C, { x: 40, y: 50 }); // C with a heading: an L-bend
-  await app.page.keyboard.up('Control');
-  expect((await app.state()).kinds).toEqual([['S', 'C']]);
-}
-
-async function changeRadius(app: App) {
-  expect((await app.edges())[1]!.radius).toBeNull();
-  const handle = await app.radiusHandle(1);
-  await app.page.keyboard.down('Control'); // no snapping (^101, ^249): the radius point goes where it is dragged
-  await app.drag(handle, { x: handle.x + 2, y: handle.y - 2 });
-  await app.page.keyboard.up('Control');
-  expect((await app.edges())[1]!.radius).not.toBeNull();
-}
-
-async function moveUndoRedo(app: App) {
-  await app.page.keyboard.press('Escape');
-  expect((await app.state()).mode).toBe('select');
-  await app.page.keyboard.down('Control'); // no snapping (^101): the node goes where it is dragged
-  await app.drag(B, { x: 25, y: 10 });
-  await app.page.keyboard.up('Control');
-  expect((await app.node(1)).x).toBeCloseTo(25, 0);
-  await expect(app.history()).toContainText('move node');
-  await expect(app.history()).toContainText('undo');
-  await app.page.keyboard.press('Control+z');
-  expect((await app.node(1)).x).toBeCloseTo(20, 0);
-  // The undone step stays in the panel, grayed out, and the redo hint appears.
-  await expect(app.history().locator('.undone')).toContainText('move node');
-  await expect(app.history()).toContainText('redo');
-  await app.page.keyboard.press('Control+y');
-  expect((await app.node(1)).x).toBeCloseTo(25, 0);
-}
-
-async function secondArm(app: App) {
-  await app.page.keyboard.down('Control'); // no snapping (^101): the nodes go where they are clicked
-  await app.click({ x: 0, y: -40 }); // empty canvas first clears the selection
-  await app.click({ x: 0, y: -40 }); // then enters draw mode again
-  expect((await app.state()).mode).toBe('draw');
-  await app.click({ x: 10, y: -40 });
-  await app.click({ x: 50, y: -40 });
-  expect((await app.state()).kinds[1]).toEqual(['line']);
-  await app.page.keyboard.up('Control');
-  await app.page.keyboard.press('Escape');
-}
-
-async function splitAndMerge(app: App) {
-  await app.click({ x: 0, y: -60 }); // draw mode
-  await app.click({ x: 30, y: -40 }); // curve of the second arm: split
-  // A click on a curve is pulled to where a snap line crosses it (^802), so the merge goes where it is clicked with Ctrl (^101).
-  await app.page.keyboard.down('Control');
-  await app.click(await app.curvePoint({ x: 33, y: 10 })); // curve of the first arm: merge
-  await app.page.keyboard.up('Control');
-  // five nodes of the arms, the node of the split, the node of the merge; the merge edge is the last
-  const { nodes, edges } = await app.graph();
-  expect(nodes).toHaveLength(7);
-  expect(edges).toHaveLength(6);
-  const end = nodes.find((n) => n.id === edges.at(-1)!.end)!;
-  expect(Math.hypot(end.x - 32.4, end.y - 11.2)).toBeLessThan(1);
-  expect((await app.state()).mode).toBe('draw');
-}
-
-async function selectBranch(app: App) {
-  await app.page.keyboard.press('Escape'); // from draw mode straight to select mode (^120)
-  const onBranch = await app.curvePoint({ x: 25, y: -20 });
-  await app.page.keyboard.down('Alt');
-  await app.click(onBranch);
-  expect((await app.state()).selected).toBeGreaterThan(1);
-  await app.click(onBranch); // the whole branch is selected: deselects it
-  await app.page.keyboard.up('Alt');
-  expect((await app.state()).selected).toBe(0);
-}
-
-test('draw, edit, undo, split, merge and select a branch', async ({ page }) => {
+test('the app opens an empty map: a canvas, the projects, no error', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
   const app = new App(page);
   await app.ready();
-  await test.step('first arm A, B, C', () => firstArm(app));
-  await test.step('radius of B-C', () => changeRadius(app));
-  await test.step('move, undo, redo', () => moveUndoRedo(app));
-  await test.step('second arm D, E', () => secondArm(app));
-  await test.step('split and merge', () => splitAndMerge(app));
-  await test.step('select a branch with Alt', () => selectBranch(app));
+  await expect(page.locator('canvas')).toBeVisible();
+  expect(await app.nodes()).toEqual([]);
+  const hints = await page.getByLabel('Controls').locator('li').allInnerTexts();
+  expect(hints.map((h) => h.replace(/\s+/g, ' ').trim())).toEqual([
+    'pan',
+    'zoom',
+    'rotate',
+    'P projects',
+  ]);
+  expect(errors).toEqual([]);
 });

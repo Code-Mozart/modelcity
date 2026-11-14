@@ -1,3 +1,5 @@
+> **Since ^1232 this describes the old app, removed in the tabula rasa (PR #60). It is the list of what is to be built again; the tests it names are gone.** Built again so far (hint, scenario test in `src/lib/hints/appControls.test.ts`): ^722, ^723, ^725, ^400.
+
 # Controls and features (^371)
 
 **Status: incomplete, on purpose (^371, ^783).** The audit (^371) found every control and gave it a hat, but the *conditions* of each control (in which state it listens, what it says, what it does) are only written down in part: the user's table by context, the walked controls and the controls found in the code but not walked. The full reference comes from the milestone ^783 (controls as data, one table that the code and the hints both read). Until then a new or changed control gets its row in *Controls by context* in the same PR (^786), and `src/lib/testing/controlsMatrix.test.ts` can run the editor over the combinations to compare (its docblock says how). The old file before the audit is in the Git history (`git show origin/main:docs/controls.md` before the merge of ^371).

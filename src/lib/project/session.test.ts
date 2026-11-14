@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { addNode } from '../model/graph';
-import { click } from '../testing/editorHelpers';
 import { drawRoad, resetClock, setup, two, withRoad, datesOf } from '../testing/sessionHelpers';
-import { fromFile } from './file';
+import { fromFile, type ProjectFile } from './file';
 import { AUTOSAVE_MAX_WAIT_MS, AUTOSAVE_MS } from './session.svelte';
 
 beforeEach(() => {
@@ -30,7 +29,7 @@ describe('the open project (^82, ^148, ^189)', () => {
     expect(await s.storage.list()).toHaveLength(0);
     await vi.advanceTimersByTimeAsync(2);
     const [stored] = await s.storage.list();
-    expect(stored!.file.nodes).toHaveLength(2);
+    expect(((await s.storage.load(stored!.id)) as ProjectFile).nodes).toHaveLength(2);
     expect(stored!.file.title).toBe('Untitled project');
     expect(s.session.noProject).toBe(false);
   });
@@ -94,17 +93,17 @@ describe('several projects (^167, ^171, ^189)', () => {
 });
 
 describe('opening and deleting projects (^167, ^189)', () => {
-  it('opens another project with its map and camera, and the history starts again', async () => {
+  it('opens another project with its camera, and reads none of its map (^1236)', async () => {
     const s = setup();
     await withRoad(s);
     s.camera.restore({ x: 3, y: 4, scale: 6, rotation: 0.5 });
     const first = s.session.id;
     await s.session.newProject();
-    expect(s.editor.timeline.canUndo).toBe(false);
+    const read = vi.spyOn(s.storage, 'load');
     await s.session.open(first);
-    expect(s.editor.graph.nodes).toHaveLength(2);
+    expect(read).not.toHaveBeenCalled();
+    expect(s.editor.graph.nodes).toHaveLength(0);
     expect(s.camera.state).toMatchObject({ x: 3, y: 4, scale: 6, rotation: 0.5 });
-    expect(s.editor.timeline.canUndo).toBe(false);
   });
 
   it('deleting the open project opens another, or there is none', async () => {
@@ -127,12 +126,12 @@ describe('import and export (^163, ^164)', () => {
   it('exports the project as a file that imports as a new project', async () => {
     const s = setup();
     await withRoad(s);
-    const text = s.session.exportText();
-    expect(JSON.parse(text)).toMatchObject({ version: 1, title: 'Untitled project' });
+    const text = await s.session.exportText();
+    expect(JSON.parse(text)).toMatchObject({ version: 2, title: 'Untitled project' });
     const first = s.session.id;
     await s.session.importText(text);
     expect(s.session.id).not.toBe(first);
-    expect(s.editor.graph.nodes).toHaveLength(2);
+    expect(s.editor.graph.nodes).toHaveLength(0);
     expect(s.session.error).toBeNull();
     expect(await s.storage.list()).toHaveLength(2);
     expect(fromFile(JSON.parse(text)).graph.edges).toHaveLength(1);
@@ -141,7 +140,11 @@ describe('import and export (^163, ^164)', () => {
   it('exports a map without a project too', async () => {
     const { session } = setup();
     await session.start();
-    expect(JSON.parse(session.exportText())).toMatchObject({ version: 1, nodes: [], edges: [] });
+    expect(JSON.parse(await session.exportText())).toMatchObject({
+      version: 2,
+      nodes: [],
+      edges: [],
+    });
   });
 
   it('keeps the open project and says what is wrong with a file that is no project', async () => {
@@ -152,15 +155,6 @@ describe('import and export (^163, ^164)', () => {
     expect(s.session.error).toMatch(/newer version/);
     expect(s.session.id).toBe(id);
     expect(s.editor.graph.nodes).toHaveLength(2);
-  });
-});
-
-describe('the editor and the project', () => {
-  it('rounds what a step produced to the millimeter (^170)', () => {
-    const { editor } = setup();
-    click(editor, 500, 500);
-    click(editor, 10.0004, 20.0006);
-    expect(editor.graph.nodes[0]).toMatchObject({ x: 10, y: 20.001 });
   });
 });
 
@@ -226,7 +220,7 @@ describe('opening a file keeps its dates (^214)', () => {
   it('keeps the dates of the file: opening a file is not a change of the map (^214)', async () => {
     const { session, storage } = setup();
     await session.start();
-    const file = JSON.parse(session.exportText());
+    const file = JSON.parse(await session.exportText());
     file.createdAt = '2026-10-01T19:02:41.454Z';
     file.lastUpdatedAt = '2026-10-12T19:06:18.603Z';
     await session.importText(JSON.stringify(file));
@@ -235,7 +229,7 @@ describe('opening a file keeps its dates (^214)', () => {
       createdAt: file.createdAt,
       lastUpdatedAt: file.lastUpdatedAt,
     });
-    expect(session.exportText()).toContain(file.lastUpdatedAt);
+    expect(await session.exportText()).toContain(file.lastUpdatedAt);
   });
 });
 
@@ -262,7 +256,10 @@ describe('autosave with a maximum wait (^166, ^183)', () => {
       editor.graph = addNode(editor.graph, { x: editor.graph.nodes.length, y: 0, th: 0 }).graph;
       session.changed();
     };
-    const nodes = async () => (await storage.list())[0]?.file.nodes.length ?? 0;
+    const nodes = async () => {
+      const [first] = await storage.list();
+      return first ? ((await storage.load(first.id)) as ProjectFile).nodes.length : 0;
+    };
     for (let ms = 0; ms < AUTOSAVE_MAX_WAIT_MS - 300; ms += 300) {
       change();
       await vi.advanceTimersByTimeAsync(300);

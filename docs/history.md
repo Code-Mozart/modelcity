@@ -62,3 +62,4 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #56 | | v0.56.0: Collapse by control | ^1200 to ^1203 | Nodes no longer collapse by themselves: `C` collapses the selected nodes without an effect, with a toast when none can; the milestones performance and the rest of the junction markings are registered |
 | #58 | | v0.58.0: Performance | ^927 to ^941 | The benchmark setup, sample projects, and the optimizations of the pipeline that the large testing grounds make slow, each measured |
 | #59 | | v0.59.0: Performance by region | ^927, ^941 | An edit derives again only the region around what changed |
+| #60 | | v0.60.0: Chunked map | ^927, ^1224–^1227 | Data model version 2 (id counters), visible conversion of old projects; first paint from the storage follows |

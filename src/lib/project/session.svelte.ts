@@ -3,11 +3,21 @@ import type { ModalTarget } from './modalHints';
 import type { Camera } from '../camera/camera.svelte';
 import type { Editor } from '../editor/editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
-import { fromFile, ProjectFileError, toFile, type CameraState, type Project } from './file';
+import {
+  cameraOf,
+  exportText,
+  ProjectFileError,
+  type CameraState,
+  type Project,
+  type ProjectFile,
+} from './file';
 import { lastId, remember, uid } from './browserMemory';
-import { parseProject, readProject } from './migrate';
+import { download, exportName } from './download';
+import { openStored } from './open';
+import { headerFor, persist } from './persist';
+import { parseProject } from './migrate';
 import type { ToastKind } from '../ui/toasts.svelte';
-import type { ProjectStorage, StoredProject } from './storage';
+import { headerOf, type Header, type ProjectStorage, type StoredHeader } from './storage';
 
 /** How long after a change the project is saved to the browser (^166). */
 export const AUTOSAVE_MS = 400;
@@ -36,7 +46,7 @@ export class ProjectSession {
   title = $state(UNTITLED);
   modalOpen = $state(false);
   /** The projects kept in the browser, newest first (shown by the modal). */
-  projects = $state.raw<StoredProject[]>([]);
+  projects = $state.raw<StoredHeader[]>([]);
   error = $state<string | null>(null);
   /** The card being renamed or asked to be deleted (a second click confirms), if any. */
   row = $state<{ id: string; mode: 'rename' | 'delete' } | null>(null);
@@ -51,6 +61,10 @@ export class ProjectSession {
   private createdAt = '';
   private lastUpdatedAt = '';
   private saved: Graph | null = null;
+  /** The header of the open project as it is stored: what of it is not the session's own (the lane configurations, the id counters) is kept as it is (^1236). */
+  private header: Header | null = null;
+  /** The map as it is in the storage; null: the project is not there yet. */
+  private stored: Graph | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
   /** When the oldest change that is not saved yet happened. */
   private waitingSince: number | null = null;
@@ -80,7 +94,7 @@ export class ProjectSession {
   async start() {
     const all = await this.refresh();
     const last = all.find((p) => p.id === lastId()) ?? all[0];
-    if (last && !this.tryShow(last)) this.showBlank();
+    if (last && !(await this.tryShow(last.id))) this.showBlank();
     this.ready = true;
   }
 
@@ -92,35 +106,33 @@ export class ProjectSession {
     return this.projects;
   }
 
-  /**
-   * Put the camera of a project back. The camera keeps the view on the content, so it has to know
-   * the content of this project first, not the one before (else it pulls the stored view toward
-   * that).
-   */
-  private showCamera(camera: CameraState) {
-    this.camera.setAnchors(this.editor.anchors);
-    this.camera.restore(camera);
-  }
-
-  /** Make the project the open one: its title, dates, map and view. */
-  private enter(id: string, p: Project) {
+  /** Make the project the open one: its title, dates and view. Its map is not read (^1236). */
+  private enter(id: string, header: Header) {
     this.id = id;
-    [this.title, this.createdAt, this.lastUpdatedAt] = [p.title, p.createdAt, p.lastUpdatedAt];
-    this.editor.load(p.graph);
-    this.showCamera(p.camera);
-    this.saved = this.editor.graph;
+    [this.title, this.createdAt, this.lastUpdatedAt] = [
+      header.title,
+      header.createdAt,
+      header.lastUpdatedAt,
+    ];
+    this.header = header;
+    this.editor.load(emptyGraph());
+    this.camera.restore(cameraOf(header));
+    this.saved = this.stored = this.editor.graph;
     this.savedCamera = JSON.stringify(this.camera.state);
     remember(id);
   }
 
   /**
-   * Open a stored project through the one pipeline (^229): migrated and checked like an import. One
-   * that is refused is told to the user in a toast (the same texts as an import, ^209) and stays in
-   * the storage as it is; nothing changes. False when it was refused.
+   * Open a stored project (^229): its header is checked, and one of an older data model is
+   * converted first (`openStored`). One that is refused is told to the user in a toast (the same
+   * texts as an import, ^209) and stays in the storage as it is; nothing changes. False when it
+   * was refused.
    */
-  private tryShow({ id, file }: StoredProject): boolean {
+  private async tryShow(id: string): Promise<boolean> {
     try {
-      this.enter(id, fromFile(readProject(file)));
+      const { header, converted } = await openStored(this.storage, id);
+      this.enter(id, header);
+      if (converted) this.notify('info', converted);
       return true;
     } catch (e) {
       const refusal = e instanceof ProjectFileError ? e : unreadable(e);
@@ -154,6 +166,7 @@ export class ProjectSession {
   private begin(title = UNTITLED) {
     const stamp = this.now();
     this.id = uid();
+    this.stored = this.header = null;
     [this.title, this.createdAt, this.lastUpdatedAt] = [title, stamp, stamp];
     remember(this.id);
   }
@@ -164,9 +177,12 @@ export class ProjectSession {
     if (!this.worthKeeping) return;
     if (!this.id) this.begin();
     else if (touch) this.lastUpdatedAt = this.now();
-    this.saved = this.editor.graph;
+    const [was, graph] = [this.stored, this.editor.graph];
+    this.saved = this.stored = graph;
     this.savedCamera = JSON.stringify(this.camera.state);
-    await this.storage.put({ id: this.id, file: toFile(this.project()) });
+    const p = this.project();
+    const header = (this.header = headerFor(p, this.header));
+    await persist(this.storage, this.id, { was, project: p, header });
   }
 
   /** Save what is not saved yet (before another project opens, a modal lists them, the page closes). The date only changes if the map did. */
@@ -199,9 +215,10 @@ export class ProjectSession {
   private showBlank() {
     this.cancelSave();
     this.id = '';
+    this.stored = this.header = null;
     this.title = UNTITLED;
     this.editor.load(emptyGraph());
-    this.showCamera(NEW_CAMERA);
+    this.camera.restore(NEW_CAMERA);
     this.saved = this.editor.graph;
     this.savedCamera = JSON.stringify(this.camera.state);
   }
@@ -217,12 +234,13 @@ export class ProjectSession {
     this.closeModal();
   }
 
-  /** A project made of a file (^164). */
-  private async adopt(project: Project) {
+  /** A project made of a file (^164): stored as it is, and opened without its map (^1236). */
+  private async adopt(file: ProjectFile) {
     await this.flush();
     // Opening a file is not a change of the map: the project keeps the dates of the file (^214).
-    this.enter(uid(), project);
-    await this.save(false);
+    const id = uid();
+    await this.storage.put({ id, file });
+    this.enter(id, headerOf(file));
     await this.refresh();
   }
 
@@ -235,7 +253,7 @@ export class ProjectSession {
     const target = (await this.refresh()).find((p) => p.id === id);
     if (!target) return;
     await this.flush();
-    if (this.tryShow(target)) this.closeModal();
+    if (await this.tryShow(target.id)) this.closeModal();
   }
 
   async remove(id: string) {
@@ -245,7 +263,7 @@ export class ProjectSession {
       return;
     }
     const rest = await this.refresh();
-    if (!rest[0] || !this.tryShow(rest[0])) this.showBlank();
+    if (!rest[0] || !(await this.tryShow(rest[0].id))) this.showBlank();
   }
 
   /** Open a project from a file the user picked; one that cannot be read is refused like one that is no project (^208). */
@@ -270,10 +288,10 @@ export class ProjectSession {
   /** Open a project from the text of a file as a new project of the browser (^164). A refusal tells the user in a word, the console the details (^209). */
   async importText(text: string) {
     try {
-      const p = fromFile(parseProject(text));
-      await this.adopt(p);
+      const file = parseProject(text);
+      await this.adopt(file);
       this.error = null;
-      this.notify('success', `imported ${p.title}`);
+      this.notify('success', `imported ${file.title}`);
       this.closeModal();
     } catch (e) {
       this.refuse(e instanceof ProjectFileError ? e : unreadable(e));
@@ -318,7 +336,7 @@ export class ProjectSession {
         this.title = name;
         await this.save(false);
       } else {
-        await this.storage.put({ id, file: { ...target.file, title: name } });
+        await this.storage.patch(id, { ...target.file, title: name });
       }
     } finally {
       this.busy = false;
@@ -332,15 +350,11 @@ export class ProjectSession {
     if (id) await this.remove(id);
   }
 
-  /** The project as the text of an export file (^163). */
-  exportText() {
-    const stamp = this.now();
-    const p = {
-      ...this.project(),
-      createdAt: this.createdAt || stamp,
-      lastUpdatedAt: this.lastUpdatedAt || stamp,
-    };
-    return JSON.stringify(toFile(p), null, 2);
+  /** The project as the text of an export file (^163): what is stored, since the map is not in memory (^1236); a blank map that was never saved is exported as it is. */
+  async exportText() {
+    await this.flush();
+    const stored = this.id ? await this.storage.load(this.id) : undefined;
+    return stored ? JSON.stringify(stored, null, 2) : exportText(this.project(), this.now());
   }
 
   /** `Ctrl+S` (^226): save the open project to the browser at once, and say so (^232). */
@@ -354,20 +368,10 @@ export class ProjectSession {
   }
 
   /** Let the user save the project as a file: the button `Export JSON` (^226). */
-  exportJson() {
-    const name =
-      this.title
-        .trim()
-        .replace(/[^\p{L}\p{N}]+/gu, '-')
-        .replace(/^-|-$/g, '') || 'project';
-    const url = URL.createObjectURL(new Blob([this.exportText()], { type: 'application/json' }));
-    const a = Object.assign(document.createElement('a'), {
-      href: url,
-      download: `${name}.modelcity.json`,
-    });
-    a.click();
-    URL.revokeObjectURL(url);
-    this.notify('success', `exported ${name}.modelcity.json`);
+  async exportJson() {
+    const name = exportName(this.title);
+    download(name, await this.exportText());
+    this.notify('success', `exported ${name}`);
   }
 
   /** Open the projects modal; `importFile`: and its file window (`Ctrl+O`, ^223). */

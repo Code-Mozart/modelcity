@@ -17,7 +17,7 @@ export function formatAt(iso: string, offsetMinutes: number): string {
 const localOffset = (iso: string) => -new Date(iso).getTimezoneOffset();
 
 /** An instant in this computer's local time, `YYYY-MM-DD hh:mm:ss` (^190). */
-export const formatLocal = (iso: string) => formatAt(iso, localOffset(iso));
+const formatLocal = (iso: string) => formatAt(iso, localOffset(iso));
 
 /** The same with the offset, ISO 8601 style: `YYYY-MM-DDThh:mm:ss+01:00` (the tooltip of a date). */
 export function formatLocalIso(iso: string): string {

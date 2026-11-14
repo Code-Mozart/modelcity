@@ -1,4 +1,3 @@
-import { constrainView, type Anchor } from './bounds';
 import { cardinalForKey, chipAt } from '../hud/compass';
 import { movePivot, setRotation, startPivot, type PivotDrag } from './pivotDrag';
 import { applyTwoFinger, type Pair } from './twoFinger';
@@ -9,7 +8,7 @@ const ZOOM_PER_WHEEL_PX = 0.0015;
 /** Pointer travel below which a right-button press still counts as a click (^31). */
 const CLICK_SLOP_PX = 4;
 /** How long the scale bar stays visible after the last wheel or pinch zoom (^34). */
-export const SCALE_BAR_HOLD_MS = 2000;
+const SCALE_BAR_HOLD_MS = 2000;
 
 /**
  * The camera: view, pan, zoom and rotate interaction (^30). No DOM and no document logic: the
@@ -29,8 +28,6 @@ export class Camera {
   /** The scale bar is only shown while it is useful: during a middle drag and shortly after zooming (^34). */
   scaleBarVisible = $derived(this.rotating || this.recentZoom);
 
-  /** Everything grabbable; the view must stay on it (^37). */
-  private anchors: Anchor[] = [];
   private pan: { last: Point; travel: number } | null = null;
   private touches: { id: number; at: Point }[] = [];
   private zoomTimer: ReturnType<typeof setTimeout> | undefined;
@@ -42,7 +39,7 @@ export class Camera {
 
   /** Every view change goes through here so the camera cannot leave the content (^37). */
   private setView(view: View) {
-    this.view = this.measured ? constrainView(view, this.size, this.anchors) : view;
+    this.view = view;
   }
 
   /** The camera as a project stores it (^170). */
@@ -54,12 +51,6 @@ export class Camera {
   /** Go back to a stored camera. */
   restore({ x, y, scale, rotation }: CameraState) {
     this.setView({ ...initialView(), cx: x, cy: y, scale, rot: rotation });
-  }
-
-  /** The content moved or the window resized: keep the view on the content. */
-  setAnchors(anchors: Anchor[]) {
-    this.anchors = anchors;
-    this.setView(this.view);
   }
 
   /** Zoom at `anchor` by a wheel delta in pixels (positive deltaY zooms out). */

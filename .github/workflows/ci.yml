@@ -8,6 +8,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run check
@@ -19,6 +21,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bunx playwright install --with-deps chromium
       - run: bun run e2e
@@ -40,40 +44,3 @@ jobs:
             echo "package.json says $version, this PR is number ${{ github.event.pull_request.number }}: the version must be $want (^367). Set it again if the PR was replaced by another."
             exit 1
           fi
-
-  # Pictures of every case of the testing ground of the junctions, debug layer on, put on the
-  # branch `screenshots` in a folder named after the branch, to look at without running the app (^1018).
-  shots:
-    if: github.event_name == 'push' && github.ref_name != 'screenshots'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    concurrency: screenshots
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bunx playwright install --with-deps chromium
-      - run: bun run shots
-      - name: Put the pictures on the branch screenshots
-        run: |
-          dir="$(echo "$GITHUB_REF_NAME" | tr '/' '-')"
-          tmp="$(mktemp -d)"
-          cp -r shots/out/. "$tmp"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git fetch origin screenshots; then
-            git checkout -f -B screenshots FETCH_HEAD
-            amend="--amend"
-          else
-            git checkout --orphan screenshots
-            git rm -rfq .
-            amend=""
-          fi
-          rm -rf "$dir"
-          mkdir -p "$dir"
-          cp -r "$tmp"/. "$dir"
-          git add -f "$dir"
-          # One commit only, so that the pictures do not pile up in the history.
-          git commit -q $amend -m "Pictures of the testing ground of the junctions ($GITHUB_REF_NAME at $GITHUB_SHA)"
-          git push -f origin screenshots

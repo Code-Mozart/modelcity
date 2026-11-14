@@ -1,5 +1,4 @@
 import type { Page } from '@playwright/test';
-import { chainsOf, nearestOnChains } from '../src/lib/editor/chains';
 import type { Graph } from '../src/lib/model/graph';
 
 export type Pt = { x: number; y: number };
@@ -71,42 +70,6 @@ export class App {
 
   async edges() {
     return (await this.graph()).edges;
-  }
-
-  state() {
-    return this.page.evaluate(() => {
-      const e = window.__modelcity!.editor;
-      return {
-        mode: e.mode,
-        selected: e.selection.length,
-        kinds: e.edges.map((r) => r.map((x) => x.E.kind)),
-      };
-    });
-  }
-
-  /** The point of the curves nearest to a guess, to click exactly on a curve. */
-  async curvePoint(guess: Pt): Promise<Pt> {
-    const hit = nearestOnChains(chainsOf(await this.graph()), guess, 100)!;
-    return { x: hit.at.x, y: hit.at.y };
-  }
-
-  /** The middle radius point of the edge with this id. */
-  async radiusHandle(edge: number): Promise<Pt> {
-    return this.page.evaluate((id) => {
-      const hook = window.__modelcity!;
-      const hs = hook.editor.handles(hook.scale());
-      const h = hs.find((x) => x.type === 'rad' && x.id === id && x.t === 0.5)!;
-      return { x: h.x, y: h.y };
-    }, edge);
-  }
-
-  /** The control point at the tip of the heading arrow of the node with this id. */
-  async headHandle(node: number): Promise<Pt> {
-    return this.page.evaluate((id) => {
-      const hook = window.__modelcity!;
-      const h = hook.editor.handles(hook.scale()).find((x) => x.type === 'head' && x.id === id)!;
-      return { x: h.x, y: h.y };
-    }, node);
   }
 
   /** The projects stored in the browser (IndexedDB), as export files. */

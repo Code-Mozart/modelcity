@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CameraState } from './file';
 import { AUTOSAVE_MS, CAMERA_SAVE_MS } from './session.svelte';
-import { click } from '../testing/editorHelpers';
-import { resetClock, setup } from '../testing/sessionHelpers';
+import { drawRoad, resetClock, setup } from '../testing/sessionHelpers';
 
 type S = ReturnType<typeof setup>;
 
@@ -13,11 +12,7 @@ async function roadWithCamera(
   y: number,
   c: CameraState,
 ) {
-  click(editor, 500, 500);
-  click(editor, x, y);
-  click(editor, x + 30, y + 10);
-  editor.key('Escape');
-  camera.setAnchors(editor.anchors);
+  drawRoad(editor, x, y);
   camera.restore(c);
   session.changed();
   await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + 1);
@@ -64,10 +59,8 @@ describe("the camera of a project is saved and comes back (the user's report)", 
   it('restoring before the canvas has its size does not move the camera', async () => {
     const s = setup();
     s.camera.size = { width: 1, height: 1 };
-    s.camera.setAnchors([{ kind: 'point', x: 0, y: 0, r: 7 }]);
     s.camera.restore(A);
     s.camera.size = { width: 1000, height: 800 };
-    s.camera.setAnchors([{ kind: 'point', x: 0, y: 0, r: 7 }]);
     near(s.camera.state, A);
   });
 });
@@ -78,7 +71,7 @@ describe('a camera that only moved is saved when it rests, without a change of t
     await s.session.start();
     await roadWithCamera(s, 0, 0, A);
     const [saved] = await s.storage.list();
-    const put = vi.spyOn(s.storage, 'put');
+    const put = vi.spyOn(s.storage, 'patch');
     s.camera.restore({ ...A, x: A.x + 30 });
     s.session.cameraMoved();
     await vi.advanceTimersByTimeAsync(CAMERA_SAVE_MS - 10);
@@ -96,7 +89,7 @@ describe('a camera that only moved is saved when it rests, without a change of t
   it('with no project and an empty map nothing is saved', async () => {
     const s = setup();
     await s.session.start();
-    const put = vi.spyOn(s.storage, 'put');
+    const put = vi.spyOn(s.storage, 'patch');
     s.camera.restore({ ...A, x: 5 });
     s.session.cameraMoved();
     await vi.advanceTimersByTimeAsync(CAMERA_SAVE_MS + 10);
