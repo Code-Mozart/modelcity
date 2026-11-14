@@ -13,7 +13,7 @@ export function pointsAround(base: Suggestion[], a: SnapArgs, snapped: SnapHit |
     scale: info.scale,
     touch: info.touch,
     pinned: a.pinned,
-    reach: reachOf(a.press),
+    reach: reachOf(a.press, a.partOf),
   };
   return nearbyPoints(base, q)
     .filter((s) => s.rule !== 'previous' && !(snapped && dist(snapped.pt, s.at) < SAME_PLACE_M))

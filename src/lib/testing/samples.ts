@@ -29,5 +29,29 @@ export function tiledMap(cells: number): Graph {
   return roundToMm(s.graph);
 }
 
+/**
+ * The same cells joined by roads into one connected network (right to left, and down), the shape of
+ * a real map (^941): an edit anywhere is near other roads, so nothing can be skipped for being on an island.
+ */
+export function connectedMap(cells: number): Graph {
+  const s = new Sketch();
+  const columns = Math.ceil(Math.sqrt(cells));
+  const lanes: ReturnType<typeof junction>[] = [];
+  for (let n = 0; n < cells; n++) {
+    const at = add(
+      { x: 0, y: 0 },
+      { x: (n % columns) * CELL.x, y: Math.floor(n / columns) * CELL.y },
+    );
+    lanes.push(junction(s, at, n % (2 * ALPHAS.length * BETAS.length)));
+  }
+  const join = (a: number | null | undefined, b: number | null | undefined) =>
+    a != null && b != null && s.edge(a, b);
+  lanes.forEach((l, n) => {
+    if ((n + 1) % columns && lanes[n + 1]) join(l[2]!.outFar, lanes[n + 1]![0]!.inFar);
+    if (lanes[n + columns]) join(l[1]!.outFar, lanes[n + columns]![1]!.inFar);
+  });
+  return roundToMm(s.graph);
+}
+
 /** The sizes in cells, small to large: about 12 nodes a cell. */
 export const SIZES = [4, 27, 54, 250, 1000, 8000, 80000, 250000];

@@ -151,7 +151,7 @@ export function fillLoops(f: Frame, loops: Piece[][], fill: string, edge: Stroke
 }
 
 /** The world box that the screen shows, with `extra` meters round it (a stroke or a mark reaches over the edge) (^939). */
-export function viewBox(f: Frame, extraM = 0): Box {
+export function viewBox(f: Pick<Frame, 'view' | 'size'>, extraM = 0): Box {
   const { width, height } = f.size;
   const corners = [
     { x: 0, y: 0 },

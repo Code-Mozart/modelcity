@@ -4,7 +4,9 @@ import { reverseEdge, twoRadiiEdge } from '../curves/reverse';
 import { SAME_PLACE_M, radiusTolerance } from '../curves/tolerance';
 import type { Arc, Edge, MidLine, PathNode, TwoArcEdge } from '../curves/types';
 import { add, dist, dot, fromAngle, mul, perp, sub, type Vec } from '../curves/vec';
-import type { GEdge, Graph } from '../model/graph';
+import { edgeOfId, type GEdge, type Graph } from '../model/graph';
+import { Grid } from '../curves/grid';
+import { boxAround } from '../curves/hull';
 import type { Chain } from './chains';
 import type { EdgeRef } from '../curves/path';
 import { touching } from './parallel';
@@ -97,7 +99,7 @@ function lanesOf(g: Graph, chains: Chain[]): Map<number, Lane> {
   const lanes = new Map<number, Lane>();
   for (const c of chains) {
     c.edges.forEach((ref, i) => {
-      const edge = g.edges.find((e) => e.id === c.edgeIds[i]);
+      const edge = edgeOfId(g, c.edgeIds[i]!);
       if (edge && isS(ref.E)) lanes.set(edge.id, { edge, p: ref.p, q: ref.q, E: ref.E });
     });
   }
@@ -286,14 +288,45 @@ function sharing({ g, lanes, shapes }: Context) {
 export function withParallelS(g: Graph, chains: Chain[]): Chain[] {
   const lanes = lanesOf(g, chains);
   const shapes = new Map<number, TwoArcEdge>();
-  if (lanes.size >= 2) {
-    followers({ g, lanes, shapes, lenient: false });
-    sharing({ g, lanes, shapes, lenient: false });
-    followers({ g, lanes, shapes, lenient: true });
+  // Lanes that do not touch cannot change each other's curves: each group of lanes that touch in a row is looked at alone (^941), so that the work grows with the size of a group and not with the number of lanes.
+  for (const group of groupsOf(g, lanes)) {
+    if (group.size < 2) continue;
+    followers({ g, lanes: group, shapes, lenient: false });
+    sharing({ g, lanes: group, shapes, lenient: false });
+    followers({ g, lanes: group, shapes, lenient: true });
   }
   if (!shapes.size) return chains;
   return chains.map((c) => ({
     ...c,
     edges: c.edges.map((ref, i): EdgeRef => ({ ...ref, E: shapes.get(c.edgeIds[i]!) ?? ref.E })),
   }));
+}
+
+/** How far the ends of two lanes that touch can be apart (meters): a lane width and the tolerance (`touching`). */
+const REACH_M = LANE_WIDTH_M + SAME_PLACE_M;
+
+/** The lanes split into the groups of lanes that touch one another in a row (a lane touches another at both ends, ^817), each in the order of `lanes`. */
+function groupsOf(g: Graph, lanes: Map<number, Lane>): Map<number, Lane>[] {
+  const list = [...lanes.values()];
+  const grid = new Grid<number>(2 * REACH_M);
+  const reachOf = (l: Lane) => {
+    const b = boxAround([{ type: 'line', P: l.p, Q: l.q }]);
+    return { x0: b.x0 - REACH_M, x1: b.x1 + REACH_M, y0: b.y0 - REACH_M, y1: b.y1 + REACH_M };
+  };
+  list.forEach((l, i) => grid.add(i, reachOf(l)));
+  const root = list.map((_, i) => i);
+  const find = (i: number): number => (root[i] === i ? i : (root[i] = find(root[i]!)));
+  list.forEach((a, i) => {
+    for (const j of grid.near(reachOf(a))) {
+      if (j > i && find(i) !== find(j) && touching(g, a.edge, list[j]!.edge))
+        root[find(j)] = find(i);
+    }
+  });
+  const groups = new Map<number, Map<number, Lane>>();
+  list.forEach((l, i) => {
+    const r = find(i);
+    if (!groups.has(r)) groups.set(r, new Map());
+    groups.get(r)!.set(l.edge.id, l);
+  });
+  return [...groups.values()];
 }

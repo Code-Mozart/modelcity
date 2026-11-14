@@ -61,3 +61,4 @@ Every merged PR of `main`, oldest first: what it did, the milestone hat where th
 | #55 | 2026-11-12 | v0.55.0: Rechts vor links | ^1067 to ^1145 | Small T- and X-junctions as right-before-left by topological rules per node: give-way lines and arrows where a turn is missing, "right" under 150 degrees, no centerlines inside junctions, the testing grounds (priority, small T with edge cases, angles), the work timer |
 | #56 | | v0.56.0: Collapse by control | ^1200 to ^1203 | Nodes no longer collapse by themselves: `C` collapses the selected nodes without an effect, with a toast when none can; the milestones performance and the rest of the junction markings are registered |
 | #58 | | v0.58.0: Performance | ^927 to ^941 | The benchmark setup, sample projects, and the optimizations of the pipeline that the large testing grounds make slow, each measured |
+| #59 | | v0.59.0: Performance by region | ^927, ^941 | An edit derives again only the region around what changed |

@@ -1,6 +1,7 @@
 import { crossPieces } from '../snap/geometry';
 import { boxAround, boxesMeet, type Box } from './hull';
 import { Grid } from './grid';
+import { Memo, pieceKey } from './memo';
 import { distanceToPiece, nearestParam, pieceLength, pointOn, reversePiece } from './piece';
 import { SAME_PLACE_M } from './tolerance';
 import type { Piece } from './types';
@@ -24,7 +25,7 @@ const PROBE_M = 2 * SAME_PLACE_M;
 /** Pieces and cut parameters closer than this are one (meters). */
 const TINY_M = 1e-4;
 /** A ray that no vertex of a drawing is likely to lie on. */
-const RAY_SLOPE = 0.000123;
+export const RAY_SLOPE = 0.000123;
 const RAY_REACH_M = 1e5;
 
 interface Region {
@@ -59,12 +60,28 @@ function cutsOf(piece: Piece, others: Piece[]): number[] {
 /** The size of a cell of the grids of the pieces of the outlines (meters): a lane width and a bit. */
 const PIECE_CELL_M = 4;
 
-/** All the pieces cut at each other, those with no length left out. */
-function cutAll(pieces: Piece[]): Piece[] {
+/** What was found the last time (^941): the cuts of each piece and whether each cut piece is on the boundary. */
+export class UnionMemory {
+  cuts = new Memo<Piece[]>();
+  sides = new Memo<boolean>();
+}
+
+/** The pieces of a list with their keys and boxes, keyed (the same piece twice is one key). */
+function keyed(pieces: Piece[]) {
+  const keys = pieces.map(pieceKey);
   const boxes = pieces.map((p) => boxAround([p]));
+  const now = new Map<string, Box>();
+  keys.forEach((k, i) => now.set(k, boxes[i]!));
+  return { keys, boxes, now };
+}
+
+/** All the pieces cut at each other, those with no length left out. */
+function cutAll(pieces: Piece[], memo?: Memo<Piece[]>): Piece[] {
+  const { keys, boxes, now } = keyed(pieces);
   const grid = new Grid<number>(PIECE_CELL_M);
   boxes.forEach((b, i) => grid.add(i, b));
-  return pieces.flatMap((p, i) => {
+  memo?.begin(now);
+  const cut = (p: Piece, i: number): Piece[] => {
     const nearby = [...grid.near(boxes[i]!)].filter(
       (j) => j !== i && boxesMeet(boxes[i]!, boxes[j]!),
     );
@@ -76,7 +93,10 @@ function cutAll(pieces: Piece[]): Piece[] {
       .slice(1)
       .map((t, k) => subPiece(p, ts[k]!, t))
       .filter((s) => pieceLength(s) > TINY_M);
-  });
+  };
+  return pieces.flatMap((p, i) =>
+    memo ? memo.get(keys[i]!, boxes[i]!, () => cut(p, i)) : cut(p, i),
+  );
 }
 
 /** Whether a point is inside a region: an odd number of crossings of a ray with its outline (even-odd). */
@@ -229,19 +249,45 @@ function distinctPieces(boundary: Piece[]): Piece[] {
 }
 
 /** The outline of the union of the regions, as closed loops of pieces (^945). */
-export function unionOutline(regions: Piece[][]): Loop[] {
+export function unionOutline(regions: Piece[][], memory?: UnionMemory): Loop[] {
   const all = new Grid<Region>(PIECE_CELL_M);
+  const places = new Map<string, Box>();
   for (const pieces of regions) {
     const box = boxAround(pieces);
     all.add({ pieces, box }, box);
+    places.set(pieces.map(pieceKey).join('|'), box);
   }
-  const cut = cutAll(regions.flat().filter((p) => pieceLength(p) > TINY_M));
-  const boundary = cut.filter((p) => onBoundary(p, all));
+  memory?.sides.begin(places);
+  const cut = cutAll(
+    regions.flat().filter((p) => pieceLength(p) > TINY_M),
+    memory?.cuts,
+  );
+  const boundary = cut.filter((p) =>
+    memory
+      ? memory.sides.get(pieceKey(p), grown(boxAround([p])), () => onBoundary(p, all))
+      : onBoundary(p, all),
+  );
   return chain(withoutCovered(distinctPieces(boundary)));
 }
 
 /** The size of a cell of the grid of the pieces of the loops (meters): about the size of a lane junction. */
 const CELL_M = 50;
+/** The height of a cell of that grid (meters): the ray of a point runs almost along x, so a thin row holds only the pieces it can meet (^941). */
+const ROW_M = 1;
+
+/** The boxes of loops that hold the point, and how far to the right they reach. A loop whose box does not hold the point crosses the ray an even number of times and does not count; the boxes that hold it decide how far the ray needs to go. */
+function holding(boxes: Grid<Box>, p: Vec): { held: Set<Box>; reach: number } {
+  const held = new Set<Box>();
+  let reach = p.x;
+  // A point on the skin of a loop may lie a hair outside its box: the box is looked at with the tolerance.
+  const m = SAME_PLACE_M;
+  for (const b of boxes.near({ x0: p.x - m, x1: p.x + m, y0: p.y - m, y1: p.y + m })) {
+    if (p.x < b.x0 - m || p.x > b.x1 + m || p.y < b.y0 - m || p.y > b.y1 + m) continue;
+    reach = Math.max(reach, b.x1 + m);
+    held.add(b);
+  }
+  return { held, reach };
+}
 
 /**
  * A test for points being inside the loops (even-odd, so inside a hole is outside), for many
@@ -249,29 +295,16 @@ const CELL_M = 50;
  * question costs what lies along the ray and not all the pieces of the surface.
  */
 export function insideOf(loops: Loop[]): (p: Vec) => boolean {
-  const grid = new Grid<{ piece: Piece; box: Box }>(CELL_M);
+  const grid = new Grid<{ piece: Piece; box: Box; seen: number }>(CELL_M, ROW_M);
+  let query = 0;
   const boxes = new Grid<Box>(CELL_M);
   for (const loop of loops) {
     const box = boxAround(loop);
     boxes.add(box, box);
-    for (const piece of loop) grid.add({ piece, box }, boxAround([piece]));
+    for (const piece of loop) grid.add({ piece, box, seen: 0 }, boxAround([piece]));
   }
   return (p) => {
-    // A loop whose box does not hold the point crosses the ray an even number of times and does not count; the boxes that hold it decide how far the ray needs to go.
-    const held = new Set<Box>();
-    let reach = p.x;
-    for (const b of boxes.near({
-      x0: p.x - SAME_PLACE_M,
-      x1: p.x + SAME_PLACE_M,
-      y0: p.y - SAME_PLACE_M,
-      y1: p.y + SAME_PLACE_M,
-    })) {
-      // A point on the skin of a loop may lie a hair outside its box: the box is looked at with the tolerance.
-      const m = SAME_PLACE_M;
-      if (p.x < b.x0 - m || p.x > b.x1 + m || p.y < b.y0 - m || p.y > b.y1 + m) continue;
-      reach = Math.max(reach, b.x1 + m);
-      held.add(b);
-    }
+    const { held, reach } = holding(boxes, p);
     if (!held.size) return false;
     const ray: Piece = {
       type: 'line',
@@ -286,8 +319,12 @@ export function insideOf(loops: Loop[]): (p: Vec) => boolean {
       y1: p.y + (reach - p.x) * RAY_SLOPE + SAME_PLACE_M,
     };
     let n = 0;
-    for (const { piece, box } of grid.near(to))
-      if (held.has(box)) n += crossPieces(ray, piece).length;
+    query++;
+    grid.each(to, (e) => {
+      if (e.seen === query || !held.has(e.box)) return;
+      e.seen = query;
+      n += crossPieces(ray, e.piece).length;
+    });
     return n % 2 === 1;
   };
 }

@@ -1,13 +1,45 @@
 import { test } from '@playwright/test';
-import { tiledMap } from '../src/lib/testing/samples';
+import { connectedMap, tiledMap } from '../src/lib/testing/samples';
 
 interface Profile {
-  nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[];
+  nodes: {
+    id: number;
+    children?: number[];
+    callFrame: { functionName: string; url: string; lineNumber: number };
+  }[];
   samples: number[];
   timeDeltas: number[];
 }
 
 /** The functions with the most time of their own, as lines of text. */
+function inclusiveOf(profile: Profile): string {
+  const self = new Map<number, number>();
+  profile.samples.forEach((id, i) =>
+    self.set(id, (self.get(id) ?? 0) + (profile.timeDeltas[i] ?? 0)),
+  );
+  const byId = new Map(profile.nodes.map((n) => [n.id, n]));
+  const total = new Map<number, number>();
+  const walk = (id: number): number => {
+    const n = byId.get(id)!;
+    const t = (self.get(id) ?? 0) + (n.children ?? []).reduce((a, c) => a + walk(c), 0);
+    total.set(id, t);
+    return t;
+  };
+  if (profile.nodes.length) walk(profile.nodes[0]!.id);
+  const byName = new Map<string, number>();
+  for (const n of profile.nodes) {
+    const f = n.callFrame;
+    if (!f.url.includes('/src/')) continue;
+    const key = `${f.functionName || '(anonymous)'} ${f.url.split('/').slice(-2).join('/')}:${f.lineNumber}`;
+    byName.set(key, Math.max(byName.get(key) ?? 0, total.get(n.id) ?? 0));
+  }
+  return [...byName]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 25)
+    .map(([k, us]) => `${(us / 1000).toFixed(0)} ms total  ${k}`)
+    .join('\n');
+}
+
 function topOf(profile: Profile): string {
   const self = new Map<number, number>();
   profile.samples.forEach((id, i) =>
@@ -27,11 +59,12 @@ function topOf(profile: Profile): string {
 test('profile of an edit', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => window.__modelcity?.session.ready);
-  const graph = tiledMap(Number(process.env.CELLS ?? 120));
+  const graph = (process.env.MAP === 'connected' ? connectedMap : tiledMap)(
+    Number(process.env.CELLS ?? 120),
+  );
   await page.evaluate(async (g) => {
     window.__modelcity!.editor.graph = g;
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   }, graph);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Profiler.enable');
@@ -42,23 +75,20 @@ test('profile of an edit', async ({ page }) => {
       const base = hook.camera();
       for (let i = 0; i < 20; i++) {
         hook.show({ x: base.x + i * 2, y: base.y + i, scale: 3, rotation: 0 });
-        await new Promise((r) => requestAnimationFrame(r));
-        await new Promise((r) => requestAnimationFrame(r));
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       }
     });
   } else {
-    await page.evaluate(async (g) => {
-      window.__modelcity!.editor.graph = { ...g, nodes: g.nodes.map((n) => ({ ...n })) };
-      await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => requestAnimationFrame(r));
-    }, graph);
+    await page.evaluate(async () => {
+      const cur = window.__modelcity!.editor.graph;
+      const mid = Math.floor(cur.nodes.length / 2);
+      window.__modelcity!.editor.graph = {
+        ...cur,
+        nodes: cur.nodes.map((n, k) => (k === mid ? { ...n, x: n.x + 0.5 } : n)),
+      };
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    });
   }
-  const { profile } = (await cdp.send('Profiler.stop')) as {
-    profile: {
-      nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[];
-      samples: number[];
-      timeDeltas: number[];
-    };
-  };
-  console.log(topOf(profile));
+  const { profile } = (await cdp.send('Profiler.stop')) as { profile: Profile };
+  console.log(`${topOf(profile)}\nINCLUSIVE\n${inclusiveOf(profile)}`);
 });

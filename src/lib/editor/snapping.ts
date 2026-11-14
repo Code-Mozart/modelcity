@@ -19,7 +19,7 @@ import { previewOf, type Drawn } from './targets';
 import { tipWays } from './ways';
 import { arcRadii, onLine } from './snapHit';
 import { headingFrom, placedHeading } from '../snap/heading';
-import type { RoadHit } from './chains';
+import { curveOfEdge, type RoadHit } from './chains';
 import type { Hover, Placement, PointerInfo, Press } from './types';
 
 /** The heading control point on a snap: it copies the heading, the pointer stays (^313); `Shift` aims at it, for an existing node (^335). */
@@ -80,10 +80,11 @@ const withoutEdge = (g: Graph, id: number): Graph => ({
 });
 
 /** The arc and the place on it of the radius point that is dragged (^333). */
-function radiusPointOf(press: Press) {
+function radiusPointOf(press: Press, partOf: Part) {
   if (press.kind !== 'drag' || press.drag.handle.type !== 'rad') return null;
-  const { i, k = 0, t = 0.5 } = press.drag.handle;
-  const arc = chainsOf(press.undo.graph)[press.road]?.edges[i]?.E.pieces[k];
+  const { k = 0, t = 0.5 } = press.drag.handle;
+  // The id of a radius point is its segment's (^306).
+  const arc = curveOfEdge(partOf(press.undo.graph), press.id)?.pieces[k];
   return arc && sweeps(arc) ? { arc, t } : null;
 }
 
@@ -91,8 +92,8 @@ function radiusPointOf(press: Press) {
  * The line a radius point moves along: the heading line at an end of its arc, the bisector in the
  * middle (^333). Null for the other control points, which are not tied to a line.
  */
-function locusOf(press: Press): { p: Vec; d: Vec } | null {
-  const r = radiusPointOf(press);
+function locusOf(press: Press, partOf: Part): { p: Vec; d: Vec } | null {
+  const r = radiusPointOf(press, partOf);
   if (!r) return null;
   const at = pointOn(r.arc, r.t);
   const middle = r.t === 0.5;
@@ -117,8 +118,8 @@ function sides(c: SnapCurve, locus: { p: Vec; d: Vec }): number[] {
  * curves that cross it. Everything else is not offered and not shown. Undefined for control points
  * that are not tied to a line.
  */
-export function reachOf(press: Press | null): Reach | undefined {
-  const locus = press && locusOf(press);
+export function reachOf(press: Press | null, partOf: Part = whole): Reach | undefined {
+  const locus = press && locusOf(press, partOf);
   if (!locus) return undefined;
   return {
     line: locus,
@@ -129,6 +130,10 @@ export function reachOf(press: Press | null): Reach | undefined {
     },
   };
 }
+
+/** The part of a graph that is in the window on the map (^941). */
+type Part = (g: Graph) => Graph;
+const whole: Part = (g) => g;
 
 /** The graph without some nodes and the edges at them: what the others offer while those move. */
 export function without(g: Graph, ids: number[]): Graph {
@@ -162,17 +167,19 @@ export function snapBase(
   graph: Graph,
   press: Press | null,
   extendFrom: number | null,
+  partOf: Part = whole,
 ): Suggestion[] {
   const from = extendFrom === null ? undefined : nodeOf(graph, extendFrom);
-  return [...baseOf(graph, press), ...(from ? extendRules(from) : [])];
+  return [...baseOf(graph, press, partOf), ...(from ? extendRules(from) : [])];
 }
 
-function baseOf(graph: Graph, press: Press | null): Suggestion[] {
+/** `partOf` gives the part of a graph that is in the window on the map (^941): only what is near the view, and what is pinned, offers a snap. */
+function baseOf(graph: Graph, press: Press | null, partOf: Part): Suggestion[] {
   // A heading snaps to everything but the node itself and its own segments (^313).
   const turning = turningNode(press);
   // While a heading is turned no offset curve is offered (^878).
   if (turning !== null)
-    return suggestionsOfGraph(without(press!.undo.graph, [turning])).filter(
+    return suggestionsOfGraph(without(partOf(press!.undo.graph), [turning])).filter(
       (s) => !(s.kind === 'curve' && s.rule === 'offset'),
     );
   const moving = movedIds(press);
@@ -181,7 +188,7 @@ function baseOf(graph: Graph, press: Press | null): Suggestion[] {
   if (control !== null)
     return [...suggestionsOfGraph(withoutEdge(graph, control)), ...ownPlace(press!)];
   if (!moving.length || !press || press.kind !== 'drag') return suggestionsOfGraph(graph);
-  const before = press.undo.graph;
+  const before = partOf(press.undo.graph);
   const were = moving.flatMap((id) => nodeOf(before, id) ?? []);
   const places = were.map((n): Suggestion => ({
     kind: 'point',
@@ -248,6 +255,8 @@ export interface SnapArgs {
   hover: Hover | null;
   drawing: boolean;
   pinned: readonly number[];
+  /** The part of a graph in the window on the map (^941); all of it if not given. */
+  partOf?: Part;
 }
 
 /** Where a node is placed in draw mode: over empty canvas, a curve or a node. */
@@ -331,7 +340,7 @@ export function snapFor(base: Suggestion[], a: SnapArgs): SnapHit | null {
     scale: info.scale,
     touch: info.touch,
     pinned: a.pinned,
-    reach: reachOf(a.press),
+    reach: reachOf(a.press, a.partOf),
   };
   const hit = what === 'place' ? placeHit(base, a.hover, query) : snapTo(base, query);
   return hit && withoutExtendAtTip(hit, a, base);

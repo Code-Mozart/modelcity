@@ -71,7 +71,7 @@ export function angleOf(n: number): { alpha: number; beta: number; skip: [number
 }
 
 /** One 3-way junction at `c`: B heads south, A is alpha clockwise of it, C beta counter-clockwise (y is down). */
-export function junction(s: Sketch, c: Vec, n: number) {
+export function junction(s: Sketch, c: Vec, n: number): Lanes[] {
   const { alpha, beta, skip } = angleOf(n);
   const heads = [Math.PI / 2 + rad(alpha), Math.PI / 2, Math.PI / 2 - rad(beta)];
   const lanes: Lanes[] = heads.map((h) =>
@@ -87,6 +87,7 @@ export function junction(s: Sketch, c: Vec, n: number) {
       if (i !== j && from.in !== null && to.out !== null && !missing) s.edge(from.in, to.out);
     }),
   );
+  return lanes;
 }
 
 export function angleGround(): Graph {
