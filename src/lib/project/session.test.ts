@@ -128,7 +128,7 @@ describe('import and export (^163, ^164)', () => {
     const s = setup();
     await withRoad(s);
     const text = s.session.exportText();
-    expect(JSON.parse(text)).toMatchObject({ version: 2, title: 'Untitled project' });
+    expect(JSON.parse(text)).toMatchObject({ version: 1, title: 'Untitled project' });
     const first = s.session.id;
     await s.session.importText(text);
     expect(s.session.id).not.toBe(first);
@@ -141,7 +141,7 @@ describe('import and export (^163, ^164)', () => {
   it('exports a map without a project too', async () => {
     const { session } = setup();
     await session.start();
-    expect(JSON.parse(session.exportText())).toMatchObject({ version: 2, nodes: [], edges: [] });
+    expect(JSON.parse(session.exportText())).toMatchObject({ version: 1, nodes: [], edges: [] });
   });
 
   it('keeps the open project and says what is wrong with a file that is no project', async () => {

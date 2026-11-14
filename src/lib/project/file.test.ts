@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import v1Sample from './samples/v1.json';
 import { addEdge, addNode, emptyGraph, shareRadius } from '../model/graph';
 import {
   fromFile,
@@ -67,7 +66,7 @@ const text = (change: (f: Draft) => void = () => {}) => {
 const REFUSALS: [string, RefusalKind, RegExp, (f: Draft) => void][] = [
   ['^194', 'not-project', /not a modelcity project file/, (f) => delete f.version],
   ['^194', 'not-project', /not a modelcity project file/, (f) => (f.version = 1.5)],
-  ['^195', 'newer', /newer version.*version 99.*up to 2/, (f) => (f.version = 99)],
+  ['^195', 'newer', /newer version.*version 99.*up to 1/, (f) => (f.version = 99)],
   ['^197', 'damaged', /damaged.*console/, (f) => delete f.title],
   ['^198', 'damaged', /damaged.*console/, (f) => (f.camera = { x: 'a' })],
   ['^199', 'damaged', /damaged.*console/, (f) => (f.nodes = {} as never)],
@@ -143,22 +142,5 @@ describe('migrations (^173)', () => {
       expect(f.version).toBe(FILE_VERSION);
       expect(fromFile(f).graph.nodes.length).toBeGreaterThan(0);
     }
-  });
-});
-
-describe('the counters of the next ids (^1224)', () => {
-  const v1 = () => structuredClone(v1Sample) as { nodes: number[][]; edges: number[][] };
-
-  it('a version 1 project gets the ids its ids implied, also with gaps', () => {
-    const f = v1();
-    f.nodes[2]![0] = 7;
-    f.edges[1]![2] = 7;
-    const m = validate(migrate(f));
-    expect([m.version, m.nextNodeId, m.nextEdgeId]).toEqual([2, 8, 2]);
-  });
-
-  it('refuses a counter that is not above every id (^1225)', () => {
-    const f = { ...validate(migrate(v1())), nextNodeId: 2 };
-    expect(refusal(() => validate(f)).hat).toBe('^1225');
   });
 });

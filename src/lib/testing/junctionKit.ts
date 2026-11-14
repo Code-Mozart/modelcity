@@ -14,8 +14,7 @@ export class Sketch {
   private edges: GEdge[] = [];
 
   get graph(): Graph {
-    const [nextNodeId, nextEdgeId] = [this.nodes.length, this.edges.length];
-    return { ...emptyGraph(), nodes: this.nodes, edges: this.edges, nextNodeId, nextEdgeId };
+    return { ...emptyGraph(), nodes: this.nodes, edges: this.edges };
   }
 
   node(at: Vec, th: number): number {

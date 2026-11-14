@@ -3,21 +3,8 @@ import { FILE_VERSION, ProjectFileError, type ProjectFile, type RefusalKind } fr
 /** Migration `n` turns a project of version `n` into version `n + 1`: a pure function on parsed JSON (^173). */
 export type Migrations = Record<number, (file: Record<string, unknown>) => Record<string, unknown>>;
 
-const nextAfter = (rows: unknown): number =>
-  Array.isArray(rows)
-    ? rows.reduce(
-        (m: number, r) => (Array.isArray(r) && isNum(r[0]) ? Math.max(m, r[0] + 1) : m),
-        0,
-      )
-    : 0;
-
-/**
- * The migrations of the stored model; old ones are never edited. 1 to 2 (^1224): the ids the next
- * node and edge get are stored; a version 1 project gets the ones its ids implied (the largest + 1).
- */
-export const MIGRATIONS: Migrations = {
-  1: (f) => ({ ...f, nextNodeId: nextAfter(f.nodes), nextEdgeId: nextAfter(f.edges) }),
-};
+/** The migrations of the stored model. None yet: version 1 is the first. Old ones are never edited. */
+export const MIGRATIONS: Migrations = {};
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -89,21 +76,6 @@ function checkTuples(f: Record<string, unknown>) {
   }
 }
 
-function checkCounters(f: Record<string, unknown>) {
-  const [nodes, edges] = [nextAfter(f.nodes), nextAfter(f.edges)];
-  const ok = (v: unknown, least: number) => isNum(v) && Number.isInteger(v) && v >= least;
-  check(
-    ok(f.nextNodeId, nodes),
-    '^1225',
-    `"nextNodeId" is ${JSON.stringify(f.nextNodeId)}, not a whole number above every node id (at least ${nodes})`,
-  );
-  check(
-    ok(f.nextEdgeId, edges),
-    '^1225',
-    `"nextEdgeId" is ${JSON.stringify(f.nextEdgeId)}, not a whole number above every edge id (at least ${edges})`,
-  );
-}
-
 function checkReferences(f: ProjectFile) {
   const nodeIds = new Set(f.nodes.map((n) => n[0]));
   check(nodeIds.size === f.nodes.length, '^204', 'two nodes have the same id');
@@ -140,7 +112,6 @@ export function validate(f: Record<string, unknown>): ProjectFile {
   );
   check(isRecord(f.laneConfigurations), '^200', '"laneConfigurations" must be an object');
   checkTuples(f);
-  checkCounters(f);
   checkReferences(f as unknown as ProjectFile);
   return f as unknown as ProjectFile;
 }
