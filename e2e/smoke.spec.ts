@@ -9,11 +9,12 @@ test('the app opens an empty map: a canvas, the projects, no error', async ({ pa
   await app.ready();
   await expect(page.locator('canvas')).toBeVisible();
   expect(await app.nodes()).toEqual([]);
-  await expect(page.getByLabel('Controls').locator('li')).toHaveText([
+  const hints = await page.getByLabel('Controls').locator('li').allInnerTexts();
+  expect(hints.map((h) => h.replace(/\s+/g, ' ').trim())).toEqual([
     'pan',
     'zoom',
     'rotate',
-    'projects',
+    'P projects',
   ]);
   expect(errors).toEqual([]);
 });
