@@ -1,12 +1,19 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
   import { FEATURES } from './features';
   import { render } from './render/render';
   import type { Point } from './camera/view';
   import type { ControlId } from './hints/hints';
+  import { boxOfId, CHUNK_M, countOf, idsOf } from './map/chunks';
+  import { chunksInView } from './map/inView';
+  import { MAX_CHUNKS, type MapMemory } from './map/mapMemory.svelte';
 
-  let { camera, onUse }: { camera: Camera; onUse: (id: ControlId) => void } = $props();
+  let {
+    camera,
+    memory,
+    onUse,
+  }: { camera: Camera; memory: MapMemory; onUse: (id: ControlId) => void } = $props();
 
   const LINE_PX = 16;
   const PAGE_PX = 400;
@@ -22,10 +29,30 @@
     canvas.height = Math.round(camera.size.height * dpr);
   }
 
-  // Redraw whenever the camera changes.
+  // The chunks the screen touches and one ring round them are asked for (^1238).
+  $effect(() => {
+    void memory.project;
+    const range = chunksInView(camera.view, camera.size, CHUNK_M);
+    untrack(() => void memory.show(range));
+  });
+
+  /** The chunks the screen touches, with their nodes or as not loaded. */
+  const scene = $derived.by(() => {
+    const seen = chunksInView(camera.view, camera.size);
+    const tooMuch = countOf(seen) > MAX_CHUNKS;
+    const chunks = tooMuch
+      ? []
+      : [...idsOf(seen)].map((id) => ({
+          box: boxOfId(id),
+          nodes: memory.ready.get(id)?.nodes ?? null,
+        }));
+    return { chunks, tooMuch };
+  });
+
+  // Redraw whenever the camera or the map in memory changes.
   $effect(() => {
     const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
-    render(frame, dpr, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
+    render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
   });
 
   function localPoint(e: MouseEvent): Point {

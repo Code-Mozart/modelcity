@@ -13,9 +13,11 @@ What the app holds in memory, operation by operation. Since ^1232 (the tabula ra
 - `Camera` (`camera/camera.svelte.ts`): the view (centre, scale, rotation, grid centre), the size of the canvas, the cursor, panning, rotating, the pressed compass chip, the recent-zoom flag of the scale bar, the touches of a two-finger gesture.
 - The projects list (headers only), the modal (open, row mode, rename draft, hover), the toasts, the version banner.
 
-## Chunks (dry, ^1231)
+## Chunks (^1231, ^1238)
 
-- `ChunkLoader` (`map/chunkLoader.ts`): `chunks` (by id) and the nodes it has read; not connected to anything yet.
+- `MapMemory` (`map/mapMemory.svelte.ts`): `ready` (the loaded chunks of the open project, by id: their node and segment rows as stored), `loading` (the chunks asked for that are on their way), `tooMuch`, `project`. Chunks are asked for from the camera: the view and one ring. Nothing is let go yet (eviction is not built).
+- `ChunkLoader` (`map/chunkLoader.ts`): the chunks it has read, the nodes by id (also the far ends of segments), the chunks it is reading.
+- Drawn from it, so far: the node dots, and the placeholder of a chunk that is not loaded.
 
 ## Not there any more (^1232)
 

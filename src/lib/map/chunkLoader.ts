@@ -1,6 +1,6 @@
 import type { Box } from '../curves/hull';
 import type { EdgeRow, NodeRow, ProjectStorage } from '../project/storage';
-import { boxOfRange, chunkId, chunkOf, idsOf, type ChunkRange } from './chunks';
+import { boxOfRange, chunkId, chunkOf, idsOf, rangeOfIds, type ChunkRange } from './chunks';
 
 /** What is known of one chunk: its nodes (those whose position is in its cell) and every segment that has one of its nodes at an end. */
 export interface Chunk {
@@ -30,6 +30,8 @@ const toMeters = (n: NodeRow): [number, number] => [n[1] / 1000, n[2] / 1000];
  */
 export class ChunkLoader {
   readonly chunks = new Map<string, Chunk>();
+  /** The chunks that are being read: a request for them is not made twice. */
+  private reading = new Set<string>();
   /** Every node that was read, by id: the nodes of the chunks and the nodes at the far end of their segments. */
   private nodes = new Map<number, NodeRow>();
 
@@ -38,12 +40,26 @@ export class ChunkLoader {
     private project: string,
   ) {}
 
-  /** Make sure the chunks of a range are loaded. */
+  /** Whether a chunk is loaded. */
+  has = (id: string) => this.chunks.has(id);
+
+  /** Make sure the chunks of a range are loaded: the ones that are neither there nor being read are read, in one request for the box round them. */
   async load(range: ChunkRange): Promise<Loaded> {
-    const fresh = new Set([...idsOf(range)].filter((id) => !this.chunks.has(id)));
+    const fresh = new Set(
+      [...idsOf(range)].filter((id) => !this.chunks.has(id) && !this.reading.has(id)),
+    );
     const found: Loaded = { chunks: fresh.size, nodes: 0, edges: 0, ends: 0 };
     if (!fresh.size) return found;
-    const box: Box = boxOfRange(range);
+    fresh.forEach((id) => this.reading.add(id));
+    try {
+      return await this.read(fresh, found);
+    } finally {
+      fresh.forEach((id) => this.reading.delete(id));
+    }
+  }
+
+  private async read(fresh: Set<string>, found: Loaded): Promise<Loaded> {
+    const box: Box = boxOfRange(rangeOfIds(fresh));
     const rows = await this.storage.nodesIn(this.project, {
       x0: mm(box.x0),
       x1: mm(box.x1 - 1e-3),

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { projectKeyOf } from './lib/project/projectKeys';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { Camera } from './lib/camera/camera.svelte';
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
@@ -14,6 +14,7 @@
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
   import { ProjectSession } from './lib/project/session.svelte';
   import { IndexedDbStorage } from './lib/project/indexedDb';
+  import { MapMemory } from './lib/map/mapMemory.svelte';
   import { installTestHook } from './lib/testHook';
   import VersionText from './lib/hud/VersionText.svelte';
   import { VersionBanner } from './lib/hud/versionBanner.svelte';
@@ -25,12 +26,20 @@
   // The version and the moniker show at load and after a while without input (^787); the tab says it too (^788).
   const banner = new VersionBanner();
   document.title = TAB_TITLE;
-  const session = new ProjectSession(editor, camera, new IndexedDbStorage(), {
+  const storage = new IndexedDbStorage();
+  const memory = new MapMemory(storage);
+  const session = new ProjectSession(editor, camera, storage, {
     notify: (kind, text) => toasts.show(kind, text),
   });
-  installTestHook(editor, camera, session, () => document.querySelector('canvas'));
+  installTestHook({ editor, camera, session, memory }, () => document.querySelector('canvas'));
 
   onMount(() => void session.start());
+
+  // The chunks in memory are those of the open project (^1238).
+  $effect(() => {
+    const id = session.id;
+    untrack(() => memory.open(id));
+  });
 
   // Save the camera once it rests, if it moved (^236).
   $effect(() => {
@@ -86,7 +95,7 @@
 />
 
 <main>
-  <MapCanvas {camera} onUse={(id) => usage.mark(id)} />
+  <MapCanvas {camera} {memory} onUse={(id) => usage.mark(id)} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
   <div class="right">

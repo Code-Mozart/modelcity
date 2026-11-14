@@ -41,3 +41,19 @@ export const boxOfRange = (r: ChunkRange): Box => ({
   y0: r.cy0 * CHUNK_M,
   y1: (r.cy1 + 1) * CHUNK_M,
 });
+
+/** The smallest range that holds all of these chunks (ids as made by `chunkId`). */
+export function rangeOfIds(ids: Iterable<string>): ChunkRange {
+  const r = { cx0: Infinity, cx1: -Infinity, cy0: Infinity, cy1: -Infinity };
+  for (const id of ids) {
+    const [cx, cy] = id.split(',').map(Number) as [number, number];
+    r.cx0 = Math.min(r.cx0, cx);
+    r.cx1 = Math.max(r.cx1, cx);
+    r.cy0 = Math.min(r.cy0, cy);
+    r.cy1 = Math.max(r.cy1, cy);
+  }
+  return r;
+}
+
+/** The box of one chunk, from its id. */
+export const boxOfId = (id: string): Box => boxOfRange(rangeOfIds([id]));
