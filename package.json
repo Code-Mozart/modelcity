@@ -2,6 +2,7 @@
   "name": "modelcity",
   "version": "0.60.0",
   "moniker": "Chunked map",
+  "packageManager": "bun@1.4.4",
   "private": true,
   "type": "module",
   "scripts": {
