@@ -1,4 +1,4 @@
-> **Since ^1232 this describes the old app, removed in the tabula rasa (PR #60). It is the list of what is to be built again; the tests it names are gone.**
+> **Since ^1232 this describes the old app, removed in the tabula rasa (PR #60). It is the list of what is to be built again; the tests it names are gone.** Built again so far (hint, scenario test in `src/lib/hints/appControls.test.ts`): ^722, ^723, ^725, ^400.
 
 # Controls and features (^371)
 

@@ -9,5 +9,11 @@ test('the app opens an empty map: a canvas, the projects, no error', async ({ pa
   await app.ready();
   await expect(page.locator('canvas')).toBeVisible();
   expect(await app.nodes()).toEqual([]);
+  await expect(page.getByLabel('Controls').locator('li')).toHaveText([
+    'pan',
+    'zoom',
+    'rotate',
+    'projects',
+  ]);
   expect(errors).toEqual([]);
 });

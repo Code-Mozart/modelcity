@@ -7,6 +7,8 @@
   import Hints from './lib/hints/Hints.svelte';
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
+  import { appHints } from './lib/hints/appControls';
+  import { Usage } from './lib/hints/usage.svelte';
   import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
   import ProjectsModal from './lib/project/ProjectsModal.svelte';
@@ -42,9 +44,13 @@
     session.changed();
   });
 
+  // A control that was used lately has its hint hidden for a while (^110).
+  const usage = new Usage();
   // While the projects modal is up its controls replace all others (^168).
   const hints = $derived(
-    session.modalOpen ? modalHints(session.row?.mode ?? 'list', session.over) : [],
+    session.modalOpen
+      ? modalHints(session.row?.mode ?? 'list', session.over)
+      : appHints(usage.hidden),
   );
 
   /** The keys of the projects: `Ctrl+S` saves, `Ctrl+Shift+S` exports, `P` and `Ctrl+O` open (^168, ^222, ^223, ^226, ^746). */
@@ -80,7 +86,7 @@
 />
 
 <main>
-  <MapCanvas {camera} onUse={() => {}} />
+  <MapCanvas {camera} onUse={(id) => usage.mark(id)} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
   <div class="right">

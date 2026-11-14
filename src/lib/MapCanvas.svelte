@@ -4,8 +4,9 @@
   import { FEATURES } from './features';
   import { render } from './render/render';
   import type { Point } from './camera/view';
+  import type { ControlId } from './hints/hints';
 
-  let { camera, onUse }: { camera: Camera; onUse: (id: string) => void } = $props();
+  let { camera, onUse }: { camera: Camera; onUse: (id: ControlId) => void } = $props();
 
   const LINE_PX = 16;
   const PAGE_PX = 400;
