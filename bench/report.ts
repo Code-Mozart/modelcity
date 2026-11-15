@@ -93,6 +93,7 @@ export function markdown(machine: Machine, results: SizeResult[]): string {
     `- Machine: ${machine.os}, ${machine.cpu}, ${machine.ramGb} GB RAM`,
     `- Browser: ${machine.userAgent}${machine.headless ? ' (headless)' : ''}`,
     `- GPU: ${machine.gpu}, device pixel ratio ${machine.devicePixelRatio}`,
+    '- The map: one connected road network, a single component (checked for every size by `src/lib/testing/benchMap.test.ts`): rows of straight roads joined by S-curves, one-way segments.',
     '- The frame rate limit of the browser is lifted: the frame times say how fast it can go, not what the screen shows.',
     '',
     head,

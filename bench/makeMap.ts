@@ -1,6 +1,6 @@
 /**
  * The text of a project file with one big connected road network (^1249): rows of straight roads
- * (nodes `spacing` meters apart, heading east) joined by S-curves at every 8th column. It is sent
+ * (nodes `spacing` meters apart, heading east) joined by S-curves at every 8th column, every row to the next, so that it is one connected graph (a single component, `src/lib/testing/benchMap.test.ts`). It is sent
  * to the page and runs there, so it uses nothing from outside.
  */
 export function makeMapText(nodes: number, spacing: number): string {

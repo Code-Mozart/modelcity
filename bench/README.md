@@ -1,6 +1,6 @@
 # Measuring the chunked map
 
-One big connected road network (rows of straight roads 40 m apart, joined by S-curves), imported into
+One big connected road network: a single component in the sense of graph theory (rows of straight roads 40 m apart, every row joined to the next by S-curves; `src/lib/testing/benchMap.test.ts` checks it), imported into
 the app like a file, in a real Chromium on the production build. It measures: the import, the build
 of the index, opening the project, the first view, panning while chunks are read, and panning,
 zooming and rotating inside what is loaded. The frame rate limit of the browser is lifted, so the
