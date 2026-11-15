@@ -5,6 +5,7 @@
   import { FEATURES } from './features';
   import { render } from './render/render';
   import type { ChunkView } from './render/mapLayer';
+  import type { FrameStats } from './hud/frameStats.svelte';
   import { curveOf, type SkeletonEdge } from './map/curve';
   import type { Point } from './camera/view';
   import type { ControlId } from './hints/hints';
@@ -15,8 +16,10 @@
   let {
     camera,
     memory,
+    frames,
     onUse,
-  }: { camera: Camera; memory: MapMemory; onUse: (id: ControlId) => void } = $props();
+  }: { camera: Camera; memory: MapMemory; frames: FrameStats; onUse: (id: ControlId) => void } =
+    $props();
 
   const LINE_PX = 16;
   const PAGE_PX = 400;
@@ -78,6 +81,7 @@
 
   // Redraw whenever the camera or the map in memory changes.
   $effect(() => {
+    const began = performance.now();
     // A plain copy of the view: the numbers are read for every node, and reading them through the state of the camera is slow (^1249).
     const frame = {
       ctx: canvas.getContext('2d')!,
@@ -85,6 +89,7 @@
       size: { ...camera.size },
     };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
+    frames.record(began, performance.now());
   });
 
   function localPoint(e: MouseEvent): Point {

@@ -109,3 +109,23 @@ test('a chunk that is not loaded yet is hatched, and the camera is free meanwhil
   const after = await page.evaluate(() => window.__modelcity!.camera());
   expect(after.x).not.toBe(before.x);
 });
+
+test('Ctrl+Period shows the frame times while the view moves, and hides them again', async ({
+  page,
+}) => {
+  await open(page);
+  await page.waitForFunction(() => window.__modelcity!.memory.chunks.size > 0);
+  const readout = page.getByRole('status', { name: 'Frame times' });
+  await expect(readout).toBeHidden();
+  await page.keyboard.press('Control+Period');
+  await expect(readout).toBeVisible();
+  await page.evaluate(async () => {
+    for (let i = 0; i < 30; i++) {
+      window.__modelcity!.show({ x: i, y: 0, scale: 4, rotation: 0 });
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+  });
+  await expect(readout).toContainText(/draw [\d.]+ ms .* frames per second/);
+  await page.keyboard.press('Control+Period');
+  await expect(readout).toBeHidden();
+});

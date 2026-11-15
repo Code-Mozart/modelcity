@@ -18,6 +18,9 @@
   import { IndexBuild } from './lib/map/indexBuild.svelte';
   import IndexPanel from './lib/map/IndexPanel.svelte';
   import { isRebuildKey } from './lib/map/rebuildKey';
+  import { FrameStats } from './lib/hud/frameStats.svelte';
+  import FrameTimes from './lib/hud/FrameTimes.svelte';
+  import { isFramesKey } from './lib/hud/frameKey';
   import { installTestHook } from './lib/testHook';
   import VersionText from './lib/hud/VersionText.svelte';
   import { VersionBanner } from './lib/hud/versionBanner.svelte';
@@ -32,6 +35,7 @@
   const storage = new IndexedDbStorage();
   const memory = new MapMemory(storage);
   const index = new IndexBuild(storage);
+  const frames = new FrameStats();
   const session = new ProjectSession(editor, camera, storage, {
     notify: (kind, text) => toasts.show(kind, text),
   });
@@ -93,6 +97,10 @@
     banner.used();
     if (session.modalOpen) return modalKey(e);
     if (e.target instanceof HTMLInputElement) return;
+    if (isFramesKey(e)) {
+      frames.toggle();
+      return e.preventDefault();
+    }
     if (isRebuildKey(e)) {
       void index.rebuild();
       return e.preventDefault();
@@ -109,10 +117,11 @@
 />
 
 <main>
-  <MapCanvas {camera} {memory} onUse={(id) => usage.mark(id)} />
+  <MapCanvas {camera} {memory} {frames} onUse={(id) => usage.mark(id)} />
   <IndexPanel build={index} title={session.title} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
+  <FrameTimes stats={frames} />
   <div class="right">
     <div class="toasts"><ToastList {toasts} /></div>
   </div>
