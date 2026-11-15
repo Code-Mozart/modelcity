@@ -1,8 +1,8 @@
-import type { EdgeRow, NodeRow, ProjectStorage, ReadOptions } from '../project/storage';
-import { boxOfId, rangeOfIds } from './chunks';
+import type { EdgeRow, NodeRow, ProjectStorage } from '../project/storage';
+import { rangeOfIds } from './chunks';
 import { INDEX_VERSION } from './segmentIndex';
 
-/** What is known of one chunk: its nodes (those whose position is in its cell) and every segment that has one of its nodes at an end. */
+/** What is known of one chunk: its nodes (those whose position is in its cell) and every segment whose box touches it. */
 export interface Chunk {
   id: string;
   nodes: NodeRow[];
@@ -17,18 +17,16 @@ export interface ChunkRead {
   signal?: AbortSignal;
 }
 
-/** The share of the progress that the nodes have: the rows are counted, what comes after is a step each. */
-const NODES_SHARE = 0.9;
-const EDGES_DONE = 0.95;
-
-const mm = (m: number) => Math.round(m * 1000);
+/** How far a read is when its nodes and segments are there: the nodes at the far ends are the rest. */
+const NODES_AND_EDGES_DONE = 0.7;
 
 /**
- * Reads one chunk of the open project from the storage (^1231, ^1241): its nodes (the index on x
- * or on y, ^1228, counted while they are read, so that the progress is real), the segments that the
- * segment index lists for it (every segment whose box touches the chunk, also one that only crosses
- * it, ^1239), and the nodes at their ends that are not in the chunk. The segment index has to be
- * complete (`isComplete`): a project without one is not read.
+ * Reads one chunk of the open project from the storage (^1231, ^1241): its nodes and the segments
+ * that the index lists for it (every segment whose box touches the chunk, also one that only
+ * crosses it, ^1239), each with one exact lookup of the chunk and both at the same time (each
+ * request waits for the storage, ^1249), and then the nodes at the ends of those segments that are
+ * not in the chunk. The index has to be complete (`isComplete`): a project without one is not read.
+ * How far it is says which of these are done.
  */
 export class ChunkLoader {
   constructor(
@@ -37,24 +35,13 @@ export class ChunkLoader {
   ) {}
 
   async load(id: string, { onProgress, signal }: ChunkRead = {}): Promise<Chunk> {
-    const box = boxOfId(id);
-    const read: ReadOptions = {
-      signal,
-      onProgress: (done, total) => onProgress?.(total ? (NODES_SHARE * done) / total : NODES_SHARE),
-    };
-    // The nodes and the segments are asked at once: each waits for the storage (^1249).
-    const { cx0, cy0 } = rangeOfIds([id]);
-    const [nodes, edges] = await Promise.all([
-      // The upper edge belongs to the next chunk (a cell holds its left and top edge).
-      this.storage.nodesIn(
-        this.project,
-        { x0: mm(box.x0), x1: mm(box.x1) - 1, y0: mm(box.y0), y1: mm(box.y1) - 1 },
-        read,
-      ),
-      this.storage.edgesInChunk(this.project, cx0, cy0, INDEX_VERSION),
-    ]);
+    const { cx0: cx, cy0: cy } = rangeOfIds([id]);
     signal?.throwIfAborted();
-    onProgress?.(EDGES_DONE);
+    const [nodes, edges] = await Promise.all([
+      this.storage.nodesInChunk(this.project, cx, cy, INDEX_VERSION),
+      this.storage.edgesInChunk(this.project, cx, cy, INDEX_VERSION),
+    ]);
+    onProgress?.(NODES_AND_EDGES_DONE);
     signal?.throwIfAborted();
     const here = new Set(nodes.map((n) => n[0]));
     const away = new Set<number>();

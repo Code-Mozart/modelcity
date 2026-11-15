@@ -33,8 +33,9 @@ An export file is exactly one such project object (^163, ^164). The browser keep
 The persisted data has **no chunks** and no other spatial structure of its own: only records and the indexes of the database. Database `modelcity`, version 2:
 
 - `projects`, key `id`: `{ id, header }`, the header being the project without `nodes` and `edges` (title, dates, version, camera, lane configurations, the two id counters). The list of projects reads only these.
-- `nodes`, key `[project, id]`: one record `{ p, id, x, y, th }` per node (millimeters). Indexes: `[project, x]` and `[project, y]`, so that the nodes in a range of x or of y are read without the others; the side with the smaller span is the one to range on, the other is filtered by the reader.
+- `nodes`, key `[project, id]`: one record `{ p, id, x, y, th }` per node (millimeters). No other index: the nodes of a part of the map are found with the index below (^1250).
 - `edges`, key `[project, id]`: `{ p, id, start, end, radius, lane }`. Indexes: `[project, start]` and `[project, end]`: the segments of a node.
+- `nodecells`, key `[project, id]` (^1250): the cell of each node (the chunk its position is in) with its row, `{ p, id, v, x, y, th, cell: [p, cx, cy] }`, found by an exact lookup of `cell`; derived like `segments`, built with it and rebuildable. Database version 4.
 - `segments`, key `[project, id]` (^1239, ^1248): the segment index, derived from the rows above and rebuildable, never part of the file: `{ p, id, v, box, cells }`; a multi-entry index `cell` finds the segments a chunk is touched by, an index on `[p, v]` counts the records of a version of the derivation.
 - An edit writes the header and the rows that changed (found by id), not the project.
 - Records of the first layout, `{ id, file }` (the whole file in one record), are still read; they are written in this layout when they are read. A damaged file (rows that are not rows) stays in one record, so that it is refused when it is opened (^229).

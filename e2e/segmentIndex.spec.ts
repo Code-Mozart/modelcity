@@ -25,9 +25,9 @@ test('the segment index is built before the map is shown, with how far it is, an
   page,
 }) => {
   await slowBuild(page);
-  const panel = page.getByRole('status', { name: 'Segment index' });
-  await expect(panel).toContainText('Building the segment index of “Sample of version 2”');
-  await expect(panel).toContainText(/\d+ of 100 segments/);
+  const panel = page.getByRole('status', { name: 'Index' });
+  await expect(panel).toContainText('Building the index of “Sample of version 2”');
+  await expect(panel).toContainText(/\d+ of 100 rows/);
   expect(await page.evaluate(() => window.__modelcity!.memory.chunks.size)).toBe(0);
   await panel.getByRole('button', { name: 'Cancel' }).click();
   await expect(panel).toContainText('is not complete');
@@ -37,10 +37,7 @@ test('the segment index is built before the map is shown, with how far it is, an
 
 test('it goes on with the real build, and then the map is shown', async ({ page }) => {
   await slowBuild(page);
-  await page
-    .getByRole('status', { name: 'Segment index' })
-    .getByRole('button', { name: 'Cancel' })
-    .click();
+  await page.getByRole('status', { name: 'Index' }).getByRole('button', { name: 'Cancel' }).click();
   // The build in the worker (the one that ships).
   await page.reload();
   await new App(page).ready();
@@ -49,7 +46,7 @@ test('it goes on with the real build, and then the map is shown', async ({ page 
     const chunks = [...window.__modelcity!.memory.chunks.values()];
     return chunks.length > 0 && chunks.every((c) => c.status === 'ready');
   });
-  await expect(page.getByRole('status', { name: 'Segment index' })).toBeHidden();
+  await expect(page.getByRole('status', { name: 'Index' })).toBeHidden();
 });
 
 test('Ctrl+Comma throws the index away and builds it again', async ({ page }) => {

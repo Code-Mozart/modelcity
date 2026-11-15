@@ -4,10 +4,11 @@ import type { ProjectFile } from '../project/file';
 import { IndexedDbStorage } from '../project/indexedDb';
 import { file } from '../testing/storageFixtures';
 import { ChunkLoader } from './chunkLoader';
+import { buildIndex } from './segmentIndex';
 
 globalThis.IDBKeyRange = IDBKeyRange;
 
-/** 1300 nodes in the chunk (0,0), 20 in (1,0): the rows are counted while they are read (^1241). */
+/** 1300 nodes in the chunk (0,0), 20 in (1,0), and a segment between two of them. */
 const crowded = (): ProjectFile => ({
   ...file(),
   nodes: [
@@ -24,33 +25,31 @@ const crowded = (): ProjectFile => ({
       0,
     ]),
   ],
-  edges: [],
+  edges: [[0, 0, 2000, null, 1]],
 });
 
-describe('the progress of reading a chunk is real (^1241)', () => {
+describe('how far the read of a chunk is (^1241)', () => {
   let loader: ChunkLoader;
   beforeEach(async () => {
     globalThis.indexedDB = new IDBFactory();
     const storage = new IndexedDbStorage();
     await storage.put({ id: 'p', file: crowded() });
+    await buildIndex(storage, 'p');
     loader = new ChunkLoader(storage, 'p');
   });
 
-  it('counts rows read of rows there are: it rises in steps and ends at 1', async () => {
+  it('says which part is done: the nodes and segments, then the nodes at the far ends; it rises and ends at 1', async () => {
     const seen: number[] = [];
     const chunk = await loader.load('0,0', { onProgress: (p) => seen.push(p) });
     expect(chunk.nodes).toHaveLength(1300);
-    expect(seen.length).toBeGreaterThan(3);
-    expect(seen).toEqual([...seen].sort((a, b) => a - b));
-    expect(seen.filter((p) => p > 0 && p < 0.9).length).toBeGreaterThanOrEqual(2);
-    expect(seen.at(-1)).toBe(1);
+    expect(chunk.ends.map((n) => n[0])).toEqual([2000]);
+    expect(seen).toEqual([0.7, 1]);
   });
 
-  it('stops when told to, also in the middle of the rows', async () => {
+  it('stops when told to, between the parts', async () => {
     const control = new AbortController();
     const read = loader.load('0,0', { signal: control.signal, onProgress: () => control.abort() });
     await expect(read).rejects.toMatchObject({ name: 'AbortError' });
-    expect(control.signal.aborted).toBe(true);
     await expect(loader.load('1,0', { signal: control.signal })).rejects.toMatchObject({
       name: 'AbortError',
     });

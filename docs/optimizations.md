@@ -104,6 +104,21 @@ What was found, and done:
 
 What is left (not within the limits yet; 300,000 nodes is not tried before this is):
 
-- **The nodes of a chunk are found by the strip of the index on x (or on y) that holds fewer: 2,200 rows for the 99 that are in the chunk, 22 times too many** (the strip grows with the square root of the number of nodes). Reading the rows of the chunk alone is 0.9 ms against 15 ms for the strip, and four reads at the same time are 2 ms against 49 ms: the strips are what blocks the main thread for 50 to 117 ms (the structured clone of the rows), which are the frames over 50 ms while panning.
+- **(Done, ^1250: see below.) The nodes of a chunk were found by the strip of the index on x (or on y) that holds fewer: 2,200 rows for the 99 that are in the chunk, 22 times too many** (the strip grows with the square root of the number of nodes). Reading the rows of the chunk alone is 0.9 ms against 15 ms for the strip, and four reads at the same time are 2 ms against 49 ms: the strips are what blocks the main thread for 50 to 117 ms (the structured clone of the rows), which are the frames over 50 ms while panning.
 - Import 12 s and the build of the index 16 s per 100,000 nodes (about 65 and 140 microseconds a row): about 6 to 7 minutes for 2,000,000 nodes. One request per row.
 - 1.4 KB of storage per node, with its segment and the index: 2.8 GB for 2,000,000 nodes.
+
+### Nodes found by their cell (^1250)
+
+The nodes of a chunk are one exact lookup of their cell in a derived store (`nodecells`, built with the index of the segments), and the indexes on x and y of the nodes are gone. At 100,000 nodes, same map and machine:
+
+| | strip of the index on x or y | cell of the node |
+|---|---|---|
+| Read of one chunk (median) | 288 ms | 101 ms |
+| First view (48 chunks) | 3.2 s | 1.2 s |
+| Pan 300 m/s: frames in 10 s | 299 | 529 |
+| ... frame time, 95th percentile / worst | 117 / 133 ms | 33 / 67 ms |
+| ... frames over 50 ms | 50 | 14 |
+| Build of the index | 15.5 s | 28 s (twice the rows) |
+| Storage | 141 MB | 160 MB (+13.5%) |
+| Import | 11.7 s | 10.8 s |

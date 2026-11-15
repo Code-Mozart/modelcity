@@ -2,7 +2,7 @@
   import type { IndexBuild } from './indexBuild.svelte';
 
   /**
-   * What the segment index of the open project is doing (^1239): it is built before the map is
+   * What the index of the open project is doing (^1239): it is built before the map is
    * shown, so that no segment is missing from it. Shown while it is built, stopped or failed.
    */
   let { build, title }: { build: IndexBuild; title: string } = $props();
@@ -13,22 +13,22 @@
 </script>
 
 {#if shown}
-  <div class="panel" role="status" aria-label="Segment index">
+  <div class="panel" role="status" aria-label="Index">
     {#if build.status === 'building'}
-      <p class="what">Building the segment index of “{title}”</p>
+      <p class="what">Building the index of “{title}”</p>
       <progress max={Math.max(build.total, 1)} value={build.done}></progress>
-      <p>{count(build.done)} of {count(build.total)} segments</p>
+      <p>{count(build.done)} of {count(build.total)} rows (segments and nodes)</p>
       <p class="note">The map is shown when it is complete.</p>
       <button onclick={() => build.stop()}>Cancel</button>
     {:else if build.status === 'stopped'}
-      <p class="what">The segment index of “{title}” is not complete</p>
+      <p class="what">The index of “{title}” is not complete</p>
       <p class="note">
-        {count(build.done)} of {count(build.total)} segments. The map is not shown without it, because
-        segments would be missing.
+        {count(build.done)} of {count(build.total)} rows (segments and nodes). The map is not shown without
+        it, because segments would be missing.
       </p>
       <button onclick={() => void build.resume()}>Build it</button>
     {:else}
-      <p class="what">The segment index of “{title}” could not be built</p>
+      <p class="what">The index of “{title}” could not be built</p>
       <p class="note">{build.error}</p>
       <button onclick={() => void build.resume()}>Try again</button>
     {/if}

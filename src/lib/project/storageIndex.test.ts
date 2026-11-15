@@ -2,7 +2,13 @@ import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { file, none } from '../testing/storageFixtures';
 import { IndexedDbStorage } from './indexedDb';
-import { headerOf, MemoryStorage, type IndexRecord, type ProjectStorage } from './storage';
+import {
+  headerOf,
+  MemoryStorage,
+  type IndexRecord,
+  type NodeRow,
+  type ProjectStorage,
+} from './storage';
 
 globalThis.IDBKeyRange = IDBKeyRange;
 
@@ -38,10 +44,10 @@ describe.each(storages)('the segment index in the storage (^1239): %s', (_name, 
   });
 
   it('counts the segments and the records of a version', async () => {
-    expect(await s.indexStatus('a', 1)).toEqual({ segments: 2, indexed: 0 });
+    expect(await s.indexStatus('a', 1)).toMatchObject({ segments: 2, indexed: 0 });
     await s.putIndex('a', 1, records);
-    expect(await s.indexStatus('a', 1)).toEqual({ segments: 2, indexed: 2 });
-    expect(await s.indexStatus('a', 2)).toEqual({ segments: 2, indexed: 0 });
+    expect(await s.indexStatus('a', 1)).toMatchObject({ segments: 2, indexed: 2 });
+    expect(await s.indexStatus('a', 2)).toMatchObject({ segments: 2, indexed: 0 });
   });
 
   it('pages through the segments in the order of their ids', async () => {
@@ -92,5 +98,29 @@ describe.each(storages)('the segment index goes with the map (^1239, ^1243): %s'
     await s.putIndex('a', 1, records);
     await s.remove('a');
     expect((await s.indexStatus('a', 1)).indexed).toBe(0);
+  });
+});
+
+describe.each(storages)('the cells of the nodes in the storage (^1250): %s', (_name, make) => {
+  let s: ProjectStorage;
+  beforeEach(async () => {
+    s = make();
+    await s.put({ id: 'a', file: file() });
+  });
+
+  it('counts the nodes and the cells of a version, pages through the nodes, and finds the nodes of a chunk (^1250)', async () => {
+    expect(await s.indexStatus('a', 1)).toMatchObject({ nodes: 3, nodesIndexed: 0 });
+    expect((await s.nodesAfter('a', -1, 2)).map((n) => n[0])).toEqual([0, 1]);
+    expect((await s.nodesAfter('a', 1, 5)).map((n) => n[0])).toEqual([5]);
+    const [first, second] = (await s.nodesAfter('a', -1, 2)) as [NodeRow, NodeRow];
+    await s.putNodeCells('a', 1, [
+      { node: first, cell: [0, 0] },
+      { node: second, cell: [0, -1] },
+    ]);
+    expect(await s.indexStatus('a', 1)).toMatchObject({ nodesIndexed: 2 });
+    expect(await s.indexStatus('a', 2)).toMatchObject({ nodesIndexed: 0 });
+    expect([...(await s.indexedNodeIds('a', [0, 1, 5], 1))].sort()).toEqual([0, 1]);
+    expect(await s.nodesInChunk('a', 0, -1, 1)).toEqual([second]);
+    expect(await s.nodesInChunk('a', 0, 0, 2)).toEqual([]);
   });
 });

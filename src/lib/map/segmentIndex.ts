@@ -1,5 +1,5 @@
 import { ProjectFileError } from '../project/file';
-import type { EdgeRow, IndexRecord, NodeRow, ProjectStorage } from '../project/storage';
+import type { EdgeRow, IndexRecord, NodeCell, NodeRow, ProjectStorage } from '../project/storage';
 import { curveOf } from './curve';
 import { CHUNK_M } from './chunks';
 
@@ -8,7 +8,7 @@ import { CHUNK_M } from './chunks';
  * the boxes are different, needs a new number, and every index of an older one is built again.
  * `segmentIndex.test.ts` holds the boxes of some curves and fails when they change.
  */
-export const INDEX_VERSION = 1;
+export const INDEX_VERSION = 2;
 
 /** A box of more chunks than this is not listed in each of them: the segment is returned for every chunk (`'wide'`). */
 export const MAX_CELLS = 4096;
@@ -38,6 +38,12 @@ export function recordOf(row: EdgeRow, p: NodeRow, q: NodeRow): IndexRecord {
   return { id: row[0], box: [x0, y0, x1, y1], cells: count <= MAX_CELLS ? cells : 'wide' };
 }
 
+/** The cell of a node: the chunk its position is in. */
+export const cellOfNode = (node: NodeRow): NodeCell => ({
+  node,
+  cell: [cellOf(node[1]), cellOf(node[2])],
+});
+
 export interface BuildOptions {
   signal?: AbortSignal;
   /** How many segments have a record, of how many there are. */
@@ -56,40 +62,86 @@ export async function isComplete(
 }
 
 /**
- * Make the records that a project lacks, page by page, and write them (^1239). What is there is
- * kept, so that a build that was stopped goes on where it was. A segment whose node is not there is
- * a damaged project: it fails with the hat of the refusal and what is wrong (^206).
+ * Make the records that a project lacks, page by page, and write them (^1239, ^1250): the boxes of
+ * the segments, then the cells of the nodes. What is there is kept, so that a build that was
+ * stopped goes on where it was. A segment whose node is not there is a damaged project: it fails
+ * with the hat of the refusal and what is wrong (^206).
  */
 export async function buildIndex(
   storage: ProjectStorage,
   project: string,
   { signal, onProgress, version = INDEX_VERSION }: BuildOptions = {},
 ) {
-  const { segments, indexed } = await storage.indexStatus(project, version);
-  let done = indexed;
-  onProgress?.(done, segments);
+  const status = await storage.indexStatus(project, version);
+  const total = status.segments + status.nodes;
+  let done = status.indexed + status.nodesIndexed;
+  const report = (more: number) => onProgress?.((done += more), total);
+  onProgress?.(done, total);
+  const run = { storage, project, version, signal, report };
+  await paged(
+    signal,
+    (after) => storage.edgesAfter(project, after, PAGE),
+    (page) => segmentPage(run, page),
+  );
+  await paged(
+    signal,
+    (after) => storage.nodesAfter(project, after, PAGE),
+    (page) => nodePage(run, page),
+  );
+}
+
+interface Run {
+  storage: ProjectStorage;
+  project: string;
+  version: number;
+  signal?: AbortSignal;
+  report: (more: number) => void;
+}
+
+/** The records of the segments of a page that have none. */
+async function segmentPage({ storage, project, version, signal, report }: Run, page: EdgeRow[]) {
+  const have = await storage.indexedIds(
+    project,
+    page.map((e) => e[0]),
+    version,
+  );
+  const todo = page.filter((e) => !have.has(e[0]));
+  if (todo.length) {
+    const ids = new Set(todo.flatMap((e) => [e[1], e[2]]));
+    const nodes = new Map((await storage.nodesByIds(project, [...ids])).map((n) => [n[0], n]));
+    const records = todo.map((e) =>
+      recordOf(e, nodeOrFail(nodes, e, e[1]), nodeOrFail(nodes, e, e[2])),
+    );
+    signal?.throwIfAborted();
+    await storage.putIndex(project, version, records);
+  }
+  report(todo.length);
+}
+
+/** The cells of the nodes of a page that have none. */
+async function nodePage({ storage, project, version, report }: Run, page: NodeRow[]) {
+  const have = await storage.indexedNodeIds(
+    project,
+    page.map((n) => n[0]),
+    version,
+  );
+  const todo = page.filter((n) => !have.has(n[0]));
+  if (todo.length) await storage.putNodeCells(project, version, todo.map(cellOfNode));
+  report(todo.length);
+}
+
+/** Go through the rows in pages, in the order of their ids: `next` gives the page after an id, `each` does a page. */
+async function paged<R extends [number, ...unknown[]]>(
+  signal: AbortSignal | undefined,
+  next: (after: number) => Promise<R[]>,
+  each: (page: R[]) => Promise<void>,
+) {
   for (let after = -1; ;) {
     signal?.throwIfAborted();
-    const page = await storage.edgesAfter(project, after, PAGE);
+    const page = await next(after);
     if (!page.length) return;
     after = page[page.length - 1]![0];
-    const have = await storage.indexedIds(
-      project,
-      page.map((e) => e[0]),
-      version,
-    );
-    const todo = page.filter((e) => !have.has(e[0]));
-    if (todo.length) {
-      const ids = new Set(todo.flatMap((e) => [e[1], e[2]]));
-      const nodes = new Map((await storage.nodesByIds(project, [...ids])).map((n) => [n[0], n]));
-      const records = todo.map((e) =>
-        recordOf(e, nodeOrFail(nodes, e, e[1]), nodeOrFail(nodes, e, e[2])),
-      );
-      signal?.throwIfAborted();
-      await storage.putIndex(project, version, records);
-      done += todo.length;
-    }
-    onProgress?.(done, segments);
+    await each(page);
   }
 }
 

@@ -4,12 +4,13 @@ import { file, none } from '../testing/storageFixtures';
 import type { ProjectFile } from './file';
 import { IndexedDbStorage } from './indexedDb';
 import { headerOf } from './storage';
+import { buildIndex, INDEX_VERSION } from '../map/segmentIndex';
 
 globalThis.IDBKeyRange = IDBKeyRange;
 
 const raw = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
-    const open = indexedDB.open('modelcity', 3);
+    const open = indexedDB.open('modelcity', 4);
     open.onsuccess = () => resolve(open.result);
     open.onerror = () => reject(open.error);
   });
@@ -23,24 +24,32 @@ describe('the layout in IndexedDB', () => {
     globalThis.indexedDB = new IDBFactory();
   });
 
-  it('finds nodes by a range of x or of y and segments by their nodes, with no chunks', async () => {
+  it('finds the segments by their nodes and has no indexes on x and y of the nodes (^1250)', async () => {
     const s = new IndexedDbStorage();
     await s.put({ id: 'a', file: file() });
     await s.put({ id: 'b', file: file() });
     const db = await raw();
     const nodes = db.transaction('nodes').objectStore('nodes');
-    const inX = await all(
-      nodes.index('x').getAll(IDBKeyRange.bound(['a', 1000], ['a', 20000], true, false)),
-    );
-    expect(inX.map((n) => n.id)).toEqual([1]);
-    const inY = await all(nodes.index('y').getAll(IDBKeyRange.bound(['a', 0], ['a', 10000])));
-    expect(inY.map((n) => n.id).sort()).toEqual([0, 5]);
+    expect([...nodes.indexNames]).toEqual([]);
     const edges = db.transaction('edges').objectStore('edges');
     expect((await all(edges.index('start').getAll(['a', 1]))).map((e) => e.id)).toEqual([3]);
     expect((await all(edges.index('end').getAll(['a', 1]))).map((e) => e.id)).toEqual([0]);
     expect(
       JSON.stringify(await all(db.transaction('nodes').objectStore('nodes').getAll())),
     ).not.toMatch(/chunk|cell/);
+  });
+
+  it('finds the nodes of a chunk by one exact lookup of their cell, with their rows (^1250)', async () => {
+    const s = new IndexedDbStorage();
+    await s.put({ id: 'a', file: file() });
+    await buildIndex(s, 'a');
+    // The fixture has nodes at (1, 5), (20, -3) and (30, 9) meters: the chunks (0,0), (0,-1) and (0,0).
+    expect((await s.nodesInChunk('a', 0, 0, INDEX_VERSION)).map((n) => n[0]).sort()).toEqual([
+      0, 5,
+    ]);
+    expect(await s.nodesInChunk('a', 0, -1, INDEX_VERSION)).toEqual([[1, 20000, -3000, 1.5]]);
+    expect(await s.nodesInChunk('a', 3, 3, INDEX_VERSION)).toEqual([]);
+    expect(await s.nodesInChunk('a', 0, 0, INDEX_VERSION + 1)).toEqual([]);
   });
 });
 

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectFile } from '../project/file';
-import { MemoryStorage, type BoxMm, type ReadOptions } from '../project/storage';
+import { MemoryStorage } from '../project/storage';
 import { file } from '../testing/storageFixtures';
 import { MAX_CHUNKS, MapMemory, PARALLEL_READS } from './mapMemory.svelte';
-import { chunkOf } from './chunks';
+import { buildIndex } from './segmentIndex';
 
 /** Nodes in the chunks (0,0) and (1,0). */
 const map = (): ProjectFile => ({
@@ -15,23 +15,16 @@ const map = (): ProjectFile => ({
   edges: [[0, 0, 1, null, 1]],
 });
 
-/** A storage whose reads of nodes wait until the test lets them go, and that remembers what was asked and stopped. */
+/** A storage whose reads of the nodes of a chunk wait until the test lets them go, and that remembers which were asked. */
 class Held extends MemoryStorage {
   started: string[] = [];
-  stopped: string[] = [];
   private held = new Map<string, () => void>();
 
-  async nodesIn(id: string, b: BoxMm, read: ReadOptions = {}) {
-    const chunk = chunkOf(b.x0 / 1000, b.y0 / 1000).join(',');
+  async nodesInChunk(id: string, cx: number, cy: number, version: number) {
+    const chunk = `${cx},${cy}`;
     this.started.push(chunk);
-    await new Promise<void>((resolve, reject) => {
-      this.held.set(chunk, resolve);
-      read.signal?.addEventListener(
-        'abort',
-        () => (this.stopped.push(chunk), reject(read.signal!.reason)),
-      );
-    });
-    return super.nodesIn(id, b, read);
+    await new Promise<void>((resolve) => this.held.set(chunk, resolve));
+    return super.nodesInChunk(id, cx, cy, version);
   }
 
   release = (chunk: string) => this.held.get(chunk)?.();
@@ -41,6 +34,7 @@ class Held extends MemoryStorage {
 async function held() {
   const storage = new Held();
   await storage.put({ id: 'p', file: map() });
+  await buildIndex(storage, 'p');
   return { storage, memory: new MapMemory(storage) };
 }
 
@@ -97,8 +91,10 @@ describe('chunks that are no longer asked for (^1241)', () => {
     await flush();
     memory.show(row(1, 2));
     await flush();
-    expect(storage.stopped).toEqual(['0,0']);
     expect(states(memory)).toEqual(['1,0:loading', '2,0:loading']);
+    storage.releaseAll();
+    await flush();
+    expect(states(memory)).toEqual(['1,0:ready', '2,0:ready']);
   });
 
   it('a chunk that is there stays when it leaves the view (nothing is let go yet)', async () => {
@@ -119,7 +115,9 @@ describe('chunks that are no longer asked for (^1241)', () => {
     memory.show(row(0, 1));
     await flush();
     memory.open('q');
-    expect(storage.stopped.sort()).toEqual(['0,0', '1,0']);
+    expect(memory.chunks.size).toBe(0);
+    storage.releaseAll();
+    await flush();
     expect(memory.chunks.size).toBe(0);
     expect(memory.project).toBe('q');
   });

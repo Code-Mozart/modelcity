@@ -32,7 +32,7 @@ describe('the record of a segment (^1239)', () => {
       box: [273_827, 50_000, 300_001, 150_000],
       cells: [[1, 0]],
     });
-    expect(INDEX_VERSION).toBe(1);
+    expect(INDEX_VERSION).toBe(2);
   });
 
   it('lists the chunks a box touches, also those whose edge it only touches', () => {

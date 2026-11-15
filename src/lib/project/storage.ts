@@ -37,8 +37,6 @@ export interface ProjectStorage {
   /** Write the header of a stored project and, if given, what changed on its map. Only that is written. */
   patch(id: string, header: Header, change?: MapChange): Promise<void>;
   remove(id: string): Promise<void>;
-  /** The nodes of a project inside a box (millimeters, both ends included): the part of the map that is looked at. */
-  nodesIn(id: string, box: BoxMm, read?: ReadOptions): Promise<NodeRow[]>;
   /** The nodes with these ids. */
   nodesByIds(id: string, ids: number[]): Promise<NodeRow[]>;
   /** The segments that start or end at one of these nodes. */
@@ -58,12 +56,14 @@ export interface ProjectStorage {
   clearIndex(id: string): Promise<void>;
   /** The segments the index lists for a chunk (their boxes touch it), with the wide ones. Needs a complete index of this version. */
   edgesInChunk(id: string, cx: number, cy: number, version: number): Promise<EdgeRow[]>;
-}
-
-/** What a long read can be asked: to say how far it is (rows looked at, of rows to look at), and to stop (it then fails with an `AbortError`). */
-export interface ReadOptions {
-  onProgress?: (done: number, total: number) => void;
-  signal?: AbortSignal;
+  /** The next `limit` nodes after the one with id `after`, in the order of their ids. */
+  nodesAfter(id: string, after: number, limit: number): Promise<NodeRow[]>;
+  /** Which of these nodes have a cell of this version. */
+  indexedNodeIds(id: string, ids: number[], version: number): Promise<Set<number>>;
+  /** Write the cells of nodes (in one step: all or none). */
+  putNodeCells(id: string, version: number, cells: NodeCell[]): Promise<void>;
+  /** The nodes whose cell is this chunk (x and y are in it): one exact lookup. Needs a complete index of this version. */
+  nodesInChunk(id: string, cx: number, cy: number, version: number): Promise<NodeRow[]>;
 }
 
 /**
@@ -77,18 +77,18 @@ export interface IndexRecord {
   cells: [number, number][] | 'wide';
 }
 
-/** How much of a project's segment index there is: the segments, and the records of the asked version. */
+/** A node in the index (^1250): its row, and the chunk its position is in (a cell holds its left and top edge). */
+export interface NodeCell {
+  node: NodeRow;
+  cell: [number, number];
+}
+
+/** How much of a project's index there is: the segments and the nodes, and the records of the asked version of each. */
 export interface IndexStatus {
   segments: number;
   indexed: number;
-}
-
-/** A box in millimeters, the unit of what is stored. */
-export interface BoxMm {
-  x0: number;
-  x1: number;
-  y0: number;
-  y1: number;
+  nodes: number;
+  nodesIndexed: number;
 }
 
 export const headerOf = (file: ProjectFile | Header): Header =>
@@ -123,6 +123,10 @@ export function applyChange(file: ProjectFile, header: Header, change?: MapChang
 export class MemoryStorage implements ProjectStorage {
   private items = new Map<string, StoredProject>();
   private index = new Map<string, Map<number, { version: number; record: IndexRecord }>>();
+  private cells = new Map<
+    string,
+    Map<number, { version: number; node: NodeRow; cell: [number, number] }>
+  >();
 
   async list() {
     return [...this.items.values()].map((p) => ({ id: p.id, file: headerOf(p.file) }));
@@ -140,7 +144,8 @@ export class MemoryStorage implements ProjectStorage {
 
   async put(project: StoredProject) {
     this.items.set(project.id, structuredClone(project));
-    this.index.delete(project.id);
+    this.dropIndex(project.id);
+    this.cells.delete(project.id);
   }
 
   /** A change of the map makes the segment index of the project stale: it is thrown away (until the edits keep it current, ^1243). */
@@ -155,20 +160,12 @@ export class MemoryStorage implements ProjectStorage {
         change.removedNodes.length ||
         change.removedEdges.length)
     )
-      this.index.delete(id);
+      this.dropIndex(id);
   }
 
   async remove(id: string) {
     this.items.delete(id);
-    this.index.delete(id);
-  }
-
-  async nodesIn(id: string, b: BoxMm, { onProgress, signal }: ReadOptions = {}) {
-    signal?.throwIfAborted();
-    const inBox = ([, x, y]: NodeRow) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
-    const rows = this.items.get(id)?.file.nodes.filter(inBox) ?? [];
-    onProgress?.(rows.length, rows.length);
-    return rows;
+    this.dropIndex(id);
   }
 
   async nodesByIds(id: string, ids: number[]) {
@@ -183,9 +180,12 @@ export class MemoryStorage implements ProjectStorage {
 
   async indexStatus(id: string, version: number) {
     const records = [...(this.index.get(id)?.values() ?? [])];
+    const cells = [...(this.cells.get(id)?.values() ?? [])];
     return {
       segments: this.items.get(id)?.file.edges.length ?? 0,
       indexed: records.filter((r) => r.version === version).length,
+      nodes: this.items.get(id)?.file.nodes.length ?? 0,
+      nodesIndexed: cells.filter((r) => r.version === version).length,
     };
   }
 
@@ -209,7 +209,12 @@ export class MemoryStorage implements ProjectStorage {
   }
 
   async clearIndex(id: string) {
+    this.dropIndex(id);
+  }
+
+  private dropIndex(id: string) {
     this.index.delete(id);
+    this.cells.delete(id);
   }
 
   async edgesInChunk(id: string, cx: number, cy: number, version: number) {
@@ -222,5 +227,30 @@ export class MemoryStorage implements ProjectStorage {
       .map(({ record }) => record.id);
     const want = new Set(listed);
     return this.items.get(id)?.file.edges.filter((e) => want.has(e[0])) ?? [];
+  }
+
+  async nodesAfter(id: string, after: number, limit: number) {
+    const nodes = this.items.get(id)?.file.nodes ?? [];
+    return nodes
+      .filter((n) => n[0] > after)
+      .sort((a, b) => a[0] - b[0])
+      .slice(0, limit);
+  }
+
+  async indexedNodeIds(id: string, ids: number[], version: number) {
+    const held = this.cells.get(id);
+    return new Set(ids.filter((n) => held?.get(n)?.version === version));
+  }
+
+  async putNodeCells(id: string, version: number, cells: NodeCell[]) {
+    const held = this.cells.get(id) ?? new Map();
+    cells.forEach(({ node, cell }) => held.set(node[0], { version, node: [...node], cell }));
+    this.cells.set(id, held);
+  }
+
+  async nodesInChunk(id: string, cx: number, cy: number, version: number) {
+    return [...(this.cells.get(id)?.values() ?? [])]
+      .filter((c) => c.version === version && c.cell[0] === cx && c.cell[1] === cy)
+      .map((c): NodeRow => [...c.node]);
   }
 }

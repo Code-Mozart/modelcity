@@ -1,23 +1,25 @@
 import type {
-  BoxMm,
   EdgeRow,
   Header,
   IndexRecord,
   IndexStatus,
   MapChange,
+  NodeCell,
   NodeRow,
   ProjectStorage,
-  ReadOptions,
   StoredProject,
 } from './storage';
 import { applyChange, headerOf } from './storage';
 import type { ProjectFile } from './file';
 
 const DB = 'modelcity';
-const [PROJECTS, NODES, EDGES, SEGMENTS] = ['projects', 'nodes', 'edges', 'segments'];
-/** A range of nodes is read in at most this many parts, of about this many rows each, so that it can say how far it is. */
-const READ_PARTS = 8;
-const PART_ROWS = 250;
+const [PROJECTS, NODES, EDGES, SEGMENTS, CELLS] = [
+  'projects',
+  'nodes',
+  'edges',
+  'segments',
+  'nodecells',
+];
 
 /**
  * A project is a record of `projects` with its header (the list reads only these), and one record
@@ -43,8 +45,6 @@ const done = (tx: IDBTransaction) =>
 
 const ofProject = (p: string) => IDBKeyRange.bound([p, -Infinity], [p, Infinity]);
 
-const between = (p: string, lo: number, hi: number) => IDBKeyRange.bound([p, lo], [p, hi]);
-
 const node = (p: string, [id, x, y, th]: NodeRow) => ({ p, id, x, y, th });
 const edge = (p: string, [id, start, end, radius, lane]: EdgeRow) => ({
   p,
@@ -66,8 +66,8 @@ export class IndexedDbStorage implements ProjectStorage {
 
   private open(): Promise<IDBDatabase> {
     this.db ??= new Promise((resolve, reject) => {
-      const open = indexedDB.open(DB, 3);
-      open.onupgradeneeded = () => upgrade(open.result);
+      const open = indexedDB.open(DB, 4);
+      open.onupgradeneeded = () => upgrade(open.result, open.transaction!);
       open.onsuccess = () => resolve(open.result);
       open.onerror = () => reject(open.error);
     });
@@ -75,7 +75,7 @@ export class IndexedDbStorage implements ProjectStorage {
   }
 
   private async tx(mode: IDBTransactionMode) {
-    return (await this.open()).transaction([PROJECTS, NODES, EDGES, SEGMENTS], mode);
+    return (await this.open()).transaction([PROJECTS, NODES, EDGES, SEGMENTS, CELLS], mode);
   }
 
   async list() {
@@ -130,8 +130,8 @@ export class IndexedDbStorage implements ProjectStorage {
     else {
       tx.objectStore(PROJECTS).put({ id, header });
       if (change && changes(change)) {
-        // A change of the map makes the segment index stale: it is thrown away (until the edits keep it current, ^1243).
-        tx.objectStore(SEGMENTS).delete(ofProject(id));
+        // A change of the map makes the index stale: it is thrown away (until the edits keep it current, ^1243).
+        this.dropIndex(tx, id);
         this.changeRows(tx, id, change);
       }
     }
@@ -143,45 +143,6 @@ export class IndexedDbStorage implements ProjectStorage {
     this.clear(tx, id);
     tx.objectStore(PROJECTS).delete(id);
     await done(tx);
-  }
-
-  /**
-   * The nodes in a box: the index on x or the one on y finds them, the one whose range holds fewer
-   * (the count is asked of both), and the other coordinate is filtered here (^1228). The range is
-   * read in a few parts, each with one request, all at once (a cursor, one request for each row,
-   * was 20 times slower, ^1249), so that it can say how far it is, and stop (^1241).
-   */
-  async nodesIn(id: string, b: BoxMm, { onProgress, signal }: ReadOptions = {}) {
-    signal?.throwIfAborted();
-    const store = (await this.tx('readonly')).objectStore(NODES);
-    const [byX, byY] = [store.index('x'), store.index('y')];
-    const [nx, ny] = await Promise.all([
-      request(byX.count(between(id, b.x0, b.x1))),
-      request(byY.count(between(id, b.y0, b.y1))),
-    ]);
-    const [from, lo, hi, total] = nx <= ny ? [byX, b.x0, b.x1, nx] : [byY, b.y0, b.y1, ny];
-    const parts = Math.max(1, Math.min(READ_PARTS, Math.ceil(total / PART_ROWS)));
-    const rows: NodeRow[] = [];
-    let seen = 0;
-    // All parts are asked at once: each request waits for the storage, so asking one after the other is much slower (^1249).
-    const part = async (i: number) => {
-      const width = hi - lo + 1;
-      const range = between(
-        id,
-        lo + Math.floor((width * i) / parts),
-        lo + Math.floor((width * (i + 1)) / parts) - 1,
-      );
-      const found = await request(from.getAll(range));
-      signal?.throwIfAborted();
-      for (const n of found)
-        if (n.x >= b.x0 && n.x <= b.x1 && n.y >= b.y0 && n.y <= b.y1)
-          rows.push([n.id, n.x, n.y, n.th]);
-      seen += found.length;
-      onProgress?.(seen, total);
-    };
-    await Promise.all(Array.from({ length: parts }, (_, i) => part(i)));
-    onProgress?.(total, total);
-    return rows;
   }
 
   async nodesByIds(id: string, ids: number[]) {
@@ -204,11 +165,13 @@ export class IndexedDbStorage implements ProjectStorage {
 
   async indexStatus(id: string, version: number): Promise<IndexStatus> {
     const tx = await this.tx('readonly');
-    const [segments, indexed] = await Promise.all([
+    const [segments, indexed, nodes, nodesIndexed] = await Promise.all([
       request(tx.objectStore(EDGES).count(ofProject(id))),
       request(tx.objectStore(SEGMENTS).index('version').count([id, version])),
+      request(tx.objectStore(NODES).count(ofProject(id))),
+      request(tx.objectStore(CELLS).index('version').count([id, version])),
     ]);
-    return { segments, indexed };
+    return { segments, indexed, nodes, nodesIndexed };
   }
 
   async edgesAfter(id: string, after: number, limit: number) {
@@ -237,7 +200,7 @@ export class IndexedDbStorage implements ProjectStorage {
 
   async clearIndex(id: string) {
     const tx = await this.tx('readwrite');
-    tx.objectStore(SEGMENTS).delete(ofProject(id));
+    this.dropIndex(tx, id);
     await done(tx);
   }
 
@@ -256,10 +219,47 @@ export class IndexedDbStorage implements ProjectStorage {
     return rows.filter((e) => e).map((e): EdgeRow => [e.id, e.start, e.end, e.radius, e.lane]);
   }
 
+  async nodesAfter(id: string, after: number, limit: number) {
+    const store = (await this.tx('readonly')).objectStore(NODES);
+    const rows = await request(
+      store.getAll(IDBKeyRange.bound([id, after], [id, Infinity], true, false), limit),
+    );
+    return rows.map((n): NodeRow => [n.id, n.x, n.y, n.th]);
+  }
+
+  async indexedNodeIds(id: string, ids: number[], version: number) {
+    const store = (await this.tx('readonly')).objectStore(CELLS);
+    const found = await Promise.all(ids.map((n) => request(store.get([id, n]))));
+    return new Set(found.filter((r) => r?.v === version).map((r) => r.id as number));
+  }
+
+  async putNodeCells(id: string, version: number, cells: NodeCell[]) {
+    const tx = await this.tx('readwrite');
+    const store = tx.objectStore(CELLS);
+    for (const {
+      node: [n, x, y, th],
+      cell,
+    } of cells)
+      store.put({ p: id, id: n, v: version, x, y, th, cell: [id, cell[0], cell[1]] });
+    await done(tx);
+  }
+
+  /** The nodes of a chunk: one exact lookup of its cell, nothing round it (^1250). */
+  async nodesInChunk(id: string, cx: number, cy: number, version: number) {
+    const store = (await this.tx('readonly')).objectStore(CELLS);
+    const rows = await request(store.index('cell').getAll([id, cx, cy]));
+    return rows.filter((n) => n.v === version).map((n): NodeRow => [n.id, n.x, n.y, n.th]);
+  }
+
   private clear(tx: IDBTransaction, id: string) {
     tx.objectStore(NODES).delete(ofProject(id));
     tx.objectStore(EDGES).delete(ofProject(id));
+    this.dropIndex(tx, id);
+  }
+
+  private dropIndex(tx: IDBTransaction, id: string) {
     tx.objectStore(SEGMENTS).delete(ofProject(id));
+    tx.objectStore(CELLS).delete(ofProject(id));
   }
 
   /** A whole project in the layout; one whose rows are not rows (a damaged file) stays in one record so that it can be refused when opened. */
@@ -287,13 +287,12 @@ export class IndexedDbStorage implements ProjectStorage {
   }
 }
 
-function upgrade(db: IDBDatabase) {
+function upgrade(db: IDBDatabase, tx: IDBTransaction) {
   if (!db.objectStoreNames.contains(PROJECTS)) db.createObjectStore(PROJECTS, { keyPath: 'id' });
-  if (!db.objectStoreNames.contains(NODES)) {
-    const nodes = db.createObjectStore(NODES, { keyPath: ['p', 'id'] });
-    nodes.createIndex('x', ['p', 'x']);
-    nodes.createIndex('y', ['p', 'y']);
-  }
+  if (!db.objectStoreNames.contains(NODES)) db.createObjectStore(NODES, { keyPath: ['p', 'id'] });
+  // The strips of the indexes on x and on y are no longer how the nodes of a chunk are found (^1250): they only took room.
+  const nodes = tx.objectStore(NODES);
+  for (const name of ['x', 'y']) if (nodes.indexNames.contains(name)) nodes.deleteIndex(name);
   if (!db.objectStoreNames.contains(EDGES)) {
     const edges = db.createObjectStore(EDGES, { keyPath: ['p', 'id'] });
     edges.createIndex('start', ['p', 'start']);
@@ -304,5 +303,11 @@ function upgrade(db: IDBDatabase) {
     const segments = db.createObjectStore(SEGMENTS, { keyPath: ['p', 'id'] });
     segments.createIndex('cell', 'cells', { multiEntry: true });
     segments.createIndex('version', ['p', 'v']);
+  }
+  if (!db.objectStoreNames.contains(CELLS)) {
+    // The nodes by the chunk they are in, with their rows (^1250): derived, built with the segment index.
+    const cells = db.createObjectStore(CELLS, { keyPath: ['p', 'id'] });
+    cells.createIndex('cell', 'cell');
+    cells.createIndex('version', ['p', 'v']);
   }
 }

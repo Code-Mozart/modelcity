@@ -34,7 +34,7 @@ describe('making sure the index is there before the map is shown (^1239)', () =>
     await build.ensure('p');
     expect(states).toEqual(['building']);
     expect(build.status).toBe('ready');
-    expect([build.done, build.total]).toEqual([1200, 1200]);
+    expect([build.done, build.total]).toEqual([2401, 2401]);
   });
 
   it('only counts when the index is complete: it is trusted, nothing is built or looked at', async () => {

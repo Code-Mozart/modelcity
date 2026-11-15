@@ -84,6 +84,7 @@ describe.each(storages)(
         id: 'e',
         file: { ...file(), nodes: [row(0, 256, 10), row(1, 10, 256)], edges: [] },
       });
+      await buildIndex(s, 'e');
       const edge = new ChunkLoader(s, 'e');
       expect((await edge.load('0,0')).nodes).toEqual([]);
       expect((await edge.load('1,0')).nodes.map((n) => n[0])).toEqual([0]);

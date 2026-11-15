@@ -3,6 +3,7 @@ import type { ProjectFile } from '../project/file';
 import { MemoryStorage } from '../project/storage';
 import { file } from '../testing/storageFixtures';
 import { MapMemory } from './mapMemory.svelte';
+import { buildIndex } from './segmentIndex';
 
 /** Ten chunks in a row, five nodes in each: a chunk costs 6 rows (the nodes and one for itself). */
 const map = (): ProjectFile => ({
@@ -19,6 +20,7 @@ const map = (): ProjectFile => ({
 async function loaded() {
   const storage = new MemoryStorage();
   await storage.put({ id: 'p', file: map() });
+  await buildIndex(storage, 'p');
   const memory = new MapMemory(storage);
   memory.open('p');
   memory.budgetRows = 20;
