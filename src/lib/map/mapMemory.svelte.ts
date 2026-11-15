@@ -184,19 +184,7 @@ export class MapMemory {
         signal: control.signal,
         onProgress: (progress) => generation === this.generation && this.step(id, progress),
       });
-      if (generation === this.generation && this.wanted.has(id)) {
-        this.reads.push({
-          id,
-          ms: performance.now() - began,
-          rows: chunk.nodes.length + chunk.edges.length,
-        });
-        if (this.reads.length > MAX_READS) this.reads.shift();
-        this.index.add(chunk);
-        this.chunks.set(id, { status: 'ready', chunk });
-        this.progress.delete(id);
-        this.rows += this.costOf(chunk);
-        this.evict();
-      }
+      if (generation === this.generation && this.wanted.has(id)) this.arrived(chunk, began);
     } catch (e) {
       if (generation === this.generation && !aborted(e)) {
         console.error(`[modelcity] chunk ${id} could not be read`, e);
@@ -209,6 +197,21 @@ export class MapMemory {
         this.pump();
       }
     }
+  }
+
+  /** A chunk has been read: it is shared, kept, counted against the budget, and the budget is looked at. */
+  private arrived(chunk: Chunk, began: number) {
+    this.reads.push({
+      id: chunk.id,
+      ms: performance.now() - began,
+      rows: chunk.nodes.length + chunk.edges.length,
+    });
+    if (this.reads.length > MAX_READS) this.reads.shift();
+    this.index.add(chunk);
+    this.chunks.set(chunk.id, { status: 'ready', chunk });
+    this.progress.delete(chunk.id);
+    this.rows += this.costOf(chunk);
+    this.evict();
   }
 
   private step(id: string, progress: number) {
