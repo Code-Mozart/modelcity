@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { EdgeRow, NodeRow } from '../project/storage';
 import type { Palette } from './paint';
-import { curveOf, drawCurves } from './skeleton';
+import { curveOf } from '../map/curve';
+import { drawCurves } from './skeleton';
 
 const p: NodeRow = [0, 0, 0, 0];
 const q: NodeRow = [1, 40_000, 0, 0];

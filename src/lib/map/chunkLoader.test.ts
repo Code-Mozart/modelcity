@@ -5,6 +5,7 @@ import { IndexedDbStorage } from '../project/indexedDb';
 import { MemoryStorage, type ProjectStorage } from '../project/storage';
 import { file } from '../testing/storageFixtures';
 import { ChunkLoader } from './chunkLoader';
+import { buildIndex } from './segmentIndex';
 
 globalThis.IDBKeyRange = IDBKeyRange;
 
@@ -43,6 +44,7 @@ describe.each(storages)('reading one chunk: %s', (_name, make) => {
   beforeEach(async () => {
     const s = make();
     await s.put({ id: 'p', file: map() });
+    await buildIndex(s, 'p');
     loader = new ChunkLoader(s, 'p');
   });
 
@@ -60,25 +62,44 @@ describe.each(storages)('reading one chunk: %s', (_name, make) => {
     expect(b.nodes.map((n) => n[0])).toEqual([1]);
   });
 
-  it('the right and bottom edge of a chunk belong to the next one', async () => {
+  it('has the segment that only crosses it, with both nodes outside (^1239)', async () => {
     const s = make();
-    await s.put({
-      id: 'e',
-      file: { ...file(), nodes: [row(0, 256, 10), row(1, 10, 256)], edges: [] },
-    });
-    const edge = new ChunkLoader(s, 'e');
-    expect((await edge.load('0,0')).nodes).toEqual([]);
-    expect((await edge.load('1,0')).nodes.map((n) => n[0])).toEqual([0]);
-    expect((await edge.load('0,1')).nodes.map((n) => n[0])).toEqual([1]);
-  });
-
-  it('an empty chunk is a chunk with nothing in it', async () => {
-    expect(await loader.load('5,5')).toEqual({ id: '5,5', nodes: [], edges: [], ends: [] });
-  });
-
-  it('the segment that only crosses a chunk is not found there yet (^1239)', async () => {
-    const chunk = await loader.load('1,1');
-    expect(chunk.edges).toEqual([]);
-    expect((await loader.load('1,0')).edges.map((e) => e[0])).toContain(1);
+    const nodes = [row(0, 10, 10), row(1, 800, 10)];
+    await s.put({ id: 'c', file: { ...file(), nodes, edges: [[0, 0, 1, null, 1]] } });
+    await buildIndex(s, 'c');
+    const chunk = await new ChunkLoader(s, 'c').load('1,0');
+    expect(chunk.nodes).toEqual([]);
+    expect(chunk.edges.map((e) => e[0])).toEqual([0]);
+    expect(chunk.ends.map((n) => n[0]).sort()).toEqual([0, 1]);
+    expect((await new ChunkLoader(s, 'c').load('1,5')).edges).toEqual([]);
   });
 });
+
+describe.each(storages)(
+  'what a chunk holds at its edges and when it is empty: %s',
+  (_name, make) => {
+    it('the right and bottom edge of a chunk belong to the next one', async () => {
+      const s = make();
+      await s.put({
+        id: 'e',
+        file: { ...file(), nodes: [row(0, 256, 10), row(1, 10, 256)], edges: [] },
+      });
+      const edge = new ChunkLoader(s, 'e');
+      expect((await edge.load('0,0')).nodes).toEqual([]);
+      expect((await edge.load('1,0')).nodes.map((n) => n[0])).toEqual([0]);
+      expect((await edge.load('0,1')).nodes.map((n) => n[0])).toEqual([1]);
+    });
+
+    it('an empty chunk is a chunk with nothing in it', async () => {
+      const s = make();
+      await s.put({ id: 'p', file: map() });
+      await buildIndex(s, 'p');
+      expect(await new ChunkLoader(s, 'p').load('5,5')).toEqual({
+        id: '5,5',
+        nodes: [],
+        edges: [],
+        ends: [],
+      });
+    });
+  },
+);

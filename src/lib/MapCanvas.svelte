@@ -5,7 +5,7 @@
   import { FEATURES } from './features';
   import { render } from './render/render';
   import type { ChunkView } from './render/mapLayer';
-  import { curveOf, type SkeletonEdge } from './render/skeleton';
+  import { curveOf, type SkeletonEdge } from './map/curve';
   import type { Point } from './camera/view';
   import type { ControlId } from './hints/hints';
   import { boxOfId, CHUNK_M, countOf, idsOf } from './map/chunks';

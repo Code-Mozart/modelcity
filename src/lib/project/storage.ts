@@ -43,12 +43,44 @@ export interface ProjectStorage {
   nodesByIds(id: string, ids: number[]): Promise<NodeRow[]>;
   /** The segments that start or end at one of these nodes. */
   edgesOf(id: string, nodeIds: number[]): Promise<EdgeRow[]>;
+  /**
+   * The segment index of a project (^1239), derived from its nodes and segments, never stored with
+   * the project: how much of it there is, for a version of the derivation.
+   */
+  indexStatus(id: string, version: number): Promise<IndexStatus>;
+  /** The next `limit` segments after the one with id `after`, in the order of their ids. */
+  edgesAfter(id: string, after: number, limit: number): Promise<EdgeRow[]>;
+  /** Which of these segments have a record of this version. */
+  indexedIds(id: string, ids: number[], version: number): Promise<Set<number>>;
+  /** Write records of the segment index (in one step: all or none). */
+  putIndex(id: string, version: number, records: IndexRecord[]): Promise<void>;
+  /** Throw the segment index of a project away. */
+  clearIndex(id: string): Promise<void>;
+  /** The segments the index lists for a chunk (their boxes touch it), with the wide ones. Needs a complete index of this version. */
+  edgesInChunk(id: string, cx: number, cy: number, version: number): Promise<EdgeRow[]>;
 }
 
 /** What a long read can be asked: to say how far it is (rows looked at, of rows to look at), and to stop (it then fails with an `AbortError`). */
 export interface ReadOptions {
   onProgress?: (done: number, total: number) => void;
   signal?: AbortSignal;
+}
+
+/**
+ * One segment in the segment index (^1239): the box round its curve (millimeters, whole numbers,
+ * left, top, right, bottom) and the chunks that box covers (cell coordinates); `'wide'` for a box
+ * of so many chunks that the segment is returned for every chunk instead of being listed in each.
+ */
+export interface IndexRecord {
+  id: number;
+  box: [number, number, number, number];
+  cells: [number, number][] | 'wide';
+}
+
+/** How much of a project's segment index there is: the segments, and the records of the asked version. */
+export interface IndexStatus {
+  segments: number;
+  indexed: number;
 }
 
 /** A box in millimeters, the unit of what is stored. */
@@ -90,6 +122,7 @@ export function applyChange(file: ProjectFile, header: Header, change?: MapChang
 /** For tests, and for a browser without IndexedDB. */
 export class MemoryStorage implements ProjectStorage {
   private items = new Map<string, StoredProject>();
+  private index = new Map<string, Map<number, { version: number; record: IndexRecord }>>();
 
   async list() {
     return [...this.items.values()].map((p) => ({ id: p.id, file: headerOf(p.file) }));
@@ -107,15 +140,27 @@ export class MemoryStorage implements ProjectStorage {
 
   async put(project: StoredProject) {
     this.items.set(project.id, structuredClone(project));
+    this.index.delete(project.id);
   }
 
+  /** A change of the map makes the segment index of the project stale: it is thrown away (until the edits keep it current, ^1243). */
   async patch(id: string, header: Header, change?: MapChange) {
     const p = this.items.get(id);
-    if (p) this.items.set(id, { id, file: structuredClone(applyChange(p.file, header, change)) });
+    if (!p) return;
+    this.items.set(id, { id, file: structuredClone(applyChange(p.file, header, change)) });
+    if (
+      change &&
+      (change.nodes.length ||
+        change.edges.length ||
+        change.removedNodes.length ||
+        change.removedEdges.length)
+    )
+      this.index.delete(id);
   }
 
   async remove(id: string) {
     this.items.delete(id);
+    this.index.delete(id);
   }
 
   async nodesIn(id: string, b: BoxMm, { onProgress, signal }: ReadOptions = {}) {
@@ -134,5 +179,48 @@ export class MemoryStorage implements ProjectStorage {
   async edgesOf(id: string, nodeIds: number[]) {
     const want = new Set(nodeIds);
     return this.items.get(id)?.file.edges.filter((e) => want.has(e[1]) || want.has(e[2])) ?? [];
+  }
+
+  async indexStatus(id: string, version: number) {
+    const records = [...(this.index.get(id)?.values() ?? [])];
+    return {
+      segments: this.items.get(id)?.file.edges.length ?? 0,
+      indexed: records.filter((r) => r.version === version).length,
+    };
+  }
+
+  async edgesAfter(id: string, after: number, limit: number) {
+    const edges = this.items.get(id)?.file.edges ?? [];
+    return edges
+      .filter((e) => e[0] > after)
+      .sort((a, b) => a[0] - b[0])
+      .slice(0, limit);
+  }
+
+  async indexedIds(id: string, ids: number[], version: number) {
+    const records = this.index.get(id);
+    return new Set(ids.filter((n) => records?.get(n)?.version === version));
+  }
+
+  async putIndex(id: string, version: number, records: IndexRecord[]) {
+    const held = this.index.get(id) ?? new Map();
+    records.forEach((record) => held.set(record.id, { version, record: structuredClone(record) }));
+    this.index.set(id, held);
+  }
+
+  async clearIndex(id: string) {
+    this.index.delete(id);
+  }
+
+  async edgesInChunk(id: string, cx: number, cy: number, version: number) {
+    const listed = [...(this.index.get(id)?.values() ?? [])]
+      .filter((r) => r.version === version)
+      .filter(
+        ({ record }) =>
+          record.cells === 'wide' || record.cells.some(([x, y]) => x === cx && y === cy),
+      )
+      .map(({ record }) => record.id);
+    const want = new Set(listed);
+    return this.items.get(id)?.file.edges.filter((e) => want.has(e[0])) ?? [];
   }
 }

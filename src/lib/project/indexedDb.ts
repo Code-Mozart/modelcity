@@ -2,6 +2,8 @@ import type {
   BoxMm,
   EdgeRow,
   Header,
+  IndexRecord,
+  IndexStatus,
   MapChange,
   NodeRow,
   ProjectStorage,
@@ -12,7 +14,7 @@ import { applyChange, headerOf } from './storage';
 import type { ProjectFile } from './file';
 
 const DB = 'modelcity';
-const [PROJECTS, NODES, EDGES] = ['projects', 'nodes', 'edges'];
+const [PROJECTS, NODES, EDGES, SEGMENTS] = ['projects', 'nodes', 'edges', 'segments'];
 /** A read that can say how far it is says it after this many rows. */
 const PROGRESS_STEP = 500;
 
@@ -52,6 +54,9 @@ const edge = (p: string, [id, start, end, radius, lane]: EdgeRow) => ({
   lane,
 });
 
+const changes = (c: MapChange) =>
+  c.nodes.length + c.edges.length + c.removedNodes.length + c.removedEdges.length > 0;
+
 const isRows = (v: unknown) => Array.isArray(v) && v.every(Array.isArray);
 
 /** IndexedDB, in the layout above. */
@@ -60,7 +65,7 @@ export class IndexedDbStorage implements ProjectStorage {
 
   private open(): Promise<IDBDatabase> {
     this.db ??= new Promise((resolve, reject) => {
-      const open = indexedDB.open(DB, 2);
+      const open = indexedDB.open(DB, 3);
       open.onupgradeneeded = () => upgrade(open.result);
       open.onsuccess = () => resolve(open.result);
       open.onerror = () => reject(open.error);
@@ -69,7 +74,7 @@ export class IndexedDbStorage implements ProjectStorage {
   }
 
   private async tx(mode: IDBTransactionMode) {
-    return (await this.open()).transaction([PROJECTS, NODES, EDGES], mode);
+    return (await this.open()).transaction([PROJECTS, NODES, EDGES, SEGMENTS], mode);
   }
 
   async list() {
@@ -123,7 +128,11 @@ export class IndexedDbStorage implements ProjectStorage {
     if ('file' in r) this.write(tx, id, applyChange(r.file, header, change));
     else {
       tx.objectStore(PROJECTS).put({ id, header });
-      if (change) this.changeRows(tx, id, change);
+      if (change && changes(change)) {
+        // A change of the map makes the segment index stale: it is thrown away (until the edits keep it current, ^1243).
+        tx.objectStore(SEGMENTS).delete(ofProject(id));
+        this.changeRows(tx, id, change);
+      }
     }
     await done(tx);
   }
@@ -186,9 +195,64 @@ export class IndexedDbStorage implements ProjectStorage {
     return [...found.values()];
   }
 
+  async indexStatus(id: string, version: number): Promise<IndexStatus> {
+    const tx = await this.tx('readonly');
+    const [segments, indexed] = await Promise.all([
+      request(tx.objectStore(EDGES).count(ofProject(id))),
+      request(tx.objectStore(SEGMENTS).index('version').count([id, version])),
+    ]);
+    return { segments, indexed };
+  }
+
+  async edgesAfter(id: string, after: number, limit: number) {
+    const store = (await this.tx('readonly')).objectStore(EDGES);
+    const rows = await request(
+      store.getAll(IDBKeyRange.bound([id, after], [id, Infinity], true, false), limit),
+    );
+    return rows.map((e): EdgeRow => [e.id, e.start, e.end, e.radius, e.lane]);
+  }
+
+  async indexedIds(id: string, ids: number[], version: number) {
+    const store = (await this.tx('readonly')).objectStore(SEGMENTS);
+    const found = await Promise.all(ids.map((n) => request(store.get([id, n]))));
+    return new Set(found.filter((r) => r?.v === version).map((r) => r.id as number));
+  }
+
+  async putIndex(id: string, version: number, records: IndexRecord[]) {
+    const tx = await this.tx('readwrite');
+    const store = tx.objectStore(SEGMENTS);
+    for (const r of records) {
+      const cells = r.cells === 'wide' ? [[id, 'wide']] : r.cells.map(([cx, cy]) => [id, cx, cy]);
+      store.put({ p: id, id: r.id, v: version, box: r.box, cells });
+    }
+    await done(tx);
+  }
+
+  async clearIndex(id: string) {
+    const tx = await this.tx('readwrite');
+    tx.objectStore(SEGMENTS).delete(ofProject(id));
+    await done(tx);
+  }
+
+  async edgesInChunk(id: string, cx: number, cy: number, version: number) {
+    const tx = await this.tx('readonly');
+    const cell = tx.objectStore(SEGMENTS).index('cell');
+    const [here, wide] = await Promise.all([
+      request(cell.getAll([id, cx, cy])),
+      request(cell.getAll([id, 'wide'])),
+    ]);
+    const ids = new Set(
+      [...here, ...wide].filter((r) => r.v === version).map((r) => r.id as number),
+    );
+    const edges = tx.objectStore(EDGES);
+    const rows = await Promise.all([...ids].map((n) => request(edges.get([id, n]))));
+    return rows.filter((e) => e).map((e): EdgeRow => [e.id, e.start, e.end, e.radius, e.lane]);
+  }
+
   private clear(tx: IDBTransaction, id: string) {
     tx.objectStore(NODES).delete(ofProject(id));
     tx.objectStore(EDGES).delete(ofProject(id));
+    tx.objectStore(SEGMENTS).delete(ofProject(id));
   }
 
   /** A whole project in the layout; one whose rows are not rows (a damaged file) stays in one record so that it can be refused when opened. */
@@ -218,10 +282,20 @@ export class IndexedDbStorage implements ProjectStorage {
 
 function upgrade(db: IDBDatabase) {
   if (!db.objectStoreNames.contains(PROJECTS)) db.createObjectStore(PROJECTS, { keyPath: 'id' });
-  const nodes = db.createObjectStore(NODES, { keyPath: ['p', 'id'] });
-  nodes.createIndex('x', ['p', 'x']);
-  nodes.createIndex('y', ['p', 'y']);
-  const edges = db.createObjectStore(EDGES, { keyPath: ['p', 'id'] });
-  edges.createIndex('start', ['p', 'start']);
-  edges.createIndex('end', ['p', 'end']);
+  if (!db.objectStoreNames.contains(NODES)) {
+    const nodes = db.createObjectStore(NODES, { keyPath: ['p', 'id'] });
+    nodes.createIndex('x', ['p', 'x']);
+    nodes.createIndex('y', ['p', 'y']);
+  }
+  if (!db.objectStoreNames.contains(EDGES)) {
+    const edges = db.createObjectStore(EDGES, { keyPath: ['p', 'id'] });
+    edges.createIndex('start', ['p', 'start']);
+    edges.createIndex('end', ['p', 'end']);
+  }
+  if (!db.objectStoreNames.contains(SEGMENTS)) {
+    // The segment index (^1239): one record per segment with the box round its curve; `cell` finds the segments of a chunk.
+    const segments = db.createObjectStore(SEGMENTS, { keyPath: ['p', 'id'] });
+    segments.createIndex('cell', 'cells', { multiEntry: true });
+    segments.createIndex('version', ['p', 'v']);
+  }
 }

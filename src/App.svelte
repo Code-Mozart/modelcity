@@ -15,6 +15,9 @@
   import { ProjectSession } from './lib/project/session.svelte';
   import { IndexedDbStorage } from './lib/project/indexedDb';
   import { MapMemory } from './lib/map/mapMemory.svelte';
+  import { IndexBuild } from './lib/map/indexBuild.svelte';
+  import IndexPanel from './lib/map/IndexPanel.svelte';
+  import { isRebuildKey } from './lib/map/rebuildKey';
   import { installTestHook } from './lib/testHook';
   import VersionText from './lib/hud/VersionText.svelte';
   import { VersionBanner } from './lib/hud/versionBanner.svelte';
@@ -28,16 +31,23 @@
   document.title = TAB_TITLE;
   const storage = new IndexedDbStorage();
   const memory = new MapMemory(storage);
+  const index = new IndexBuild(storage);
   const session = new ProjectSession(editor, camera, storage, {
     notify: (kind, text) => toasts.show(kind, text),
   });
-  installTestHook({ editor, camera, session, memory }, () => document.querySelector('canvas'));
+  installTestHook({ editor, camera, session, memory, index }, () =>
+    document.querySelector('canvas'),
+  );
 
   onMount(() => void session.start());
 
-  // The chunks in memory are those of the open project (^1238).
+  // The open project has a complete segment index before its map is shown (^1239); the chunks in memory are those of that project (^1238).
   $effect(() => {
     const id = session.id;
+    untrack(() => void index.ensure(id));
+  });
+  $effect(() => {
+    const id = index.status === 'ready' ? index.project : '';
     untrack(() => memory.open(id));
   });
 
@@ -83,6 +93,10 @@
     banner.used();
     if (session.modalOpen) return modalKey(e);
     if (e.target instanceof HTMLInputElement) return;
+    if (isRebuildKey(e)) {
+      void index.rebuild();
+      return e.preventDefault();
+    }
     if (projectKey(e) || camera.key(e.key)) e.preventDefault();
   }
 </script>
@@ -96,6 +110,7 @@
 
 <main>
   <MapCanvas {camera} {memory} onUse={(id) => usage.mark(id)} />
+  <IndexPanel build={index} title={session.title} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
   <div class="right">

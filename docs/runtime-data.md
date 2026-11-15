@@ -13,6 +13,10 @@ What the app holds in memory, operation by operation. Since ^1232 (the tabula ra
 - `Camera` (`camera/camera.svelte.ts`): the view (centre, scale, rotation, grid centre), the size of the canvas, the cursor, panning, rotating, the pressed compass chip, the recent-zoom flag of the scale bar, the touches of a two-finger gesture.
 - The projects list (headers only), the modal (open, row mode, rename draft, hover), the toasts, the version banner.
 
+## The segment index (^1239, ^1248)
+
+- Stored in IndexedDB with the project (`segments`, one record per segment); derived from the nodes and segments, rebuildable (`Ctrl+Comma`). `IndexBuild` (`map/indexBuild.svelte.ts`): `status` (none, building, ready, stopped, failed), `project`, `done` and `total`, `error`; the build runs in a worker. The map is shown only when the status is ready.
+
 ## Chunks (^1231, ^1238)
 
 - `MapMemory` (`map/mapMemory.svelte.ts`): `chunks`, one reactive state per chunk asked for: loading (with its progress, real: rows read of rows there are) or ready (the chunk: its node and segment rows as stored), `tooMuch`, `project`. Asked for from the camera: the view and one ring. Chunks are read one at a time each, 4 at the same time, the one nearest the middle of the view first; a read of a chunk that left the view is stopped. Over a budget of rows (`ROW_BUDGET`, 500,000, provisional) chunks are let go (^1246): not asked for now, not pinned, the one asked for longest ago first, then the farthest from the view, down to 80%.

@@ -2,7 +2,8 @@ import type { Box } from '../curves/hull';
 import type { NodeRow } from '../project/storage';
 import { worldToScreen } from '../camera/view';
 import { text, type Frame, type Palette } from './paint';
-import { drawCurves, type SkeletonEdge } from './skeleton';
+import type { SkeletonEdge } from '../map/curve';
+import { drawCurves } from './skeleton';
 
 /** One chunk of the map as it is drawn: where it is, and its nodes, or null while it is not loaded (^1238). */
 export interface ChunkView {

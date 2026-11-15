@@ -1,5 +1,6 @@
 import type { EdgeRow, NodeRow, ProjectStorage, ReadOptions } from '../project/storage';
-import { boxOfId } from './chunks';
+import { boxOfId, rangeOfIds } from './chunks';
+import { INDEX_VERSION } from './segmentIndex';
 
 /** What is known of one chunk: its nodes (those whose position is in its cell) and every segment that has one of its nodes at an end. */
 export interface Chunk {
@@ -24,9 +25,10 @@ const mm = (m: number) => Math.round(m * 1000);
 
 /**
  * Reads one chunk of the open project from the storage (^1231, ^1241): its nodes (the index on x
- * or on y, ^1228, counted while they are read, so that the progress is real), the segments of those
- * nodes, and the nodes at their other ends (not shared with other chunks yet: `ChunkIndex`, ^1247). A segment that only crosses the chunk, with both nodes
- * outside it, is not found by this (^1239 is to find it). Dry: nothing is made from what it reads.
+ * or on y, ^1228, counted while they are read, so that the progress is real), the segments that the
+ * segment index lists for it (every segment whose box touches the chunk, also one that only crosses
+ * it, ^1239), and the nodes at their ends that are not in the chunk. The segment index has to be
+ * complete (`isComplete`): a project without one is not read.
  */
 export class ChunkLoader {
   constructor(
@@ -47,10 +49,8 @@ export class ChunkLoader {
       read,
     );
     signal?.throwIfAborted();
-    const edges = await this.storage.edgesOf(
-      this.project,
-      nodes.map((n) => n[0]),
-    );
+    const { cx0, cy0 } = rangeOfIds([id]);
+    const edges = await this.storage.edgesInChunk(this.project, cx0, cy0, INDEX_VERSION);
     onProgress?.(EDGES_DONE);
     signal?.throwIfAborted();
     const here = new Set(nodes.map((n) => n[0]));

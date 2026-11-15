@@ -1,19 +1,11 @@
 import { samplesAlong } from '../curves/arrows';
-import { buildEdge } from '../curves/edge';
-import { boxAround, type Box } from '../curves/hull';
+import type { Box } from '../curves/hull';
 import type { Piece } from '../curves/types';
-import type { EdgeRow, NodeRow } from '../project/storage';
+import type { SkeletonEdge } from '../map/curve';
 import { screenToWorld, worldToScreen } from '../camera/view';
 import { viewBox, type Frame, type Palette } from './paint';
 
 /** The skeleton of the map (^60, ^1240): the curves of the segments, with chevrons that point the way they run (^80), and the node dots. */
-
-/** A segment as it is drawn: its curve and the box round it (the same box that the cache of the segments will hold, ^1239). */
-export interface SkeletonEdge {
-  id: number;
-  pieces: Piece[];
-  box: Box;
-}
 
 const CURVE_PX = 2;
 const CHEVRON = { size: 6, spread: 0.7 };
@@ -21,24 +13,6 @@ const CHEVRON = { size: 6, spread: 0.7 };
 const SPACING_PX = 72;
 /** A curve this far outside the screen is not drawn (its stroke and chevrons reach in), in pixels. */
 const MARGIN_PX = 12;
-
-const toM = (mm: number) => mm / 1000;
-const node = ([, x, y, th]: NodeRow) => ({ x: toM(x), y: toM(y), th });
-
-const curves = new WeakMap<EdgeRow, { p: NodeRow; q: NodeRow; edge: SkeletonEdge }>();
-
-/**
- * The curve of a segment, made from its two nodes and its radius alone (^172) and kept while the
- * rows stay the same objects (the rows are shared between the chunks, `ChunkIndex`).
- */
-export function curveOf(row: EdgeRow, p: NodeRow, q: NodeRow): SkeletonEdge {
-  const kept = curves.get(row);
-  if (kept && kept.p === p && kept.q === q) return kept.edge;
-  const pieces = buildEdge(node(p), node(q), row[3] === null ? null : toM(row[3])).pieces;
-  const edge = { id: row[0], pieces, box: boxAround(pieces) };
-  curves.set(row, { p, q, edge });
-  return edge;
-}
 
 /** Trace pieces that follow each other into the current path of the canvas. */
 function trace(f: Frame, pieces: Piece[]) {

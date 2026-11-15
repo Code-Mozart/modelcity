@@ -9,7 +9,7 @@ globalThis.IDBKeyRange = IDBKeyRange;
 
 const raw = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
-    const open = indexedDB.open('modelcity', 2);
+    const open = indexedDB.open('modelcity', 3);
     open.onsuccess = () => resolve(open.result);
     open.onerror = () => reject(open.error);
   });

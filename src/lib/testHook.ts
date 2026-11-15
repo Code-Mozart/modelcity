@@ -1,5 +1,6 @@
 import type { Camera } from './camera/camera.svelte';
 import type { Editor } from './editor/editor.svelte';
+import type { IndexBuild } from './map/indexBuild.svelte';
 import type { MapMemory } from './map/mapMemory.svelte';
 import type { ProjectSession } from './project/session.svelte';
 import { worldToScreen, type Point } from './camera/view';
@@ -10,6 +11,8 @@ interface TestHook {
   session: ProjectSession;
   /** The chunks in memory; a test can make their reads slow. */
   memory: MapMemory;
+  /** The segment index of the open project; a test can put its own runner. */
+  index: IndexBuild;
   /** Where a world point is on the canvas, in page pixels. */
   toPage(pt: Point): Point;
   /** Pixels per meter. */
@@ -32,7 +35,8 @@ export function installTestHook(
     camera,
     session,
     memory,
-  }: Pick<TestHook, 'editor' | 'session' | 'memory'> & { camera: Camera },
+    index,
+  }: Pick<TestHook, 'editor' | 'session' | 'memory' | 'index'> & { camera: Camera },
   canvas: () => HTMLElement | null,
 ) {
   if (!import.meta.env.DEV) return;
@@ -40,6 +44,7 @@ export function installTestHook(
     editor,
     session,
     memory,
+    index,
     scale: () => camera.view.scale,
     camera: () => camera.state,
     show: (state) => camera.restore(state),
