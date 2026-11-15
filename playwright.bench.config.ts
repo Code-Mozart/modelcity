@@ -11,13 +11,14 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:4174',
+    // The production build is served under its base path.
+    baseURL: 'http://localhost:4174/modelcity/',
     viewport: { width: 1200, height: 800 },
     launchOptions: { args: ['--enable-precise-memory-info'] },
   },
   webServer: {
     command: 'VITE_TEST_HOOK=1 bun run build && bunx vite preview --port 4174 --strictPort',
-    url: 'http://localhost:4174',
+    url: 'http://localhost:4174/modelcity/',
     reuseExistingServer: false,
     timeout: 120_000,
   },

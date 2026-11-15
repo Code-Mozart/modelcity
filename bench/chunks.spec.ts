@@ -145,7 +145,7 @@ async function pan(page: Page) {
 
 test(`the chunked map with ${NODES} nodes`, async ({ page }) => {
   const client = await page.context().newCDPSession(page);
-  await page.goto('/');
+  await page.goto('./');
   await new App(page).ready();
   const imported = await importMap(page);
   const storageMb = await page.evaluate(
