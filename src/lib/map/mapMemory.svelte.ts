@@ -12,6 +12,8 @@ export const PARALLEL_READS = 4;
 export const ROW_BUDGET = 500_000;
 /** What an eviction frees: the loaded chunks are let go down to this share of the budget, so that a chunk at the edge does not load and unload on every frame. */
 export const EVICT_TO = 0.8;
+/** How many reads are remembered (`reads`). */
+const MAX_READS = 2000;
 /** What a chunk costs besides its rows (so that empty chunks count a little). */
 const CHUNK_COST = 1;
 
@@ -47,6 +49,8 @@ export class MapMemory {
   tooMuch = $state(false);
   /** The rows that the loaded chunks may hold. */
   budgetRows = ROW_BUDGET;
+  /** How long the last reads took (`ms`) and how many rows they gave: for the benchmarks (`bench/`) and for a look at the console. */
+  readonly reads: { id: string; ms: number; rows: number }[] = [];
   /** Milliseconds each read waits before it starts: for the tests that want to see a chunk that is not there yet. */
   latencyMs = 0;
   private loader: ChunkLoader | null = null;
@@ -115,6 +119,11 @@ export class MapMemory {
     return Math.hypot(cx0 - this.middle.x, cy0 - this.middle.y);
   }
 
+  /** The rows that the loaded chunks hold. */
+  get loadedRows() {
+    return this.rows;
+  }
+
   private costOf = (c: Chunk) => c.nodes.length + c.edges.length + CHUNK_COST;
 
   /**
@@ -170,11 +179,18 @@ export class MapMemory {
     this.reading.set(id, control);
     try {
       if (this.latencyMs) await wait(this.latencyMs, control.signal);
+      const began = performance.now();
       const chunk = await loader.load(id, {
         signal: control.signal,
         onProgress: (progress) => generation === this.generation && this.step(id, progress),
       });
       if (generation === this.generation && this.wanted.has(id)) {
+        this.reads.push({
+          id,
+          ms: performance.now() - began,
+          rows: chunk.nodes.length + chunk.edges.length,
+        });
+        if (this.reads.length > MAX_READS) this.reads.shift();
         this.index.add(chunk);
         this.chunks.set(id, { status: 'ready', chunk });
         this.progress.delete(id);

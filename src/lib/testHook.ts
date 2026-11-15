@@ -5,7 +5,7 @@ import type { MapMemory } from './map/mapMemory.svelte';
 import type { ProjectSession } from './project/session.svelte';
 import { worldToScreen, type Point } from './camera/view';
 
-/** What the end-to-end tests (`e2e/`) can see of the app (^145). Only installed in dev builds. */
+/** What the end-to-end tests (`e2e/`) can see of the app (^145). Only installed in dev builds and in the build of the benchmarks. */
 interface TestHook {
   editor: Editor;
   session: ProjectSession;
@@ -39,7 +39,8 @@ export function installTestHook(
   }: Pick<TestHook, 'editor' | 'session' | 'memory' | 'index'> & { camera: Camera },
   canvas: () => HTMLElement | null,
 ) {
-  if (!import.meta.env.DEV) return;
+  // Dev builds, and the build that the benchmarks measure (`VITE_TEST_HOOK=1`, ^1249): a dev build is slower in the reactivity of Svelte.
+  if (!import.meta.env.DEV && !import.meta.env.VITE_TEST_HOOK) return;
   window.__modelcity = {
     editor,
     session,

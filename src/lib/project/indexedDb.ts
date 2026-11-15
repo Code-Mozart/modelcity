@@ -15,8 +15,9 @@ import type { ProjectFile } from './file';
 
 const DB = 'modelcity';
 const [PROJECTS, NODES, EDGES, SEGMENTS] = ['projects', 'nodes', 'edges', 'segments'];
-/** A read that can say how far it is says it after this many rows. */
-const PROGRESS_STEP = 500;
+/** A range of nodes is read in at most this many parts, of about this many rows each, so that it can say how far it is. */
+const READ_PARTS = 8;
+const PART_ROWS = 250;
 
 /**
  * A project is a record of `projects` with its header (the list reads only these), and one record
@@ -146,35 +147,41 @@ export class IndexedDbStorage implements ProjectStorage {
 
   /**
    * The nodes in a box: the index on x or the one on y finds them, the one whose range holds fewer
-   * (the count is asked of both), and the other coordinate is filtered here (^1228). They are read
-   * one by one so that it can say how far it is, and stop (^1241).
+   * (the count is asked of both), and the other coordinate is filtered here (^1228). The range is
+   * read in a few parts, each with one request, all at once (a cursor, one request for each row,
+   * was 20 times slower, ^1249), so that it can say how far it is, and stop (^1241).
    */
   async nodesIn(id: string, b: BoxMm, { onProgress, signal }: ReadOptions = {}) {
     signal?.throwIfAborted();
     const store = (await this.tx('readonly')).objectStore(NODES);
     const [byX, byY] = [store.index('x'), store.index('y')];
-    const [rx, ry] = [between(id, b.x0, b.x1), between(id, b.y0, b.y1)];
-    const [nx, ny] = await Promise.all([request(byX.count(rx)), request(byY.count(ry))]);
-    const [from, range, total] = nx <= ny ? [byX, rx, nx] : [byY, ry, ny];
-    return new Promise<NodeRow[]>((resolve, reject) => {
-      const rows: NodeRow[] = [];
-      let seen = 0;
-      const cursor = from.openCursor(range);
-      cursor.onerror = () => reject(cursor.error);
-      cursor.onsuccess = () => {
-        const at = cursor.result;
-        if (signal?.aborted) return reject(signal.reason);
-        if (!at) return resolve(rows);
-        const n = at.value;
+    const [nx, ny] = await Promise.all([
+      request(byX.count(between(id, b.x0, b.x1))),
+      request(byY.count(between(id, b.y0, b.y1))),
+    ]);
+    const [from, lo, hi, total] = nx <= ny ? [byX, b.x0, b.x1, nx] : [byY, b.y0, b.y1, ny];
+    const parts = Math.max(1, Math.min(READ_PARTS, Math.ceil(total / PART_ROWS)));
+    const rows: NodeRow[] = [];
+    let seen = 0;
+    // All parts are asked at once: each request waits for the storage, so asking one after the other is much slower (^1249).
+    const part = async (i: number) => {
+      const width = hi - lo + 1;
+      const range = between(
+        id,
+        lo + Math.floor((width * i) / parts),
+        lo + Math.floor((width * (i + 1)) / parts) - 1,
+      );
+      const found = await request(from.getAll(range));
+      signal?.throwIfAborted();
+      for (const n of found)
         if (n.x >= b.x0 && n.x <= b.x1 && n.y >= b.y0 && n.y <= b.y1)
           rows.push([n.id, n.x, n.y, n.th]);
-        if (++seen % PROGRESS_STEP === 0) onProgress?.(seen, total);
-        at.continue();
-      };
-    }).then((rows) => {
-      onProgress?.(total, total);
-      return rows;
-    });
+      seen += found.length;
+      onProgress?.(seen, total);
+    };
+    await Promise.all(Array.from({ length: parts }, (_, i) => part(i)));
+    onProgress?.(total, total);
+    return rows;
   }
 
   async nodesByIds(id: string, ids: number[]) {

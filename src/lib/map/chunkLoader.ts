@@ -42,15 +42,18 @@ export class ChunkLoader {
       signal,
       onProgress: (done, total) => onProgress?.(total ? (NODES_SHARE * done) / total : NODES_SHARE),
     };
-    // The upper edge belongs to the next chunk (a cell holds its left and top edge).
-    const nodes = await this.storage.nodesIn(
-      this.project,
-      { x0: mm(box.x0), x1: mm(box.x1) - 1, y0: mm(box.y0), y1: mm(box.y1) - 1 },
-      read,
-    );
-    signal?.throwIfAborted();
+    // The nodes and the segments are asked at once: each waits for the storage (^1249).
     const { cx0, cy0 } = rangeOfIds([id]);
-    const edges = await this.storage.edgesInChunk(this.project, cx0, cy0, INDEX_VERSION);
+    const [nodes, edges] = await Promise.all([
+      // The upper edge belongs to the next chunk (a cell holds its left and top edge).
+      this.storage.nodesIn(
+        this.project,
+        { x0: mm(box.x0), x1: mm(box.x1) - 1, y0: mm(box.y0), y1: mm(box.y1) - 1 },
+        read,
+      ),
+      this.storage.edgesInChunk(this.project, cx0, cy0, INDEX_VERSION),
+    ]);
+    signal?.throwIfAborted();
     onProgress?.(EDGES_DONE);
     signal?.throwIfAborted();
     const here = new Set(nodes.map((n) => n[0]));
