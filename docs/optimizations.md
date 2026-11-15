@@ -77,3 +77,33 @@ What it found, and what was done:
 
 - **Two real changes of behaviour**, both of the optimizations and both fixed: derived nodes were counted as touching nodes, and the point-in-surface test counted the crossings of the loops that hold the point only (it now also takes the box and the band of the ray with the tolerance). The test `editor/derivedOrder.test` and the 8000 random points of `curves/insideOf.test` keep them from coming back. The derived nodes, towers, bars, hulls, surface, lane facts, give-way lines, arrows and markings (logical and physical) of the junction, priority and small T grounds are now **identical to the base, to the last digit**.
 - **The pictures are not pixel for pixel the same**, only because of what is not drawn off the screen (^939): the surface fill of fewer loops gives anti-aliasing that differs by one level of 255 on a few pixels in about 180 of the 411 views, and leaving out marks and lines off the screen changes the state the canvas keeps for the next one (the dash pattern), so that a dash of a give-way line starts a fraction of a pixel elsewhere in 13 views. With the surface culling switched off 13 of the 411 views differed, and with the culling of marks switched off as well the three of them that were tried were identical; a full run with all culling off was not made.
+
+## The chunked map (PR #60, ^1249)
+
+Measured in a real browser (headless Chromium on a 4-core container with 16 GB), on the production build, one big connected road network (`bench/chunks.spec.ts`, `bun run bench`, `NODES=100000`; rows of straight roads 40 m apart joined by S-curves at every 8th column; about 1.12 segments per node). The view is 1200 x 800 m at 1 px per meter: 48 chunks (the screen and one ring). Compare on one machine only (^930).
+
+| | 20,000 nodes | 100,000 nodes |
+|---|---|---|
+| Import of the file (parse, check, write all rows) | 2.6 s | 11.7 s |
+| Build of the segment index (in the worker) | 2.9 s | 15.5 s |
+| Storage used by the project | 26 MB | 141 MB |
+| Open a project (header, count of the index) | 0.04 s | 0.05 s (0.07 s with the count) |
+| First view: all 48 chunks loaded | 2.4 s | 3.2 s |
+| Read of one chunk (median) | 0.22 s | 0.29 s |
+| Rows in a chunk | 97 | 99 |
+| Pan at 300 m/s for 10 s: median frame | 17 ms | 17 ms |
+| ... frames over 50 ms | 10 of 124 (3 s) | 50 of 299 |
+| JS heap | 3.7 MB | 4.6 MB |
+
+What was found, and done:
+
+- **A cursor reads a row per request and was 20 times slower than a few requests that ask for parts at once.** The nodes of a chunk are now read in up to 8 parts, all at once, and the nodes and the segments of a chunk are asked at the same time (a read of a chunk went from 0.50 s to 0.29 s at 100k).
+- **A dev build is much slower than the production one** in the reactivity of Svelte (a stack is captured for every read of a reactive map): the benchmarks run on the production build (`VITE_TEST_HOOK=1`, names of the functions kept).
+- **The drawing of the nodes read the view through the proxy of the state of the camera for every number of every node** (0.6 s of 10 s of panning, plus 0.6 s of reads of the reactivity): a plain copy of the view, the projection worked out once, one path for all dots (the JS time of the pan went from about 2.2 s to 0.5 s).
+- **The id of a project was a UUID, in the key of every record and every entry of every index: half of the storage.** New projects have 8 characters (26 MB instead of 52 MB at 20k; 141 MB instead of 261 MB at 100k). Projects that have a UUID keep it.
+
+What is left (not within the limits yet; 300,000 nodes is not tried before this is):
+
+- **The nodes of a chunk are found by the strip of the index on x (or on y) that holds fewer: 2,200 rows for the 99 that are in the chunk, 22 times too many** (the strip grows with the square root of the number of nodes). Reading the rows of the chunk alone is 0.9 ms against 15 ms for the strip, and four reads at the same time are 2 ms against 49 ms: the strips are what blocks the main thread for 50 to 117 ms (the structured clone of the rows), which are the frames over 50 ms while panning.
+- Import 12 s and the build of the index 16 s per 100,000 nodes (about 65 and 140 microseconds a row): about 6 to 7 minutes for 2,000,000 nodes. One request per row.
+- 1.4 KB of storage per node, with its segment and the index: 2.8 GB for 2,000,000 nodes.
