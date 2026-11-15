@@ -8,8 +8,8 @@
   import { curveOf, type SkeletonEdge } from './map/curve';
   import type { Point } from './camera/view';
   import type { ControlId } from './hints/hints';
-  import { boxOfId, CHUNK_M, countOf, idsOf } from './map/chunks';
-  import { chunksInView } from './map/inView';
+  import { boxOfId, CHUNK_M, countOf, idsWhere } from './map/chunks';
+  import { chunksInView, overlapsView } from './map/inView';
   import { MAX_CHUNKS, type MapMemory } from './map/mapMemory.svelte';
 
   let {
@@ -36,29 +36,34 @@
   $effect(() => {
     void memory.project;
     const range = chunksInView(camera.view, camera.size, CHUNK_M);
-    untrack(() => void memory.show(range));
+    const near = overlapsView(camera.view, camera.size, CHUNK_M);
+    untrack(() => void memory.show(range, near));
   });
 
-  /** The chunks the screen touches, with their nodes or as not loaded, and how far those are. */
-  const chunkViews = $derived.by(() => {
-    const seen = chunksInView(camera.view, camera.size);
-    if (countOf(seen) > MAX_CHUNKS) return [];
-    return [...idsOf(seen)].map((id): ChunkView => {
+  /** The chunks the screen touches as it is turned (not all of the box round it), or null when that is more than can be shown. */
+  const seen = $derived.by(() => {
+    const range = chunksInView(camera.view, camera.size);
+    if (countOf(range) > 4 * MAX_CHUNKS) return null;
+    const ids = idsWhere(range, overlapsView(camera.view, camera.size));
+    return ids.length > MAX_CHUNKS ? null : ids;
+  });
+
+  /** Those chunks, with their nodes or as not loaded, and how far those are. */
+  const chunkViews = $derived(
+    (seen ?? []).map((id): ChunkView => {
       const state = memory.chunks.get(id);
       return {
         box: boxOfId(id),
         nodes: state?.status === 'ready' ? state.chunk.nodes : null,
         progress: memory.progress.get(id) ?? 0,
       };
-    });
-  });
+    }),
+  );
 
   /** The segments of the chunks that are loaded, each once; what the progress of a chunk does is not looked at here. */
   const edges = $derived.by(() => {
-    const seen = chunksInView(camera.view, camera.size);
-    if (countOf(seen) > MAX_CHUNKS) return [];
     const found = new SvelteMap<number, SkeletonEdge>();
-    for (const id of idsOf(seen)) {
+    for (const id of seen ?? []) {
       const state = memory.chunks.get(id);
       if (state?.status !== 'ready') continue;
       for (const row of state.chunk.edges) {
@@ -69,11 +74,7 @@
     return [...found.values()];
   });
 
-  const scene = $derived({
-    chunks: chunkViews,
-    edges,
-    tooMuch: countOf(chunksInView(camera.view, camera.size)) > MAX_CHUNKS || memory.tooMuch,
-  });
+  const scene = $derived({ chunks: chunkViews, edges, tooMuch: seen === null || memory.tooMuch });
 
   // Redraw whenever the camera or the map in memory changes.
   $effect(() => {

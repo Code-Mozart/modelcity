@@ -2,7 +2,8 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ProjectStorage } from '../project/storage';
 import { ChunkIndex } from './chunkIndex';
 import { ChunkLoader, type Chunk } from './chunkLoader';
-import { countOf, idsOf, rangeOfIds, type ChunkRange } from './chunks';
+import type { Box } from '../curves/hull';
+import { countOf, idsWhere, rangeOfIds, type ChunkRange } from './chunks';
 
 /** More chunks than this are not loaded: so much of the map at once needs a level of detail that is not built yet (^1238). */
 export const MAX_CHUNKS = 400;
@@ -90,12 +91,18 @@ export class MapMemory {
     this.tooMuch = false;
   }
 
-  /** Ask for the chunks of a range, and no others: what is not there is read, what is on its way and no longer asked for is stopped. */
-  show(range: ChunkRange) {
-    this.tooMuch = countOf(range) > MAX_CHUNKS;
+  /**
+   * Ask for the chunks of a range (those of it whose box `near` says yes to: a turned screen is
+   * not all of the box round it, ^1251), and no others: what is not there is read, what is on its
+   * way and no longer asked for is stopped.
+   */
+  show(range: ChunkRange, near?: (box: Box) => boolean) {
+    // A range that is far too large is not even counted chunk by chunk.
+    const ids = countOf(range) > 4 * MAX_CHUNKS ? [] : idsWhere(range, near);
+    this.tooMuch = countOf(range) > 4 * MAX_CHUNKS || ids.length > MAX_CHUNKS;
     if (!this.loader || this.tooMuch) return;
     this.wanted.clear();
-    for (const id of idsOf(range)) this.wanted.add(id);
+    ids.forEach((id) => this.wanted.add(id));
     for (const [id, state] of this.chunks) {
       if (state.status === 'loading' && !this.wanted.has(id)) this.drop(id);
     }

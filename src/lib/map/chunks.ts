@@ -57,3 +57,12 @@ export function rangeOfIds(ids: Iterable<string>): ChunkRange {
 
 /** The box of one chunk, from its id. */
 export const boxOfId = (id: string): Box => boxOfRange(rangeOfIds([id]));
+
+/** The ids of the chunks of a range whose box `near` says yes to (all of them without it), row by row. */
+export function idsWhere(r: ChunkRange, near: (box: Box) => boolean = () => true): string[] {
+  const ids: string[] = [];
+  for (let cy = r.cy0; cy <= r.cy1; cy++)
+    for (let cx = r.cx0; cx <= r.cx1; cx++)
+      if (near(boxOfRange({ cx0: cx, cx1: cx, cy0: cy, cy1: cy }))) ids.push(chunkId(cx, cy));
+  return ids;
+}

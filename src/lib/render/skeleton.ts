@@ -1,9 +1,9 @@
 import { samplesAlong } from '../curves/arrows';
-import type { Box } from '../curves/hull';
 import type { Piece } from '../curves/types';
 import type { SkeletonEdge } from '../map/curve';
 import { screenToWorld, worldToScreen } from '../camera/view';
-import { viewBox, type Frame, type Palette } from './paint';
+import { overlapsView } from '../map/inView';
+import type { Frame, Palette } from './paint';
 
 /** The skeleton of the map (^60, ^1240): the curves of the segments, with chevrons that point the way they run (^80), and the node dots. */
 
@@ -32,8 +32,6 @@ function trace(f: Frame, pieces: Piece[]) {
   }
 }
 
-const meets = (a: Box, b: Box) => a.x0 <= b.x1 && a.x1 >= b.x0 && a.y0 <= b.y1 && a.y1 >= b.y0;
-
 /** Chevrons along the curves at a constant pixel distance, pointing the way the road runs. All in one path. */
 function chevrons(f: Frame, edges: SkeletonEdge[]) {
   const { ctx, view, size } = f;
@@ -61,8 +59,8 @@ function chevrons(f: Frame, edges: SkeletonEdge[]) {
 /** The curves and their chevrons: what is on the screen only, each kind in one stroke. */
 export function drawCurves(f: Frame, edges: readonly SkeletonEdge[], pal: Palette) {
   const { ctx, view } = f;
-  const seen = viewBox(f, MARGIN_PX / view.scale);
-  const shown = edges.filter((e) => meets(e.box, seen));
+  const seen = overlapsView(view, f.size, MARGIN_PX / view.scale);
+  const shown = edges.filter((e) => seen(e.box));
   ctx.strokeStyle = pal.ink;
   ctx.lineWidth = CURVE_PX;
   ctx.lineCap = 'round';
