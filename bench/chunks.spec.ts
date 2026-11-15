@@ -1,7 +1,7 @@
 import { test, type CDPSession, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { App } from '../e2e/app';
-import { makeMapText } from './makeMap';
+import { importMap, mb, ms, profiled, stats } from './helpers';
 
 /**
  * The chunked map on one big connected road network (^1249): import, build of the segment index,
@@ -13,56 +13,9 @@ const SPACING_M = Number(process.env.SPACING ?? 40);
 const PAN_SECONDS = Number(process.env.PAN_SECONDS ?? 10);
 const PAN_M_PER_S = 300;
 
-const ms = (n: number) => Math.round(n);
-const mb = (bytes: number) => Math.round(bytes / 1e5) / 10;
-
-function stats(values: number[]) {
-  const sorted = [...values].sort((a, b) => a - b);
-  const at = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))] ?? 0;
-  return { n: values.length, p50: ms(at(0.5)), p95: ms(at(0.95)), max: ms(sorted.at(-1) ?? 0) };
-}
-
-/** The functions with the most time of their own in what `run` does on the main thread (`PROFILE=1`). */
-async function profiled(client: CDPSession, run: () => Promise<unknown>) {
-  await client.send('Profiler.enable');
-  await client.send('Profiler.start');
-  await run();
-  const { profile } = await client.send('Profiler.stop');
-  const byId = new Map(profile.nodes.map((n) => [n.id, n]));
-  const self = new Map<string, number>();
-  profile.samples?.forEach((id, i) => {
-    const frame = byId.get(id)!.callFrame;
-    const key = `${frame.functionName || '(anonymous)'} ${frame.url.split('/').pop()}:${frame.lineNumber}`;
-    self.set(key, (self.get(key) ?? 0) + (profile.timeDeltas[i] ?? 0) / 1000);
-  });
-  return [...self.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 16)
-    .map(([k, v]) => `${ms(v)} ms ${k}`);
-}
-
 async function heapMb(client: CDPSession) {
   await client.send('HeapProfiler.collectGarbage');
   return mb((await client.send('Runtime.getHeapUsage')).usedSize);
-}
-
-/** Import the map like a file: the time of the import, and of the build of the segment index. */
-async function importMap(page: Page) {
-  return page.evaluate(
-    async ({ make, nodes, spacing }) => {
-      const hook = window.__modelcity!;
-      const text = (0, eval)(`(${make})`)(nodes, spacing) as string;
-      const t0 = performance.now();
-      await hook.session.importText(text);
-      const t1 = performance.now();
-      while (hook.index.status !== 'ready') {
-        if (hook.index.status === 'failed') throw new Error(hook.index.error ?? 'failed');
-        await new Promise((r) => setTimeout(r, 25));
-      }
-      return { fileMb: text.length / 1e6, importMs: t1 - t0, indexMs: performance.now() - t1 };
-    },
-    { make: makeMapText.toString(), nodes: NODES, spacing: SPACING_M },
-  );
 }
 
 type Marks = Record<'opened' | 'index' | 'chunks', number | undefined>;
@@ -174,7 +127,7 @@ test(`the chunked map with ${NODES} nodes`, async ({ page }) => {
   const client = await page.context().newCDPSession(page);
   await page.goto('./');
   await new App(page).ready();
-  const imported = await importMap(page);
+  const imported = await importMap(page, NODES, SPACING_M);
   const storageMb = await page.evaluate(
     async () => Math.round(((await navigator.storage.estimate()).usage ?? 0) / 1e5) / 10,
   );

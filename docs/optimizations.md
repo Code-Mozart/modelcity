@@ -122,3 +122,18 @@ The nodes of a chunk are one exact lookup of their cell in a derived store (`nod
 | Build of the index | 15.5 s | 28 s (twice the rows) |
 | Storage | 141 MB | 160 MB (+13.5%) |
 | Import | 11.7 s | 10.8 s |
+
+### The established view (^1251)
+
+After the chunks of the view are loaded (`bench/established.spec.ts`, 5 s each, the frame rate limit of the browser lifted, headless Chromium on the production build, no GPU: the canvas is rasterized by software), at 1 px per meter:
+
+| | 20,000 nodes | 100,000 nodes |
+|---|---|---|
+| Pan 80 m back and forth: frames per second | 88 | 78 |
+| ... median / 95th percentile frame | 11.3 / 13.5 ms | 11.8 / 19.8 ms |
+| Zoom 15%: frames per second | 84 | 72 |
+| Rotate 0.4 rad: frames per second | 26 | 34 |
+| ... median frame | 24.5 ms | 25 ms |
+| Rows in view (nodes and segments) | 4,725 | 4,805 |
+
+The same at both sizes, within what the machine varies: the established view does not depend on the size of the map. The profile of a pan: the main thread is in the browser's own code (the rasterization) for 4.3 s of 5 s, JavaScript is about 0.6 s (about 1 ms a frame). Rotating costs about twice: the box of the view that is round the turned screen is larger than the screen, so more chunks are asked for (in the test 9 to 24 more reads, which are the frames over 50 ms) and more curves are drawn than are on the screen.
