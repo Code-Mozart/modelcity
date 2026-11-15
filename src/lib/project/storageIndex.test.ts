@@ -124,3 +124,31 @@ describe.each(storages)('the cells of the nodes in the storage (^1250): %s', (_n
     expect(await s.nodesInChunk('a', 0, 0, 2)).toEqual([]);
   });
 });
+
+describe.each(storages)('the mark that the index is complete (^1253): %s', (_name, make) => {
+  let s: ProjectStorage;
+  beforeEach(async () => {
+    s = make();
+    await s.put({ id: 'a', file: file() });
+  });
+
+  it('is not there until a build writes it, and is for one version', async () => {
+    expect(await s.indexedVersion('a')).toBeUndefined();
+    await s.markIndexed('a', 2);
+    expect(await s.indexedVersion('a')).toBe(2);
+  });
+
+  it('stays when only the header changes, goes when the map is changed or written, or the index cleared', async () => {
+    await s.markIndexed('a', 2);
+    await s.patch('a', headerOf(file('Renamed')));
+    expect(await s.indexedVersion('a')).toBe(2);
+    await s.patch('a', headerOf(file()), { ...none, nodes: [[9, 0, 0, 0]] });
+    expect(await s.indexedVersion('a')).toBeUndefined();
+    await s.markIndexed('a', 2);
+    await s.put({ id: 'a', file: file() });
+    expect(await s.indexedVersion('a')).toBeUndefined();
+    await s.markIndexed('a', 2);
+    await s.clearIndex('a');
+    expect(await s.indexedVersion('a')).toBeUndefined();
+  });
+});

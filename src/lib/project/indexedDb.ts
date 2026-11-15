@@ -11,15 +11,8 @@ import type {
 } from './storage';
 import { applyChange, headerOf } from './storage';
 import type { ProjectFile } from './file';
-
-const DB = 'modelcity';
-const [PROJECTS, NODES, EDGES, SEGMENTS, CELLS] = [
-  'projects',
-  'nodes',
-  'edges',
-  'segments',
-  'nodecells',
-];
+import { DB, DB_VERSION, CELLS, EDGES, NODES, PROJECTS, SEGMENTS, upgrade } from './idbSchema';
+import { done, edge, node, ofProject, request, rowsByIds } from './idbRows';
 
 /**
  * A project is a record of `projects` with its header (the list reads only these), and one record
@@ -29,31 +22,7 @@ const [PROJECTS, NODES, EDGES, SEGMENTS, CELLS] = [
  * first layout (`{id, file}`: the whole file in one record) is read as before and written in this
  * layout when it is read.
  */
-type Stored = { id: string; header: Header } | { id: string; file: ProjectFile };
-
-const request = <T>(r: IDBRequest<T>) =>
-  new Promise<T>((resolve, reject) => {
-    r.onsuccess = () => resolve(r.result);
-    r.onerror = () => reject(r.error);
-  });
-
-const done = (tx: IDBTransaction) =>
-  new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = tx.onabort = () => reject(tx.error);
-  });
-
-const ofProject = (p: string) => IDBKeyRange.bound([p, -Infinity], [p, Infinity]);
-
-const node = (p: string, [id, x, y, th]: NodeRow) => ({ p, id, x, y, th });
-const edge = (p: string, [id, start, end, radius, lane]: EdgeRow) => ({
-  p,
-  id,
-  start,
-  end,
-  radius,
-  lane,
-});
+type Stored = { id: string; header: Header; index?: number } | { id: string; file: ProjectFile };
 
 const changes = (c: MapChange) =>
   c.nodes.length + c.edges.length + c.removedNodes.length + c.removedEdges.length > 0;
@@ -66,7 +35,7 @@ export class IndexedDbStorage implements ProjectStorage {
 
   private open(): Promise<IDBDatabase> {
     this.db ??= new Promise((resolve, reject) => {
-      const open = indexedDB.open(DB, 4);
+      const open = indexedDB.open(DB, DB_VERSION);
       open.onupgradeneeded = () => upgrade(open.result, open.transaction!);
       open.onsuccess = () => resolve(open.result);
       open.onerror = () => reject(open.error);
@@ -128,8 +97,14 @@ export class IndexedDbStorage implements ProjectStorage {
     if (!r) return;
     if ('file' in r) this.write(tx, id, applyChange(r.file, header, change));
     else {
-      tx.objectStore(PROJECTS).put({ id, header });
-      if (change && changes(change)) {
+      // The mark that the index is complete stays unless the map changes.
+      const changed = change !== undefined && changes(change);
+      tx.objectStore(PROJECTS).put({
+        id,
+        header,
+        ...(!changed && r.index ? { index: r.index } : {}),
+      });
+      if (change && changed) {
         // A change of the map makes the index stale: it is thrown away (until the edits keep it current, ^1243).
         this.dropIndex(tx, id);
         this.changeRows(tx, id, change);
@@ -146,9 +121,12 @@ export class IndexedDbStorage implements ProjectStorage {
   }
 
   async nodesByIds(id: string, ids: number[]) {
-    const store = (await this.tx('readonly')).objectStore(NODES);
-    const rows = await Promise.all(ids.map((n) => request(store.get([id, n]))));
-    return rows.filter((n) => n).map((n): NodeRow => [n.id, n.x, n.y, n.th]);
+    const rows = await rowsByIds<{ id: number; x: number; y: number; th: number }>(
+      (await this.tx('readonly')).objectStore(NODES),
+      id,
+      ids,
+    );
+    return rows.map((n): NodeRow => [n.id, n.x, n.y, n.th]);
   }
 
   async edgesOf(id: string, nodeIds: number[]) {
@@ -183,9 +161,12 @@ export class IndexedDbStorage implements ProjectStorage {
   }
 
   async indexedIds(id: string, ids: number[], version: number) {
-    const store = (await this.tx('readonly')).objectStore(SEGMENTS);
-    const found = await Promise.all(ids.map((n) => request(store.get([id, n]))));
-    return new Set(found.filter((r) => r?.v === version).map((r) => r.id as number));
+    const found = await rowsByIds<{ id: number; v: number }>(
+      (await this.tx('readonly')).objectStore(SEGMENTS),
+      id,
+      ids,
+    );
+    return new Set(found.filter((r) => r.v === version).map((r) => r.id as number));
   }
 
   async putIndex(id: string, version: number, records: IndexRecord[]) {
@@ -201,6 +182,21 @@ export class IndexedDbStorage implements ProjectStorage {
   async clearIndex(id: string) {
     const tx = await this.tx('readwrite');
     this.dropIndex(tx, id);
+    const r = await request<Stored | undefined>(tx.objectStore(PROJECTS).get(id));
+    if (r && 'header' in r) tx.objectStore(PROJECTS).put({ id, header: r.header });
+    await done(tx);
+  }
+
+  async indexedVersion(id: string) {
+    const tx = await this.tx('readonly');
+    const r = await request<Stored | undefined>(tx.objectStore(PROJECTS).get(id));
+    return r && 'header' in r ? r.index : undefined;
+  }
+
+  async markIndexed(id: string, version: number) {
+    const tx = await this.tx('readwrite');
+    const r = await request<Stored | undefined>(tx.objectStore(PROJECTS).get(id));
+    if (r && 'header' in r) tx.objectStore(PROJECTS).put({ ...r, index: version });
     await done(tx);
   }
 
@@ -214,9 +210,14 @@ export class IndexedDbStorage implements ProjectStorage {
     const ids = new Set(
       [...here, ...wide].filter((r) => r.v === version).map((r) => r.id as number),
     );
-    const edges = tx.objectStore(EDGES);
-    const rows = await Promise.all([...ids].map((n) => request(edges.get([id, n]))));
-    return rows.filter((e) => e).map((e): EdgeRow => [e.id, e.start, e.end, e.radius, e.lane]);
+    const rows = await rowsByIds<{
+      id: number;
+      start: number;
+      end: number;
+      radius: number | null;
+      lane: number;
+    }>(tx.objectStore(EDGES), id, [...ids]);
+    return rows.map((e): EdgeRow => [e.id, e.start, e.end, e.radius, e.lane]);
   }
 
   async nodesAfter(id: string, after: number, limit: number) {
@@ -228,9 +229,12 @@ export class IndexedDbStorage implements ProjectStorage {
   }
 
   async indexedNodeIds(id: string, ids: number[], version: number) {
-    const store = (await this.tx('readonly')).objectStore(CELLS);
-    const found = await Promise.all(ids.map((n) => request(store.get([id, n]))));
-    return new Set(found.filter((r) => r?.v === version).map((r) => r.id as number));
+    const found = await rowsByIds<{ id: number; v: number }>(
+      (await this.tx('readonly')).objectStore(CELLS),
+      id,
+      ids,
+    );
+    return new Set(found.filter((r) => r.v === version).map((r) => r.id as number));
   }
 
   async putNodeCells(id: string, version: number, cells: NodeCell[]) {
@@ -284,30 +288,5 @@ export class IndexedDbStorage implements ProjectStorage {
     c.edges.forEach((e) => edges.put(edge(id, e)));
     c.removedNodes.forEach((n) => nodes.delete([id, n]));
     c.removedEdges.forEach((e) => edges.delete([id, e]));
-  }
-}
-
-function upgrade(db: IDBDatabase, tx: IDBTransaction) {
-  if (!db.objectStoreNames.contains(PROJECTS)) db.createObjectStore(PROJECTS, { keyPath: 'id' });
-  if (!db.objectStoreNames.contains(NODES)) db.createObjectStore(NODES, { keyPath: ['p', 'id'] });
-  // The strips of the indexes on x and on y are no longer how the nodes of a chunk are found (^1250): they only took room.
-  const nodes = tx.objectStore(NODES);
-  for (const name of ['x', 'y']) if (nodes.indexNames.contains(name)) nodes.deleteIndex(name);
-  if (!db.objectStoreNames.contains(EDGES)) {
-    const edges = db.createObjectStore(EDGES, { keyPath: ['p', 'id'] });
-    edges.createIndex('start', ['p', 'start']);
-    edges.createIndex('end', ['p', 'end']);
-  }
-  if (!db.objectStoreNames.contains(SEGMENTS)) {
-    // The segment index (^1239): one record per segment with the box round its curve; `cell` finds the segments of a chunk.
-    const segments = db.createObjectStore(SEGMENTS, { keyPath: ['p', 'id'] });
-    segments.createIndex('cell', 'cells', { multiEntry: true });
-    segments.createIndex('version', ['p', 'v']);
-  }
-  if (!db.objectStoreNames.contains(CELLS)) {
-    // The nodes by the chunk they are in, with their rows (^1250): derived, built with the segment index.
-    const cells = db.createObjectStore(CELLS, { keyPath: ['p', 'id'] });
-    cells.createIndex('cell', 'cell');
-    cells.createIndex('version', ['p', 'v']);
   }
 }

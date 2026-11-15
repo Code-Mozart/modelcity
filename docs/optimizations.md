@@ -139,3 +139,31 @@ After the chunks of the view are loaded (`bench/established.spec.ts`, 5 s each, 
 The same at both sizes, within what the machine varies: the established view does not depend on the size of the map. The profile of a pan: the main thread is in the browser's own code (the rasterization) for 4.3 s of 5 s, JavaScript is about 0.6 s (about 1 ms a frame). Rotating costs about twice: the box of the view that is round the turned screen is larger than the screen, so more chunks are asked for (in the test 9 to 24 more reads, which are the frames over 50 ms) and more curves are drawn than are on the screen.
 
 Culling by the turned screen instead of the box round it (`overlapsView`): chunks to ask for, chunks to show and curves to draw are those that the screen as it is turned touches. Rotating at 100,000 nodes: 34 to 36 frames per second, median frame 25 to 23.7 ms, 9 to 5 new chunk reads, 7,106 to 6,630 rows loaded. Less than expected (I expected about half the cost): rotating is slow in this browser because of the software rasterization of lines that are not along the pixel rows and columns, not because of what is drawn off the screen. The test for it is `src/lib/map/chunks.test.ts`.
+
+### Where the time of the import goes, and what was done (^1253)
+
+Measured in a browser profile on disk (the earlier tables were measured on a profile in memory: the storage is not compressed there, 160 MB for 100,000 nodes against 40 MB on disk, and the writes are faster).
+
+Writing 100,000 small rows to IndexedDB, headless Chromium, profile on disk (`/tmp` probe, not kept):
+
+| One transaction, a put for each row, key and value as stored | 6.3 s |
+| The same with two indexes on the store | 10.1 s |
+| Durability `relaxed` | 8.1 s |
+| Two stores written at the same time | 7.5 s |
+| Ten transactions at the same time on one store | 8.3 s |
+| A key that is a number and a value that is a number | 6.3 s |
+| **Blocks of 100 rows, a put for each block** | **0.3 s** |
+
+So a put costs about 65 microseconds whatever it is given, and only the number of puts counts. Reads: 20,000 rows by 20,000 `get`s 817 ms, by one `getAll` of the range 131 ms, `getAllKeys` 78 ms; the count of a store of 100,000 rows 171 ms (a count scans).
+
+100,000 nodes, 112,000 segments (`bench/report.spec.ts`, headless, no GPU), before and after reading in ranges and the mark that the index is complete:
+
+| | before | after |
+|---|---|---|
+| Import (212,000 puts: at the floor) | 18.1 s | 17.2 s |
+| Build of the index (212,000 records and their reads) | 47.9 s | 31.1 s |
+| Open: the check of the index | 1,826 ms | 83 ms |
+| First view | 3.8 s | 1.5 s |
+| Read of one chunk (median) | 179 ms | 129 ms |
+
+What is left is the number of puts: 4,250,000 rows (2,000,000 nodes, 2,250,000 segments) for the import and as many records for the index. Blocks of rows (^1254) are the only thing that changes that.

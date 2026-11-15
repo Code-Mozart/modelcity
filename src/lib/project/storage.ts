@@ -46,6 +46,10 @@ export interface ProjectStorage {
    * the project: how much of it there is, for a version of the derivation.
    */
   indexStatus(id: string, version: number): Promise<IndexStatus>;
+  /** The version of the index of a project that was built whole, or undefined: the mark that a build writes when it is done and that a change of the map takes away (nothing is counted, ^1253). */
+  indexedVersion(id: string): Promise<number | undefined>;
+  /** Mark the index of a project as complete for a version. */
+  markIndexed(id: string, version: number): Promise<void>;
   /** The next `limit` segments after the one with id `after`, in the order of their ids. */
   edgesAfter(id: string, after: number, limit: number): Promise<EdgeRow[]>;
   /** Which of these segments have a record of this version. */
@@ -127,6 +131,7 @@ export class MemoryStorage implements ProjectStorage {
     string,
     Map<number, { version: number; node: NodeRow; cell: [number, number] }>
   >();
+  private marks = new Map<string, number>();
 
   async list() {
     return [...this.items.values()].map((p) => ({ id: p.id, file: headerOf(p.file) }));
@@ -215,6 +220,15 @@ export class MemoryStorage implements ProjectStorage {
   private dropIndex(id: string) {
     this.index.delete(id);
     this.cells.delete(id);
+    this.marks.delete(id);
+  }
+
+  async indexedVersion(id: string) {
+    return this.marks.get(id);
+  }
+
+  async markIndexed(id: string, version: number) {
+    this.marks.set(id, version);
   }
 
   async edgesInChunk(id: string, cx: number, cy: number, version: number) {

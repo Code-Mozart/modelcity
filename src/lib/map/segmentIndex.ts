@@ -13,8 +13,8 @@ export const INDEX_VERSION = 2;
 /** A box of more chunks than this is not listed in each of them: the segment is returned for every chunk (`'wide'`). */
 export const MAX_CELLS = 4096;
 
-/** How many segments are made into records, and written, at a time. */
-const PAGE = 500;
+/** How many rows are made into records, and written, at a time (reads are by range, so a big page costs little more than a small one, ^1253). */
+const PAGE = 2000;
 
 const mm = (m: number) => m * 1000;
 /** The chunk that a distance in millimeters is in. */
@@ -49,16 +49,17 @@ export interface BuildOptions {
   /** How many segments have a record, of how many there are. */
   onProgress?: (done: number, total: number) => void;
   version?: number;
+  /** How many rows are made into records, and written, at a time. */
+  page?: number;
 }
 
-/** Whether every segment of a project has a record of the version: counted, not looked at (^1239: the index is trusted where there is one). */
+/** Whether the index of a project was built whole for the version: one read of the mark that the build writes when it is done, nothing is counted or looked at (^1239, ^1253: the index is trusted where there is one). */
 export async function isComplete(
   storage: ProjectStorage,
   project: string,
   version = INDEX_VERSION,
 ) {
-  const { segments, indexed } = await storage.indexStatus(project, version);
-  return segments === indexed;
+  return (await storage.indexedVersion(project)) === version;
 }
 
 /**
@@ -70,24 +71,26 @@ export async function isComplete(
 export async function buildIndex(
   storage: ProjectStorage,
   project: string,
-  { signal, onProgress, version = INDEX_VERSION }: BuildOptions = {},
+  { signal, onProgress, version = INDEX_VERSION, page = PAGE }: BuildOptions = {},
 ) {
   const status = await storage.indexStatus(project, version);
   const total = status.segments + status.nodes;
   let done = status.indexed + status.nodesIndexed;
   const report = (more: number) => onProgress?.((done += more), total);
   onProgress?.(done, total);
-  const run = { storage, project, version, signal, report };
+  // Nothing of it there yet: no need to ask, row by row, which rows have a record.
+  const run = { storage, project, version, signal, report, cold: done === 0 };
   await paged(
     signal,
-    (after) => storage.edgesAfter(project, after, PAGE),
+    (after) => storage.edgesAfter(project, after, page),
     (page) => segmentPage(run, page),
   );
   await paged(
     signal,
-    (after) => storage.nodesAfter(project, after, PAGE),
+    (after) => storage.nodesAfter(project, after, page),
     (page) => nodePage(run, page),
   );
+  await storage.markIndexed(project, version);
 }
 
 interface Run {
@@ -96,15 +99,22 @@ interface Run {
   version: number;
   signal?: AbortSignal;
   report: (more: number) => void;
+  /** Nothing of the index was there when the build began. */
+  cold: boolean;
 }
 
 /** The records of the segments of a page that have none. */
-async function segmentPage({ storage, project, version, signal, report }: Run, page: EdgeRow[]) {
-  const have = await storage.indexedIds(
-    project,
-    page.map((e) => e[0]),
-    version,
-  );
+async function segmentPage(
+  { storage, project, version, signal, report, cold }: Run,
+  page: EdgeRow[],
+) {
+  const have = cold
+    ? new Set<number>()
+    : await storage.indexedIds(
+        project,
+        page.map((e) => e[0]),
+        version,
+      );
   const todo = page.filter((e) => !have.has(e[0]));
   if (todo.length) {
     const ids = new Set(todo.flatMap((e) => [e[1], e[2]]));
@@ -119,12 +129,14 @@ async function segmentPage({ storage, project, version, signal, report }: Run, p
 }
 
 /** The cells of the nodes of a page that have none. */
-async function nodePage({ storage, project, version, report }: Run, page: NodeRow[]) {
-  const have = await storage.indexedNodeIds(
-    project,
-    page.map((n) => n[0]),
-    version,
-  );
+async function nodePage({ storage, project, version, report, cold }: Run, page: NodeRow[]) {
+  const have = cold
+    ? new Set<number>()
+    : await storage.indexedNodeIds(
+        project,
+        page.map((n) => n[0]),
+        version,
+      );
   const todo = page.filter((n) => !have.has(n[0]));
   if (todo.length) await storage.putNodeCells(project, version, todo.map(cellOfNode));
   report(todo.length);

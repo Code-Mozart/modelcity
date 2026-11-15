@@ -2,7 +2,13 @@ import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
 import { describe, expect, it, vi } from 'vitest';
 import { IndexedDbStorage } from '../project/indexedDb';
 import type { ProjectFile } from '../project/file';
-import { MemoryStorage, type EdgeRow, type NodeRow, type ProjectStorage } from '../project/storage';
+import {
+  headerOf,
+  MemoryStorage,
+  type EdgeRow,
+  type NodeRow,
+  type ProjectStorage,
+} from '../project/storage';
 import { file } from '../testing/storageFixtures';
 import { buildIndex, INDEX_VERSION, isComplete, MAX_CELLS, recordOf } from './segmentIndex';
 
@@ -74,7 +80,7 @@ describe.each(storages)('building the segment index: %s', (_name, make) => {
     await s.put({ id: 'r', file: road() });
     expect(await isComplete(s, 'r')).toBe(false);
     const seen: number[] = [];
-    await buildIndex(s, 'r', { onProgress: (done, total) => seen.push(done / total) });
+    await buildIndex(s, 'r', { page: 300, onProgress: (done, total) => seen.push(done / total) });
     expect(await isComplete(s, 'r')).toBe(true);
     expect(seen[0]).toBe(0);
     expect(seen.at(-1)).toBe(1);
@@ -88,6 +94,7 @@ describe.each(storages)('building the segment index: %s', (_name, make) => {
     const control = new AbortController();
     await expect(
       buildIndex(s, 'r', {
+        page: 300,
         signal: control.signal,
         onProgress: (done) => done > 0 && control.abort(),
       }),
@@ -115,5 +122,30 @@ describe.each(storages)('a project that cannot be indexed: %s', (_name, make) =>
     const s = make();
     await s.put({ id: 'r', file: { ...road(), edges: [[0, 0, 5000, null, 1]] } });
     await expect(buildIndex(s, 'r')).rejects.toMatchObject({ hat: '^206' });
+  });
+});
+
+describe.each(storages)('when the index counts as complete (^1253): %s', (_name, make) => {
+  it('only when a build has gone through to its end, and not after the map is changed', async () => {
+    const s = make();
+    await s.put({ id: 'r', file: road() });
+    expect(await isComplete(s, 'r')).toBe(false);
+    const control = new AbortController();
+    await buildIndex(s, 'r', {
+      page: 300,
+      signal: control.signal,
+      onProgress: (d) => d > 0 && control.abort(),
+    }).catch(() => {});
+    expect(await isComplete(s, 'r')).toBe(false);
+    await buildIndex(s, 'r');
+    expect(await isComplete(s, 'r')).toBe(true);
+    expect(await isComplete(s, 'r', INDEX_VERSION + 1)).toBe(false);
+    await s.patch('r', headerOf(file()), {
+      nodes: [[9999, 0, 0, 0]],
+      edges: [],
+      removedNodes: [],
+      removedEdges: [],
+    });
+    expect(await isComplete(s, 'r')).toBe(false);
   });
 });
