@@ -22,6 +22,25 @@ function stats(values: number[]) {
   return { n: values.length, p50: ms(at(0.5)), p95: ms(at(0.95)), max: ms(sorted.at(-1) ?? 0) };
 }
 
+/** The functions with the most time of their own in what `run` does on the main thread (`PROFILE=1`). */
+async function profiled(client: CDPSession, run: () => Promise<unknown>) {
+  await client.send('Profiler.enable');
+  await client.send('Profiler.start');
+  await run();
+  const { profile } = await client.send('Profiler.stop');
+  const byId = new Map(profile.nodes.map((n) => [n.id, n]));
+  const self = new Map<string, number>();
+  profile.samples?.forEach((id, i) => {
+    const frame = byId.get(id)!.callFrame;
+    const key = `${frame.functionName || '(anonymous)'} ${frame.url.split('/').pop()}:${frame.lineNumber}`;
+    self.set(key, (self.get(key) ?? 0) + (profile.timeDeltas[i] ?? 0) / 1000);
+  });
+  return [...self.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 16)
+    .map(([k, v]) => `${ms(v)} ms ${k}`);
+}
+
 async function heapMb(client: CDPSession) {
   await client.send('HeapProfiler.collectGarbage');
   return mb((await client.send('Runtime.getHeapUsage')).usedSize);
@@ -143,6 +162,14 @@ async function pan(page: Page) {
   };
 }
 
+/** The pan, and with `PROFILE=1` the functions that took the most time while it went on. */
+async function profiledPan(client: CDPSession, page: Page) {
+  if (!process.env.PROFILE) return { pan: await pan(page), top: [] as string[] };
+  let result: Awaited<ReturnType<typeof pan>> | undefined;
+  const top = await profiled(client, async () => (result = await pan(page)));
+  return { pan: result!, top };
+}
+
 test(`the chunked map with ${NODES} nodes`, async ({ page }) => {
   const client = await page.context().newCDPSession(page);
   await page.goto('./');
@@ -155,7 +182,8 @@ test(`the chunked map with ${NODES} nodes`, async ({ page }) => {
   await page.reload();
   const first = await firstView(page);
   const heapAfterFirstViewMb = await heapMb(client);
-  const panned = await pan(page);
+  const profile = await profiledPan(client, page);
+  const panned = profile.pan;
   const out = {
     nodes: NODES,
     spacing: SPACING_M,
@@ -163,6 +191,7 @@ test(`the chunked map with ${NODES} nodes`, async ({ page }) => {
     storageMb,
     ...first,
     pan: panned,
+    ...(profile.top.length ? { profile: profile.top } : {}),
     heapAfterFirstViewMb,
     heapAfterPanMb: await heapMb(client),
   };

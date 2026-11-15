@@ -111,26 +111,39 @@ function drawLoading(f: Frame, b: Box, progress: number, pal: Palette) {
   );
 }
 
-function drawNodes(f: Frame, nodes: readonly NodeRow[], pal: Palette) {
+/** The node dots: one path, one fill and one stroke for all, and the projection worked out once (^1249: it was a call and two objects for each node, and a read through a proxy of the view for each number). */
+function drawNodes(f: Frame, chunks: readonly (readonly NodeRow[])[], pal: Palette) {
   const { ctx, view, size } = f;
+  const [cos, sin] = [Math.cos(view.rot), Math.sin(view.rot)];
+  const [ox, oy] = [size.width / 2, size.height / 2];
+  const [reach_x, reach_y] = [size.width + NODE_RADIUS_PX, size.height + NODE_RADIUS_PX];
   ctx.fillStyle = pal.ink;
   ctx.strokeStyle = pal.bg;
   ctx.lineWidth = 1.5;
-  for (const [, x, y] of nodes) {
-    const p = worldToScreen(view, size, { x: x / 1000, y: y / 1000 });
-    if (p.x < -10 || p.y < -10 || p.x > size.width + 10 || p.y > size.height + 10) continue;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, NODE_RADIUS_PX, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.stroke();
+  ctx.beginPath();
+  for (const nodes of chunks) {
+    for (const n of nodes) {
+      const [dx, dy] = [n[1] / 1000 - view.cx, n[2] / 1000 - view.cy];
+      const sx = (dx * cos - dy * sin) * view.scale + ox;
+      const sy = (dx * sin + dy * cos) * view.scale + oy;
+      if (sx < -NODE_RADIUS_PX || sy < -NODE_RADIUS_PX || sx > reach_x || sy > reach_y) continue;
+      ctx.moveTo(sx + NODE_RADIUS_PX, sy);
+      ctx.arc(sx, sy, NODE_RADIUS_PX, 0, 2 * Math.PI);
+    }
   }
+  ctx.fill();
+  ctx.stroke();
 }
 
 /** The map: the chunks that are not loaded, the curves of the segments, and the nodes of the chunks that are loaded. */
 export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
   for (const c of scene.chunks) if (!c.nodes) drawLoading(f, c.box, c.progress, pal);
   drawCurves(f, scene.edges, pal);
-  for (const c of scene.chunks) if (c.nodes) drawNodes(f, c.nodes, pal);
+  drawNodes(
+    f,
+    scene.chunks.flatMap((c) => (c.nodes ? [c.nodes] : [])),
+    pal,
+  );
   if (scene.tooMuch)
     text(
       f.ctx,

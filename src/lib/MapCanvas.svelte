@@ -77,7 +77,12 @@
 
   // Redraw whenever the camera or the map in memory changes.
   $effect(() => {
-    const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
+    // A plain copy of the view: the numbers are read for every node, and reading them through the state of the camera is slow (^1249).
+    const frame = {
+      ctx: canvas.getContext('2d')!,
+      view: { ...camera.view },
+      size: { ...camera.size },
+    };
     render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
   });
 

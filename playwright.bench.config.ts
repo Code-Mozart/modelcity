@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 /**
  * The measurements of the chunked map in a real browser (`bun run bench`, ^1249): never part of CI.
  * They run on the production build (a dev build is much slower in the reactivity of Svelte), with
- * the test hook switched on.
+ * the test hook switched on and the names of the functions kept, for the profile.
  */
 export default defineConfig({
   testDir: 'bench',
@@ -17,7 +17,8 @@ export default defineConfig({
     launchOptions: { args: ['--enable-precise-memory-info'] },
   },
   webServer: {
-    command: 'VITE_TEST_HOOK=1 bun run build && bunx vite preview --port 4174 --strictPort',
+    command:
+      'VITE_TEST_HOOK=1 bunx vite build --minify false && bunx vite preview --port 4174 --strictPort --base /modelcity/',
     url: 'http://localhost:4174/modelcity/',
     reuseExistingServer: false,
     timeout: 120_000,
