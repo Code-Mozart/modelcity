@@ -1,12 +1,14 @@
 export const DB = 'modelcity';
 /** The version of the database (^1250): it only says which stores and indexes there are, the version of what a project is is in its header. */
-export const DB_VERSION = 4;
-export const [PROJECTS, NODES, EDGES, SEGMENTS, CELLS] = [
+export const DB_VERSION = 5;
+export const [PROJECTS, NODES, EDGES, SEGMENTS, CELLS, NODE_BLOCKS, EDGE_BLOCKS] = [
   'projects',
   'nodes',
   'edges',
   'segments',
   'nodecells',
+  'nodeblocks',
+  'edgeblocks',
 ];
 
 /** Make the stores and indexes that a database of an older version lacks, and take away those that are not used any more. */
@@ -32,5 +34,12 @@ export function upgrade(db: IDBDatabase, tx: IDBTransaction) {
     const cells = db.createObjectStore(CELLS, { keyPath: ['p', 'id'] });
     cells.createIndex('cell', 'cell');
     cells.createIndex('version', ['p', 'v']);
+  }
+  // The rows of a project in blocks (^1254); `nodes` and `edges` are the rows of the layout before, read once when such a project is opened.
+  if (!db.objectStoreNames.contains(NODE_BLOCKS))
+    db.createObjectStore(NODE_BLOCKS, { keyPath: ['p', 'id'] });
+  if (!db.objectStoreNames.contains(EDGE_BLOCKS)) {
+    const edges = db.createObjectStore(EDGE_BLOCKS, { keyPath: ['p', 'id'] });
+    edges.createIndex('ends', 'ends', { multiEntry: true });
   }
 }
