@@ -30,7 +30,13 @@ describe('the map of the benchmarks (^1249, ^1253)', () => {
   );
 
   it('every segment joins two nodes that exist, and no two have the same id', () => {
-    const file = JSON.parse(makeMapText(5000, 40)) as { nodes: number[][]; edges: number[][] };
+    const file = JSON.parse(makeMapText(5000, 40)) as {
+      nodes: number[][];
+      edges: number[][];
+      nextNodeId: number;
+      nextEdgeId: number;
+    };
+    expect([file.nextNodeId, file.nextEdgeId]).toEqual([file.nodes.length, file.edges.length]);
     const ids = new Set(file.nodes.map((n) => n[0]));
     expect(ids.size).toBe(file.nodes.length);
     expect(file.edges.every(([, a, b]) => ids.has(a!) && ids.has(b!))).toBe(true);

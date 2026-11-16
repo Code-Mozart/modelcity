@@ -21,6 +21,7 @@ are what take the time). The disk needs about 1.6 KB per node while it runs; the
 at the end. After each size the report so far is written to `bench/out/report-<date>.md`
 (and `.json`). **Send me that `.md` file.**
 
+- **The log:** every run writes `bench/out/progress-<date>.log` while it goes (also to the screen): what it is doing, every 5 seconds the rows imported, the index progress, the chunks and the JS heap, errors of the page, and a line when the page does not answer. If a run hangs, send me that file (the last lines say where).
 - `SIZES=100000` to try it with a small map first.
 - `HEADLESS=1` runs without a window (software drawing: the numbers are about the machine's CPU,
   not its GPU).

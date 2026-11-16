@@ -34,6 +34,14 @@ export interface ProjectStorage {
   load(id: string): Promise<unknown>;
   /** Write a whole project, replacing what was there. */
   put(project: StoredProject): Promise<void>;
+  /**
+   * Add rows to the map of a project that is being made (^1256): it has no header yet, so it is not
+   * in the list, until `create` is called. A row whose id is there already makes the call fail with
+   * an error named `ConstraintError`, and nothing of that call is written.
+   */
+  append(id: string, rows: { nodes: NodeRow[]; edges: EdgeRow[] }): Promise<void>;
+  /** Give a project whose rows were appended its header: from now on it is a project of the list. */
+  create(id: string, header: Header): Promise<void>;
   /** Write the header of a stored project and, if given, what changed on its map. Only that is written. */
   patch(id: string, header: Header, change?: MapChange): Promise<void>;
   remove(id: string): Promise<void>;
@@ -132,6 +140,7 @@ export class MemoryStorage implements ProjectStorage {
     Map<number, { version: number; node: NodeRow; cell: [number, number] }>
   >();
   private marks = new Map<string, number>();
+  private staged = new Map<string, { nodes: NodeRow[]; edges: EdgeRow[] }>();
 
   async list() {
     return [...this.items.values()].map((p) => ({ id: p.id, file: headerOf(p.file) }));
@@ -153,6 +162,28 @@ export class MemoryStorage implements ProjectStorage {
     this.cells.delete(project.id);
   }
 
+  async append(id: string, rows: { nodes: NodeRow[]; edges: EdgeRow[] }) {
+    const held = this.staged.get(id) ?? { nodes: [], edges: [] };
+    for (const key of ['nodes', 'edges'] as const) {
+      const seen = new Set(held[key].map((r) => r[0]));
+      for (const r of rows[key]) {
+        if (seen.has(r[0]))
+          throw Object.assign(new Error('two rows have the same id'), { name: 'ConstraintError' });
+        seen.add(r[0]);
+      }
+    }
+    this.staged.set(id, {
+      nodes: [...held.nodes, ...structuredClone(rows.nodes)],
+      edges: [...held.edges, ...structuredClone(rows.edges)],
+    });
+  }
+
+  async create(id: string, header: Header) {
+    const rows = this.staged.get(id) ?? { nodes: [], edges: [] };
+    this.staged.delete(id);
+    await this.put({ id, file: { ...structuredClone(header), ...rows } });
+  }
+
   /** A change of the map makes the segment index of the project stale: it is thrown away (until the edits keep it current, ^1243). */
   async patch(id: string, header: Header, change?: MapChange) {
     const p = this.items.get(id);
@@ -170,6 +201,7 @@ export class MemoryStorage implements ProjectStorage {
 
   async remove(id: string) {
     this.items.delete(id);
+    this.staged.delete(id);
     this.dropIndex(id);
   }
 

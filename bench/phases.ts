@@ -1,25 +1,35 @@
 import type { CDPSession, Page } from '@playwright/test';
 import { mb, ms, stats } from './helpers';
-import { makeMapText } from './makeMap';
+import { mapSource } from './makeMap';
 
 /** The steps of the measurement of the chunked map (^1249, ^1251), each in the page of the app. */
 
-/** Import the map like a file: the time of the import, and of the build of the index. */
+/** Import the map like a file, made in pieces as it is read (^1256): the time of the import, and of the build of the index. */
 export async function importPhase(page: Page, nodes: number, spacing: number) {
   const done = await page.evaluate(
     async ({ make, count, space }) => {
       const hook = window.__modelcity!;
-      const text = (0, eval)(`(${make})`)(count, space) as string;
+      const pieces = (0, eval)(make)(count, space) as Generator<string>;
+      let chars = 0;
+      async function* source() {
+        for (const piece of pieces) {
+          chars += piece.length;
+          yield piece;
+          // Let the page breathe: the log of the benchmark asks it how far it is.
+          await new Promise((r) => setTimeout(r));
+        }
+      }
       const t0 = performance.now();
-      await hook.session.importText(text);
+      await hook.session.importPieces(source());
       const t1 = performance.now();
+      if (hook.session.error) throw new Error(`the import was refused: ${hook.session.error}`);
       while (hook.index.status !== 'ready') {
         if (hook.index.status === 'failed') throw new Error(hook.index.error ?? 'failed');
         await new Promise((r) => setTimeout(r, 50));
       }
-      return { fileMb: text.length / 1e6, importMs: t1 - t0, indexMs: performance.now() - t1 };
+      return { fileMb: chars / 1e6, importMs: t1 - t0, indexMs: performance.now() - t1 };
     },
-    { make: makeMapText.toString(), count: nodes, space: spacing },
+    { make: mapSource(), count: nodes, space: spacing },
   );
   return {
     fileMb: mb(done.fileMb * 1e6),

@@ -3,21 +3,15 @@ import type { ModalTarget } from './modalHints';
 import type { Camera } from '../camera/camera.svelte';
 import type { Editor } from '../editor/editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
-import {
-  cameraOf,
-  exportText,
-  ProjectFileError,
-  type CameraState,
-  type Project,
-  type ProjectFile,
-} from './file';
+import { cameraOf, exportText, ProjectFileError, type CameraState, type Project } from './file';
 import { lastId, remember, uid } from './browserMemory';
 import { download, exportName } from './download';
 import { openStored } from './open';
 import { headerFor, persist } from './persist';
-import { parseProject } from './migrate';
+import { importStream, type ImportProgress } from './streamImport';
+import { piecesOfFile, piecesOfText } from './textPieces';
 import type { ToastKind } from '../ui/toasts.svelte';
-import { headerOf, type Header, type ProjectStorage, type StoredHeader } from './storage';
+import { type Header, type ProjectStorage, type StoredHeader } from './storage';
 
 /** How long after a change the project is saved to the browser (^166). */
 export const AUTOSAVE_MS = 400;
@@ -58,6 +52,8 @@ export class ProjectSession {
   wantsImport = $state(false);
   /** True while a rename is written: the modal does not react meanwhile. */
   busy = $state(false);
+  /** The rows of a file that is being imported, written so far (^1256); null when none is. */
+  importing = $state<ImportProgress | null>(null);
   private createdAt = '';
   private lastUpdatedAt = '';
   private saved: Graph | null = null;
@@ -234,14 +230,23 @@ export class ProjectSession {
     this.closeModal();
   }
 
-  /** A project made of a file (^164): stored as it is, and opened without its map (^1236). */
-  private async adopt(file: ProjectFile) {
+  /** A project made of a file (^164): its map is written to the storage as it is read (^1256), and opened without its map (^1236). */
+  private async adopt(pieces: AsyncIterable<string>) {
     await this.flush();
     // Opening a file is not a change of the map: the project keeps the dates of the file (^214).
     const id = uid();
-    await this.storage.put({ id, file });
-    this.enter(id, headerOf(file));
-    await this.refresh();
+    this.importing = { nodes: 0, edges: 0 };
+    try {
+      const header = await importStream(this.storage, id, pieces, (p) => (this.importing = p));
+      this.enter(id, header);
+      await this.refresh();
+      return header;
+    } catch (e) {
+      await this.storage.remove(id).catch(() => undefined);
+      throw e;
+    } finally {
+      this.importing = null;
+    }
   }
 
   async open(id: string) {
@@ -267,16 +272,8 @@ export class ProjectSession {
   }
 
   /** Open a project from a file the user picked; one that cannot be read is refused like one that is no project (^208). */
-  async importFile(file: { text(): Promise<string> }) {
-    if (!this.mayLeave()) return;
-    let text: string;
-    try {
-      text = await file.text();
-    } catch (e) {
-      this.refuse(unreadable(e));
-      return;
-    }
-    await this.importText(text);
+  async importFile(file: Parameters<typeof piecesOfFile>[0]) {
+    if (this.mayLeave()) await this.importPieces(piecesOfFile(file));
   }
 
   /** The user is told in a word, the console gets the details (^209). */
@@ -285,13 +282,17 @@ export class ProjectSession {
     this.error = e.message;
   }
 
-  /** Open a project from the text of a file as a new project of the browser (^164). A refusal tells the user in a word, the console the details (^209). */
-  async importText(text: string) {
+  /** Open a project from the text of a file as a new project of the browser (^164). */
+  importText(text: string) {
+    return this.importPieces(piecesOfText(text));
+  }
+
+  /** Open a project from a file that arrives in pieces: a refusal tells the user in a word, the console the details (^209). */
+  async importPieces(pieces: AsyncIterable<string>) {
     try {
-      const file = parseProject(text);
-      await this.adopt(file);
+      const header = await this.adopt(pieces);
       this.error = null;
-      this.notify('success', `imported ${file.title}`);
+      this.notify('success', `imported ${header.title}`);
       this.closeModal();
     } catch (e) {
       this.refuse(e instanceof ProjectFileError ? e : unreadable(e));

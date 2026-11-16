@@ -10,6 +10,7 @@ import {
   openPhase,
   storageMb,
 } from './phases';
+import { openLog } from './log';
 import { machineInfo, markdown, type Machine, type SizeResult } from './report';
 
 /**
@@ -34,7 +35,9 @@ const ARGS = [
   '--ignore-gpu-blocklist',
 ];
 
-const say = (text: string) => console.log(`[bench ${new Date().toLocaleTimeString()}] ${text}`);
+const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+const log = openLog(stamp);
+const say = log.say;
 
 /** The steps of one size of map, each saved into `result` as it is done (so that a failure in the middle keeps what came before). */
 async function steps(context: BrowserContext, page: Page, nodes: number, result: SizeResult) {
@@ -64,11 +67,13 @@ async function measure(nodes: number): Promise<{ result: SizeResult; machine: Ma
     viewport: { width: 1200, height: 800 },
   });
   const page = context.pages()[0] ?? (await context.newPage());
+  const stop = log.watch(page, `${nodes}`);
   const result: SizeResult = { nodes };
   await steps(context, page, nodes, result).catch((e: unknown) => {
     result.error = e instanceof Error ? e.message.split('\n')[0] : String(e);
     say(`${nodes}: failed: ${result.error}`);
   });
+  stop();
   const machine = await machineInfo(page, HEADLESS).catch(() => null);
   await context.close();
   rmSync(dir, { recursive: true, force: true });
@@ -77,7 +82,7 @@ async function measure(nodes: number): Promise<{ result: SizeResult; machine: Ma
 
 test(`the chunked map at ${SIZES.join(', ')} nodes`, async () => {
   test.setTimeout(0);
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  say(`the log of this run is ${log.file}; send it with the report, or alone if the run hangs`);
   const results: SizeResult[] = [];
   let machine: Machine | null = null;
   mkdirSync('bench/out', { recursive: true });

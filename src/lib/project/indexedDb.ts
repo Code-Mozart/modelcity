@@ -91,6 +91,20 @@ export class IndexedDbStorage implements ProjectStorage {
     await done(tx);
   }
 
+  async append(id: string, rows: { nodes: NodeRow[]; edges: EdgeRow[] }) {
+    const tx = await this.tx('readwrite');
+    const [nodes, edges] = [tx.objectStore(NODES), tx.objectStore(EDGES)];
+    rows.nodes.forEach((n) => nodes.add(node(id, n)));
+    rows.edges.forEach((e) => edges.add(edge(id, e)));
+    await done(tx);
+  }
+
+  async create(id: string, header: Header) {
+    const tx = await this.tx('readwrite');
+    tx.objectStore(PROJECTS).put({ id, header });
+    await done(tx);
+  }
+
   async patch(id: string, header: Header, change?: MapChange) {
     const tx = await this.tx('readwrite');
     const r = await request<Stored | undefined>(tx.objectStore(PROJECTS).get(id));

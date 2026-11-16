@@ -167,3 +167,11 @@ So a put costs about 65 microseconds whatever it is given, and only the number o
 | Read of one chunk (median) | 179 ms | 129 ms |
 
 What is left is the number of puts: 4,250,000 rows (2,000,000 nodes, 2,250,000 segments) for the import and as many records for the index. Blocks of rows (^1254) are the only thing that changes that.
+
+### Streaming import and the log of the benchmark (^1256)
+
+The import used to hold the whole file at once: its text, the parsed object, the checked copy, and one transaction with every row. At 800,000 nodes that is hundreds of megabytes (and the benchmark made the whole text in a string, which cannot be longer than about 512 MB: 2,000,000 nodes do not fit). Now `project/jsonRows.ts` reads the text in pieces of about 1 MB and gives the rows of `nodes` and `edges` in batches of 5,000, `project/streamImport.ts` checks each row and writes the batch (`ProjectStorage.append`) and creates the project (`create`, which gives it its header, so it appears in the list) when all is read and checked. In memory at any time: one piece, one batch, the set of node ids (for the checks of the segments' ends) and the ends of the segments as numbers, never the rows. A file that is refused is removed again (`remove`). The checks and their hats are those of `readProject` (^229); the ones that need the whole map (^204 to ^207) are made at the end. Measured (100,000 nodes, headless): the JS heap stays at 5 to 12 MB while importing (it was the size of the file several times), the time is the same (15 s: the puts are the floor, ^1253).
+
+Left to do: a project whose import is stopped by closing the tab leaves rows without a header in the browser (they are not listed); cleaning those up is not built.
+
+The benchmark makes its map in pieces, too (`bench/makeMap.ts`), and writes a log line by line to `bench/out/progress-*.log`: what it is doing, and every 5 seconds what the page says (rows imported, index progress, chunks, JS heap), errors and crashes of the page, and a line when the page does not answer. A run that hangs shows where in that file.
