@@ -62,7 +62,7 @@ describe('the map in memory (^1238, ^1241)', () => {
   it('reads a few chunks at the same time, the next one when one is done', async () => {
     const { storage, memory } = await held();
     memory.open('p');
-    memory.show(row(0, 9));
+    memory.show(row(0, 2 * PARALLEL_READS));
     await flush();
     expect(storage.started).toHaveLength(PARALLEL_READS);
     storage.release(storage.started[0]!);
@@ -76,7 +76,9 @@ describe('the map in memory (^1238, ^1241)', () => {
     memory.show(row(0, 8));
     await flush();
     expect(storage.started[0]).toBe('4,0');
-    expect(new Set(storage.started)).toEqual(new Set(['4,0', '3,0', '5,0', '2,0']));
+    expect(new Set(storage.started.slice(0, 5))).toEqual(
+      new Set(['4,0', '3,0', '5,0', '2,0', '6,0']),
+    );
   });
 });
 

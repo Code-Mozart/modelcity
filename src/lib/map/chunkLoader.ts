@@ -46,7 +46,7 @@ export class ChunkLoader {
     const here = new Set(nodes.map((n) => n[0]));
     const away = new Set<number>();
     for (const e of edges) for (const end of [e[1], e[2]]) if (!here.has(end)) away.add(end);
-    const ends = await this.storage.nodesByIds(this.project, [...away]);
+    const ends = away.size ? await this.storage.nodesByIds(this.project, [...away]) : [];
     onProgress?.(1);
     return { id, nodes, edges, ends };
   }

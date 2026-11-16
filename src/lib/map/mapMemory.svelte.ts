@@ -8,7 +8,7 @@ import { countOf, idsWhere, rangeOfIds, type ChunkRange } from './chunks';
 /** More chunks than this are not loaded: so much of the map at once needs a level of detail that is not built yet (^1238). */
 export const MAX_CHUNKS = 400;
 /** How many chunks are read at the same time. */
-export const PARALLEL_READS = 4;
+export const PARALLEL_READS = 12;
 /** How many rows (nodes and segments) the chunks that are loaded may hold: provisional, to be set by measuring memory (^1246). */
 export const ROW_BUDGET = 500_000;
 /** What an eviction frees: the loaded chunks are let go down to this share of the budget, so that a chunk at the edge does not load and unload on every frame. */

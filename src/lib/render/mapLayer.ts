@@ -100,12 +100,20 @@ function drawLoading(f: Frame, b: Box, progress: number, pal: Palette) {
   ctx.globalAlpha = 1;
   const [a, c] = [quad[0]!, quad[2]!];
   if (Math.hypot(c.x - a.x, c.y - a.y) < RING_MIN_PX * Math.SQRT2) return;
-  // In the middle of the chunk, but where it can be seen if the middle is off the screen.
-  const inside = (v: number, side: number) =>
-    Math.min(Math.max(v, RING_INSET_PX), side - RING_INSET_PX);
+  // In the middle of the part of the chunk that is on the screen, so that the rings of the chunks at the edge do not pile up.
+  const mid = (lo: number, hi: number, side: number) => {
+    const [from, to] = [Math.max(lo, 0), Math.min(hi, side)];
+    const v = from < to ? (from + to) / 2 : (lo + hi) / 2;
+    return Math.min(Math.max(v, RING_INSET_PX), side - RING_INSET_PX);
+  };
+  const xs = quad.map((q) => q.x);
+  const ys = quad.map((q) => q.y);
   drawRing(
     f,
-    { x: inside((a.x + c.x) / 2, f.size.width), y: inside((a.y + c.y) / 2, f.size.height) },
+    {
+      x: mid(Math.min(...xs), Math.max(...xs), f.size.width),
+      y: mid(Math.min(...ys), Math.max(...ys), f.size.height),
+    },
     progress,
     pal,
   );
