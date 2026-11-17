@@ -15,7 +15,7 @@ const SPACING_PX = 72;
 const MARGIN_PX = 12;
 
 /** Trace pieces that follow each other into the current path of the canvas. */
-function trace(f: Frame, pieces: Piece[]) {
+export function trace(f: Frame, pieces: Piece[]) {
   const first = pieces[0];
   if (!first) return;
   const a = worldToScreen(f.view, f.size, first.P);

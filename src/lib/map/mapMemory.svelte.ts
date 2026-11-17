@@ -68,6 +68,8 @@ export class MapMemory {
   private rows = 0;
   /** Chunks that must stay whatever the budget says: those with changes that are not saved yet, those of selected and pinned nodes (^1246). */
   readonly pinned = new SvelteSet<string>();
+  /** Said when the pinned chunks alone are more than the budget: nothing more can be let go, so the one who pinned them has to let them go (^1257). */
+  onSqueezed: (() => void) | null = null;
   /** Counts the projects that were open: what a read of an earlier one finds is let go. */
   private generation = 0;
 
@@ -102,7 +104,8 @@ export class MapMemory {
     this.tooMuch = countOf(range) > 4 * MAX_CHUNKS || ids.length > MAX_CHUNKS;
     if (!this.loader || this.tooMuch) return;
     this.wanted.clear();
-    ids.forEach((id) => this.wanted.add(id));
+    // The chunks of what is selected stay asked for, far from the view as they may be (^1257).
+    [...ids, ...this.pinned].forEach((id) => this.wanted.add(id));
     for (const [id, state] of this.chunks) {
       if (state.status === 'loading' && !this.wanted.has(id)) this.drop(id);
     }
@@ -159,6 +162,7 @@ export class MapMemory {
     }
     this.tooMuch = this.rows > this.budgetRows;
     if (this.tooMuch) this.queue = [];
+    if (this.tooMuch && this.pinned.size > 0) this.onSqueezed?.();
   }
 
   private waiting = (id: string) =>

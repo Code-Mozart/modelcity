@@ -82,6 +82,25 @@ describe('what stays, and what comes back (^1246)', () => {
     expect(ready()).toContain('0,0');
   });
 
+  it('keeps a pinned chunk asked for: it is read though it is far from the view (^1257)', async () => {
+    const { memory, ask, ready } = await loaded();
+    memory.pinned.add('7,0');
+    await ask(0);
+    expect(ready()).toEqual(['0,0', '7,0']);
+  });
+
+  it('says so when the pinned chunks alone are more than the budget, and not otherwise (^1257)', async () => {
+    const { memory, ask } = await loaded();
+    let said = 0;
+    memory.onSqueezed = () => said++;
+    memory.pinned.add('0,0');
+    await ask(0);
+    expect(said).toBe(0);
+    for (const id of ['1,0', '2,0', '3,0']) memory.pinned.add(id);
+    await ask(0);
+    expect(said).toBeGreaterThan(0);
+  });
+
   it('reads a chunk again that was let go and is asked for again', async () => {
     const { ask, ready } = await loaded();
     for (const cx of [0, 1, 2, 3]) await ask(cx);

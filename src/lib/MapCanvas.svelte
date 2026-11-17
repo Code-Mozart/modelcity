@@ -8,6 +8,10 @@
   import type { FrameStats } from './hud/frameStats.svelte';
   import { curveOf, type SkeletonEdge } from './map/curve';
   import type { Point } from './camera/view';
+  import type { Editor } from './editor/editor.svelte';
+  import { SelectPress } from './editor/selectPress';
+  import { marksOf } from './render/marksOf';
+  import type { EdgeRow } from './project/storage';
   import type { ControlId } from './hints/hints';
   import { boxOfId, CHUNK_M, countOf, idsWhere } from './map/chunks';
   import { chunksInView, overlapsView } from './map/inView';
@@ -16,10 +20,16 @@
   let {
     camera,
     memory,
+    editor,
     frames,
     onUse,
-  }: { camera: Camera; memory: MapMemory; frames: FrameStats; onUse: (id: ControlId) => void } =
-    $props();
+  }: {
+    camera: Camera;
+    memory: MapMemory;
+    editor: Editor;
+    frames: FrameStats;
+    onUse: (id: ControlId) => void;
+  } = $props();
 
   const LINE_PX = 16;
   const PAGE_PX = 400;
@@ -38,6 +48,8 @@
   // The chunks the screen touches and one ring round them are asked for (^1238).
   $effect(() => {
     void memory.project;
+    // The chunks of the selection are asked for as well (^1257): they change with the selection.
+    void memory.pinned.size;
     const range = chunksInView(camera.view, camera.size, CHUNK_M);
     const near = overlapsView(camera.view, camera.size, CHUNK_M);
     untrack(() => void memory.show(range, near));
@@ -64,20 +76,34 @@
   );
 
   /** The segments of the chunks that are loaded, each once; what the progress of a chunk does is not looked at here. */
-  const edges = $derived.by(() => {
-    const found = new SvelteMap<number, SkeletonEdge>();
+  const found = $derived.by(() => {
+    const out = new SvelteMap<number, { row: EdgeRow; edge: SkeletonEdge }>();
     for (const id of seen ?? []) {
       const state = memory.chunks.get(id);
       if (state?.status !== 'ready') continue;
       for (const row of state.chunk.edges) {
         const [p, q] = [memory.index.nodeOf(row[1]), memory.index.nodeOf(row[2])];
-        if (p && q && !found.has(row[0])) found.set(row[0], curveOf(row, p, q));
+        if (p && q && !out.has(row[0])) out.set(row[0], { row, edge: curveOf(row, p, q) });
       }
     }
-    return [...found.values()];
+    return out;
   });
+  const edges = $derived([...found.values()].map((f) => f.edge));
 
-  const scene = $derived({ chunks: chunkViews, edges, tooMuch: seen === null || memory.tooMuch });
+  const marks = $derived(
+    marksOf(
+      { selection: editor.selection, hover: editor.hover, band: editor.band },
+      { nodes: chunkViews.flatMap((c) => (c.nodes ? [c.nodes] : [])), edges: found },
+      memory.index.nodeOf,
+    ),
+  );
+
+  const scene = $derived({
+    chunks: chunkViews,
+    edges,
+    marks,
+    tooMuch: seen === null || memory.tooMuch,
+  });
 
   // Redraw whenever the camera or the map in memory changes.
   $effect(() => {
@@ -104,12 +130,20 @@
     camera.zoomWheel(e.deltaY * unit * (e.ctrlKey ? PINCH_BOOST : 1), localPoint(e));
   }
 
+  const press = $derived(
+    new SelectPress(editor, {
+      map: () => ({ chunks: memory.chunks, nodeOf: memory.index.nodeOf }),
+      screen: () => ({ view: camera.view, size: camera.size }),
+    }),
+  );
+
   function onPointerDown(e: PointerEvent) {
     canvas.setPointerCapture(e.pointerId);
     const at = localPoint(e);
     camera.cursor = at;
     if (e.pointerType === 'touch') camera.touchDown(e.pointerId, at);
     else if (e.button === 0 && camera.rotating) camera.compassClick(at);
+    else if (e.button === 0 && editor.mode === 'select') press.down(at, e.shiftKey);
     else if (e.button === 1) camera.startRotate(at);
     else if (e.button === 2) camera.startPan(at);
   }
@@ -120,12 +154,18 @@
     if (e.pointerType === 'touch' && camera.touchMove(e.pointerId, at)) return;
     if (camera.rotating) camera.moveRotate(at);
     else if (camera.panning) camera.movePan(at);
+    else if (press.active) press.move(at);
+    else if (editor.mode === 'select') editor.hover = press.pickAt(at, e.pointerType === 'touch');
   }
 
   function onPointerUp(e: PointerEvent) {
     if (e.pointerType === 'touch') camera.touchUp(e.pointerId);
-    else if (e.button === 0) camera.releaseChip();
-    else if (e.button === 1) {
+    else if (e.button === 0) {
+      camera.releaseChip();
+      const did = press.up();
+      if (did === 'click') onUse('select');
+      else if (did === 'box') onUse('box');
+    } else if (e.button === 1) {
       camera.endRotate();
       onUse('rotate');
     } else if (e.button === 2 && camera.endPan()) onUse('pan');
@@ -146,6 +186,7 @@
   onpointermove={onPointerMove}
   onpointerup={onPointerUp}
   onpointercancel={onPointerUp}
+  onpointerleave={() => (editor.hover = null)}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
   oncontextmenu={(e) => e.preventDefault()}
 ></canvas>

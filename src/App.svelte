@@ -4,10 +4,14 @@
   import { Camera } from './lib/camera/camera.svelte';
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
+  import { editorKey } from './lib/editor/keys';
+  import { SelectionPins } from './lib/editor/pins';
   import Hints from './lib/hints/Hints.svelte';
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
   import { appHints } from './lib/hints/appControls';
+  import { selectHints } from './lib/hints/selectControls';
+  import { selectFactsOf } from './lib/hints/selectFacts';
   import { Usage } from './lib/hints/usage.svelte';
   import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
@@ -29,6 +33,7 @@
   const editor = new Editor();
   const camera = new Camera();
   const toasts = new Toasts();
+  editor.told = (kind, text) => toasts.show(kind, text);
   // The version and the moniker show at load and after a while without input (^787); the tab says it too (^788).
   const banner = new VersionBanner();
   document.title = TAB_TITLE;
@@ -55,6 +60,28 @@
     untrack(() => memory.open(id));
   });
 
+  // The chunks of the selected nodes stay in memory (^1257); if there is no room for them the selection goes, and the user is told.
+  const pins = new SelectionPins();
+  memory.onSqueezed = () => {
+    editor.dropSelection();
+    toasts.show(
+      'warning',
+      'The selection was cleared: the memory has no room for all the selected nodes.',
+    );
+  };
+  $effect(() => {
+    const sel = editor.selection;
+    untrack(() => {
+      const chunks = pins.pinnedFor(sel, memory.index.nodeOf);
+      for (const id of memory.pinned) if (!chunks.has(id)) memory.pinned.delete(id);
+      for (const id of chunks) memory.pinned.add(id);
+    });
+  });
+  $effect(() => {
+    void memory.project;
+    untrack(() => pins.reset());
+  });
+
   // Save the camera once it rests, if it moved (^236).
   $effect(() => {
     void camera.view;
@@ -73,7 +100,7 @@
   const hints = $derived(
     session.modalOpen
       ? modalHints(session.row?.mode ?? 'list', session.over)
-      : appHints(usage.hidden),
+      : [...selectHints(selectFactsOf(editor), usage.hidden), ...appHints(usage.hidden)],
   );
 
   /** The keys of the projects: `Ctrl+S` saves, `Ctrl+Shift+S` exports, `P` and `Ctrl+O` open (^168, ^222, ^223, ^226, ^746). */
@@ -105,7 +132,10 @@
       void index.rebuild();
       return e.preventDefault();
     }
-    if (projectKey(e) || camera.key(e.key)) e.preventDefault();
+    if (projectKey(e) || camera.key(e.key)) return e.preventDefault();
+    const action = editorKey(editor, e);
+    if (action === 'view') usage.mark('view');
+    if (action) e.preventDefault();
   }
 </script>
 
@@ -117,7 +147,7 @@
 />
 
 <main>
-  <MapCanvas {camera} {memory} {frames} onUse={(id) => usage.mark(id)} />
+  <MapCanvas {camera} {memory} {editor} {frames} onUse={(id) => usage.mark(id)} />
   <IndexPanel build={index} title={session.title} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />

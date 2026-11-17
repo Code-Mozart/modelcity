@@ -11,6 +11,8 @@ test('the app opens an empty map: a canvas, the projects, no error', async ({ pa
   expect(await app.nodes()).toEqual([]);
   const hints = await page.getByLabel('Controls').locator('li').allInnerTexts();
   expect(hints.map((h) => h.replace(/\s+/g, ' ').trim())).toEqual([
+    'Tab view mode',
+    'select',
     'pan',
     'zoom',
     'rotate',

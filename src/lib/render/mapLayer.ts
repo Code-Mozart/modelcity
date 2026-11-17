@@ -4,6 +4,7 @@ import { worldToScreen } from '../camera/view';
 import { text, type Frame, type Palette } from './paint';
 import type { SkeletonEdge } from '../map/curve';
 import { drawCurves } from './skeleton';
+import { drawMarks, NO_MARKS, type Marks } from './marks';
 
 /** One chunk of the map as it is drawn: where it is, and its nodes, or null while it is not loaded (^1238). */
 export interface ChunkView {
@@ -17,6 +18,8 @@ export interface MapScene {
   chunks: ChunkView[];
   /** The segments of the loaded chunks that are in view, each once (^1247). */
   edges: readonly SkeletonEdge[];
+  /** What is selected, hovered and dragged as a box (^1257). */
+  marks?: Marks;
   /** So much of the map is in view that nothing of it is loaded (no level of detail yet). */
   tooMuch: boolean;
 }
@@ -152,6 +155,7 @@ export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
     scene.chunks.flatMap((c) => (c.nodes ? [c.nodes] : [])),
     pal,
   );
+  drawMarks(f, scene.marks ?? NO_MARKS, pal);
   if (scene.tooMuch)
     text(
       f.ctx,
