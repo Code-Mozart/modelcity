@@ -175,3 +175,18 @@ The import used to hold the whole file at once: its text, the parsed object, the
 Left to do: a project whose import is stopped by closing the tab leaves rows without a header in the browser (they are not listed); cleaning those up is not built.
 
 The benchmark makes its map in pieces, too (`bench/makeMap.ts`), and writes a log line by line to `bench/out/progress-*.log`: what it is doing, and every 5 seconds what the page says (rows imported, index progress, chunks, JS heap), errors and crashes of the page, and a line when the page does not answer. A run that hangs shows where in that file.
+
+### Rows in blocks of ids: tried, measured, reverted (^1254)
+
+Nodes and segments in records of 128 ids (key: the id divided by 128) make the import 5 to 8 times faster **when the ids follow the map** (the generated map of the benchmark: rows of nodes in order): 1.8 s for 100,000 nodes. A map drawn by hand has ids in the order of drawing, which say nothing of the places. `SCRAMBLE=1 bun run bench` spreads the ids over the map; the same 100,000 nodes, headless, profile on disk:
+
+| | one record for each row (kept) | blocks of 128 ids |
+|---|---|---|
+| Import | 16 s | 39.7 s |
+| Build of the index | 31 s | 22.9 s |
+| Storage used | 58.7 MB | 64.9 MB |
+| First view | 1.15 s | 1.89 s |
+| Read of one chunk (median, 12 reads at a time) | 299 ms | 499 ms |
+| Pan along a row, chunks loading | 89 fps | 77 fps |
+
+The nodes and segments of a chunk lie in many blocks when the ids are spread, so each read gets many blocks, and each block of the import is read and written again by every batch. Reverted; the priority is operation speed and render speed over the time of the index (^1254). Reads of a chunk at 12 at a time show about three times the time of 4 at a time (the storage serves them one after the other); the first view takes the same.
