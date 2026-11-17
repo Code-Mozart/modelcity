@@ -29,6 +29,17 @@ describe('the map of the benchmarks (^1249, ^1253)', () => {
     },
   );
 
+  it('with the ids spread over the map (scrambled) it is the same map: one component, ids once', () => {
+    const file = JSON.parse(makeMapText(5000, 40, true)) as {
+      nodes: number[][];
+      edges: number[][];
+    };
+    expect(new Set(file.nodes.map((n) => n[0])).size).toBe(file.nodes.length);
+    expect(new Set(file.edges.map((e) => e[0])).size).toBe(file.edges.length);
+    expect(components(file.nodes.length, file.edges)).toBe(1);
+    expect(file.nodes.slice(0, 3).map((n) => n[0])).not.toEqual([0, 1, 2]);
+  });
+
   it('every segment joins two nodes that exist, and no two have the same id', () => {
     const file = JSON.parse(makeMapText(5000, 40)) as {
       nodes: number[][];

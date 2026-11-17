@@ -7,6 +7,12 @@
  * two million nodes is longer than a string can be.
  */
 export function mapShape(nodes: number, spacing: number) {
+  const coprime = (n: number) => {
+    let k = 7919;
+    const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+    while (n > 1 && gcd(k, n) !== 1) k += 2;
+    return k;
+  };
   const cols = Math.ceil(Math.sqrt(nodes));
   const rows = Math.ceil(nodes / cols);
   const edges = rows * (cols - 1) + (rows - 1) * Math.ceil(cols / 8);
@@ -25,27 +31,44 @@ export function mapShape(nodes: number, spacing: number) {
     nextNodeId: rows * cols,
     nextEdgeId: edges,
   };
-  return { cols, rows, edges, head };
+  return { cols, rows, edges, head, kn: coprime(rows * cols), ke: coprime(edges) };
 }
 
-export function* nodePieces(rows: number, cols: number, spacing: number): Generator<string> {
+export function* nodePieces(
+  rows: number,
+  cols: number,
+  spacing: number,
+  kn: number,
+): Generator<string> {
   let part: string[] = [];
   for (let i = 0; i < rows * cols; i++) {
-    part.push(`[${i},${(i % cols) * spacing * 1000},${Math.floor(i / cols) * spacing * 1000},0]`);
+    part.push(
+      `[${(i * kn) % (rows * cols)},${(i % cols) * spacing * 1000},${Math.floor(i / cols) * spacing * 1000},0]`,
+    );
     if (part.length < 20000 && i < rows * cols - 1) continue;
     yield part.join(',') + (i === rows * cols - 1 ? ']' : ',');
     part = [];
   }
 }
 
-export function* edgePieces(rows: number, cols: number, edges: number): Generator<string> {
+export function* edgePieces(
+  rows: number,
+  cols: number,
+  edges: number,
+  [kn = 1, ke = 1]: number[],
+): Generator<string> {
+  const total = rows * cols;
   let part: string[] = [];
   let id = 0;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols - 1; c++)
-      part.push(`[${id++},${r * cols + c},${r * cols + c + 1},null,1]`);
+      part.push(
+        `[${(id++ * ke) % edges},${((r * cols + c) * kn) % total},${((r * cols + c + 1) * kn) % total},null,1]`,
+      );
     for (let c = 0; c < cols && r + 1 < rows; c += 8)
-      part.push(`[${id++},${r * cols + c},${(r + 1) * cols + c},null,1]`);
+      part.push(
+        `[${(id++ * ke) % edges},${((r * cols + c) * kn) % total},${(((r + 1) * cols + c) * kn) % total},null,1]`,
+      );
     if (part.length < 20000 || id >= edges) continue;
     yield `${part.join(',')},`;
     part = [];
@@ -53,12 +76,18 @@ export function* edgePieces(rows: number, cols: number, edges: number): Generato
   yield `${part.join(',')}]`;
 }
 
-export function* makeMapPieces(nodes: number, spacing: number): Generator<string> {
-  const { cols, rows, edges, head } = mapShape(nodes, spacing);
+export function* makeMapPieces(
+  nodes: number,
+  spacing: number,
+  scramble = false,
+): Generator<string> {
+  const { cols, rows, edges, head, kn, ke } = mapShape(nodes, spacing);
+  // Ids in the order they were drawn is not the order of the places: `scramble` spreads the ids over the map.
+  const k = scramble ? [kn, ke] : [1, 1];
   yield `${JSON.stringify(head).slice(0, -1)},"nodes":[`;
-  yield* nodePieces(rows, cols, spacing);
+  yield* nodePieces(rows, cols, spacing, k[0]!);
   yield ',"edges":[';
-  yield* edgePieces(rows, cols, edges);
+  yield* edgePieces(rows, cols, edges, k);
   yield '}';
 }
 
@@ -68,5 +97,5 @@ export const mapSource = () =>
   '\n;makeMapPieces';
 
 /** The same as one text, for the sizes that fit in a string (the tests). */
-export const makeMapText = (nodes: number, spacing: number): string =>
-  [...makeMapPieces(nodes, spacing)].join('');
+export const makeMapText = (nodes: number, spacing: number, scramble = false): string =>
+  [...makeMapPieces(nodes, spacing, scramble)].join('');

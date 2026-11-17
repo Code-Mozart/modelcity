@@ -24,6 +24,8 @@ const SPACING_M = Number(process.env.SPACING ?? 40);
 const PAN_SECONDS = Number(process.env.PAN_SECONDS ?? 10);
 const ESTABLISHED_SECONDS = Number(process.env.ESTABLISHED_SECONDS ?? 5);
 const PAN_M_PER_S = 300;
+/** The ids are spread over the map, as in a map that was drawn by hand (`SCRAMBLE=1`). */
+const SCRAMBLE = process.env.SCRAMBLE === '1';
 /** Headless Chromium paints in software: on a machine with a screen the window is shown (`HEADLESS=1` for the other). */
 const HEADLESS = process.env.HEADLESS === '1';
 const URL = process.env.BENCH_URL ?? 'http://localhost:4174/modelcity/';
@@ -47,7 +49,7 @@ async function steps(context: BrowserContext, page: Page, nodes: number, result:
   });
   const client = await context.newCDPSession(page);
   say(`${nodes}: import (the longest part)`);
-  result.import = await importPhase(page, nodes, SPACING_M);
+  result.import = await importPhase(page, nodes, SPACING_M, SCRAMBLE);
   result.storageMb = await storageMb(page);
   say(`${nodes}: open and first view`);
   result.open = await openPhase(page);
