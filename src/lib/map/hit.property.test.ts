@@ -70,7 +70,9 @@ describe('what is found equals what looking at everything finds (random maps and
       }
     }
   });
+});
 
+describe('the box equals what looking at every node finds (random maps and views, ^1257)', () => {
   it('the nodes in a box of the screen, with the view turned and at any scale', () => {
     const rand = dice(23);
     for (let run = 0; run < 60; run++) {
@@ -106,7 +108,9 @@ describe('what is found equals what looking at everything finds (random maps and
       expect(got.waiting).toBe(0);
     }
   });
+});
 
+describe('the screen and the world (^1257)', () => {
   it('the screen and the world agree on where a point is (the box uses both)', () => {
     const view: View = { cx: 12, cy: -7, scale: 1.7, rot: 2.1, gx: 0, gy: 0 };
     const p = { x: 33, y: 44 };

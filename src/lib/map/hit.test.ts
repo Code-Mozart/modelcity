@@ -38,7 +38,9 @@ describe('what is under the pointer (^1257)', () => {
     expect(segmentAt(two, { x: 50, y: 4 }, 10)?.edge[0]).toBe(2);
     expect(segmentAt(two, { x: 50, y: 1 }, 10)?.edge[0]).toBe(1);
   });
+});
 
+describe('what is not found while chunks load (^1257)', () => {
   it('finds nothing in a chunk that is still loading, nor round it', () => {
     const waiting = loaded([node(1, 0, 0), node(2, 300, 0)], [edge(1, 1, 2)], ['0,0']);
     expect(interactable(waiting, { x: 1, y: 1 })).toBe(false);
