@@ -9,7 +9,10 @@
   import { curveOf, type SkeletonEdge } from './map/curve';
   import type { Point } from './camera/view';
   import type { Editor } from './editor/editor.svelte';
+  import { branchOf } from './editor/branchOf';
   import { SelectPress } from './editor/selectPress';
+  import type { LoadedMap } from './map/hit';
+  import { networkOf } from './map/network';
   import { marksOf } from './render/marksOf';
   import type { EdgeRow } from './project/storage';
   import type { ControlId } from './hints/hints';
@@ -75,6 +78,12 @@
     }),
   );
 
+  const loadedMap = (): LoadedMap => ({
+    chunks: memory.chunks,
+    nodeOf: memory.index.nodeOf,
+    edgesAt: memory.index.edgesAt,
+  });
+
   /** The segments of the chunks that are loaded, each once; what the progress of a chunk does is not looked at here. */
   const found = $derived.by(() => {
     const out = new SvelteMap<number, { row: EdgeRow; edge: SkeletonEdge }>();
@@ -92,7 +101,12 @@
 
   const marks = $derived(
     marksOf(
-      { selection: editor.selection, hover: editor.hover, band: editor.band },
+      {
+        selection: editor.selection,
+        hover: editor.hover,
+        band: editor.band,
+        branch: editor.alt && editor.hover ? branchOf(networkOf(loadedMap()), editor.hover) : null,
+      },
       { nodes: chunkViews.flatMap((c) => (c.nodes ? [c.nodes] : [])), edges: found },
       memory.index.nodeOf,
     ),
@@ -132,7 +146,7 @@
 
   const press = $derived(
     new SelectPress(editor, {
-      map: () => ({ chunks: memory.chunks, nodeOf: memory.index.nodeOf }),
+      map: loadedMap,
       screen: () => ({ view: camera.view, size: camera.size }),
     }),
   );
@@ -141,9 +155,10 @@
     canvas.setPointerCapture(e.pointerId);
     const at = localPoint(e);
     camera.cursor = at;
+    editor.alt = e.altKey;
     if (e.pointerType === 'touch') camera.touchDown(e.pointerId, at);
     else if (e.button === 0 && camera.rotating) camera.compassClick(at);
-    else if (e.button === 0 && editor.mode === 'select') press.down(at, e.shiftKey);
+    else if (e.button === 0 && editor.mode === 'select') press.down(at, e.shiftKey, e.altKey);
     else if (e.button === 1) camera.startRotate(at);
     else if (e.button === 2) camera.startPan(at);
   }
@@ -151,6 +166,7 @@
   function onPointerMove(e: PointerEvent) {
     const at = localPoint(e);
     camera.cursor = at;
+    editor.alt = e.altKey;
     if (e.pointerType === 'touch' && camera.touchMove(e.pointerId, at)) return;
     if (camera.rotating) camera.moveRotate(at);
     else if (camera.panning) camera.movePan(at);

@@ -1,8 +1,12 @@
+import { branchOf } from '../editor/branchOf';
 import type { Editor } from '../editor/editor.svelte';
+import { allSelected } from '../editor/selection';
+import type { LoadedMap } from '../map/hit';
+import { networkOf } from '../map/network';
 import type { SelectFacts } from './selectControls';
 
 /** What the hints of select mode need to know of the editor (^181). */
-export function selectFactsOf(editor: Editor): SelectFacts {
+export function selectFactsOf(editor: Editor, map: LoadedMap): SelectFacts {
   const { hover, selection: sel } = editor;
   return {
     mode: editor.mode,
@@ -12,7 +16,6 @@ export function selectFactsOf(editor: Editor): SelectFacts {
         ? sel.has(hover.id)
         : hover?.kind === 'segment' && hover.nodes.every((id) => sel.has(id)),
     selected: sel.size,
-    canUndo: editor.history.past.length > 0,
-    canRedo: editor.history.future.length > 0,
+    branchSelected: hover !== null && allSelected(sel, branchOf(networkOf(map), hover).nodes),
   };
 }

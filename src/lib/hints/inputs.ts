@@ -29,3 +29,6 @@ export const ESC: Input = { kind: 'key', label: 'Esc' };
 export const ENTER: Input = { kind: 'key', label: 'Enter' };
 
 export const key = (label: string): Input => ({ kind: 'key', label });
+
+/** Keys pressed together, e.g. `keys('Ctrl', 'Z')`. */
+export const keys = (...labels: string[]): Input => ({ kind: 'keys', labels });

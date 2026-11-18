@@ -20,6 +20,8 @@ export interface Step {
   /** Steps of one batch share the number. */
   batch: number;
   selection: SelectionDelta;
+  /** How many nodes are selected after the step: a run of selection steps that ends with none is named `deselect all` (^216). */
+  selectedAfter: number;
 }
 
 export interface History {

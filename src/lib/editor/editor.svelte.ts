@@ -1,6 +1,14 @@
 import type { Point } from '../camera/view';
 import { emptyGraph, type Graph } from '../model/graph';
-import { NO_HISTORY, record, redoStep, undoStep, type History, type Moved } from './history';
+import {
+  NO_HISTORY,
+  record,
+  redoStep,
+  undoStep,
+  type History,
+  type HistoryEvent,
+  type Moved,
+} from './history';
 import type { ToastKind } from '../ui/toasts.svelte';
 import type { Hover } from './pick';
 import {
@@ -32,11 +40,16 @@ export class Editor {
   mode = $state<Mode>('select');
   /** The nodes that are selected. */
   selection = $state.raw<Selection>(NOTHING);
+  /** Alt is held: a click picks the branch, and the hover shows it (^99, ^128). */
+  alt = $state(false);
   /** What a click would pick now (^1257). */
   hover = $state.raw<Hover | null>(null);
   /** The box that is being dragged, if any. */
   band = $state.raw<Band | null>(null);
   history = $state.raw<History>(NO_HISTORY);
+  /** The last thing that happened to the history, for the recent history panel (^107): a step taken, undone or redone. */
+  event = $state.raw<HistoryEvent | null>(null);
+  private seq = 0;
   /** Where the editor tells the user something (a toast): set by the app. */
   told: ((kind: ToastKind, text: string) => void) | null = null;
 
@@ -47,6 +60,7 @@ export class Editor {
     this.hover = null;
     this.band = null;
     this.history = NO_HISTORY;
+    this.event = null;
   }
 
   toggleMode() {
@@ -64,12 +78,15 @@ export class Editor {
   select(next: Selection, from: Selection = this.selection) {
     this.selection = next;
     if (sameSelection(from, next)) return;
-    this.history = record(this.history, {
+    const step = {
       name: selectionName(from, next),
-      kind: 'select',
+      kind: 'select' as const,
       continues: true,
       selection: deltaOf(from, next),
-    });
+      selectedAfter: next.size,
+    };
+    this.history = record(this.history, step);
+    this.event = { seq: ++this.seq, kind: 'step', steps: this.history.past.slice(-1) };
   }
 
   deselectAll() {
@@ -80,6 +97,7 @@ export class Editor {
   dropSelection() {
     this.selection = NOTHING;
     this.history = NO_HISTORY;
+    this.event = null;
   }
 
   undo(whole = false) {
@@ -101,5 +119,6 @@ export class Editor {
       this.selection,
     );
     this.history = moved.history;
+    this.event = { seq: ++this.seq, kind: undo ? 'undo' : 'redo', steps: moved.steps };
   }
 }

@@ -13,7 +13,8 @@ export interface Marks {
   selected: readonly NodeRow[];
   selectedEdges: readonly SkeletonEdge[];
   hoverNodes: readonly NodeRow[];
-  hoverEdge: SkeletonEdge | null;
+  /** The segment a click would pick, or with Alt all the segments of its branch (^99, ^128). */
+  hoverEdges: readonly SkeletonEdge[];
   band: { a: Point; b: Point } | null;
 }
 
@@ -21,7 +22,7 @@ export const NO_MARKS: Marks = {
   selected: [],
   selectedEdges: [],
   hoverNodes: [],
-  hoverEdge: null,
+  hoverEdges: [],
   band: null,
 };
 
@@ -75,7 +76,7 @@ export function drawMarks(f: Frame, marks: Marks, pal: Palette) {
   const { ctx } = f;
   ctx.strokeStyle = pal.blue;
   ctx.globalAlpha = HOVER_ALPHA;
-  if (marks.hoverEdge) curves(f, [marks.hoverEdge], HOVER_CURVE_PX);
+  curves(f, marks.hoverEdges, HOVER_CURVE_PX);
   ctx.lineWidth = RING_LINE_PX;
   rings(f, marks.hoverNodes);
   ctx.globalAlpha = 1;

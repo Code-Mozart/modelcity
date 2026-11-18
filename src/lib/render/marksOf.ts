@@ -1,4 +1,5 @@
 import type { Band } from '../editor/editor.svelte';
+import type { Branch } from '../map/branch';
 import { nodesOf, type Hover } from '../editor/pick';
 import type { Selection } from '../editor/selection';
 import type { SkeletonEdge } from '../map/curve';
@@ -21,15 +22,18 @@ function selectedIn(sel: Selection, inView: InView) {
 
 /** What of the selection, the hover and the box is on the screen (^1257): the selection is looked up for the nodes in view, not the other way round (it can be larger than what is in view). */
 export function marksOf(
-  state: { selection: Selection; hover: Hover | null; band: Band | null },
+  state: { selection: Selection; hover: Hover | null; band: Band | null; branch: Branch | null },
   inView: InView,
   nodeOf: (id: number) => NodeRow | undefined,
 ): Marks {
-  const { selection: sel, hover, band } = state;
+  const { selection: sel, hover, band, branch } = state;
   const picked = sel.size ? selectedIn(sel, inView) : { nodes: [], edges: [] };
   const hoverNodes = nodesOf(hover)
     .map(nodeOf)
     .filter((n): n is NodeRow => n !== undefined);
-  const hoverEdge = hover?.kind === 'segment' ? (inView.edges.get(hover.edge)?.edge ?? null) : null;
-  return { selected: picked.nodes, selectedEdges: picked.edges, hoverNodes, hoverEdge, band };
+  const ids = branch ? branch.edges : hover?.kind === 'segment' ? [hover.edge] : [];
+  const hoverEdges = ids
+    .map((id) => inView.edges.get(id)?.edge)
+    .filter((e): e is SkeletonEdge => e !== undefined);
+  return { selected: picked.nodes, selectedEdges: picked.edges, hoverNodes, hoverEdges, band };
 }

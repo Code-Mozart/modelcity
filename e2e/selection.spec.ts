@@ -100,3 +100,19 @@ test('a selected node is drawn as a ring, and the hint says what a click does', 
   expect(blue[2]).toBeGreaterThan(blue[0]!);
   await expect(page.getByRole('list', { name: 'Controls' })).toContainText('deselect all');
 });
+
+test('Alt+click selects the whole branch, and the recent history panel shows the steps', async ({
+  page,
+}) => {
+  const app = await open(page);
+  await page.keyboard.down('Alt');
+  await app.click(N0);
+  await page.keyboard.up('Alt');
+  expect(await selected(page)).toEqual([0, 1, 2]);
+  const panel = page.getByLabel('Recent history');
+  await expect(panel).toContainText('select 3 nodes');
+  await expect(panel).toContainText('undo');
+  await page.keyboard.press('Control+z');
+  await expect(panel.locator('.undone')).toContainText('select 3 nodes');
+  expect(await selected(page)).toEqual([]);
+});

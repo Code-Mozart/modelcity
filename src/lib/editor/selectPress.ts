@@ -1,8 +1,10 @@
+import { networkOf } from '../map/network';
 import { screenToWorld, type Point, type Size, type View } from '../camera/view';
 import { nodesInBox, type LoadedMap } from '../map/hit';
 import type { Editor } from './editor.svelte';
+import { branchOf } from './branchOf';
 import { afterClick, pick, reachOf, type Hover } from './pick';
-import { afterBox, type Selection } from './selection';
+import { afterBox, afterBranchAdd, afterBranchClick, type Selection } from './selection';
 
 /** The pointer has to move this far (pixels) before a press is a drag and not a click. */
 export const DRAG_PX = 4;
@@ -19,6 +21,7 @@ interface Pressed {
   at: Point;
   began: Selection;
   shift: boolean;
+  alt: boolean;
   moved: boolean;
   waited: boolean;
 }
@@ -46,9 +49,17 @@ export class SelectPress {
     return pick(this.around.map(), screenToWorld(view, size, at), reachOf(touch, view.scale));
   }
 
-  down(at: Point, shift: boolean) {
+  down(at: Point, shift: boolean, alt = false) {
     const on = this.pickAt(at);
-    this.pressed = { on, at, began: this.editor.selection, shift, moved: false, waited: false };
+    this.pressed = {
+      on,
+      at,
+      began: this.editor.selection,
+      shift,
+      alt,
+      moved: false,
+      waited: false,
+    };
   }
 
   move(at: Point) {
@@ -77,10 +88,22 @@ export class SelectPress {
       return 'box';
     }
     if (p.moved) return null;
-    editor.select(afterClick(p.began, p.on, p.shift), p.began);
+    if (p.alt && p.on) this.branchClick(p.on, p);
+    else editor.select(afterClick(p.began, p.on, p.shift), p.began);
     return 'click';
   }
+
+  /** Alt+click (^128, ^244): the branch of what is under the pointer; only what is loaded is followed (^1258). */
+  private branchClick(on: Hover, p: Pressed) {
+    const branch = branchOf(networkOf(this.around.map()), on);
+    const pick = p.shift ? afterBranchAdd : afterBranchClick;
+    this.editor.select(pick(p.began, branch.nodes), p.began);
+    if (!branch.complete) this.editor.told?.('info', BRANCH_TEXT);
+  }
 }
+
+export const BRANCH_TEXT =
+  'The branch goes on beyond the loaded map: only the loaded part was selected.';
 
 export const WAITING_TEXT =
   'Some chunks under the box are still loading: only the loaded ones were selected.';

@@ -27,6 +27,7 @@ function take(h: History, before: Selection, after: Selection, extra: Partial<Ne
     kind: 'select',
     continues: true,
     selection: deltaOf(before, after),
+    selectedAfter: after.size,
     ...extra,
   });
 }

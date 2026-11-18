@@ -37,3 +37,25 @@ describe('the rows of the chunks that are loaded (^1247)', () => {
     expect(index.size).toBe(0);
   });
 });
+
+describe('the segments at a node (^1258)', () => {
+  it('finds the segments at a node while they are loaded, and forgets them with their last chunk (^1258)', () => {
+    const index = new ChunkIndex();
+    const [a, b] = pair();
+    index.add(a);
+    index.add({ id: '2,0', nodes: [node(2)], edges: [edge(1, 1, 2)], ends: [node(1)] });
+    expect(
+      index
+        .edgesAt(1)
+        .map((e) => e[0])
+        .sort(),
+    ).toEqual([0, 1]);
+    expect(index.edgesAt(0).map((e) => e[0])).toEqual([0]);
+    index.add(b);
+    index.remove(a);
+    expect(index.edgesAt(0).map((e) => e[0])).toEqual([0]);
+    index.remove(b);
+    expect(index.edgesAt(0)).toEqual([]);
+    expect(index.edgesAt(1).map((e) => e[0])).toEqual([1]);
+  });
+});

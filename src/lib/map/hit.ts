@@ -16,6 +16,8 @@ export interface LoadedMap {
   chunks: ReadonlyMap<string, { status: 'loading' } | { status: 'ready'; chunk: Chunk }>;
   /** A node of the chunks that are loaded, by its id (also the far end of a segment). */
   nodeOf(id: number): NodeRow | undefined;
+  /** The loaded segments that start or end at a node (^1258). */
+  edgesAt(node: number): EdgeRow[];
 }
 
 const toM = (mm: number) => mm / 1000;

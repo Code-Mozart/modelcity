@@ -14,7 +14,10 @@ const map = loaded([node(1, -50, 0), node(2, 50, 0), node(3, 0, 60)], [edge(7, 1
 function editorWith(selected: number[] = []) {
   const editor = new Editor();
   if (selected.length) editor.select(new Set(selected));
-  const press = new SelectPress(editor, { map: () => map, screen: () => ({ view, size }) });
+  const press = new SelectPress(editor, {
+    map: () => map,
+    screen: () => ({ view, size }),
+  });
   return { editor, press };
 }
 
@@ -65,6 +68,24 @@ const DOES: Record<number, () => unknown> = {
     press.up();
     return [...editor.selection].join() === '3,1,2';
   },
+  491: () => {
+    const { editor, press } = editorWith([3]);
+    press.down(at(-50, 0), false, true);
+    press.up();
+    return [...editor.selection].sort().join() === '1,2';
+  },
+  692: () => {
+    const { editor, press } = editorWith([3]);
+    press.down(at(0, 1), false, true);
+    press.up();
+    return [...editor.selection].sort().join() === '1,2';
+  },
+  689: () => {
+    const { editor, press } = editorWith([3]);
+    press.down(at(-50, 0), true, true);
+    press.up();
+    return [...editor.selection].join() === '3,1,2';
+  },
   495: () => {
     const { editor, press } = editorWith();
     press.down(at(-80, -20), false);
@@ -90,17 +111,6 @@ const DOES: Record<number, () => unknown> = {
     editorKey(editor, key('Escape'));
     return editor.selection.size === 0;
   },
-  454: () => {
-    const { editor } = editorWith([1]);
-    editorKey(editor, key('z', { ctrlKey: true }));
-    return editor.selection.size === 0;
-  },
-  456: () => {
-    const { editor } = editorWith([1]);
-    editor.undo();
-    editorKey(editor, key('y', { ctrlKey: true }));
-    return editor.selection.size === 1;
-  },
 };
 
 const facts = (over: Partial<SelectFacts> = {}): SelectFacts => ({
@@ -108,8 +118,7 @@ const facts = (over: Partial<SelectFacts> = {}): SelectFacts => ({
   hovered: null,
   hoveredSelected: false,
   selected: 0,
-  canUndo: false,
-  canRedo: false,
+  branchSelected: false,
   ...over,
 });
 
@@ -142,45 +151,48 @@ describe('what the hints of select mode say in each state (^181)', () => {
   });
 
   it('on a node: select, or select instead when something else is selected, Shift toggles', () => {
-    expect(texts(facts({ hovered: 'node' }))).toEqual(['view mode', 'select']);
+    expect(texts(facts({ hovered: 'node' }))).toEqual(['view mode', 'select', 'select branch']);
     expect(texts(facts({ hovered: 'node', selected: 2 }))).toEqual([
       'view mode',
       'select instead',
       'add to selection',
+      'select branch',
+      'add branch to selection',
       'deselect all',
     ]);
     expect(texts(facts({ hovered: 'node', selected: 2, hoveredSelected: true }))).toEqual([
       'view mode',
       'select',
       'deselect',
+      'select branch',
+      'add branch to selection',
       'deselect all',
     ]);
   });
 });
 
 describe('what the hints of select mode say on a segment and in view mode (^181)', () => {
+  it('on a branch that is selected: deselect branch (^128)', () => {
+    const f = facts({ hovered: 'node', selected: 2, branchSelected: true });
+    expect(texts(f)).toContain('deselect branch');
+    expect(texts(f)).not.toContain('select branch');
+  });
+
   it('on a segment: select segment, Shift adds or deselects', () => {
     expect(texts(facts({ hovered: 'segment', selected: 2 }))).toEqual([
       'view mode',
       'select segment',
       'add segment to selection',
+      'select branch',
+      'add branch to selection',
       'deselect all',
     ]);
     const both = facts({ hovered: 'segment', selected: 2, hoveredSelected: true });
     expect(texts(both)).toContain('deselect segment');
   });
 
-  it('in view mode there is nothing to pick: select mode is offered, and undo is still there', () => {
-    expect(texts(facts({ mode: 'view', selected: 3, canUndo: true }))).toEqual([
-      'select mode',
-      'undo',
-    ]);
-  });
-
-  it('undo and redo show when there is something to undo or redo, with the Alt note (^81, ^103)', () => {
-    const hints = selectHints(facts({ canUndo: true, canRedo: true }), () => false);
-    expect(hints.map((h) => h.text).slice(-2)).toEqual(['undo', 'redo']);
-    expect(hints.at(-2)!.note).toEqual({ key: 'Alt', text: ' to undo batch' });
+  it('in view mode there is nothing to pick: select mode is offered', () => {
+    expect(texts(facts({ mode: 'view', selected: 3 }))).toEqual(['select mode']);
   });
 
   it('the hints of controls that were used lately are hidden (^110)', () => {

@@ -28,5 +28,10 @@ export function loaded(nodes: NodeRow[], edges: EdgeRow[], loading: string[] = [
   for (const e of edges)
     for (const id of new Set([idOf(all.get(e[1])!), idOf(all.get(e[2])!)])) chunk(id).edges.push(e);
   loading.forEach((id) => chunks.set(id, { status: 'loading' }));
-  return { chunks, nodeOf: (id) => all.get(id) };
+  const placed = [...new Set(edges)];
+  return {
+    chunks,
+    nodeOf: (id) => all.get(id),
+    edgesAt: (n) => placed.filter((e) => e[1] === n || e[2] === n),
+  };
 }

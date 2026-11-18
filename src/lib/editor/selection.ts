@@ -45,6 +45,16 @@ export const afterVoidClick = (sel: Selection, shift: boolean): Selection =>
 export const afterBox = (began: Selection, inside: number[], shift: boolean): Selection =>
   shift ? withNodes(began, inside) : new Set(inside);
 
+/** Alt+click on a branch (^128): selects its nodes, or takes them out if they are all selected. */
+export const afterBranchClick = (sel: Selection, nodes: number[]): Selection =>
+  allIn(sel, nodes) ? withoutNodes(sel, nodes) : new Set(nodes);
+
+/** Alt+Shift+click on a branch (^244): adds its nodes, or takes them out if they are all selected (the others stay). */
+export const afterBranchAdd = (sel: Selection, nodes: number[]): Selection =>
+  allIn(sel, nodes) ? withoutNodes(sel, nodes) : withNodes(sel, nodes);
+
+export const allSelected = allIn;
+
 const nodes = (n: number) => (n === 1 ? 'node' : `${n} nodes`);
 
 /** The name of a step that only changed the selection (^216): `select 3 nodes`, `deselect node`, `deselect all`. */
@@ -71,3 +81,13 @@ export const applyDelta = (sel: Selection, d: SelectionDelta, undo = false): Sel
   const [add, drop] = undo ? [d.removed, d.added] : [d.added, d.removed];
   return withNodes(withoutNodes(sel, drop), add);
 };
+
+/** What several steps, one after another, changed in the selection altogether: a node that one added and a later one took out is not in it. */
+export function composeDeltas(deltas: SelectionDelta[]): SelectionDelta {
+  const [added, removed] = [new Set<number>(), new Set<number>()];
+  for (const d of deltas) {
+    for (const id of d.removed) if (!added.delete(id)) removed.add(id);
+    for (const id of d.added) if (!removed.delete(id)) added.add(id);
+  }
+  return { added: [...added], removed: [...removed] };
+}

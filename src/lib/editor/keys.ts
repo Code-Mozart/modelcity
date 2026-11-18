@@ -1,4 +1,5 @@
 import type { Editor } from './editor.svelte';
+import type { ControlId } from '../hints/hints';
 import { actionFor, keyOf, type Action } from './keymap';
 
 type KeyEventLike = {
@@ -30,3 +31,12 @@ export function editorKey(editor: Editor, e: KeyEventLike): Action | null {
   DO[action](editor);
   return action;
 }
+
+/** The control whose hint is hidden for a while after the action was used (^110). */
+export const USED: Partial<Record<Action, ControlId>> = {
+  view: 'view',
+  undo: 'undo',
+  undoBatch: 'undo',
+  redo: 'redo',
+  redoBatch: 'redo',
+};

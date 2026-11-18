@@ -12,15 +12,15 @@ export interface SelectFacts {
   /** The hovered node is selected, or both nodes of the hovered segment are. */
   hoveredSelected: boolean;
   selected: number;
-  canUndo: boolean;
-  canRedo: boolean;
+  /** All the nodes of the branch of what is hovered are selected (^128). */
+  branchSelected: boolean;
 }
 
 const picking = (f: SelectFacts) => f.mode === 'select';
 const onVoid = (f: SelectFacts) => picking(f) && f.hovered === null;
 const yes = () => true;
 
-/** The controls of select mode, and Tab and the history that go with it, in the order of the hints (^392, `docs/controls.md`). */
+/** The controls of select mode, and Tab that goes with it, in the order of the hints (^392, `docs/controls.md`). */
 export const SELECT_CONTROLS: Control<SelectFacts>[] = [
   {
     hat: 394,
@@ -68,6 +68,29 @@ export const SELECT_CONTROLS: Control<SelectFacts>[] = [
     says: (f) => (f.hoveredSelected ? 'deselect segment' : 'add segment to selection'),
   },
   {
+    hat: 491,
+    input: mouse('lmb', false, 'alt'),
+    id: 'branch',
+    on: (f) => picking(f) && f.hovered === 'node',
+    listens: yes,
+    says: (f) => (f.branchSelected ? 'deselect branch' : 'select branch'),
+  },
+  {
+    hat: 692,
+    input: mouse('lmb', false, 'alt'),
+    id: 'branch',
+    on: (f) => picking(f) && f.hovered === 'segment',
+    listens: yes,
+    says: (f) => (f.branchSelected ? 'deselect branch' : 'select branch'),
+  },
+  {
+    hat: 689,
+    input: mouse('lmb', false, 'alt+shift'),
+    on: (f) => picking(f) && f.hovered !== null && f.selected > 0,
+    listens: yes,
+    says: (f) => (f.branchSelected ? 'deselect branch' : 'add branch to selection'),
+  },
+  {
     hat: 495,
     input: mouse('lmb', true),
     id: 'box',
@@ -95,25 +118,6 @@ export const SELECT_CONTROLS: Control<SelectFacts>[] = [
     on: (f) => picking(f) && f.selected > 0,
     listens: yes,
     says: () => 'deselect all',
-  },
-  {
-    hat: 454,
-    input: { kind: 'keys', labels: ['Ctrl', 'Z'] },
-    on: (f) => f.canUndo,
-    listens: yes,
-    says: () => 'undo',
-    note: { key: 'Alt', text: ' to undo batch' },
-  },
-  {
-    hat: 456,
-    input: [
-      { kind: 'keys', labels: ['Ctrl', 'Y'] },
-      { kind: 'keys', labels: ['Ctrl', 'Shift', 'Z'] },
-    ],
-    on: (f) => f.canRedo,
-    listens: yes,
-    says: () => 'redo',
-    note: { key: 'Alt', text: ' to redo batch' },
   },
 ];
 

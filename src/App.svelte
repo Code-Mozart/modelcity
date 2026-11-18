@@ -4,9 +4,13 @@
   import { Camera } from './lib/camera/camera.svelte';
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
-  import { editorKey } from './lib/editor/keys';
+  import { editorKey, USED } from './lib/editor/keys';
   import { SelectionPins } from './lib/editor/pins';
+  import type { LoadedMap } from './lib/map/hit';
   import Hints from './lib/hints/Hints.svelte';
+  import HistoryPanel from './lib/hud/HistoryPanel.svelte';
+  import { panelHints, panelView } from './lib/hud/panel';
+  import { Recent } from './lib/hud/recent.svelte';
   import { Toasts } from './lib/ui/toasts.svelte';
   import ToastList from './lib/ui/ToastList.svelte';
   import { appHints } from './lib/hints/appControls';
@@ -61,6 +65,11 @@
   });
 
   // The chunks of the selected nodes stay in memory (^1257); if there is no room for them the selection goes, and the user is told.
+  const loaded = $derived<LoadedMap>({
+    chunks: memory.chunks,
+    nodeOf: memory.index.nodeOf,
+    edgesAt: memory.index.edgesAt,
+  });
   const pins = new SelectionPins();
   memory.onSqueezed = () => {
     editor.dropSelection();
@@ -96,11 +105,19 @@
 
   // A control that was used lately has its hint hidden for a while (^110).
   const usage = new Usage();
+  // The last steps and what was undone, for a few seconds after each one (^107, ^109).
+  const recent = new Recent();
+  $effect(() => {
+    const event = editor.event;
+    untrack(() => recent.consume(event));
+  });
+  const panel = $derived(panelView(editor.history));
+  const historyRows = $derived(panelHints(editor.history, usage.hidden));
   // While the projects modal is up its controls replace all others (^168).
   const hints = $derived(
     session.modalOpen
       ? modalHints(session.row?.mode ?? 'list', session.over)
-      : [...selectHints(selectFactsOf(editor), usage.hidden), ...appHints(usage.hidden)],
+      : [...selectHints(selectFactsOf(editor, loaded), usage.hidden), ...appHints(usage.hidden)],
   );
 
   /** The keys of the projects: `Ctrl+S` saves, `Ctrl+Shift+S` exports, `P` and `Ctrl+O` open (^168, ^222, ^223, ^226, ^746). */
@@ -122,6 +139,7 @@
 
   function onKeyDown(e: KeyboardEvent) {
     banner.used();
+    editor.alt = e.altKey;
     if (session.modalOpen) return modalKey(e);
     if (e.target instanceof HTMLInputElement) return;
     if (isFramesKey(e)) {
@@ -134,15 +152,20 @@
     }
     if (projectKey(e) || camera.key(e.key)) return e.preventDefault();
     const action = editorKey(editor, e);
-    if (action === 'view') usage.mark('view');
-    if (action) e.preventDefault();
+    if (!action) return;
+    const used = USED[action];
+    if (used) usage.mark(used);
+    e.preventDefault();
   }
 </script>
 
 <svelte:window
   onkeydown={onKeyDown}
   onpointerdown={() => banner.used()}
-  onkeyup={(e) => camera.keyUp(e.key)}
+  onkeyup={(e) => {
+    editor.alt = e.altKey;
+    camera.keyUp(e.key);
+  }}
   onpagehide={() => void session.flush()}
 />
 
@@ -154,6 +177,7 @@
   <FrameTimes stats={frames} />
   <div class="right">
     <div class="toasts"><ToastList {toasts} /></div>
+    {#if recent.visible}<HistoryPanel groups={panel} hints={historyRows} />{/if}
   </div>
   <Compass {camera} />
   <ProjectsModal {session} />

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Size, View } from '../camera/view';
 import { edge, loaded, node } from '../testing/loadedMap';
 import { Editor } from './editor.svelte';
-import { SelectPress, WAITING_TEXT } from './selectPress';
+import { BRANCH_TEXT, SelectPress, WAITING_TEXT } from './selectPress';
 
 const size: Size = { width: 400, height: 400 };
 /** The world point (x, y) is at (x + 200, y + 200) on the screen. */
@@ -14,7 +14,10 @@ function setup(loading: string[] = []) {
   const editor = new Editor();
   const told: string[] = [];
   editor.told = (_, text) => told.push(text);
-  const press = new SelectPress(editor, { map: () => map, screen: () => ({ view, size }) });
+  const press = new SelectPress(editor, {
+    map: () => map,
+    screen: () => ({ view, size }),
+  });
   return { editor, press, told };
 }
 
@@ -102,5 +105,58 @@ describe('what a press does not do (^1257)', () => {
   it('what is under the pointer is hovered nowhere that is loading', () => {
     const { press } = setup(['-1,0', '0,0']);
     expect(press.pickAt(at(-50, 1))).toBeNull();
+  });
+});
+
+/** A road 1 - 2 - 3 along the x axis that splits at 3 into 3 - 4 and 3 - 5. */
+function treeSetup(loading: string[] = []) {
+  const map = loaded(
+    [node(1, -50, 0), node(2, 50, 0), node(3, 150, 0), node(4, 200, -50), node(5, 200, 50)],
+    [edge(1, 1, 2), edge(2, 2, 3), edge(3, 3, 4), edge(4, 3, 5)],
+    loading,
+  );
+  const editor = new Editor();
+  const told: string[] = [];
+  editor.told = (_, text) => told.push(text);
+  const press = new SelectPress(editor, { map: () => map, screen: () => ({ view, size }) });
+  return { editor, press, told };
+}
+
+describe('Alt+click selects a branch (^128, ^244, ^1258)', () => {
+  it('on a node or a segment: its branch up to the split, the nodes at the ends included', () => {
+    const { editor, press } = treeSetup();
+    press.down(at(-50, 1), false, true);
+    press.up();
+    expect([...editor.selection].sort()).toEqual([1, 2, 3]);
+    press.down(at(100, 1), false, true);
+    press.up();
+    expect(editor.selection.size).toBe(0);
+  });
+
+  it('a second Alt+click deselects it; with Shift the others stay, and a branch is added to them', () => {
+    const { editor, press } = treeSetup();
+    click(press, at(200, -50));
+    press.down(at(-50, 1), true, true);
+    press.up();
+    expect([...editor.selection].sort()).toEqual([1, 2, 3, 4]);
+    press.down(at(-50, 1), true, true);
+    press.up();
+    expect([...editor.selection]).toEqual([4]);
+  });
+
+  it('a branch that leaves what is loaded is followed as far as that, and the user is told', () => {
+    const { editor, press, told } = treeSetup(['0,0']);
+    press.down(at(-50, 1), false, true);
+    press.up();
+    expect([...editor.selection].sort()).toEqual([1, 2]);
+    expect(told).toEqual([BRANCH_TEXT]);
+  });
+
+  it('Alt on nothing is a click on nothing', () => {
+    const { editor, press } = treeSetup();
+    click(press, at(-50, 1));
+    press.down(at(0, -100), false, true);
+    press.up();
+    expect(editor.selection.size).toBe(0);
   });
 });

@@ -15,8 +15,16 @@ interface Held<R> {
 export class ChunkIndex {
   private nodes = new Map<number, Held<NodeRow>>();
   private edges = new Map<number, Held<EdgeRow>>();
+  /** The segments that start or end at a node, of those that are loaded (^1258). */
+  private at = new Map<number, Set<number>>();
 
   nodeOf = (id: number): NodeRow | undefined => this.nodes.get(id)?.row;
+
+  /** The loaded segments that start or end at a node. */
+  edgesAt = (node: number): EdgeRow[] =>
+    [...(this.at.get(node) ?? [])]
+      .map((id) => this.edges.get(id)?.row)
+      .filter((row): row is EdgeRow => row !== undefined);
 
   get size() {
     return this.nodes.size + this.edges.size;
@@ -26,19 +34,36 @@ export class ChunkIndex {
   add(chunk: Chunk) {
     chunk.nodes = chunk.nodes.map((r) => take(this.nodes, r));
     chunk.ends = chunk.ends.map((r) => take(this.nodes, r));
-    chunk.edges = chunk.edges.map((r) => take(this.edges, r));
+    chunk.edges = chunk.edges.map((r) => {
+      const known = this.edges.has(r[0]);
+      const row = take(this.edges, r);
+      if (!known) for (const end of [r[1], r[2]]) this.touch(end, r[0], true);
+      return row;
+    });
+  }
+
+  private touch(node: number, edge: number, add: boolean) {
+    const set = this.at.get(node) ?? new Set<number>();
+    if (add) set.add(edge);
+    else set.delete(edge);
+    if (set.size) this.at.set(node, set);
+    else this.at.delete(node);
   }
 
   /** Let go of a chunk's rows: those that no other chunk has are forgotten. */
   remove(chunk: Chunk) {
     chunk.nodes.forEach((r) => drop(this.nodes, r));
     chunk.ends.forEach((r) => drop(this.nodes, r));
-    chunk.edges.forEach((r) => drop(this.edges, r));
+    chunk.edges.forEach((r) => {
+      drop(this.edges, r);
+      if (!this.edges.has(r[0])) for (const end of [r[1], r[2]]) this.touch(end, r[0], false);
+    });
   }
 
   clear() {
     this.nodes.clear();
     this.edges.clear();
+    this.at.clear();
   }
 }
 
