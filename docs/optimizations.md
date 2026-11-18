@@ -190,3 +190,20 @@ Nodes and segments in records of 128 ids (key: the id divided by 128) make the i
 | Pan along a row, chunks loading | 89 fps | 77 fps |
 
 The nodes and segments of a chunk lie in many blocks when the ids are spread, so each read gets many blocks, and each block of the import is read and written again by every batch. Reverted; the priority is operation speed and render speed over the time of the index (^1254). Reads of a chunk at 12 at a time show about three times the time of 4 at a time (the storage serves them one after the other); the first view takes the same.
+
+### Selection (^1257)
+
+`bun run bench:selection` (seeded, repeatable, `bench/selection.ts`) measures the work that the pointer and a frame ask for, on the rows that a view holds; `bun run bench` has a part with every loaded node selected. 2026-11-18, linux x64 in a container, no GPU:
+
+| | 5,000 nodes in view | 20,000 | 80,000 |
+|---|---|---|---|
+| Pick at the pointer (node and segment), ms | < 0.01 | < 0.01 | < 0.01 |
+| of which the segment, ms | 0.04 | 0.07 | 0.15 |
+| Box over the whole screen (turned), ms | 0.56 | 1.55 | 4.98 |
+
+A selection of 1,000, 20,000 or 100,000 nodes: the marks of a frame (which of the nodes in view are selected) 1.6 to 2.5 ms for 20,000 nodes in view; the pins 0.3 to 6.8 ms; a history step 0.03 to 0.24 ms; 200 steps of 1,000 nodes in the history: the panel 19 ms (once for each step, not for each frame).
+
+Frames at 100,000 nodes (headless, software drawing), 3,549 nodes in view selected: pan 91 fps without a selection, 27 with the first way of drawing it (a stroked ring on each node, thick curves over the skeleton), 34 with the second (a filled halo under each dot, the thick curves under the skeleton); zoom 75, 28, 36; rotate 45, 25, 29. The profile of a frame says that 80% of the time is the browser drawing (`(program)`), the JavaScript of the selection is below 2%: the cost is in the pixels of the highlight. On a machine with a GPU the drawing is not the limit (the 100,000-node run on an M1 laptop showed 700 to 1,000 fps without a selection, ^1253).
+
+Checked against looking at everything (`map/hit.property.test`): the nearest node and the nearest segment equal what a search of all nodes and segments finds, with a reach larger than a chunk, and the nodes in a box equal the nodes whose screen position is in it, with the view turned and at any scale.
+
