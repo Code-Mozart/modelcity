@@ -4,7 +4,7 @@ import { worldToScreen } from '../camera/view';
 import { text, type Frame, type Palette } from './paint';
 import type { SkeletonEdge } from '../map/curve';
 import { drawCurves } from './skeleton';
-import { drawMarks, NO_MARKS, type Marks } from './marks';
+import { drawBand, drawMarksHalos, drawMarksUnder, NO_MARKS, type Marks } from './marks';
 
 /** One chunk of the map as it is drawn: where it is, and its nodes, or null while it is not loaded (^1238). */
 export interface ChunkView {
@@ -149,13 +149,16 @@ function drawNodes(f: Frame, chunks: readonly (readonly NodeRow[])[], pal: Palet
 /** The map: the chunks that are not loaded, the curves of the segments, and the nodes of the chunks that are loaded. */
 export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
   for (const c of scene.chunks) if (!c.nodes) drawLoading(f, c.box, c.progress, pal);
+  const marks = scene.marks ?? NO_MARKS;
+  drawMarksUnder(f, marks, pal);
   drawCurves(f, scene.edges, pal);
+  drawMarksHalos(f, marks, pal);
   drawNodes(
     f,
     scene.chunks.flatMap((c) => (c.nodes ? [c.nodes] : [])),
     pal,
   );
-  drawMarks(f, scene.marks ?? NO_MARKS, pal);
+  drawBand(f, marks, pal);
   if (scene.tooMuch)
     text(
       f.ctx,

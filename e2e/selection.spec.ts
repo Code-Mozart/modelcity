@@ -94,10 +94,10 @@ test('a selected node is drawn as a ring, and the hint says what a click does', 
     const at = hook.toPage({ x: p.x, y: p.y });
     const rect = canvas.getBoundingClientRect();
     const ratio = canvas.width / rect.width;
-    // The ring has a radius of 9 px: look to the right of the node's centre.
+    // The halo has a radius of 9 px, the dot 5.5: look 7 px to the right of the node's centre.
     const data = canvas
       .getContext('2d')!
-      .getImageData((at.x - rect.left + 9) * ratio, (at.y - rect.top) * ratio, 1, 1).data;
+      .getImageData((at.x - rect.left + 7) * ratio, (at.y - rect.top) * ratio, 1, 1).data;
     return [data[0], data[1], data[2]];
   }, N2);
   expect(blue[2]).toBeGreaterThan(blue[0]!);
