@@ -72,7 +72,10 @@ test('a click on a segment selects its two nodes; a box selects the nodes inside
 
 test('Tab goes to view mode, where a click selects nothing, and back', async ({ page }) => {
   const app = await open(page);
+  const frame = page.getByTestId('mode-frame');
+  await expect(frame).toHaveAttribute('data-mode', 'select');
   await page.keyboard.press('Tab');
+  await expect(frame).toHaveAttribute('data-mode', 'view');
   await app.click(N0);
   expect(await selected(page)).toEqual([]);
   await page.keyboard.press('Tab');

@@ -8,6 +8,7 @@
   import { SelectionPins } from './lib/editor/pins';
   import type { LoadedMap } from './lib/map/hit';
   import Hints from './lib/hints/Hints.svelte';
+  import ModeFrame from './lib/hud/ModeFrame.svelte';
   import HistoryPanel from './lib/hud/HistoryPanel.svelte';
   import { panelHints, panelView } from './lib/hud/panel';
   import { Recent } from './lib/hud/recent.svelte';
@@ -171,6 +172,7 @@
 
 <main>
   <MapCanvas {camera} {memory} {editor} {frames} onUse={(id) => usage.mark(id)} />
+  <ModeFrame mode={editor.mode} />
   <IndexPanel build={index} title={session.title} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
