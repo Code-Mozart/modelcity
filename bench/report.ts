@@ -66,6 +66,10 @@ const ROWS: [string, string][] = [
   ['Established view, zoom: frames per second', 'established.zoom.framesPerSecond'],
   ['Established view, rotate: frames per second', 'established.rotate.framesPerSecond'],
   ['Rows in view while panning', 'established.pan.loadedRows'],
+  ['With the loaded nodes selected: how many', 'selected.selected'],
+  ['... pan: frames per second', 'selected.pan.framesPerSecond'],
+  ['... zoom: frames per second', 'selected.zoom.framesPerSecond'],
+  ['... rotate: frames per second', 'selected.rotate.framesPerSecond'],
   ['JS heap after the first view (MB)', 'heapAfterFirstViewMb'],
   ['JS heap at the end (MB)', 'heapAtEndMb'],
 ];

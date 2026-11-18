@@ -177,3 +177,20 @@ export async function establishedPhase(page: Page, seconds: number) {
   }
   return out;
 }
+
+/** Pan, zoom and rotate with every node that is loaded selected (^1257): what a frame costs with a large selection. */
+export async function selectedPhase(page: Page, seconds: number) {
+  await allLoaded(page);
+  const selected = await page.evaluate(() => {
+    const hook = window.__modelcity!;
+    const ids: number[] = [];
+    for (const state of hook.memory.chunks.values())
+      if (state.status === 'ready') for (const n of state.chunk.nodes) ids.push(n[0]);
+    hook.editor.select(new Set(ids));
+    return ids.length;
+  });
+  const out: Record<string, ReturnType<typeof summary>> = {};
+  for (const how of ['pan', 'zoom', 'rotate'] as const)
+    out[how] = summary(await frames(page, seconds, how), seconds);
+  return { selected, ...out };
+}

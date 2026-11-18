@@ -16,7 +16,8 @@
     "e2e": "playwright test",
     "bench": "playwright test -c playwright.bench.config.ts",
     "ci": "bun run lint && bun run check && bun run test && bun run build",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "bench:selection": "bun bench/selection.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

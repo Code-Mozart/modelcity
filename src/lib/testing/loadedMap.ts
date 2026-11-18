@@ -1,6 +1,7 @@
 import { chunkId, chunkOf } from '../map/chunks';
 import type { Chunk } from '../map/chunkLoader';
 import type { LoadedMap } from '../map/hit';
+import { recordOf } from '../map/segmentIndex';
 import type { EdgeRow, NodeRow } from '../project/storage';
 
 export const mm = (m: number) => Math.round(m * 1000);
@@ -22,11 +23,15 @@ export function loaded(nodes: NodeRow[], edges: EdgeRow[], loading: string[] = [
     return fresh;
   };
   // Empty chunks are loaded too, as they are in memory.
-  for (let cy = -2; cy <= 2; cy++) for (let cx = -2; cx <= 2; cx++) chunk(chunkId(cx, cy));
+  for (let cy = -8; cy <= 8; cy++) for (let cx = -8; cx <= 8; cx++) chunk(chunkId(cx, cy));
   const idOf = (n: NodeRow) => chunkId(...chunkOf(n[1] / 1000, n[2] / 1000));
   nodes.forEach((n) => chunk(idOf(n)).nodes.push(n));
-  for (const e of edges)
-    for (const id of new Set([idOf(all.get(e[1])!), idOf(all.get(e[2])!)])) chunk(id).edges.push(e);
+  // A segment is in every chunk its box touches, as the segment index lists it (^1239).
+  for (const e of edges) {
+    const cells = recordOf(e, all.get(e[1])!, all.get(e[2])!).cells;
+    const ids = cells === 'wide' ? [...chunks.keys()] : cells.map(([cx, cy]) => chunkId(cx, cy));
+    ids.forEach((id) => chunk(id).edges.push(e));
+  }
   loading.forEach((id) => chunks.set(id, { status: 'loading' }));
   const placed = [...new Set(edges)];
   return {

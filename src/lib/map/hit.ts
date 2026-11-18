@@ -40,15 +40,21 @@ function* readyIn(map: LoadedMap, r: ChunkRange): Generator<Chunk> {
 const around = (pt: Vec, reach: number): ChunkRange =>
   chunksOf({ x0: pt.x - reach, x1: pt.x + reach, y0: pt.y - reach, y1: pt.y + reach });
 
-/** Whether the chunk that a point is in is loaded: where it is not, nothing can be picked (^1257). */
-export function interactable(map: LoadedMap, pt: Vec): boolean {
-  const [cx, cy] = chunkOf(pt.x, pt.y);
-  return readyChunk(map, cx, cy) !== null;
+/**
+ * Whether what is within `reach` meters of a point can be picked (^1257): every chunk that the
+ * reach touches is loaded. Where one is still loading, a node or segment in it could be the nearest,
+ * and the one found in the chunks that are loaded would be the wrong one.
+ */
+export function interactable(map: LoadedMap, pt: Vec, reach = 0): boolean {
+  const r = around(pt, reach);
+  for (let cy = r.cy0; cy <= r.cy1; cy++)
+    for (let cx = r.cx0; cx <= r.cx1; cx++) if (!readyChunk(map, cx, cy)) return false;
+  return true;
 }
 
 /** The node nearest to a point, if one is within `reach` meters. */
 export function nodeAt(map: LoadedMap, pt: Vec, reach: number): NodeRow | null {
-  if (!interactable(map, pt)) return null;
+  if (!interactable(map, pt, reach)) return null;
   let best: NodeRow | null = null;
   let bestD = reach;
   for (const chunk of readyIn(map, around(pt, reach)))
@@ -72,7 +78,7 @@ export interface SegmentHit {
  * nodes are loaded when it is: a chunk holds the far ends of its segments (^1231).
  */
 export function segmentAt(map: LoadedMap, pt: Vec, reach: number): SegmentHit | null {
-  if (!interactable(map, pt)) return null;
+  if (!interactable(map, pt, reach)) return null;
   const seen = new Set<number>();
   let best: SegmentHit | null = null;
   for (const chunk of readyIn(map, around(pt, reach)))

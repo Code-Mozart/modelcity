@@ -47,6 +47,15 @@ describe('what is under the pointer (^1257)', () => {
     // The chunk next to it is there: its nodes can be picked.
     expect(nodeAt(waiting, { x: 300, y: 0 }, 5)?.[0]).toBe(2);
   });
+
+  it('finds nothing where a chunk within reach is still loading: the nearest might be in it, and a farther one would be wrong', () => {
+    // Node 1 is in the chunk (-1, 0), which is loading; node 2 is 3 m farther, in the chunk (0, 0).
+    const waiting = loaded([node(1, -1, 0), node(2, 4, 0)], [], ['-1,0']);
+    expect(nodeAt(waiting, { x: 1, y: 0 }, 10)).toBeNull();
+    expect(nodeAt(waiting, { x: 100, y: 0 }, 10)).toBeNull();
+    expect(nodeAt(waiting, { x: 20, y: 0 }, 5)).toBeNull();
+    expect(interactable(waiting, { x: 20, y: 0 })).toBe(true);
+  });
 });
 
 describe('the nodes in a box (^1257)', () => {

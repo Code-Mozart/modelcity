@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   establishedPhase,
+  selectedPhase,
   heapMb,
   importPhase,
   loadingPanPhase,
@@ -58,6 +59,8 @@ async function steps(context: BrowserContext, page: Page, nodes: number, result:
   result.loadingPan = await loadingPanPhase(page, PAN_SECONDS, PAN_M_PER_S);
   say(`${nodes}: established view`);
   result.established = await establishedPhase(page, ESTABLISHED_SECONDS);
+  say(`${nodes}: with the loaded nodes selected`);
+  result.selected = await selectedPhase(page, ESTABLISHED_SECONDS);
   result.heapAtEndMb = await heapMb(client);
 }
 
