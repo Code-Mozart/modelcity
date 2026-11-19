@@ -67,10 +67,20 @@ export class ChunkIndex {
   }
 }
 
+const sameRow = (a: readonly unknown[], b: readonly unknown[]) =>
+  a.length === b.length && a.every((v, i) => v === b[i]);
+
+/**
+ * A row for a chunk: the one that is held if it has the same content (so that rows are shared, and
+ * what is kept per row object stays), else the new one takes its place (a chunk that is read
+ * again after an edit has the row as it is now, ^1260; the chunks that hold the old row are read
+ * again too).
+ */
 function take<R extends [number, ...unknown[]]>(rows: Map<number, Held<R>>, row: R): R {
   const held = rows.get(row[0]);
   if (held) {
     held.refs++;
+    if (!sameRow(held.row, row)) held.row = row;
     return held.row;
   }
   rows.set(row[0], { row, refs: 1 });

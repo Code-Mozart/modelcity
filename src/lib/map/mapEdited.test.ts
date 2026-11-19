@@ -92,6 +92,64 @@ describe('the chunks in memory after an edit is read again or undone (^1260)', (
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('a segment that is changed (not gone) is the new row in every chunk that has it, also in the index of rows', async () => {
+    const { storage, memory } = await open();
+    // Deleting node 2 dissolves nothing here (three segments); delete node 3 and then 1 so that 2 has one in and one out: 1 - 2 - 4.
+    await deleteAndShow(storage, memory, [3]);
+    await vi.advanceTimersByTimeAsync(50);
+    await deleteAndShow(storage, memory, [2]);
+    await vi.advanceTimersByTimeAsync(50);
+    expect(storage).toBeDefined();
+    const rows = [...memory.chunks.values()].flatMap((s) =>
+      s.status === 'ready' ? s.chunk.edges : [],
+    );
+    // Whatever is left in the chunks is exactly what the storage holds.
+    const stored = ((await storage.load('p')) as unknown as { edges: EdgeRow[] }).edges.map((e) =>
+      JSON.stringify(e),
+    );
+    for (const row of rows) expect(stored).toContain(JSON.stringify(row));
+  });
+});
+
+describe('a segment that changed is the new row in the chunks (^1260)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('a segment whose end changed shows its new end after the chunks are read again (a dissolved node)', async () => {
+    const storage = new MemoryStorage();
+    const line: NodeRow[] = [
+      [1, 100_000, 100_000, 0],
+      [2, 400_000, 100_000, 0],
+      [3, 700_000, 100_000, 0],
+    ];
+    await storage.put({
+      id: 'p',
+      file: {
+        ...file(),
+        nodes: line,
+        edges: [
+          [10, 1, 2, null, 1],
+          [11, 2, 3, null, 1],
+        ],
+      },
+    });
+    await buildIndex(storage, 'p');
+    const memory = new MapMemory(storage);
+    memory.open('p');
+    memory.show({ cx0: 0, cx1: 2, cy0: 0, cy1: 0 });
+    await vi.advanceTimersByTimeAsync(50);
+    await deleteAndShow(storage, memory, [2]);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(JSON.stringify(memory.index.edgesAt(1))).toBe('[[10,1,3,null,1]]');
+    for (const s of memory.chunks.values())
+      if (s.status === 'ready') for (const e of s.chunk.edges) expect(e[2]).toBe(3);
+  });
+});
+
+describe('what shows after an edit is read again, and after it is undone (^1260)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
   it('a chunk that is read again is not shown as loading, and the rows count stays right', async () => {
     const { storage, memory } = await open();
     const seen: string[] = [];

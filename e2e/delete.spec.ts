@@ -50,10 +50,26 @@ test('RMB on a node deletes it, with its segment; Ctrl+Z brings it back; a pan d
   await page.evaluate(() => window.__modelcity!.show({ x: 200, y: 75, scale: 2, rotation: 0 }));
   await app.rightClick(N2);
   await expect.poll(() => nodes(page)).toEqual([0, 1]);
+
   await page.keyboard.press('Control+z');
   await expect.poll(() => nodes(page)).toEqual([0, 1, 2]);
   await page.keyboard.press('Control+y');
   await expect.poll(() => nodes(page)).toEqual([0, 1]);
+});
+
+test('deleting the middle node dissolves it: the first segment runs on to the last node, in the chunks too', async ({
+  page,
+}) => {
+  const app = await open(page);
+  await app.rightClick(N1);
+  // The segment is the new row everywhere it is shown, not the old one.
+  await expect
+    .poll(() => page.evaluate(() => JSON.stringify(window.__modelcity!.memory.index.edgesAt(0))))
+    .toBe('[[0,0,2,null,1]]');
+  await page.keyboard.press('Control+z');
+  await expect
+    .poll(() => page.evaluate(() => JSON.stringify(window.__modelcity!.memory.index.edgesAt(0))))
+    .toBe('[[0,0,1,null,1]]');
 });
 
 test('Del deletes the selection; the deleted nodes are not selected; it is saved and the index stays complete after a reload', async ({

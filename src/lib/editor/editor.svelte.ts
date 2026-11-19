@@ -65,6 +65,8 @@ export class Editor {
   loaded: (() => LoadedMap) | null = null;
   /** A change of the map is being written: the editor does nothing else meanwhile (every edit is atomic and blocks, ^1260). */
   busy = $state(false);
+  private waiting = 0;
+  private chain: Promise<void> = Promise.resolve();
 
   /** Replace the map by that of a project: nothing of the project before stays selected or can be undone. */
   load(graph: Graph) {
@@ -116,8 +118,8 @@ export class Editor {
   /** Delete nodes or segments (^434, ^920): the change is worked out from the storage, written, and then it is one step. */
   async delete(doing: Doing) {
     const [source, writer] = [this.source, this.writer];
-    if (this.busy || !source || !writer) return;
-    await this.exclusively(async () => {
+    if (!source || !writer) return;
+    await this.queued(async () => {
       const change = await this.plan(doing, source());
       if (isEmpty(change)) return;
       await writer(change);
@@ -149,17 +151,22 @@ export class Editor {
     this.event = { seq: ++this.seq, kind: 'step', steps: this.history.past.slice(-1) };
   }
 
-  /** Do something that writes the map, one thing at a time; what goes wrong is told to the user and nothing else changes. */
-  private async exclusively(work: () => Promise<void>) {
+  /**
+   * Do something that writes the map, one thing at a time, in the order it was asked for (^1260): what
+   * is asked while a change is written waits for its turn and is worked out then, from the state
+   * it finds (two quick `Ctrl+Z` are two undos). What goes wrong is told to the user and changes nothing.
+   */
+  private queued(work: () => Promise<void>): Promise<void> {
+    this.waiting++;
     this.busy = true;
-    try {
-      await work();
-    } catch (e) {
+    const done = this.chain.then(work).catch((e: unknown) => {
       console.error('[modelcity] the change of the map failed', e);
       this.told?.('error', 'The change could not be written: nothing was changed.');
-    } finally {
-      this.busy = false;
-    }
+    });
+    this.chain = done.finally(() => {
+      if (--this.waiting === 0) this.busy = false;
+    });
+    return done;
   }
 
   /** A click of the right button (^489, ^699, ^920): deletes what is under the pointer, or the selection if the pointer is on it. */
@@ -169,35 +176,36 @@ export class Editor {
     if (doing) await this.delete(doing);
   }
 
-  async undo(whole = false) {
-    await this.move(undoStep(this.history, whole), true);
+  undo(whole = false) {
+    return this.step(undoStep, whole, true);
   }
 
-  async redo(whole = false) {
-    await this.move(redoStep(this.history, whole), false);
+  redo(whole = false) {
+    return this.step(redoStep, whole, false);
   }
 
-  /** Apply what moved; with nothing to move the user is told (^397, ^398). The steps that changed the map are written as one change, all or nothing; while a change is being written nothing is undone. */
+  /** What an undo or redo does when it is asked for: a selection that goes back, and nothing to undo, at once; a change of the map waits for its turn and is worked out then (^1260). */
+  private step(pick: typeof undoStep, whole: boolean, undo: boolean): Promise<void> {
+    const moved = this.busy ? null : pick(this.history, whole);
+    if (!this.busy && !moved) this.nothing(undo);
+    else if (moved && !moved.steps.some((s) => s.map)) this.apply(moved, undo);
+    else return this.queued(() => this.move(pick(this.history, whole), undo));
+    return Promise.resolve();
+  }
+
+  private nothing(undo: boolean) {
+    this.told?.('info', undo ? 'nothing to undo' : 'nothing to redo');
+  }
+
+  /** Called when its turn has come: the steps that changed the map are written as one change, all or nothing (a failed write is thrown and nothing changes). */
   private async move(moved: Moved | null, undo: boolean) {
-    if (this.busy) {
-      this.told?.('info', 'Wait until the change is written.');
-      return;
-    }
-    if (!moved) {
-      this.told?.('info', undo ? 'nothing to undo' : 'nothing to redo');
-      return;
-    }
+    if (!moved) return this.nothing(undo);
     const changes = moved.steps.flatMap((s) => (s.map ? [undo ? inverse(s.map) : s.map] : []));
-    const writer = this.writer;
-    if (changes.length) {
-      if (!writer) return;
-      let failed = true;
-      await this.exclusively(async () => {
-        await writer(compose(changes));
-        failed = false;
-      });
-      if (failed) return;
-    }
+    if (changes.length) await this.writer?.(compose(changes));
+    this.apply(moved, undo);
+  }
+
+  private apply(moved: Moved, undo: boolean) {
     this.selection = moved.steps.reduce(
       (s, step) => applyDelta(s, step.selection, undo),
       this.selection,
