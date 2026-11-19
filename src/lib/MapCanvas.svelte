@@ -158,7 +158,8 @@
     editor.alt = e.altKey;
     if (e.pointerType === 'touch') camera.touchDown(e.pointerId, at);
     else if (e.button === 0 && camera.rotating) camera.compassClick(at);
-    else if (e.button === 0 && editor.mode === 'select') press.down(at, e.shiftKey, e.altKey);
+    else if (e.button === 0 && editor.mode === 'select' && !editor.busy)
+      press.down(at, e.shiftKey, e.altKey);
     else if (e.button === 1) camera.startRotate(at);
     else if (e.button === 2) camera.startPan(at);
   }
@@ -184,7 +185,11 @@
     } else if (e.button === 1) {
       camera.endRotate();
       onUse('rotate');
-    } else if (e.button === 2 && camera.endPan()) onUse('pan');
+    } else if (e.button === 2) {
+      // Pulled: a pan. Not moved: a click, which deletes what is under the pointer (^489, ^920).
+      if (camera.endPan()) onUse('pan');
+      else void editor.rightClick(press.pickAt(localPoint(e)), e.altKey);
+    }
   }
 
   onMount(() => {
@@ -196,7 +201,13 @@
 
 <canvas
   bind:this={canvas}
-  style:cursor={camera.rotating ? 'none' : camera.panning ? 'grabbing' : 'default'}
+  style:cursor={editor.busy
+    ? 'progress'
+    : camera.rotating
+      ? 'none'
+      : camera.panning
+        ? 'grabbing'
+        : 'default'}
   onwheel={onWheel}
   onpointerdown={onPointerDown}
   onpointermove={onPointerMove}

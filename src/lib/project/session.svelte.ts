@@ -1,5 +1,5 @@
 import { SvelteDate } from 'svelte/reactivity';
-import type { ModalTarget } from './modalHints';
+import { ProjectModal, type Notify } from './modalState.svelte';
 import type { Camera } from '../camera/camera.svelte';
 import type { Editor } from '../editor/editor.svelte';
 import { emptyGraph, type Graph } from '../model/graph';
@@ -10,8 +10,13 @@ import { openStored } from './open';
 import { headerFor, persist } from './persist';
 import { importStream, type ImportProgress } from './streamImport';
 import { piecesOfFile, piecesOfText } from './textPieces';
-import type { ToastKind } from '../ui/toasts.svelte';
-import { type Header, type ProjectStorage, type StoredHeader } from './storage';
+import {
+  type Header,
+  type IndexChange,
+  type MapChange,
+  type ProjectStorage,
+  type StoredHeader,
+} from './storage';
 
 /** How long after a change the project is saved to the browser (^166). */
 export const AUTOSAVE_MS = 400;
@@ -19,12 +24,10 @@ export const AUTOSAVE_MS = 400;
 export const AUTOSAVE_MAX_WAIT_MS = 5000;
 /** How long the camera has to rest before it is saved, if it was the only thing that changed (^236). */
 export const CAMERA_SAVE_MS = 1000;
+export type { Notify };
 const MAX_TITLE = 100;
 const UNTITLED = 'Untitled project';
 const NEW_CAMERA: CameraState = { x: 0, y: 0, scale: 4, rotation: 0 };
-
-/** Tell the user something (a toast, ^232). */
-export type Notify = (kind: ToastKind, text: string) => void;
 
 const unreadable = (e: unknown) => new ProjectFileError('unreadable', '^208', String(e));
 
@@ -32,24 +35,15 @@ const unreadable = (e: unknown) => new ProjectFileError('unreadable', '^208', St
  * The open project: its title and dates, the browser storage it is kept in, autosave, import and
  * export (^82, ^148). The editor and the camera hold the map and the view.
  */
-export class ProjectSession {
+export class ProjectSession extends ProjectModal {
   /** The id of the open project; empty while there is none (^189). */
   id = $state('');
   /** True when the projects of the browser were looked at and one was opened, if there is any. */
   ready = $state(false);
   title = $state(UNTITLED);
-  modalOpen = $state(false);
   /** The projects kept in the browser, newest first (shown by the modal). */
   projects = $state.raw<StoredHeader[]>([]);
   error = $state<string | null>(null);
-  /** The card being renamed or asked to be deleted (a second click confirms), if any. */
-  row = $state<{ id: string; mode: 'rename' | 'delete' } | null>(null);
-  /** What the pointer is over in the modal, for the hints (^181). */
-  over = $state<ModalTarget | null>(null);
-  /** The name being typed in a rename differs from the title: closing would throw it away (^233). */
-  renameDirty = $state(false);
-  /** The modal was opened to import: it opens the file window as soon as it is there (^223). */
-  wantsImport = $state(false);
   /** True while a rename is written: the modal does not react meanwhile. */
   busy = $state(false);
   /** The rows of a file that is being imported, written so far (^1256); null when none is. */
@@ -74,7 +68,7 @@ export class ProjectSession {
   }
 
   private now: () => string;
-  private notify: Notify;
+  protected notify: Notify;
 
   constructor(
     private editor: Editor,
@@ -82,6 +76,7 @@ export class ProjectSession {
     private storage: ProjectStorage,
     deps: { now?: () => string; notify?: Notify } = {},
   ) {
+    super();
     this.now = deps.now ?? (() => new SvelteDate().toISOString());
     this.notify = deps.notify ?? (() => {});
   }
@@ -165,6 +160,18 @@ export class ProjectSession {
     this.stored = this.header = null;
     [this.title, this.createdAt, this.lastUpdatedAt] = [title, stamp, stamp];
     remember(this.id);
+  }
+
+  /**
+   * Write a change that an operation made on the map (^1260): straight to the storage, with what it
+   * does to the segment index, in one step; the project's date is now. The map is not held here
+   * (^1236), only the header is kept in step.
+   */
+  async commitMap(change: MapChange, index: IndexChange) {
+    if (!this.id) return;
+    this.lastUpdatedAt = this.now();
+    const header = (this.header = headerFor(this.project(), this.header));
+    await this.storage.patch(this.id, header, change, index);
   }
 
   /** Write the project to the browser now. Only a change of the map counts as an update, not a rename or the camera. */
@@ -299,29 +306,6 @@ export class ProjectSession {
     }
   }
 
-  /**
-   * Whether the user may leave what they are doing in the modal: not while a rename has a name
-   * that was changed (^233, avoid accidental actions that discard work); it says why.
-   */
-  mayLeave(): boolean {
-    if (this.row?.mode !== 'rename' || !this.renameDirty) return true;
-    this.notify('warning', 'Finish or cancel the rename first.');
-    return false;
-  }
-
-  startRename(id: string) {
-    if (this.mayLeave()) this.row = { id, mode: 'rename' };
-  }
-
-  startDelete(id: string) {
-    if (this.mayLeave()) this.row = { id, mode: 'delete' };
-  }
-
-  cancelRow() {
-    this.row = null;
-    this.renameDirty = false;
-  }
-
   /** Give a project a new name (an empty one is refused) and save it at once. The date of the last change stays (^177). */
   async rename(id: string, title: string) {
     const name = title.trim().slice(0, MAX_TITLE);
@@ -383,17 +367,5 @@ export class ProjectSession {
     await this.refresh();
     this.wantsImport = importFile;
     this.modalOpen = true;
-  }
-
-  /** Close the modal if the user may leave (a click outside, the cross): see `mayLeave`. */
-  requestClose() {
-    if (this.mayLeave()) this.closeModal();
-  }
-
-  closeModal() {
-    this.modalOpen = false;
-    this.row = null;
-    this.renameDirty = false;
-    this.over = null;
   }
 }

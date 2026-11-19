@@ -70,6 +70,10 @@ export class MapMemory {
   readonly pinned = new SvelteSet<string>();
   /** Said when the pinned chunks alone are more than the budget: nothing more can be let go, so the one who pinned them has to let them go (^1257). */
   onSqueezed: (() => void) | null = null;
+  /** What was asked for last, so that it can be asked for again when a chunk has to be read afresh (^1260). */
+  private last: { range: ChunkRange; near?: (box: Box) => boolean } | null = null;
+  /** For each chunk the number of the last read afresh that was asked for: an older one that arrives later is let go. */
+  private fresh = new SvelteMap<string, number>();
   /** Counts the projects that were open: what a read of an earlier one finds is let go. */
   private generation = 0;
 
@@ -88,6 +92,8 @@ export class MapMemory {
     this.progress.clear();
     this.index.clear();
     this.lastWanted.clear();
+    this.fresh.clear();
+    this.last = null;
     this.pinned.clear();
     this.rows = 0;
     this.tooMuch = false;
@@ -99,6 +105,7 @@ export class MapMemory {
    * way and no longer asked for is stopped.
    */
   show(range: ChunkRange, near?: (box: Box) => boolean) {
+    this.last = { range, near };
     // A range that is far too large is not even counted chunk by chunk.
     const ids = countOf(range) > 4 * MAX_CHUNKS ? [] : idsWhere(range, near);
     this.tooMuch = countOf(range) > 4 * MAX_CHUNKS || ids.length > MAX_CHUNKS;
@@ -121,6 +128,68 @@ export class MapMemory {
     );
     this.evict();
     this.pump();
+  }
+
+  /**
+   * An edit changed the map (^1260): the rows that are gone leave the loaded chunks at once, and the
+   * chunks that the change touches (`touched`, `'wide'` for a segment that is in all of them) are read
+   * again, each in place: it stays as it is shown until the new one is there, and it is not shown as loading.
+   */
+  edited(gone: { nodes: number[]; edges: number[] }, touched: string[]) {
+    this.forget(new SvelteSet(gone.nodes), new SvelteSet(gone.edges));
+    for (const id of touched.includes('wide') ? [...this.chunks.keys()] : touched) this.reread(id);
+  }
+
+  private forget(nodes: ReadonlySet<number>, edges: ReadonlySet<number>) {
+    const without = <R extends [number, ...unknown[]]>(rows: R[], gone: ReadonlySet<number>) =>
+      rows.filter((r) => !gone.has(r[0]));
+    for (const [id, state] of [...this.chunks]) {
+      if (state.status !== 'ready') continue;
+      const c = state.chunk;
+      const next: Chunk = {
+        id,
+        nodes: without(c.nodes, nodes),
+        ends: without(c.ends, nodes),
+        edges: without(c.edges, edges),
+      };
+      if (this.costOf(next) !== this.costOf(c) || next.ends.length !== c.ends.length)
+        this.swap(c, next);
+    }
+  }
+
+  private swap(old: Chunk, next: Chunk) {
+    this.index.remove(old);
+    this.rows += this.costOf(next) - this.costOf(old);
+    this.index.add(next);
+    this.chunks.set(next.id, { status: 'ready', chunk: next });
+  }
+
+  private reread(id: string) {
+    const state = this.chunks.get(id);
+    if (!state || !this.loader) return;
+    if (state.status === 'loading') {
+      // What is being read may have been read before the edit: start it again.
+      this.drop(id);
+      if (this.last) this.show(this.last.range, this.last.near);
+      return;
+    }
+    const token = (this.fresh.get(id) ?? 0) + 1;
+    this.fresh.set(id, token);
+    const generation = this.generation;
+    this.loader
+      .load(id)
+      .then((next) => {
+        const now = this.chunks.get(id);
+        if (
+          generation !== this.generation ||
+          this.fresh.get(id) !== token ||
+          now?.status !== 'ready'
+        )
+          return;
+        this.swap(now.chunk, next);
+        this.evict();
+      })
+      .catch((e: unknown) => console.error(`[modelcity] chunk ${id} could not be read again`, e));
   }
 
   /** How far a chunk is from the middle of the view, in chunks. */

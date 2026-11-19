@@ -1,3 +1,4 @@
+import type { RowChange } from '../edit/change';
 import type { SelectionDelta } from './selection';
 
 /**
@@ -22,6 +23,8 @@ export interface Step {
   selection: SelectionDelta;
   /** How many nodes are selected after the step: a run of selection steps that ends with none is named `deselect all` (^216). */
   selectedAfter: number;
+  /** What the step changed on the map, if it did (^1260): the rows as they were and are, so that undo and redo can write them again. */
+  map?: RowChange;
 }
 
 export interface History {

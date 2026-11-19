@@ -1,6 +1,7 @@
 import type {
   EdgeRow,
   Header,
+  IndexChange,
   IndexRecord,
   IndexStatus,
   MapChange,
@@ -12,7 +13,7 @@ import type {
 import { applyChange, headerOf } from './storage';
 import type { ProjectFile } from './file';
 import { DB, DB_VERSION, CELLS, EDGES, NODES, PROJECTS, SEGMENTS, upgrade } from './idbSchema';
-import { done, edge, node, ofProject, request, rowsByIds } from './idbRows';
+import { deleteIds, done, edge, node, ofProject, request, rowsByIds } from './idbRows';
 
 /**
  * A project is a record of `projects` with its header (the list reads only these), and one record
@@ -105,26 +106,32 @@ export class IndexedDbStorage implements ProjectStorage {
     await done(tx);
   }
 
-  async patch(id: string, header: Header, change?: MapChange) {
+  async patch(id: string, header: Header, change?: MapChange, index?: IndexChange) {
     const tx = await this.tx('readwrite');
     const r = await request<Stored | undefined>(tx.objectStore(PROJECTS).get(id));
     if (!r) return;
     if ('file' in r) this.write(tx, id, applyChange(r.file, header, change));
-    else {
-      // The mark that the index is complete stays unless the map changes.
-      const changed = change !== undefined && changes(change);
-      tx.objectStore(PROJECTS).put({
-        id,
-        header,
-        ...(!changed && r.index ? { index: r.index } : {}),
-      });
-      if (change && changed) {
-        // A change of the map makes the index stale: it is thrown away (until the edits keep it current, ^1243).
-        this.dropIndex(tx, id);
-        this.changeRows(tx, id, change);
-      }
-    }
+    else this.patchRows(tx, r, { header, change, index });
     await done(tx);
+  }
+
+  /** The header and the change of a project in the layout with rows; the index stays if the map did not change, or the change says what to do with the index and it is complete (^1260), else it is thrown away. */
+  private patchRows(
+    tx: IDBTransaction,
+    r: Extract<Stored, { header: Header }>,
+    { header, change, index }: { header: Header; change?: MapChange; index?: IndexChange },
+  ) {
+    const changed = change !== undefined && changes(change);
+    const keeps = !changed || (index !== undefined && r.index === index.version);
+    tx.objectStore(PROJECTS).put({
+      id: r.id,
+      header,
+      ...(keeps && r.index ? { index: r.index } : {}),
+    });
+    if (!change || !changed) return;
+    if (keeps && index) this.updateIndex(tx, r.id, index);
+    else this.dropIndex(tx, r.id);
+    this.changeRows(tx, r.id, change);
   }
 
   async remove(id: string) {
@@ -275,6 +282,22 @@ export class IndexedDbStorage implements ProjectStorage {
     this.dropIndex(tx, id);
   }
 
+  /** Bring the index up to date with a change, in the step of the change. */
+  private updateIndex(tx: IDBTransaction, id: string, c: IndexChange) {
+    const [segments, cells] = [tx.objectStore(SEGMENTS), tx.objectStore(CELLS)];
+    deleteIds(segments, id, c.removedSegments);
+    deleteIds(cells, id, c.removedNodes);
+    for (const r of c.records) {
+      const keys = r.cells === 'wide' ? [[id, 'wide']] : r.cells.map(([cx, cy]) => [id, cx, cy]);
+      segments.put({ p: id, id: r.id, v: c.version, box: r.box, cells: keys });
+    }
+    for (const {
+      node: [n, x, y, th],
+      cell,
+    } of c.cells)
+      cells.put({ p: id, id: n, v: c.version, x, y, th, cell: [id, cell[0], cell[1]] });
+  }
+
   private dropIndex(tx: IDBTransaction, id: string) {
     tx.objectStore(SEGMENTS).delete(ofProject(id));
     tx.objectStore(CELLS).delete(ofProject(id));
@@ -300,7 +323,7 @@ export class IndexedDbStorage implements ProjectStorage {
     const [nodes, edges] = [tx.objectStore(NODES), tx.objectStore(EDGES)];
     c.nodes.forEach((n) => nodes.put(node(id, n)));
     c.edges.forEach((e) => edges.put(edge(id, e)));
-    c.removedNodes.forEach((n) => nodes.delete([id, n]));
-    c.removedEdges.forEach((e) => edges.delete([id, e]));
+    deleteIds(nodes, id, c.removedNodes);
+    deleteIds(edges, id, c.removedEdges);
   }
 }

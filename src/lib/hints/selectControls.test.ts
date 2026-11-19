@@ -4,6 +4,7 @@ import { Editor } from '../editor/editor.svelte';
 import { editorKey } from '../editor/keys';
 import { SelectPress } from '../editor/selectPress';
 import { edge, loaded, node } from '../testing/loadedMap';
+import { editing } from '../testing/editHarness';
 import { SELECT_CONTROLS, selectHints, type SelectFacts } from './selectControls';
 
 const size: Size = { width: 400, height: 400 };
@@ -31,8 +32,77 @@ const key = (k: string, mods: object = {}) => ({
   ...mods,
 });
 
+const deleted = async () => {
+  const e = await editing([node(1, -50, 0), node(2, 50, 0), node(3, 0, 60)], [edge(7, 1, 2)]);
+  const nodes = async () => (await e.rows()).nodes.map((n) => n[0]).join();
+  const edges = async () => (await e.rows()).edges.map((n) => n[0]).join();
+  return { ...e, nodes, edges };
+};
+
+/** The controls that delete, each done on a map in a storage (^1260). */
+function deletes(): Record<number, () => Promise<boolean>> {
+  return {
+    757: async () => {
+      const { editor, press, nodes } = await deleted();
+      editor.hover = press.pickAt(at(0, 60));
+      editorKey(editor, key('Delete'));
+      await new Promise((r) => setTimeout(r, 0));
+      return (await nodes()) === '1,2';
+    },
+    489: async () => {
+      const { editor, press, nodes } = await deleted();
+      press.down(at(0, 60), false);
+      press.up();
+      await editor.rightClick(press.pickAt(at(50, 0)), false);
+      return (await nodes()) === '3';
+    },
+    920: async () => {
+      const { editor, press, edges } = await deleted();
+      editor.hover = press.pickAt(at(0, 1));
+      editorKey(editor, key('Delete'));
+      await new Promise((r) => setTimeout(r, 0));
+      return (await edges()) === '';
+    },
+    1261: async () => {
+      const { editor, press, edges } = await deleted();
+      press.down(at(0, 60), false);
+      press.up();
+      await editor.rightClick(press.pickAt(at(0, 1)), false);
+      return (await edges()) === '';
+    },
+  };
+}
+
+/** The controls that delete with the right button. */
+function deletesByClick(): Record<number, () => Promise<boolean>> {
+  return {
+    160: async () => {
+      const { editor, press, edges } = await deleted();
+      await editor.rightClick(press.pickAt(at(0, 1)), true);
+      return (await edges()) === '';
+    },
+    699: async () => {
+      const { editor, press, nodes } = await deleted();
+      press.down(at(0, 1), false);
+      press.up();
+      await editor.rightClick(press.pickAt(at(-50, 0)), false);
+      return (await nodes()) === '3';
+    },
+    687: async () => {
+      const { editor, press, nodes } = await deleted();
+      press.down(at(0, 60), false);
+      press.up();
+      editorKey(editor, key('Delete'));
+      await new Promise((r) => setTimeout(r, 0));
+      return (await nodes()) === '1,2';
+    },
+  };
+}
+
 /** Each control of the table, done on the real thing, with the state its hint is shown in (^783): what the hint says it does. */
 const DOES: Record<number, () => unknown> = {
+  ...deletes(),
+  ...deletesByClick(),
   394: () => {
     const { editor } = editorWith();
     editorKey(editor, key('Tab'));
@@ -119,6 +189,7 @@ const facts = (over: Partial<SelectFacts> = {}): SelectFacts => ({
   hoveredSelected: false,
   selected: 0,
   branchSelected: false,
+  onSelection: false,
   ...over,
 });
 
@@ -126,9 +197,12 @@ const texts = (f: SelectFacts, hidden: (id: string) => boolean = () => false) =>
   selectHints(f, hidden).map((h) => h.text);
 
 describe('the controls of select mode (^394, ^395, ^454, ^456, ^490 to ^495, ^684 to ^691)', () => {
-  it.each(SELECT_CONTROLS.map((c) => [c.hat]))('control ^%i does what its hint says', (hat) => {
-    expect(DOES[hat]!()).toBe(true);
-  });
+  it.each(SELECT_CONTROLS.map((c) => [c.hat]))(
+    'control ^%i does what its hint says',
+    async (hat) => {
+      expect(await DOES[hat]!()).toBe(true);
+    },
+  );
 
   it('every control of the table has such a scenario, and no other has one', () => {
     expect(Object.keys(DOES).map(Number).sort()).toEqual(SELECT_CONTROLS.map((c) => c.hat).sort());
@@ -147,11 +221,19 @@ describe('what the hints of select mode say in each state (^181)', () => {
       'add to selection',
       'deselect all',
       'deselect all',
+      'delete selected',
     ]);
   });
+});
 
+describe('what the hints of select mode say on a node (^181)', () => {
   it('on a node: select, or select instead when something else is selected, Shift toggles', () => {
-    expect(texts(facts({ hovered: 'node' }))).toEqual(['view mode', 'select', 'select branch']);
+    expect(texts(facts({ hovered: 'node' }))).toEqual([
+      'view mode',
+      'select',
+      'select branch',
+      'delete node',
+    ]);
     expect(texts(facts({ hovered: 'node', selected: 2 }))).toEqual([
       'view mode',
       'select instead',
@@ -159,6 +241,8 @@ describe('what the hints of select mode say in each state (^181)', () => {
       'select branch',
       'add branch to selection',
       'deselect all',
+      'delete node',
+      'delete selected',
     ]);
     expect(texts(facts({ hovered: 'node', selected: 2, hoveredSelected: true }))).toEqual([
       'view mode',
@@ -167,6 +251,8 @@ describe('what the hints of select mode say in each state (^181)', () => {
       'select branch',
       'add branch to selection',
       'deselect all',
+      'delete node',
+      'delete selected',
     ]);
   });
 });
@@ -186,6 +272,9 @@ describe('what the hints of select mode say on a segment and in view mode (^181)
       'select branch',
       'add branch to selection',
       'deselect all',
+      'delete segment',
+      'delete branch',
+      'delete selected',
     ]);
     const both = facts({ hovered: 'segment', selected: 2, hoveredSelected: true });
     expect(texts(both)).toContain('deselect segment');

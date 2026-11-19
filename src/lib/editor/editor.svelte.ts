@@ -1,4 +1,6 @@
 import type { Point } from '../camera/view';
+import { inverse, isEmpty, type RowChange } from '../edit/change';
+import { deleteEdges, deleteNodes, type RowSource } from '../edit/deleteNodes';
 import { emptyGraph, type Graph } from '../model/graph';
 import {
   NO_HISTORY,
@@ -10,6 +12,8 @@ import {
   type Moved,
 } from './history';
 import type { ToastKind } from '../ui/toasts.svelte';
+import type { LoadedMap } from '../map/hit';
+import { byClick, type Doing } from './deleting';
 import type { Hover } from './pick';
 import {
   applyDelta,
@@ -17,6 +21,7 @@ import {
   NOTHING,
   sameSelection,
   selectionName,
+  withoutNodes,
   type Selection,
 } from './selection';
 
@@ -52,6 +57,13 @@ export class Editor {
   private seq = 0;
   /** Where the editor tells the user something (a toast): set by the app. */
   told: ((kind: ToastKind, text: string) => void) | null = null;
+  /** What the editor needs of the map to change it (^1260): where to read the rows an operation works on, and how a change is written (the storage, its index, the chunks in memory). Set by the app. */
+  source: (() => RowSource) | null = null;
+  writer: ((change: RowChange) => Promise<void>) | null = null;
+  /** The map as it is loaded: what a hover or a click found is looked up in it. */
+  loaded: (() => LoadedMap) | null = null;
+  /** A change of the map is being written: the editor does nothing else meanwhile (every edit is atomic and blocks, ^1260). */
+  busy = $state(false);
 
   /** Replace the map by that of a project: nothing of the project before stays selected or can be undone. */
   load(graph: Graph) {
@@ -100,19 +112,83 @@ export class Editor {
     this.event = null;
   }
 
-  undo(whole = false) {
-    this.move(undoStep(this.history, whole), true);
+  /** Delete nodes or segments (^434, ^920): the change is worked out from the storage, written, and then it is one step. */
+  async delete(doing: Doing) {
+    const [source, writer] = [this.source, this.writer];
+    if (this.busy || !source || !writer) return;
+    await this.exclusively(async () => {
+      const change =
+        doing.kind === 'nodes'
+          ? await deleteNodes(source(), doing.ids)
+          : await deleteEdges(source(), doing.edges);
+      if (isEmpty(change)) return;
+      await writer(change);
+      this.took(doing.name, change);
+      if (doing.told) this.told?.('info', doing.told);
+    });
   }
 
-  redo(whole = false) {
-    this.move(redoStep(this.history, whole), false);
+  /** The step of a change that was written: the nodes that are gone are not selected any more. */
+  private took(name: string, change: RowChange) {
+    const gone = change.nodes.flatMap((p) => (p.after || !p.before ? [] : [p.before[0]]));
+    const [before, after] = [this.selection, withoutNodes(this.selection, gone)];
+    this.selection = after;
+    this.hover = null;
+    this.history = record(this.history, {
+      name,
+      kind: null,
+      continues: false,
+      selection: deltaOf(before, after),
+      selectedAfter: after.size,
+      map: change,
+    });
+    this.event = { seq: ++this.seq, kind: 'step', steps: this.history.past.slice(-1) };
   }
 
-  /** Apply what moved; with nothing to move the user is told (^397, ^398). */
-  private move(moved: Moved | null, undo: boolean) {
+  /** Do something that writes the map, one thing at a time; what goes wrong is told to the user and nothing else changes. */
+  private async exclusively(work: () => Promise<void>) {
+    this.busy = true;
+    try {
+      await work();
+    } catch (e) {
+      console.error('[modelcity] the change of the map failed', e);
+      this.told?.('error', 'The change could not be written: nothing was changed.');
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** A click of the right button (^489, ^699, ^920): deletes what is under the pointer, or the selection if the pointer is on it. */
+  async rightClick(on: Hover | null, alt: boolean) {
+    const map = this.loaded?.();
+    const doing = map && this.mode === 'select' ? byClick(this.selection, on, alt, map) : null;
+    if (doing) await this.delete(doing);
+  }
+
+  async undo(whole = false) {
+    await this.move(undoStep(this.history, whole), true);
+  }
+
+  async redo(whole = false) {
+    await this.move(redoStep(this.history, whole), false);
+  }
+
+  /** Apply what moved; with nothing to move the user is told (^397, ^398). A step that changed the map writes the change again, or its inverse. */
+  private async move(moved: Moved | null, undo: boolean) {
     if (!moved) {
       this.told?.('info', undo ? 'nothing to undo' : 'nothing to redo');
       return;
+    }
+    const writer = this.writer;
+    if (moved.steps.some((s) => s.map)) {
+      if (this.busy || !writer) return;
+      let failed = true;
+      await this.exclusively(async () => {
+        for (const step of moved.steps)
+          if (step.map) await writer(undo ? inverse(step.map) : step.map);
+        failed = false;
+      });
+      if (failed) return;
     }
     this.selection = moved.steps.reduce(
       (s, step) => applyDelta(s, step.selection, undo),

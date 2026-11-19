@@ -62,3 +62,21 @@ export async function rowsByIds<R extends { id: number }>(
   });
   return (await Promise.all(reads)).flat();
 }
+
+/**
+ * Delete the rows of a store with these ids (`[project, id]` keys): ids that follow each other are
+ * deleted with one request for the run (a road that was drawn in one go has ids in a row), the
+ * others one by one. A delete costs about the same whatever it deletes (^1253).
+ */
+export function deleteIds(store: IDBObjectStore, project: string, ids: number[]) {
+  const sorted = [...new Set(ids)].sort((a, b) => a - b);
+  let from = 0;
+  for (let i = 1; i <= sorted.length; i++) {
+    if (i < sorted.length && sorted[i] === sorted[i - 1]! + 1) continue;
+    const [first, last] = [sorted[from]!, sorted[i - 1]!];
+    store.delete(
+      first === last ? [project, first] : IDBKeyRange.bound([project, first], [project, last]),
+    );
+    from = i;
+  }
+}

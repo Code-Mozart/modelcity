@@ -1,3 +1,4 @@
+import { byKey } from './deleting';
 import type { Editor } from './editor.svelte';
 import type { ControlId } from '../hints/hints';
 import { actionFor, keyOf, type Action } from './keymap';
@@ -14,6 +15,11 @@ type KeyEventLike = {
 const DO: Record<Action, (editor: Editor) => void> = {
   escape: (e) => e.mode === 'select' && e.deselectAll(),
   view: (e) => e.toggleMode(),
+  delete: (e) => {
+    const map = e.loaded?.();
+    const doing = map && e.mode === 'select' ? byKey(e.selection, e.hover, e.alt, map) : null;
+    if (doing) void e.delete(doing);
+  },
   undo: (e) => e.undo(),
   redo: (e) => e.redo(),
   undoBatch: (e) => e.undo(true),

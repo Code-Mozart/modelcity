@@ -42,8 +42,13 @@ export interface ProjectStorage {
   append(id: string, rows: { nodes: NodeRow[]; edges: EdgeRow[] }): Promise<void>;
   /** Give a project whose rows were appended its header: from now on it is a project of the list. */
   create(id: string, header: Header): Promise<void>;
-  /** Write the header of a stored project and, if given, what changed on its map. Only that is written. */
-  patch(id: string, header: Header, change?: MapChange): Promise<void>;
+  /**
+   * Write the header of a stored project and, if given, what changed on its map. Only that is
+   * written. With `index` (what the change does to the segment index, ^1260) a complete index of
+   * that version is kept and brought up to date in the same step; without it, or when the index is
+   * not complete, a change of the map throws the index away.
+   */
+  patch(id: string, header: Header, change?: MapChange, index?: IndexChange): Promise<void>;
   remove(id: string): Promise<void>;
   /** The nodes with these ids. */
   nodesByIds(id: string, ids: number[]): Promise<NodeRow[]>;
@@ -93,6 +98,15 @@ export interface IndexRecord {
 export interface NodeCell {
   node: NodeRow;
   cell: [number, number];
+}
+
+/** What a change of the map does to the segment index (^1260): the records and cells that are new or different, and the ids of those that are gone. */
+export interface IndexChange {
+  version: number;
+  records: IndexRecord[];
+  cells: NodeCell[];
+  removedSegments: number[];
+  removedNodes: number[];
 }
 
 /** How much of a project's index there is: the segments and the nodes, and the records of the asked version of each. */
@@ -184,19 +198,38 @@ export class MemoryStorage implements ProjectStorage {
     await this.put({ id, file: { ...structuredClone(header), ...rows } });
   }
 
-  /** A change of the map makes the segment index of the project stale: it is thrown away (until the edits keep it current, ^1243). */
-  async patch(id: string, header: Header, change?: MapChange) {
+  /** A change of the map makes the segment index of the project stale and it is thrown away, unless the change brings what to do with it (^1260). */
+  async patch(id: string, header: Header, change?: MapChange, index?: IndexChange) {
     const p = this.items.get(id);
     if (!p) return;
     this.items.set(id, { id, file: structuredClone(applyChange(p.file, header, change)) });
     if (
-      change &&
-      (change.nodes.length ||
+      !change ||
+      !(
+        change.nodes.length ||
         change.edges.length ||
         change.removedNodes.length ||
-        change.removedEdges.length)
+        change.removedEdges.length
+      )
     )
-      this.dropIndex(id);
+      return;
+    if (index && this.marks.get(id) === index.version) this.keepIndex(id, index);
+    else this.dropIndex(id);
+  }
+
+  private keepIndex(id: string, c: IndexChange) {
+    const records = this.index.get(id) ?? new Map();
+    const cells = this.cells.get(id) ?? new Map();
+    this.index.set(id, records);
+    this.cells.set(id, cells);
+    c.removedSegments.forEach((n) => records.delete(n));
+    c.removedNodes.forEach((n) => cells.delete(n));
+    c.records.forEach((record) =>
+      records.set(record.id, { version: c.version, record: structuredClone(record) }),
+    );
+    c.cells.forEach(({ node, cell }) =>
+      cells.set(node[0], { version: c.version, node: [...node], cell }),
+    );
   }
 
   async remove(id: string) {

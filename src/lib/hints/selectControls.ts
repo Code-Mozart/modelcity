@@ -2,6 +2,8 @@ import { hintsOf, type Control } from './controls';
 import type { Hint } from './hints';
 import { ESC, key, mouse } from './inputs';
 
+const DEL = key('Del');
+
 /**
  * What the controls of select mode need to know (^181): the mode, what is under the pointer, and
  * the state of the selection and the history. `hovered` is a node, a segment, or nothing.
@@ -14,6 +16,8 @@ export interface SelectFacts {
   selected: number;
   /** All the nodes of the branch of what is hovered are selected (^128). */
   branchSelected: boolean;
+  /** The pointer is on the selection, which has several nodes: on one of them or on a segment between them (^699). */
+  onSelection: boolean;
 }
 
 const picking = (f: SelectFacts) => f.mode === 'select';
@@ -118,6 +122,55 @@ export const SELECT_CONTROLS: Control<SelectFacts>[] = [
     on: (f) => picking(f) && f.selected > 0,
     listens: yes,
     says: () => 'deselect all',
+  },
+  {
+    hat: 757,
+    input: [mouse('rmb'), DEL],
+    on: (f) => picking(f) && f.hovered === 'node' && f.selected === 0,
+    listens: yes,
+    says: () => 'delete node',
+  },
+  {
+    hat: 489,
+    input: mouse('rmb'),
+    on: (f) => picking(f) && f.hovered === 'node' && f.selected > 0 && !f.onSelection,
+    listens: yes,
+    says: () => 'delete node',
+  },
+  {
+    hat: 920,
+    input: [mouse('rmb'), DEL],
+    on: (f) => picking(f) && f.hovered === 'segment' && f.selected === 0,
+    listens: yes,
+    says: () => 'delete segment',
+  },
+  {
+    hat: 1261,
+    input: mouse('rmb'),
+    on: (f) => picking(f) && f.hovered === 'segment' && f.selected > 0 && !f.onSelection,
+    listens: yes,
+    says: () => 'delete segment',
+  },
+  {
+    hat: 160,
+    input: mouse('rmb', false, 'alt'),
+    on: (f) => picking(f) && f.hovered === 'segment' && !f.onSelection,
+    listens: yes,
+    says: () => 'delete branch',
+  },
+  {
+    hat: 699,
+    input: mouse('rmb'),
+    on: (f) => picking(f) && f.onSelection,
+    listens: yes,
+    says: () => 'delete selected nodes',
+  },
+  {
+    hat: 687,
+    input: DEL,
+    on: (f) => picking(f) && f.selected > 0,
+    listens: yes,
+    says: () => 'delete selected',
   },
 ];
 

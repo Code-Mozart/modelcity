@@ -5,6 +5,7 @@
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
   import { editorKey, USED } from './lib/editor/keys';
+  import { connectEditor } from './lib/edit/connect';
   import { SelectionPins } from './lib/editor/pins';
   import type { LoadedMap } from './lib/map/hit';
   import Hints from './lib/hints/Hints.svelte';
@@ -70,6 +71,12 @@
     chunks: memory.chunks,
     nodeOf: memory.index.nodeOf,
     edgesAt: memory.index.edgesAt,
+  });
+  connectEditor(editor, {
+    storage,
+    memory,
+    project: () => session.id,
+    commit: (change, index) => session.commitMap(change, index),
   });
   const pins = new SelectionPins();
   memory.onSqueezed = () => {
