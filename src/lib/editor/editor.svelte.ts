@@ -22,7 +22,6 @@ import {
   NOTHING,
   sameSelection,
   selectionName,
-  withoutNodes,
   type Selection,
 } from './selection';
 
@@ -61,15 +60,20 @@ export class Editor {
   /** What the editor needs of the map to change it (^1260): where to read the rows an operation works on, and how a change is written (the storage, its index, the chunks in memory). Set by the app. */
   source: (() => RowSource) | null = null;
   writer: ((change: RowChange) => Promise<void>) | null = null;
+  /** Whether the map can be changed now: not while its index is built (a build that goes on while rows change would end with an index that is wrong, ^1260). Set by the app. */
+  canEdit: (() => boolean) | null = null;
   /** The map as it is loaded: what a hover or a click found is looked up in it. */
   loaded: (() => LoadedMap) | null = null;
   /** A change of the map is being written: the editor does nothing else meanwhile (every edit is atomic and blocks, ^1260). */
   busy = $state(false);
   private waiting = 0;
+  /** Counts the projects that were open: what was asked for an earlier one is not done in the one that is open now. */
+  private epoch = 0;
   private chain: Promise<void> = Promise.resolve();
 
   /** Replace the map by that of a project: nothing of the project before stays selected or can be undone. */
   load(graph: Graph) {
+    this.epoch++;
     this.graph = graph;
     this.selection = NOTHING;
     this.hover = null;
@@ -119,11 +123,13 @@ export class Editor {
   async delete(doing: Doing) {
     const [source, writer] = [this.source, this.writer];
     if (!source || !writer) return;
+    const epoch = this.epoch;
     await this.queued(async () => {
       const change = await this.plan(doing, source());
       if (isEmpty(change)) return;
       await writer(change);
-      this.took(doing.name, change);
+      // The project was changed while it was written: the step belongs to the other one.
+      if (epoch === this.epoch) this.took(doing.name, change);
     });
   }
 
@@ -134,10 +140,9 @@ export class Editor {
     return branchEdgesOf(source, doing.edge).then((edges) => deleteEdges(source, edges));
   }
 
-  /** The step of a change that was written: the nodes that are gone are not selected any more. */
+  /** The step of a change that was written: nothing is selected any more, as on `main` (a removal ends with `selection: []`, ^434). */
   private took(name: string, change: RowChange) {
-    const gone = change.nodes.flatMap((p) => (p.after || !p.before ? [] : [p.before[0]]));
-    const [before, after] = [this.selection, withoutNodes(this.selection, gone)];
+    const [before, after] = [this.selection, NOTHING];
     this.selection = after;
     this.hover = null;
     this.history = record(this.history, {
@@ -145,7 +150,7 @@ export class Editor {
       kind: null,
       continues: false,
       selection: deltaOf(before, after),
-      selectedAfter: after.size,
+      selectedAfter: 0,
       map: change,
     });
     this.event = { seq: ++this.seq, kind: 'step', steps: this.history.past.slice(-1) };
@@ -159,10 +164,18 @@ export class Editor {
   private queued(work: () => Promise<void>): Promise<void> {
     this.waiting++;
     this.busy = true;
-    const done = this.chain.then(work).catch((e: unknown) => {
-      console.error('[modelcity] the change of the map failed', e);
-      this.told?.('error', 'The change could not be written: nothing was changed.');
-    });
+    const epoch = this.epoch;
+    const done = this.chain
+      .then(() => {
+        // The project was changed while this waited: it was asked for another one.
+        if (epoch !== this.epoch) return;
+        if (this.canEdit && !this.canEdit()) throw new Error('the map cannot be changed now');
+        return work();
+      })
+      .catch((e: unknown) => {
+        console.error('[modelcity] the change of the map failed', e);
+        this.told?.('error', 'The change could not be written: nothing was changed.');
+      });
     this.chain = done.finally(() => {
       if (--this.waiting === 0) this.busy = false;
     });
@@ -189,7 +202,10 @@ export class Editor {
     const moved = this.busy ? null : pick(this.history, whole);
     if (!this.busy && !moved) this.nothing(undo);
     else if (moved && !moved.steps.some((s) => s.map)) this.apply(moved, undo);
-    else return this.queued(() => this.move(pick(this.history, whole), undo));
+    else {
+      const epoch = this.epoch;
+      return this.queued(() => this.move(pick(this.history, whole), undo, epoch));
+    }
     return Promise.resolve();
   }
 
@@ -198,7 +214,7 @@ export class Editor {
   }
 
   /** Called when its turn has come: the steps that changed the map are written as one change, all or nothing (a failed write is thrown and nothing changes). */
-  private async move(moved: Moved | null, undo: boolean) {
+  private async move(moved: Moved | null, undo: boolean, epoch = this.epoch) {
     if (!moved) return this.nothing(undo);
     const changes = moved.steps.flatMap((s) => (s.map ? [undo ? inverse(s.map) : s.map] : []));
     if (changes.length) {
@@ -206,7 +222,7 @@ export class Editor {
       if (!this.writer) throw new Error('there is no way to write the map');
       await this.writer(compose(changes));
     }
-    this.apply(moved, undo);
+    if (epoch === this.epoch) this.apply(moved, undo);
   }
 
   private apply(moved: Moved, undo: boolean) {

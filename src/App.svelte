@@ -72,6 +72,7 @@
     nodeOf: memory.index.nodeOf,
     edgesAt: memory.index.edgesAt,
   });
+  editor.canEdit = () => index.status === 'ready' && memory.project === session.id;
   connectEditor(editor, {
     storage,
     memory,

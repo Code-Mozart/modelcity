@@ -99,13 +99,18 @@
   });
   const edges = $derived([...found.values()].map((f) => f.edge));
 
+  /** The branch under the pointer while `Alt` is held: not worked out again at every frame of the camera, only when the pointer, `Alt` or what is loaded changes. */
+  const hoverBranch = $derived(
+    editor.alt && editor.hover ? branchOf(networkOf(loadedMap()), editor.hover) : null,
+  );
+
   const marks = $derived(
     marksOf(
       {
         selection: editor.selection,
         hover: editor.hover,
         band: editor.band,
-        branch: editor.alt && editor.hover ? branchOf(networkOf(loadedMap()), editor.hover) : null,
+        branch: hoverBranch,
       },
       { nodes: chunkViews.flatMap((c) => (c.nodes ? [c.nodes] : [])), edges: found },
       memory.index.nodeOf,

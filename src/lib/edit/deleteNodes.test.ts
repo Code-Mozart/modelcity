@@ -8,6 +8,7 @@ import {
 } from '../project/storage';
 import { file } from '../testing/storageFixtures';
 import { inverse, toMapChange } from './change';
+import { removeNodesRef } from '../testing/mainRemoval';
 import { deleteEdges, deleteNodes, type RowSource } from './deleteNodes';
 
 const node = (id: number): NodeRow => [id, id * 1000, 0, 0];
@@ -28,26 +29,6 @@ async function map(nodes: NodeRow[], edges: EdgeRow[]) {
   const storage = new MemoryStorage();
   await storage.put({ id: 'p', file: { ...file(), nodes, edges } });
   return storage;
-}
-
-/** What `main` does (graph.ts removeNode and removeNodes, ^322, ^434): the reference that the rows are compared with. */
-function reference(nodes: NodeRow[], edges: EdgeRow[], ids: number[], keep: number | null) {
-  let [ns, es] = [nodes, edges];
-  for (const id of ids) {
-    const [inE, outE] = [es.filter((e) => e[2] === id), es.filter((e) => e[1] === id)];
-    const rest = es.filter((e) => e[1] !== id && e[2] !== id);
-    const join =
-      inE.length === 1 &&
-      outE.length === 1 &&
-      inE[0]![1] !== id &&
-      outE[0]![2] !== id &&
-      inE[0]![1] !== outE[0]![2];
-    const joined: EdgeRow[] = join ? [[inE[0]![0], inE[0]![1], outE[0]![2], null, inE[0]![4]]] : [];
-    ns = ns.filter((n) => n[0] !== id);
-    es = [...rest, ...joined];
-  }
-  const used = new Set(es.flatMap((e) => [e[1], e[2]]));
-  return { nodes: ns.filter((n) => used.has(n[0]) || n[0] === keep), edges: es };
 }
 
 const byId = <R extends [number, ...unknown[]]>(rows: R[]) => [...rows].sort((a, b) => a[0] - b[0]);
@@ -159,7 +140,7 @@ describe('delete nodes is what main does, on random maps (^434)', () => {
       const keep = rand(4) === 0 ? rand(count) : null;
       const storage = await map(nodes, edges);
       const got = await after(storage, await deleteNodes(sourceOf(storage), ids, keep));
-      const want = reference(nodes, edges, ids, keep);
+      const want = removeNodesRef({ nodes, edges }, ids, keep);
       expect(byId(got.nodes)).toEqual(byId(want.nodes));
       expect(byId(got.edges)).toEqual(byId(want.edges));
     }

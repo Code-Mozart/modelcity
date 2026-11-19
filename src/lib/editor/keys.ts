@@ -17,7 +17,7 @@ const DO: Record<Action, (editor: Editor) => void> = {
   view: (e) => e.toggleMode(),
   delete: (e) => {
     const map = e.loaded?.();
-    const doing = map && e.mode === 'select' ? byKey(e.selection, e.hover, e.alt, map) : null;
+    const doing = map && e.mode === 'select' ? byKey(e.selection, e.hover, map) : null;
     if (doing) void e.delete(doing);
   },
   undo: (e) => e.undo(),

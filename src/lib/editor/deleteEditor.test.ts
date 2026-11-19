@@ -66,18 +66,23 @@ describe('the right button deletes what is under the pointer (^489, ^699, ^920, 
     ]);
   });
 
-  it('on the selection, which has several nodes, it deletes the selection; elsewhere only what is under it', async () => {
+  it('on the selection, which has several nodes, it deletes the selection', async () => {
     const { editor, rows, press, click } = await setup();
     click(-100, 0);
     click(0, 100, true);
     click(100, 100, true);
-    // Node 3 is not selected: only it goes, the selection stays.
+    await editor.rightClick(press.pickAt(at(-100, 0)), false);
+    // The nodes 1, 4 and 5 go with their segments; 2 and 3 are left with the segment between them.
+    expect(ids((await rows()).nodes)).toEqual([2, 3]);
+    expect(editor.selection.size).toBe(0);
+  });
+
+  it('elsewhere only what is under it, and nothing is selected after (as on main, a removal ends with no selection)', async () => {
+    const { editor, rows, press, click } = await setup();
+    click(-100, 0);
+    click(0, 100, true);
     await editor.rightClick(press.pickAt(at(100, 0)), false);
     expect(ids((await rows()).nodes)).toEqual([1, 2, 4, 5]);
-    expect([...editor.selection].sort()).toEqual([1, 4, 5]);
-    await editor.rightClick(press.pickAt(at(-100, 0)), false);
-    // The pointer was on a selected node and the selection has several nodes: all of it goes.
-    expect(ids((await rows()).nodes)).toEqual([]);
     expect(editor.selection.size).toBe(0);
   });
 

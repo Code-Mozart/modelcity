@@ -4,7 +4,7 @@ import { SelectPress } from '../editor/selectPress';
 import type { Size, View } from '../camera/view';
 import { MapMemory } from '../map/mapMemory.svelte';
 import { buildIndex } from '../map/segmentIndex';
-import { MemoryStorage, type EdgeRow, type NodeRow } from '../project/storage';
+import { MemoryStorage, type EdgeRow, type NodeRow, type ProjectStorage } from '../project/storage';
 import { file } from './storageFixtures';
 
 export const size: Size = { width: 400, height: 400 };
@@ -17,8 +17,12 @@ const settle = async () => {
 };
 
 /** A project in a storage with its index, its chunks loaded in memory, and an editor that changes it the way the app does (^1260). */
-export async function editing(nodes: NodeRow[], edges: EdgeRow[], told: string[] = []) {
-  const storage = new MemoryStorage();
+export async function editing(
+  nodes: NodeRow[],
+  edges: EdgeRow[],
+  told: string[] = [],
+  storage: ProjectStorage = new MemoryStorage(),
+) {
   await storage.put({ id: 'p', file: { ...file(), nodes, edges } });
   await buildIndex(storage, 'p');
   const memory = new MapMemory(storage);

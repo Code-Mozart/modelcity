@@ -18,6 +18,10 @@ export function selectFactsOf(editor: Editor, map: LoadedMap): SelectFacts {
         : hover?.kind === 'segment' && hover.nodes.every((id) => sel.has(id)),
     selected: sel.size,
     onSelection: onSelection(sel, hover),
-    branchSelected: hover !== null && allSelected(sel, branchOf(networkOf(map), hover).nodes),
+    // A branch with more nodes than are selected cannot be all selected: it is not walked further than that.
+    branchSelected:
+      hover !== null &&
+      sel.size > 0 &&
+      allSelected(sel, branchOf(networkOf(map), hover, sel.size).nodes),
   };
 }

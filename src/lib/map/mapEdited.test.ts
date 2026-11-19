@@ -7,6 +7,14 @@ import { file } from '../testing/storageFixtures';
 import { MapMemory } from './mapMemory.svelte';
 import { buildIndex } from './segmentIndex';
 
+/** The ids of the segments that the chunks hold, one for each chunk that holds it. */
+const edgesHeld = (memory: MapMemory) => {
+  const out: number[] = [];
+  for (const s of memory.chunks.values())
+    if (s.status === 'ready') out.push(...s.chunk.edges.map((e) => e[0]));
+  return out;
+};
+
 /** A road 1 - 2 - 3 along the x axis, the nodes 300 m apart, in the chunks (0,0), (1,0) and (2,0); and a branch from 2 to 4. */
 const nodes: NodeRow[] = [
   [1, 100_000, 100_000, 0],
@@ -244,5 +252,40 @@ describe('a read afresh that is late does not overwrite a newer one (^1260)', ()
     probe.show({ cx0: 1, cx1: 1, cy0: 0, cy1: 0 });
     await vi.advanceTimersByTimeAsync(50);
     expect(held(memory)['1,0']).toBe(held(probe)['1,0']);
+  });
+});
+
+describe('a segment that is in every chunk (too large to be listed in each, ^1239, ^1260)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('is gone from all the chunks that are loaded when it is deleted, and comes back with the undo', async () => {
+    // Two nodes 30 km apart: the box of their segment is larger than a segment is listed with.
+    const far: NodeRow[] = [
+      [1, 100_000, 100_000, 0],
+      [2, 30_000_000, 30_000_000, 0],
+    ];
+    const storage = new MemoryStorage();
+    await storage.put({ id: 'p', file: { ...file(), nodes: far, edges: [[10, 1, 2, null, 1]] } });
+    await buildIndex(storage, 'p');
+    const memory = new MapMemory(storage);
+    memory.open('p');
+    memory.show({ cx0: 0, cx1: 1, cy0: 0, cy1: 0 });
+    await vi.advanceTimersByTimeAsync(50);
+    const inChunks = () => edgesHeld(memory);
+    expect(inChunks()).toEqual([10, 10]);
+    const change = await deleteAndShow(storage, memory, [2]);
+    await vi.advanceTimersByTimeAsync(50);
+    expect(inChunks()).toEqual([]);
+    const back = {
+      nodes: change.nodes.map((p) => ({ before: p.after, after: p.before })),
+      edges: change.edges.map((p) => ({ before: p.after, after: p.before })),
+      context: change.context,
+    };
+    await storage.patch('p', file(), toMapChange(back), indexChangeOf(back));
+    const map = toMapChange(back);
+    memory.edited({ nodes: map.removedNodes, edges: map.removedEdges }, affectedChunks(back));
+    await vi.advanceTimersByTimeAsync(50);
+    expect(inChunks()).toEqual([10, 10]);
   });
 });

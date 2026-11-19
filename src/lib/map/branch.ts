@@ -18,9 +18,18 @@ export interface Branch {
 const other = (e: EdgeRow, id: number) => (e[1] === id ? e[2] : e[1]);
 
 /** The nodes and segments reached from `cur` by going on, away from the segment `via`, through nodes with exactly two segments. */
-function walk(net: Network, from: { cur: number; via: number }, seen: Set<number>, out: Branch) {
+function walk(
+  net: Network,
+  from: { cur: number; via: number },
+  seen: Set<number>,
+  out: Branch & { max: number },
+) {
   let { cur, via } = from;
   for (;;) {
+    if (out.nodes.length > out.max) {
+      out.complete = false;
+      return;
+    }
     if (!net.complete(cur)) {
       out.complete = false;
       return;
@@ -36,12 +45,14 @@ function walk(net: Network, from: { cur: number; via: number }, seen: Set<number
   }
 }
 
-/** The branch a segment is on: its nodes, ends included. */
-export function branchOfEdge(net: Network, edge: EdgeRow): Branch {
+/** The branch a segment is on: its nodes, ends included. A walk of more than `max` nodes stops (and says it is not complete): what only needs to know whether the branch is as large as something does not walk a branch of thousands of nodes for it. */
+export function branchOfEdge(net: Network, edge: EdgeRow, max = Infinity): Branch {
   const seen = new Set([edge[1], edge[2]]);
-  const out: Branch = { nodes: [edge[1], edge[2]], edges: [edge[0]], complete: true };
+  const out = { nodes: [edge[1], edge[2]], edges: [edge[0]], complete: true, max };
   for (const cur of [edge[1], edge[2]]) walk(net, { cur, via: edge[0] }, seen, out);
-  return out;
+  const { max: _max, ...branch } = out;
+  void _max;
+  return branch;
 }
 
 /**
@@ -49,9 +60,11 @@ export function branchOfEdge(net: Network, edge: EdgeRow): Branch {
  * branches meet or end, the branch that goes on from it in the direction the road was drawn, else
  * the one before it (assumed, as on `main`); a node with no segment is a branch of its own.
  */
-export function branchOfNode(net: Network, id: number): Branch {
+export function branchOfNode(net: Network, id: number, max = Infinity): Branch {
   const here = net.edgesAt(id);
   const edge =
     here.length === 2 ? here[0] : (here.find((e) => e[1] === id) ?? here.find((e) => e[2] === id));
-  return edge ? branchOfEdge(net, edge) : { nodes: [id], edges: [], complete: net.complete(id) };
+  return edge
+    ? branchOfEdge(net, edge, max)
+    : { nodes: [id], edges: [], complete: net.complete(id) };
 }

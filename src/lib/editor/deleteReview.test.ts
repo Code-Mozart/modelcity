@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { emptyGraph } from '../model/graph';
 import { ids, key, setup } from '../testing/deleteFixture';
 import { editorKey } from './keys';
 
@@ -28,18 +29,20 @@ describe('what the review found (^1260)', () => {
     const first = editor.delete({ kind: 'nodes', ids: [3], name: 'delete node' });
     editor.deselectAll();
     await first;
-    expect([...editor.selection]).toEqual([5]);
+    // Nothing is selected after a removal (as on main); Esc made no step of its own.
+    expect(editor.selection.size).toBe(0);
+    expect(editor.history.past.map((s) => s.name)).toEqual(['select node', 'delete node']);
   });
 });
 describe('what the review found about keys and stale rows (^1260)', () => {
-  it('Alt+Del on a segment deletes its branch, as Alt+RMB does', async () => {
+  it('Alt+Del on a segment deletes the segment only: Alt is for the right button (as on main)', async () => {
     const { editor, rows, hover } = await setup();
     hover(-50, 0);
     editor.alt = true;
     editorKey(editor, key('Delete', { altKey: true }));
     await new Promise((r) => setTimeout(r, 0));
-    expect(editor.history.past.at(-1)?.name).toBe('delete branch');
-    expect(ids((await rows()).edges)).not.toContain(10);
+    expect(editor.history.past.at(-1)?.name).toBe('delete segment');
+    expect(ids((await rows()).edges)).toEqual([11, 12, 13]);
   });
 
   it('a step that is undone after the nodes next to it were moved finds them where they are now (the index follows)', async () => {
@@ -61,5 +64,36 @@ describe('what the review found about keys and stale rows (^1260)', () => {
     const there = await storage.edgesInChunk('p', 0, 390, 2);
     expect(there.map((e) => e[0])).toContain(12);
     void memory;
+  });
+});
+
+describe('what is not written (^1260)', () => {
+  it('what was asked for before another project was opened is not done, and is not a step of the new one', async () => {
+    const { editor, rows } = await setup();
+    const writer = editor.writer!;
+    let open: () => void = () => {};
+    const gate = new Promise<void>((resolve) => (open = resolve));
+    editor.writer = async (change) => {
+      await gate;
+      await writer(change);
+    };
+    const first = editor.delete({ kind: 'nodes', ids: [3], name: 'delete node' });
+    const second = editor.delete({ kind: 'nodes', ids: [1], name: 'delete node' });
+    editor.load(emptyGraph());
+    void writer;
+    open();
+    await Promise.all([first, second]);
+    // Neither had begun: neither is done, and neither is a step of the new project.
+    expect(ids((await rows()).nodes)).toEqual([1, 2, 3, 4, 5]);
+    expect(editor.history.past).toEqual([]);
+  });
+
+  it('the map is not changed while it cannot be (its index is being built): nothing is written and the user is told', async () => {
+    const { editor, rows, told } = await setup();
+    editor.canEdit = () => false;
+    await editor.delete({ kind: 'nodes', ids: [3], name: 'delete node' });
+    expect(ids((await rows()).nodes)).toEqual([1, 2, 3, 4, 5]);
+    expect(editor.history.past).toEqual([]);
+    expect(told).toEqual(['The change could not be written: nothing was changed.']);
   });
 });

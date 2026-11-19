@@ -2,6 +2,11 @@ import { branchOfEdge } from '../map/branch';
 import type { EdgeRow } from '../project/storage';
 import type { RowSource } from './deleteNodes';
 
+/** The segments between the nodes of a branch, all of them (what `main` deletes with a branch, `branchEdges`, ^160): also one that is not part of the chain but joins two of its nodes. */
+function between(rows: Map<number, EdgeRow>, nodes: Set<number>): EdgeRow[] {
+  return [...rows.values()].filter((e) => nodes.has(e[1]) && nodes.has(e[2]));
+}
+
 /**
  * The segments of the branch that a segment is on, found in the storage (^128, ^160): a branch
  * is followed as far as it goes, not as far as it is loaded. The walk of `map/branch.ts` is run
@@ -27,7 +32,7 @@ export async function branchEdgesOf(source: RowSource, start: EdgeRow): Promise<
       },
       start,
     );
-    if (branch.complete) return branch.edges.map((id) => rows.get(id)!);
+    if (branch.complete) return between(rows, new Set(branch.nodes));
     await learn(branch.nodes.filter((n) => !at.has(n)));
   }
 }

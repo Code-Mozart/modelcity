@@ -168,7 +168,8 @@ export class ProjectSession extends ProjectModal {
    * (^1236), only the header is kept in step.
    */
   async commitMap(change: MapChange, index: IndexChange) {
-    if (!this.id) return;
+    // A change of a map that is in no project cannot be kept: that is a mistake, not something to ignore.
+    if (!this.id) throw new Error('there is no open project to write the change to');
     this.lastUpdatedAt = this.now();
     const header = (this.header = headerFor(this.project(), this.header));
     await this.storage.patch(this.id, header, change, index);

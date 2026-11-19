@@ -41,16 +41,11 @@ export function onSelection(sel: Selection, on: Hover | null): boolean {
   return on.kind === 'node' ? sel.has(on.id) : on.nodes.every((id) => sel.has(id));
 }
 
-/** `Del` or `Backspace` (^687, ^757, ^920): the selection, else what is hovered. */
-export function byKey(
-  sel: Selection,
-  on: Hover | null,
-  alt: boolean,
-  map: LoadedMap,
-): Doing | null {
+/** `Del` or `Backspace` (^687, ^757, ^920): the selection, else what is hovered, as a right click does but never a branch (`Alt` is not for `Del`, as on `main`). */
+export function byKey(sel: Selection, on: Hover | null, map: LoadedMap): Doing | null {
   if (sel.size) return nodes([...sel]);
   if (on?.kind === 'node') return nodes([on.id]);
-  return on ? segments(map, on, alt) : null;
+  return on ? segments(map, on, false) : null;
 }
 
 /** A click of the right button on something (^489, ^699, ^920): the selection if the pointer is on it, else what is under the pointer. */
