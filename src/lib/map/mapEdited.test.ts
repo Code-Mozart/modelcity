@@ -183,3 +183,66 @@ describe('what shows after an edit is read again, and after it is undone (^1260)
     ).toEqual([10, 11, 12]);
   });
 });
+
+/** A storage whose reads of the segments of one chunk wait, as many times as it is told to: each read is done at once and its answer waits to be let go. */
+class Slow extends MemoryStorage {
+  hold: string | null = null;
+  holds = 0;
+  releases: (() => void)[] = [];
+
+  async edgesInChunk(id: string, cx: number, cy: number, version: number) {
+    const rows = await super.edgesInChunk(id, cx, cy, version);
+    if (this.hold === `${cx},${cy}` && this.holds > 0) {
+      this.holds--;
+      await new Promise<void>((resolve) => this.releases.push(resolve));
+    }
+    return rows;
+  }
+}
+
+/** The chunk (1,0) with two reads afresh in the air, the first started before the chunk was let go and read again. */
+async function twoSlowReads() {
+  const storage = new Slow();
+  await storage.put({ id: 'p', file: { ...file(), nodes, edges } });
+  await buildIndex(storage, 'p');
+  const memory = new MapMemory(storage);
+  memory.open('p');
+  memory.budgetRows = 1;
+  const ask = async (cx: number, cy: number) => {
+    memory.show({ cx0: cx, cx1: cx, cy0: cy, cy1: cy });
+    await vi.advanceTimersByTimeAsync(50);
+  };
+  await ask(1, 0);
+  [storage.hold, storage.holds] = ['1,0', 1];
+  await deleteAndShow(storage, memory, [4]);
+  await vi.advanceTimersByTimeAsync(10);
+  // The chunk is let go (another one is asked for, over the budget) and read again.
+  await ask(3, 1);
+  await ask(1, 0);
+  storage.holds = 1;
+  await deleteAndShow(storage, memory, [2]);
+  await vi.advanceTimersByTimeAsync(10);
+  return { storage, memory };
+}
+
+describe('a read afresh that is late does not overwrite a newer one (^1260)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('also when the chunk was let go and read again in between, and both reads are slow', async () => {
+    const { storage, memory } = await twoSlowReads();
+    expect(storage.releases).toHaveLength(2);
+    const before = JSON.stringify(held(memory));
+    // The first read comes in, late, with what was there before the second edit: it is let go.
+    storage.releases[0]!();
+    await vi.advanceTimersByTimeAsync(50);
+    expect(JSON.stringify(held(memory))).toBe(before);
+    storage.releases[1]!();
+    await vi.advanceTimersByTimeAsync(50);
+    const probe = new MapMemory(storage);
+    probe.open('p');
+    probe.show({ cx0: 1, cx1: 1, cy0: 0, cy1: 0 });
+    await vi.advanceTimersByTimeAsync(50);
+    expect(held(memory)['1,0']).toBe(held(probe)['1,0']);
+  });
+});

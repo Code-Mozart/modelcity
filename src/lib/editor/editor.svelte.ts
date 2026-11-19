@@ -201,7 +201,11 @@ export class Editor {
   private async move(moved: Moved | null, undo: boolean) {
     if (!moved) return this.nothing(undo);
     const changes = moved.steps.flatMap((s) => (s.map ? [undo ? inverse(s.map) : s.map] : []));
-    if (changes.length) await this.writer?.(compose(changes));
+    if (changes.length) {
+      // A step of the map cannot move without a way to write it: the history stays as it is.
+      if (!this.writer) throw new Error('there is no way to write the map');
+      await this.writer(compose(changes));
+    }
     this.apply(moved, undo);
   }
 

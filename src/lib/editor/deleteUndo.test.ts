@@ -73,4 +73,14 @@ describe('what goes wrong, and what must not happen at the same time (^1260)', (
     expect(ids((await rows()).nodes)).toEqual([1, 2, 3, 4, 5]);
     expect(editor.history.future).toHaveLength(2);
   });
+
+  it('a step of the map cannot be undone with no way to write the map: the history stays as it is', async () => {
+    const { editor, told } = await setup();
+    await editor.delete({ kind: 'nodes', ids: [3], name: 'delete node' });
+    editor.writer = null;
+    await editor.undo();
+    expect(editor.history.past).toHaveLength(1);
+    expect(editor.history.future).toHaveLength(0);
+    expect(told).toEqual(['The change could not be written: nothing was changed.']);
+  });
 });

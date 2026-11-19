@@ -72,8 +72,9 @@ export class MapMemory {
   onSqueezed: (() => void) | null = null;
   /** What was asked for last, so that it can be asked for again when a chunk has to be read afresh (^1260). */
   private last: { range: ChunkRange; near?: (box: Box) => boolean } | null = null;
-  /** For each chunk the number of the last read afresh that was asked for: an older one that arrives later is let go. */
+  /** For each chunk the number of the last read afresh that was asked for: an older one that arrives later is let go. The numbers come from one counter that never goes back, so a number is never used twice, whatever is forgotten. */
   private fresh = new SvelteMap<string, number>();
+  private reads_ = 0;
   /** Counts the projects that were open: what a read of an earlier one finds is let go. */
   private generation = 0;
 
@@ -173,7 +174,7 @@ export class MapMemory {
       if (this.last) this.show(this.last.range, this.last.near);
       return;
     }
-    const token = (this.fresh.get(id) ?? 0) + 1;
+    const token = ++this.reads_;
     this.fresh.set(id, token);
     const generation = this.generation;
     this.loader
