@@ -48,3 +48,27 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 /** Pairs of rows, leaving out those that did not change (a row that was changed and then changed back is not a change). */
 export const changed = <R>(pairs: Pair<R>[]): Pair<R>[] =>
   pairs.filter((p) => !same(p.before, p.after));
+
+/**
+ * Several changes, one after the other, as one (^1260): each row as it was before the first that
+ * touched it and as it is after the last, so that a batch of steps is written in one transaction
+ * (all or nothing). A row that is back as it was is not a change.
+ */
+export function compose(changes: RowChange[]): RowChange {
+  const merge = <R extends [number, ...unknown[]]>(lists: Pair<R>[][]): Pair<R>[] => {
+    const by = new Map<number, Pair<R>>();
+    for (const p of lists.flat()) {
+      const id = (p.before ?? p.after)![0];
+      const kept = by.get(id);
+      if (kept) kept.after = p.after;
+      else by.set(id, { before: p.before, after: p.after });
+    }
+    return changed([...by.values()]);
+  };
+  const context = new Map(changes.flatMap((c) => c.context).map((n) => [n[0], n]));
+  return {
+    nodes: merge(changes.map((c) => c.nodes)),
+    edges: merge(changes.map((c) => c.edges)),
+    context: [...context.values()],
+  };
+}

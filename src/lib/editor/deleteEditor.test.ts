@@ -205,3 +205,81 @@ describe('what goes wrong, and what must not happen at the same time (^1260)', (
     expect(editor.history.past).toHaveLength(1);
   });
 });
+
+describe('what the review found (^1260)', () => {
+  it('undoing a batch of steps is one write: if it fails nothing is undone, and the history is as it was', async () => {
+    const { editor, rows, press } = await setup();
+    await editor.delete({ kind: 'nodes', ids: [5], name: 'delete node' });
+    await editor.delete({ kind: 'nodes', ids: [3], name: 'delete node' });
+    const [before, writer] = [await rows(), editor.writer!];
+    let writes = 0;
+    editor.writer = () => (writes++, Promise.reject(new Error('quota')));
+    await editor.undo(true);
+    await editor.undo();
+    expect(await rows()).toEqual(before);
+    expect(editor.history.past).toHaveLength(2);
+    editor.writer = (change) => (writes++, writer(change));
+    writes = 0;
+    await editor.undo();
+    await editor.undo();
+    expect(writes).toBe(2);
+    void press;
+  });
+
+  it('while a change is written nothing is undone and nothing is deselected, and the user is told', async () => {
+    const { editor, rows, told, click } = await setup();
+    click(100, 100);
+    const first = editor.delete({ kind: 'nodes', ids: [3], name: 'delete node' });
+    editor.deselectAll();
+    await editor.undo();
+    await first;
+    expect(told).toContain('Wait until the change is written.');
+    expect(ids((await rows()).nodes)).toEqual([1, 2, 4, 5]);
+    expect(editor.history.past.map((s) => s.name)).toEqual(['select node', 'delete node']);
+    expect([...editor.selection]).toEqual([5]);
+  });
+});
+
+describe('what the review found about keys and stale rows (^1260)', () => {
+  it('Alt+Del on a segment deletes its branch, as Alt+RMB does', async () => {
+    const { editor, rows, hover } = await setup();
+    hover(-50, 0);
+    editor.alt = true;
+    editorKey(editor, key('Delete', { altKey: true }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(editor.history.past.at(-1)?.name).toBe('delete branch');
+    expect(ids((await rows()).edges)).not.toContain(10);
+  });
+
+  it('a step that is undone after the nodes next to it were moved finds them where they are now (the index follows)', async () => {
+    const { editor, storage, rows, memory, settle } = await setup();
+    await editor.delete({ kind: 'nodes', ids: [2], name: 'delete node' });
+    // Node 4 is moved far away by something else (an operation that comes later): its row and the index change.
+    const moved = [4, 0, 100_000_000, 0] as [number, number, number, number];
+    const old = (await rows()).nodes.find((n) => n[0] === 4)!;
+    const change = {
+      nodes: [{ before: old, after: moved }],
+      edges: [{ before: [13, 4, 5, null, 1], after: [13, 4, 5, null, 1] }] as never,
+      context: [(await rows()).nodes.find((n) => n[0] === 5)!],
+    };
+    await editor.writer!(change);
+    await editor.undo(true);
+    await settle();
+    expect((await rows()).nodes.map((n) => n[0])).toEqual([1, 2, 3, 4, 5]);
+    // The segment 12 runs from node 2 to node 4, which is 100 km away now: the index has it there.
+    const there = await storage.edgesInChunk('p', 0, 390, 2);
+    expect(there.map((e) => e[0])).toContain(12);
+    void memory;
+  });
+});
+
+describe('a branch longer than what is loaded is deleted whole (^160, ^1260)', () => {
+  it('the storage is followed, not the chunks in memory', async () => {
+    const road = Array.from({ length: 12 }, (_, i) => node(i + 1, i * 300, 0));
+    const chain = Array.from({ length: 11 }, (_, i) => edge(i + 10, i + 1, i + 2));
+    const { editor, rows, press } = await editing(road, chain);
+    await editor.rightClick(press.pickAt(at(150, 0)), true);
+    const now = await rows();
+    expect([now.nodes.length, now.edges.length]).toEqual([0, 0]);
+  });
+});

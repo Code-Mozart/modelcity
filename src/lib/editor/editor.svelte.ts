@@ -1,5 +1,6 @@
 import type { Point } from '../camera/view';
-import { inverse, isEmpty, type RowChange } from '../edit/change';
+import { compose, inverse, isEmpty, type RowChange } from '../edit/change';
+import { branchEdgesOf } from '../edit/branchRows';
 import { deleteEdges, deleteNodes, type RowSource } from '../edit/deleteNodes';
 import { emptyGraph, type Graph } from '../model/graph';
 import {
@@ -102,7 +103,7 @@ export class Editor {
   }
 
   deselectAll() {
-    if (this.selection.size) this.select(NOTHING);
+    if (this.selection.size && !this.busy) this.select(NOTHING);
   }
 
   /** The selection could not stay (the memory has no room for its chunks, ^1257): it goes, and so does what could be undone of it. */
@@ -117,15 +118,18 @@ export class Editor {
     const [source, writer] = [this.source, this.writer];
     if (this.busy || !source || !writer) return;
     await this.exclusively(async () => {
-      const change =
-        doing.kind === 'nodes'
-          ? await deleteNodes(source(), doing.ids)
-          : await deleteEdges(source(), doing.edges);
+      const change = await this.plan(doing, source());
       if (isEmpty(change)) return;
       await writer(change);
       this.took(doing.name, change);
-      if (doing.told) this.told?.('info', doing.told);
     });
+  }
+
+  /** The change that a delete makes: what is deleted is worked out from the storage. */
+  private plan(doing: Doing, source: RowSource): Promise<RowChange> {
+    if (doing.kind === 'nodes') return deleteNodes(source, doing.ids);
+    if (doing.kind === 'segments') return deleteEdges(source, doing.edges);
+    return branchEdgesOf(source, doing.edge).then((edges) => deleteEdges(source, edges));
   }
 
   /** The step of a change that was written: the nodes that are gone are not selected any more. */
@@ -173,19 +177,23 @@ export class Editor {
     await this.move(redoStep(this.history, whole), false);
   }
 
-  /** Apply what moved; with nothing to move the user is told (^397, ^398). A step that changed the map writes the change again, or its inverse. */
+  /** Apply what moved; with nothing to move the user is told (^397, ^398). The steps that changed the map are written as one change, all or nothing; while a change is being written nothing is undone. */
   private async move(moved: Moved | null, undo: boolean) {
+    if (this.busy) {
+      this.told?.('info', 'Wait until the change is written.');
+      return;
+    }
     if (!moved) {
       this.told?.('info', undo ? 'nothing to undo' : 'nothing to redo');
       return;
     }
+    const changes = moved.steps.flatMap((s) => (s.map ? [undo ? inverse(s.map) : s.map] : []));
     const writer = this.writer;
-    if (moved.steps.some((s) => s.map)) {
-      if (this.busy || !writer) return;
+    if (changes.length) {
+      if (!writer) return;
       let failed = true;
       await this.exclusively(async () => {
-        for (const step of moved.steps)
-          if (step.map) await writer(undo ? inverse(step.map) : step.map);
+        await writer(compose(changes));
         failed = false;
       });
       if (failed) return;

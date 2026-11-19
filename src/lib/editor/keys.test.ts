@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Editor } from './editor.svelte';
-import { editorKey } from './keys';
+import { editorKey, isTyping } from './keys';
 
 const press = (
   key: string,
@@ -61,5 +61,26 @@ describe('the history keys (^81, ^103, ^397, ^398)', () => {
   it('leaves the other keys to the page', () => {
     expect(editorKey(new Editor(), press('q'))).toBeNull();
     expect(editorKey(new Editor(), press('z'))).toBeNull();
+  });
+});
+
+describe("keys that are typed into something are not the editor's (^11, ^1260)", () => {
+  class Stub extends EventTarget {
+    isContentEditable = false;
+    constructor(public tagName: string) {
+      super();
+    }
+  }
+
+  it('a field, a text area, a list and anything that can be edited keep their keys; the canvas does not', () => {
+    vi.stubGlobal('HTMLElement', Stub);
+    const edit = Object.assign(new Stub('DIV'), { isContentEditable: true });
+    expect(isTyping(new Stub('INPUT'))).toBe(true);
+    expect(isTyping(new Stub('TEXTAREA'))).toBe(true);
+    expect(isTyping(new Stub('SELECT'))).toBe(true);
+    expect(isTyping(edit)).toBe(true);
+    expect(isTyping(new Stub('CANVAS'))).toBe(false);
+    expect(isTyping(null)).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

@@ -186,6 +186,7 @@ export class MapMemory {
           now?.status !== 'ready'
         )
           return;
+        this.fresh.delete(id);
         this.swap(now.chunk, next);
         this.evict();
       })
@@ -227,6 +228,7 @@ export class MapMemory {
         this.index.remove(state.chunk);
       }
       this.chunks.delete(id);
+      this.fresh.delete(id);
       this.lastWanted.delete(id);
     }
     this.tooMuch = this.rows > this.budgetRows;
@@ -238,6 +240,7 @@ export class MapMemory {
     !this.reading.has(id) && this.chunks.get(id)?.status === 'loading';
 
   private drop(id: string) {
+    this.fresh.delete(id);
     this.reading.get(id)?.abort();
     this.reading.delete(id);
     this.chunks.delete(id);

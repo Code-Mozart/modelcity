@@ -1,6 +1,6 @@
 import { hintsOf, type Control } from './controls';
 import type { Hint } from './hints';
-import { ESC, key, mouse } from './inputs';
+import { ESC, key, keys, mouse } from './inputs';
 
 const DEL = key('Del');
 
@@ -153,7 +153,7 @@ export const SELECT_CONTROLS: Control<SelectFacts>[] = [
   },
   {
     hat: 160,
-    input: mouse('rmb', false, 'alt'),
+    input: [mouse('rmb', false, 'alt'), keys('Alt', 'Del')],
     on: (f) => picking(f) && f.hovered === 'segment' && !f.onSelection,
     listens: yes,
     says: () => 'delete branch',

@@ -3,6 +3,7 @@ import type { LoadedMap } from '../map/hit';
 import type { MapMemory } from '../map/mapMemory.svelte';
 import type { IndexChange, MapChange, ProjectStorage } from '../project/storage';
 import { toMapChange } from './change';
+import { withFreshContext } from './context';
 import { affectedChunks, indexChangeOf } from './indexChange';
 
 /**
@@ -35,7 +36,8 @@ export function connectEditor(
     nodes: (ids) => storage.nodesByIds(project(), ids),
     edgesAt: (ids) => storage.edgesOf(project(), ids),
   });
-  editor.writer = async (change) => {
+  editor.writer = async (made) => {
+    const change = await withFreshContext(made, (ids) => storage.nodesByIds(project(), ids));
     const map = toMapChange(change);
     await commit(map, indexChangeOf(change));
     memory.edited({ nodes: map.removedNodes, edges: map.removedEdges }, affectedChunks(change));

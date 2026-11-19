@@ -46,3 +46,9 @@ export const USED: Partial<Record<Action, ControlId>> = {
   redo: 'redo',
   redoBatch: 'redo',
 };
+
+/** Whether a key goes to something that is typed into: a field, a text area, a list, anything that can be edited (^11). The keys of the editor are not for it. */
+export function isTyping(target: EventTarget | null): boolean {
+  if (typeof HTMLElement === 'undefined' || !(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}

@@ -4,7 +4,7 @@
   import { Camera } from './lib/camera/camera.svelte';
   import Compass from './lib/hud/Compass.svelte';
   import { Editor } from './lib/editor/editor.svelte';
-  import { editorKey, USED } from './lib/editor/keys';
+  import { editorKey, isTyping, USED } from './lib/editor/keys';
   import { connectEditor } from './lib/edit/connect';
   import { SelectionPins } from './lib/editor/pins';
   import type { LoadedMap } from './lib/map/hit';
@@ -149,7 +149,7 @@
     banner.used();
     editor.alt = e.altKey;
     if (session.modalOpen) return modalKey(e);
-    if (e.target instanceof HTMLInputElement) return;
+    if (isTyping(e.target)) return;
     if (isFramesKey(e)) {
       frames.toggle();
       return e.preventDefault();
