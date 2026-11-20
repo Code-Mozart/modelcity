@@ -1,412 +1,352 @@
-import { dragPress, emptyPress } from './press';
-import * as ops from './ops';
-import { GraphWindow } from './window.svelte';
-import { dropOf } from './drop';
-import { placedAt, snapBase, snapFor, snapPreview } from './snapping';
-import { pointsAround } from './nearby';
-import { tipWays } from './ways';
-import { reducedAnchors } from '../camera/reducedAnchors';
-import { cursorOf, mergePreview, targetOf } from './targets';
-import { actionFor, type Action, type KeyMods } from './keymap';
-import { Pins } from './pins.svelte';
-import { deleteRemoval, rightClickRemoval, underHover } from './removal';
-import { Timeline, type Move } from './timeline.svelte';
-import type { ControlId } from '../hints/hints';
-import { pressName } from './stepNames';
-import { controlUsed } from './usage';
-import { pointerOf } from './proximity';
-import { type Hover, type PointerInfo, type Press, type Snapshot } from './types';
-import { focusOf, hoverAt } from './hits';
-import { followTowers } from './towerHeading';
-import { collapseStep } from './dissolve';
-import { followParallels } from './followParallels';
-import { chainHandles, chainsOf, hitOfHandle, type RoadHandle, type RoadHit } from './chains';
-import { moveOf } from './moves';
-import { hoveredSegmentsOf, movingGroupOf, selectedSegmentsOf } from './views';
-import { phaseOf } from './phase';
-import { onlyFirstNode } from '../model/junction';
-import { withKeys, type Keys } from './modifiers';
-import { emptyGraph, nodeOf, roundToMm, sameGraph, type Graph } from '../model/graph';
-import { afterEmptyClick, sameSelection, afterHandleClick, type Band } from './selection';
+import type { Point } from '../camera/view';
+import { compose, inverse, isEmpty, NO_CHANGE, type RowChange } from '../edit/change';
+import type { NextIds } from '../edit/graphPiece';
+import { NOT_DRAWING, sameDraw, type DrawState } from './drawing';
+import type { Grip } from './moving';
+import type { RowSource } from '../edit/deleteNodes';
+import { planDelete, type DeletePlan } from './deletePlan';
+import { emptyGraph, type Graph } from '../model/graph';
+import {
+  NO_HISTORY,
+  record,
+  redoStep,
+  undoStep,
+  type History,
+  type HistoryEvent,
+  type Moved,
+} from './history';
+import type { ToastKind } from '../ui/toasts.svelte';
+import type { LoadedMap } from '../map/hit';
+import { byClick, type Doing } from './deleting';
+import type { Hover } from './pick';
+import {
+  applyDelta,
+  deltaOf,
+  NOTHING,
+  sameSelection,
+  selectionName,
+  type Selection,
+} from './selection';
 
-export type { Hover, PointerInfo } from './types';
+/** View mode only moves the camera; select mode also picks (^394, ^395); draw mode places nodes (^40, ^1262). */
+export type Mode = 'view' | 'select' | 'draw';
+
+/** What the mode display shows (^119, ^120): extend mode is draw mode while a road is being drawn. */
+export type Phase = Mode | 'extend';
+
+/** An operation of the drawing as planned: its name, what it changes on the map, and the road being drawn after it. */
+export interface Planned {
+  name: string;
+  change: RowChange;
+  draw: DrawState;
+  /** The node a split on a curve inserted: finishing at once gives the curve back (^237). */
+  split?: number;
+  /** The selection after it, where it changes (a dragged node is selected, ^72). */
+  selection?: Selection;
+}
+
+/** The box that is being dragged, in pixels of the screen (^495). */
+export interface Band {
+  a: Point;
+  b: Point;
+}
 
 /**
- * The road editor: the graph, the road being drawn, selection and pointer interaction (^40, ^42).
- * No drawing and no view (zoom/pan) logic: the canvas component feeds it pointer events in world
- * coordinates (^12).
- *
- * Three modes (^48, ^54, ^120; `phase`): in select mode the left button edits handles, and a click on empty
- * canvas enters draw mode (it does not place a node yet). In draw mode it places nodes, the first
- * one starting a new road, inserts nodes on curves, and still edits handles.
+ * The map in memory (^1232): the graph, the clone of what a project stores. It is only ever behind
+ * the storage by the autosave delay (`ProjectSession`). Everything that was made from it, and
+ * every operation on it, was taken out (^1232) and is built again one operation at a time; so far
+ * the mode, the selection and the history of the selection are back (^1257).
  */
 export class Editor {
   graph = $state.raw<Graph>(emptyGraph());
-  mode = $state<'select' | 'draw'>('select');
-  /** View mode (^104): nothing can be edited, only the camera works. Left with Tab. */
-  viewing = $state(false);
-  /** The node being drawn from, null in select mode or before the first node. */
-  active = $state<number | null>(null);
-  /** Which way the next edge runs from the node being drawn from (^65). */
-  end = $state<Snapshot['end']>('end');
-  /** The node the road being drawn started at (a click on it closes a loop, ^162). */
-  origin = $state<number | null>(null);
-  /** The last pointer position with its modifiers, to look at what is under it again when something changes without the pointer moving. */
-  private lastInfo = $state.raw<PointerInfo | null>(null);
-  /** Where the pointer is, for showing handles that are near it (^55). */
-  pointer = $derived(pointerOf(this.lastInfo));
-  /** The selected nodes (^70); the last one is `sel`. */
-  selection = $state.raw<number[]>([]);
-  /** The selection box while it is dragged, in screen pixels. */
+  mode = $state<Mode>('select');
+  /** The road being drawn (^1262). */
+  draw = $state.raw<DrawState>(NOT_DRAWING);
+  phase = $derived<Phase>(this.mode === 'draw' && this.draw.active !== null ? 'extend' : this.mode);
+  /** What the operation in progress would change, drawn over the map until it is written (^1262). */
+  draft = $state.raw<RowChange | null>(null);
+  /** What is being dragged, if anything, and whether letting it go merges (for the hints, ^286). */
+  drag = $state.raw<{ grip: Grip; group: number; merges: boolean } | null>(null);
+  /** Forget the press of the left button, if there is one (`Esc` while it is down, ^295); true if there was one. Set by the canvas. */
+  cancelPress: (() => boolean) | null = null;
+  /** The ids the next node and segment get (^1224): from the header of the open project. Set by the app. */
+  ids: (() => NextIds) | null = null;
+  /** The nodes that are selected. */
+  selection = $state.raw<Selection>(NOTHING);
+  /** Alt is held: a click picks the branch, and the hover shows it (^99, ^128). */
+  alt = $state(false);
+  /** What a click would pick now (^1257). */
+  hover = $state.raw<Hover | null>(null);
+  /** The box that is being dragged, if any. */
   band = $state.raw<Band | null>(null);
-  /**
-   * What is under the pointer. Derived, not kept: from the last pointer position and the state of
-   * the editor, so it is right whenever either changes, also when the pointer did not move (a
-   * finished road, a placed node, an undo, a key, ^238). None while the left button is down.
-   */
+  history = $state.raw<History>(NO_HISTORY);
+  /** The last thing that happened to the history, for the recent history panel (^107): a step taken, undone or redone. */
+  event = $state.raw<HistoryEvent | null>(null);
+  private seq = 0;
+  /** Where the editor tells the user something (a toast): set by the app. */
+  told: ((kind: ToastKind, text: string) => void) | null = null;
+  /** What the editor needs of the map to change it (^1260): where to read the rows an operation works on, and how a change is written (the storage, its index, the chunks in memory). Set by the app. */
+  source: (() => RowSource) | null = null;
+  writer: ((change: RowChange) => Promise<void>) | null = null;
+  /** Whether the map can be changed now: not while its index is built (a build that goes on while rows change would end with an index that is wrong, ^1260). Set by the app. */
+  canEdit: (() => boolean) | null = null;
+  /** The map as it is loaded: what a hover or a click found is looked up in it. */
+  loaded: (() => LoadedMap) | null = null;
+  /** A change of the map is being written: the editor does nothing else meanwhile (every edit is atomic and blocks, ^1260). */
+  busy = $state(false);
+  private waiting = 0;
+  /** Counts the projects that were open: what was asked for an earlier one is not done in the one that is open now. */
+  private epoch = 0;
+  /** The node a split on a curve inserted, with the change that did it: finishing at once gives the curve back (^237). */
+  private splitUndo: { node: number; change: RowChange } | null = null;
+  private chain: Promise<void> = Promise.resolve();
 
-  press = $state.raw<Press | null>(null);
-  readonly timeline = new Timeline();
-
-  private use(id: ControlId | null) {
-    if (id) this.used = { seq: (this.used?.seq ?? 0) + 1, id };
-  }
-  /** The curve before and after a split on it: finishing at once goes back to the first (^237). */
-  private splitUndo: { before: Graph; after: Graph } | null = null;
-  /** The last control used that has a hint that is hidden once it is visited (^110). */
-  used = $state.raw<{ seq: number; id: ControlId } | null>(null);
-  /** True while the end of a press runs, so everything it does is one step. */
-  private batching = false;
-
-  /** The node last picked. */
-  sel = $derived(this.selection.at(-1) ?? null);
-  drawing = $derived(this.mode === 'draw');
-  private hoverRaw = $derived<Hover | null>(this.hoverNow());
-  readonly pins = new Pins((id) => nodeOf(this.graph, id) !== undefined);
-  readonly view = new GraphWindow(this);
-  /** The graph the pointer snaps to: while a node is pressed, the graph before it moved. */
-  private snapGraph = $derived(this.press ? this.view.of(this.press.undo.graph) : this.view.shown);
-  private base = $derived(
-    snapBase(this.snapGraph, this.press, this.drawing ? this.active : null, this.view.of),
-  );
-  /** What the pointer is pulled to while it places or moves a node (^101): derived like the hover. */
-  private snapArgs = $derived({
-    info: this.lastInfo,
-    press: this.press,
-    hover: this.hoverRaw,
-    drawing: this.drawing,
-    partOf: this.view.of,
-    pinned: this.active === null ? this.pins.list : [...this.pins.list, this.active],
-  });
-  snapped = $derived(snapFor(this.base, this.snapArgs));
-  /** The snap points near the pointer, shown while it places or moves a node (^890). */
-  nearbyPoints = $derived(pointsAround(this.base, this.snapArgs, this.snapped));
-  hover = $derived<Hover | null>(
-    snapPreview(this.hoverRaw, this.snapped, () => ({
-      info: this.lastInfo,
-      drawn: this.snapshot(),
-      chains: this.chains,
-    })),
-  );
-  /** The three modes (^120): extend mode is draw mode while a node is being extended. */
-  phase = $derived(phaseOf(this.mode, this.active, this.viewing));
-  /** The chains of the graph, the shape the curve code and the drawing work on (^106). */
-  chains = $derived(chainsOf(this.view.shown));
-  edges = $derived(this.chains.map((c) => c.edges));
-  /** The skeleton of all roads, for the camera bounds (^37, ^62). */
-  anchors = $derived(reducedAnchors(chainsOf(this.graph)));
-  cursor = $derived(cursorOf(this.hover, this.drawing));
-  /** The handle being hovered or dragged, or the node being placed (reveals its gizmos, ^51). */
-  focus = $derived(focusOf(this.chains, this.press, this.hover));
-  /** What the control hints are about (^49). */
-  hintTarget = $derived(this.press?.target ?? targetOf(this.snapshot(), this.hover, this.drawing));
-
-  handles(scale: number): RoadHandle[] {
-    return chainHandles(this.chains, scale);
-  }
-
-  /** The state the pure editing functions work on and undo returns to. */
-  private snapshot(): Snapshot {
-    const { graph, active, end, origin, selection } = this;
-    return { graph, active, end, origin, selection };
-  }
-
-  /** Handle a key; true if it was bound. */
-  key(key: string, mods: KeyMods = { ctrl: false, shift: false }): boolean {
-    const action: Action | undefined = actionFor(key, mods);
-    if (action === 'view') this.toggleView();
-    else if (this.viewing) return false;
-    else if (action === 'escape') this.escape();
-    else if (action === 'deleteNode') this.deleteSelected();
-    else if (action === 'collapse') this.collapseSelected();
-    else if (action === 'pin') this.pins.set(this.selection);
-    else if (action) this.move(action);
-    return action !== undefined;
-  }
-
-  /** Tab: to view mode from any mode (a road being drawn is finished), and back to select mode (^104). */
-  private toggleView() {
-    if (this.press) return;
-    if (!this.viewing) this.finishRoad(true);
-    this.viewing = !this.viewing;
-    this.use('view');
-  }
-
-  /** Undo or redo a step (^81) or a whole batch (^103); not while the left button is down. */
-  private move(action: Move) {
-    const to = this.press ? null : this.timeline.go(action);
-    if (!to) return;
-    this.restore(to);
-    this.use(action.startsWith('undo') ? 'undo' : 'redo');
-  }
-
-  private restore(s: Snapshot) {
-    this.splitUndo = null;
-    Object.assign(this, s);
-    if (s.active !== null) this.mode = 'draw';
-  }
-
-  /** Make a step undoable if it changed the graph or the selection (^88), and round it to the millimeter (^170). Inside a press only its end commits. */
-  private commit(before: Snapshot, name: string) {
-    if (this.batching) return;
-    this.graph = followParallels(before.graph, followTowers(before.graph, roundToMm(this.graph)));
-    // A graph with the same content stays the object it was (a drag back to where it began), so nothing else sees a change.
-    if (sameGraph(before.graph, this.graph)) this.graph = before.graph;
-    if (before.graph === this.graph && sameSelection(before.selection, this.selection)) return;
-    this.timeline.record(before, this.snapshot(), name);
-  }
-
-  /** Replace everything by another map (a project was opened): no selection, no drawing, no history. */
+  /** Replace the map by that of a project: nothing of the project before stays selected or can be undone. */
   load(graph: Graph) {
+    this.epoch++;
     this.graph = graph;
-    this.leaveDrawing(true);
-    [this.press, this.band, this.lastInfo] = [null, null, null];
-    this.timeline.clear();
+    this.selection = NOTHING;
+    this.draw = NOT_DRAWING;
+    this.draft = null;
+    if (this.mode === 'draw') this.mode = 'select';
+    this.hover = null;
+    this.band = null;
+    this.history = NO_HISTORY;
+    this.event = null;
   }
 
-  canCollapse = () => collapseStep(this.snapshot()).graph !== this.graph;
-  /** Collapse the selected nodes without an effect (^1064), in one step; `canCollapse`: is there one. */
-  collapseSelected() {
-    if (this.selection.length) this.use('collapse-selected');
-    this.edit('collapse nodes', collapseStep);
+  /** `Tab` (^104): to view mode from any mode (a road being drawn is finished), and back to select mode. */
+  toggleMode() {
+    if (this.mode !== 'view') this.finishRoad();
+    this.mode = this.mode === 'view' ? 'select' : 'view';
+    this.hover = null;
+    this.band = null;
   }
 
-  deleteSelected() {
-    if (this.selection.length) this.use('delete-selected');
-    const r = deleteRemoval(this.graph, this.selection, this.mode === 'select' ? this.hover : null);
-    if (r) this.edit(r.name, r.change);
-  }
-
-  /** One undoable step: the editing function takes the state and gives the new one. */
-  private edit(name: string, change: (d: Snapshot) => Snapshot) {
-    const before = this.snapshot();
-    this.restore(change(before));
-    this.commit(before, name);
-  }
-
-  /** No road being drawn, nothing selected: draw mode again (^120), or select mode. */
-  private leaveDrawing(toSelect: boolean) {
-    [this.mode, this.viewing] = [toSelect ? 'select' : 'draw', false];
-    [this.active, this.origin, this.end, this.selection] = [null, null, 'end', []];
-    this.splitUndo = null;
-  }
-
-  /** Esc: cancel a drag (^295); else finish the road being drawn, or with none deselect all (^218). */
-  private escape() {
-    if (this.press && this.press.kind !== 'empty') return this.cancelPress();
-    if (this.mode === 'draw') return this.finishRoad(true);
-    if (!this.selection.length) return;
-    this.edit('deselect all', (d) => ({ ...d, selection: [] }));
-    this.use('deselect-all');
-  }
-
-  /** Enter draw mode: the next click places the first node of a new road. */
-  enterDrawMode() {
+  /** Enter draw mode (a click on the void with nothing selected, ^120): the next click places the first node of a road. */
+  enterDraw() {
     this.mode = 'draw';
-    this.selection = [];
+    this.hover = null;
   }
 
   /**
-   * Finish the road being drawn (extend mode goes back to draw mode, ^120); with no road being drawn,
-   * leave draw mode. `toSelect` (Esc) always leaves it. A road with fewer than two nodes is cancelled.
+   * Finish the road being drawn (^432): draw mode goes on without one; `toSelect` (`Esc`) goes to
+   * select mode as well, as on `main`. A road of its first node only is cancelled: the node goes (^437).
    */
-  finishRoad(toSelect = false, keep = false) {
-    if (this.mode === 'select') return;
-    const before = this.snapshot();
-    // A split on a curve that was finished at once gives the curve back (an inserted node would stay), unless the click was on the inserted node (^276).
-    this.graph = ops.finishedGraph(this.graph, keep ? null : this.splitUndo);
-    this.leaveDrawing(toSelect || this.active === null);
-    this.commit(before, onlyFirstNode(before) ? 'cancel first node' : 'finish road');
+  finishRoad(toSelect = false) {
+    if (this.mode !== 'draw') return;
+    if (toSelect) this.mode = 'select';
+    if (this.draw.active !== null) void this.drawStep(() => this.planFinish());
   }
 
-  /** Left button pressed. */
-  pointerDown(info: PointerInfo) {
-    this.lastInfo = info;
-    if (this.viewing) return;
-    const h = this.hover;
-    if (h?.kind === 'handle') return this.grab(h.handle, info);
-    if (h?.kind !== 'candidate') return this.pressOn(null, info);
-    if (h.derived) return this.realize(h.hit, info);
-    this.pressOn(h.hit, info);
-  }
-
-  /** A press on a curve, or on the void when `hit` is null: select mode starts a click or a box, draw mode places or inserts a node. */
-  private pressOn(hit: RoadHit | null, info: PointerInfo) {
-    if (!this.drawing) {
-      this.press = emptyPress(this.snapshot(), info, hit);
-      return;
-    }
-    const place = () =>
-      ops.placePress(this.snapshot(), placedAt(this.snapped, info, tipWays(this.snapshot())));
-    this.begin(hit ? ops.curvePress(this.snapshot(), hit) : place());
+  /** The step that finishes the road: right after a split on a curve it gives the curve back (^237); a road of its first node only loses that node (^437). */
+  async planFinish(): Promise<Planned | null> {
+    const [source, active] = [this.source?.(), this.draw.active];
+    if (!source || active === null) return null;
+    const split = this.splitUndo;
+    if (split?.node === active)
+      return { name: 'finish road', change: inverse(split.change), draw: NOT_DRAWING };
+    const edges = await source.edgesAt([active]);
+    if (edges.length) return { name: 'finish road', change: NO_CHANGE, draw: NOT_DRAWING };
+    const nodes = await source.nodes([active]);
+    const change = {
+      nodes: nodes.map((n) => ({ before: n, after: null })),
+      edges: [],
+      context: [],
+    };
+    return { name: 'cancel first node', change, draw: NOT_DRAWING };
   }
 
   /**
-   * The left button went down on a derived node (^824): it becomes a real node (the segment is split
-   * there, its curve does not change) and is dragged like any node. Without a move it is taken back
-   * when the button is released.
+   * An operation of the drawing (^1262), in its turn (`queued`): planned from what it finds then,
+   * written, and one step that holds the change and the road being drawn before and after it. A
+   * step while a road is drawn joins the batch of the steps before (^216).
    */
-  private realize(hit: RoadHit, info: PointerInfo) {
-    const before = this.snapshot();
-    const made = ops.insertAt(before, hit);
-    this.restore(made.drawn);
-    const handle = this.handles(info.scale).find((h) => h.type === 'node' && h.id === made.id);
-    if (handle) this.grab(handle, info);
-    if (this.press?.kind === 'drag') this.press = { ...this.press, undo: before, realized: true };
+  drawStep(plan: () => Promise<Planned | null>): Promise<void> {
+    const writer = this.writer;
+    if (!writer) return Promise.resolve();
+    const epoch = this.epoch;
+    return this.queued(async () => {
+      try {
+        const p = await plan();
+        if (!p) return;
+        if (!isEmpty(p.change)) await writer(p.change);
+        if (epoch === this.epoch) this.drawn(p);
+      } finally {
+        // What the press showed goes, also when it was not written.
+        this.draft = null;
+      }
+    });
   }
 
-  private grab(handle: RoadHandle, info: PointerInfo) {
-    const r = dragPress(this.snapshot(), this.drawing, handle, info);
-    this.selection = r.selection;
-    const curve = this.drawing && handle.type === 'rad' ? hitOfHandle(this.chains, handle) : null;
-    this.press = { ...r.press, curve };
+  /** A planned operation of the drawing was written: the road being drawn after it, and its step. */
+  private drawn(p: Planned) {
+    const before = this.draw;
+    const was = this.selection;
+    if (p.selection) this.selection = p.selection;
+    this.draw = p.draw;
+    this.draft = null;
+    this.splitUndo = p.split !== undefined ? { node: p.split, change: p.change } : null;
+    if (isEmpty(p.change) && sameDraw(before, p.draw) && sameSelection(was, this.selection)) return;
+    const drawing = before.active !== null || p.draw.active !== null;
+    this.history = record(this.history, {
+      name: p.name,
+      kind: drawing ? 'draw' : null,
+      continues: before.active !== null,
+      selection: deltaOf(was, this.selection),
+      selectedAfter: this.selection.size,
+      ...(isEmpty(p.change) ? {} : { map: p.change }),
+      ...(drawing ? { draw: { before, after: p.draw } } : {}),
+    });
+    this.event = { seq: ++this.seq, kind: 'step', steps: this.history.past.slice(-1) };
   }
 
-  /** The press begins: its first change (a node placed or inserted), and the press itself. */
-  private begin({ drawn, press }: { drawn: Snapshot; press: Press }) {
-    this.restore(drawn);
-    this.press = press;
+  /** The selection while a box is dragged: it follows the box, and the step is taken when it ends (`select`). */
+  follow(next: Selection) {
+    this.selection = next;
   }
 
-  /** A click on a curve ends in a split or merge at the inserted node; a drag only inserts it (^133). */
-  private clickedCurve(press: Extract<Press, { kind: 'place' }>) {
-    if (press.moved || !press.then) return;
-    if (press.then === 'split') {
-      this.restore(ops.splitAt(this.snapshot(), press.id));
-      this.splitUndo = { before: press.undo.graph, after: this.graph };
-    } else this.merge(press.id);
+  /** The selection is `next` now, after it was `from`: a step of the history if it changed (^216). */
+  select(next: Selection, from: Selection = this.selection) {
+    this.selection = next;
+    if (sameSelection(from, next)) return;
+    const step = {
+      name: selectionName(from, next),
+      kind: 'select' as const,
+      continues: true,
+      selection: deltaOf(from, next),
+      selectedAfter: next.size,
+    };
+    this.history = record(this.history, step);
+    this.event = { seq: ++this.seq, kind: 'step', steps: this.history.past.slice(-1) };
   }
 
-  pointerMove(info: PointerInfo) {
-    this.lastInfo = info;
-    const moved = this.press && moveOf(this.snapshot(), this.press, info, this.snapped);
-    if (moved) Object.assign(this, moved);
+  deselectAll() {
+    if (this.selection.size && !this.busy) this.select(NOTHING);
   }
 
-  /** Alt, Shift or Ctrl went down or up: what is under the pointer can look different (^99); a press goes on with the new keys, also with no move (^801). */
-  modifiers(keys: Keys) {
-    const { info, changed } = withKeys(this.lastInfo, keys);
-    this.lastInfo = info;
-    if (changed && info && this.press) this.pointerMove(info);
+  /** The selection could not stay (the memory has no room for its chunks, ^1257): it goes, and so does what could be undone of it. */
+  dropSelection() {
+    this.selection = NOTHING;
+    this.history = NO_HISTORY;
+    this.event = null;
   }
 
-  private hoverNow(): Hover | null {
-    const info = this.lastInfo;
-    if (this.press || !info || this.viewing) return null;
-    const { chains, view } = this;
-    const hits = { handles: this.handles(info.scale), chains, derived: view.derived };
-    return hoverAt(this.snapshot(), hits, info, this.drawing);
+  /** Delete nodes or segments (^434, ^920): the change is worked out from the storage, written, and then it is one step; the road being drawn follows (^70). */
+  async delete(doing: Doing) {
+    const [source, writer] = [this.source, this.writer];
+    if (!source || !writer) return;
+    const epoch = this.epoch;
+    await this.queued(async () => {
+      const plan = await planDelete(doing, source(), this.draw);
+      if (isEmpty(plan.change)) return;
+      await writer(plan.change);
+      // The project was changed while it was written: the step belongs to the other one.
+      if (epoch === this.epoch) this.took(doing.name, plan);
+    });
   }
 
-  /** The view moved under a pointer that did not (zoom, pan, rotate): the same screen position is another place now. Not while the left button is down. */
-  look(info: PointerInfo | null) {
-    if (!this.press) this.lastInfo = info;
+  /** The step of a change that was written: nothing is selected any more, as on `main` (a removal ends with `selection: []`, ^434). */
+  private took(name: string, { change, draw }: DeletePlan) {
+    const [before, after] = [this.selection, NOTHING];
+    const drawn = this.draw;
+    const drawing = drawn.active !== null || draw.active !== null;
+    [this.selection, this.draw, this.hover, this.splitUndo] = [after, draw, null, null];
+    this.history = record(this.history, {
+      name,
+      kind: drawing ? 'draw' : null,
+      continues: drawing,
+      selection: deltaOf(before, after),
+      selectedAfter: 0,
+      map: change,
+      ...(drawing ? { draw: { before: drawn, after: draw } } : {}),
+    });
+    this.event = { seq: ++this.seq, kind: 'step', steps: this.history.past.slice(-1) };
   }
 
-  /** The segments whose two nodes are selected, as (chain, index) pairs (^133). */
-  selectedSegments = $derived(selectedSegmentsOf(this.chains, this.graph, this.selection));
-  /** The segments under the pointer that get an outline: the one, or with Alt held the whole branch (^99, ^128). */
-  hoverSegments = $derived(
-    hoveredSegmentsOf(this.chains, this.graph, this.hover, this.lastInfo?.alt ?? false),
-  );
-  /** The curve a merge into the node or curve under the pointer would add (^123, ^125). */
-  mergePreview = $derived(mergePreview(this.snapshot(), this.hover));
-  /** Moving several nodes hides all scaffolds meanwhile (^78). */
-  movingGroup = $derived(movingGroupOf(this.press));
-
-  private clickedEmpty(press: Extract<Press, { kind: 'empty' }>) {
-    const next = afterEmptyClick(this.selection, press);
-    if (next) this.selection = next;
-    else this.enterDrawMode();
+  /**
+   * Do something that writes the map, one thing at a time, in the order it was asked for (^1260): what
+   * is asked while a change is written waits for its turn and is worked out then, from the state
+   * it finds (two quick `Ctrl+Z` are two undos). What goes wrong is told to the user and changes nothing.
+   */
+  private queued(work: () => Promise<void>): Promise<void> {
+    this.waiting++;
+    this.busy = true;
+    const epoch = this.epoch;
+    const done = this.chain
+      .then(() => {
+        // The project was changed while this waited: it was asked for another one.
+        if (epoch !== this.epoch) return;
+        if (this.canEdit && !this.canEdit()) throw new Error('the map cannot be changed now');
+        return work();
+      })
+      .catch((e: unknown) => {
+        console.error('[modelcity] the change of the map failed', e);
+        this.told?.('error', 'The change could not be written: nothing was changed.');
+      });
+    this.chain = done.finally(() => {
+      if (--this.waiting === 0) this.busy = false;
+    });
+    return done;
   }
 
-  /** A click (no drag) on a node: toggles it, or in draw mode finishes, extends, splits or merges the road (^23, ^65). */
-  private clickedHandle(press: Extract<Press, { kind: 'drag' }>) {
-    const id = press.id;
-    this.selection = afterHandleClick(this.selection, press);
-    if (press.flip) this.restore(ops.flipArmFrom(this.snapshot(), id));
-    else if (press.curve) this.clickedRadius(press.curve);
-    else if (press.act === 'finish' || press.act === 'cancel') this.finishRoad(false, true);
-    else if (press.act === 'extend')
-      this.edit('extend road', (d) => ops.extendTo(d, id, press.reverse));
-    else if (press.act === 'split') this.restore(ops.splitAt(this.snapshot(), id));
-    else if (press.act === 'merge' || press.act === 'close') this.merge(id);
-  }
-
-  /** A click on a radius point splits or merges there, as on the curve (^278). */
-  private clickedRadius(hit: RoadHit) {
-    const r = ops.curvePress(this.snapshot(), hit);
-    this.restore(r.drawn);
-    this.clickedCurve(r.press);
-  }
-
-  private merge(id: number) {
-    this.restore(ops.mergeInto(this.snapshot(), id));
-    this.finishRoad();
-  }
-
-  /** The press is over: take it, and the selection box that belonged to it. */
-  private endPress(): Press | null {
-    const press = this.press;
-    [this.press, this.band] = [null, null];
-    return press;
-  }
-
-  /** Left button released. */
-  pointerUp() {
-    const drop = dropOf(this.graph, this.press, this.snapped, this.view.of);
-    const press = this.endPress();
-    if (!press) return;
-    this.batching = true;
-    if (press.kind === 'drag') this.endDrag(press, drop);
-    if (press.kind === 'empty' && !press.moved) this.clickedEmpty(press);
-    if (press.kind === 'place') this.clickedCurve(press);
-    this.batching = false;
-    this.commit(press.undo, pressName(press));
-    this.use(controlUsed(press));
-  }
-
-  /** A node dropped on a node or a curve merges; a click without moving is a click on the handle, or takes a realized node back (^824). */
-  private endDrag(press: Extract<Press, { kind: 'drag' }>, drop: ReturnType<typeof dropOf>) {
-    if (drop) this.restore(ops.droppedNode(this.snapshot(), press.id, drop));
-    if (press.moved) return;
-    if (press.realized) this.restore(press.undo);
-    else this.clickedHandle(press);
-  }
-
-  /** Abort what the left button was doing (a second finger came down, or Esc, ^295). */
-  cancelPress() {
-    const press = this.endPress();
-    if (!press || press.kind === 'empty') return;
-    this.restore(press.undo);
-  }
-
-  /** Right click without moving: removes what is under the pointer (what the hint says: the hover, snapped like a left click), else finishes the road (^43, ^160, ^290, ^808). */
-  rightClick(info: PointerInfo) {
-    if (this.viewing) return;
-    this.lastInfo = info;
-    const r = rightClickRemoval(this.graph, this.selection, underHover(this.hover), info.alt);
-    if (r) this.edit(r.name, r.change);
+  /** A click of the right button (^489, ^699, ^920): deletes what is under the pointer, or the selection if the pointer is on it; on nothing it finishes the road being drawn (^43, ^720). */
+  async rightClick(on: Hover | null, alt: boolean) {
+    const map = this.loaded?.();
+    if (this.mode === 'view') return;
+    const doing = map ? byClick(this.selection, on, alt, map) : null;
+    if (doing) await this.delete(doing);
     else this.finishRoad();
+  }
+
+  undo(whole = false) {
+    return this.step(undoStep, whole, true);
+  }
+
+  redo(whole = false) {
+    return this.step(redoStep, whole, false);
+  }
+
+  /** What an undo or redo does when it is asked for: a selection that goes back, and nothing to undo, at once; a change of the map waits for its turn and is worked out then (^1260). */
+  private step(pick: typeof undoStep, whole: boolean, undo: boolean): Promise<void> {
+    const moved = this.busy ? null : pick(this.history, whole);
+    if (!this.busy && !moved) this.nothing(undo);
+    else if (moved && !moved.steps.some((s) => s.map)) this.apply(moved, undo);
+    else {
+      const epoch = this.epoch;
+      return this.queued(() => this.move(pick(this.history, whole), undo, epoch));
+    }
+    return Promise.resolve();
+  }
+
+  private nothing(undo: boolean) {
+    this.told?.('info', undo ? 'nothing to undo' : 'nothing to redo');
+  }
+
+  /** Called when its turn has come: the steps that changed the map are written as one change, all or nothing (a failed write is thrown and nothing changes). */
+  private async move(moved: Moved | null, undo: boolean, epoch = this.epoch) {
+    if (!moved) return this.nothing(undo);
+    const changes = moved.steps.flatMap((s) => (s.map ? [undo ? inverse(s.map) : s.map] : []));
+    if (changes.length) {
+      // A step of the map cannot move without a way to write it: the history stays as it is.
+      if (!this.writer) throw new Error('there is no way to write the map');
+      await this.writer(compose(changes));
+    }
+    if (epoch === this.epoch) this.apply(moved, undo);
+  }
+
+  private apply(moved: Moved, undo: boolean) {
+    this.selection = moved.steps.reduce(
+      (s, step) => applyDelta(s, step.selection, undo),
+      this.selection,
+    );
+    // The road being drawn goes back to how it was before the oldest step undone, or after the newest one done again.
+    const drawn = moved.steps.filter((s) => s.draw).at(-1)?.draw;
+    if (drawn) this.draw = undo ? drawn.before : drawn.after;
+    if (this.draw.active !== null) this.mode = 'draw';
+    this.splitUndo = null;
+    this.draft = null;
+    this.history = moved.history;
+    this.event = { seq: ++this.seq, kind: undo ? 'undo' : 'redo', steps: moved.steps };
   }
 }

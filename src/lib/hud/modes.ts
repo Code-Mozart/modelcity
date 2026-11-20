@@ -1,8 +1,7 @@
+import type { Phase } from '../editor/editor.svelte';
 import type { IconName } from '../ui/Icon.svelte';
-import type { Phase } from '../editor/phase';
 
-/** The label text and color of each mode (^119). */
-
+/** The label text and color of each mode (^119); extend mode is draw mode while a road is drawn (^120). */
 export const MODES: Record<
   Phase,
   { label: string; color: string; outline: string; icon: IconName }

@@ -3,7 +3,7 @@ import { Camera } from '../camera/camera.svelte';
 import { Editor } from '../editor/editor.svelte';
 import { AUTOSAVE_MS, ProjectSession, type Notify } from '../project/session.svelte';
 import { MemoryStorage } from '../project/storage';
-import { click } from './editorHelpers';
+import { addEdge, addNode } from '../model/graph';
 
 let tick = 0;
 /** The clock of the sessions of the tests starts again at 0 for every test. */
@@ -27,19 +27,17 @@ export const setup = (notify?: Notify) => {
 };
 export type Setup = ReturnType<typeof setup>;
 
-/** Draw a road of two nodes into the editor of the session. */
-export const drawRoad = (editor: Editor, camera?: Camera) => {
-  click(editor, 500, 500);
-  click(editor, 0, 0);
-  click(editor, 30, 10);
-  editor.key('Escape');
-  camera?.setAnchors(editor.anchors);
+/** Put a road of two nodes at (x, y) into the map of the session. */
+export const drawRoad = (editor: Editor, x = 0, y = 0) => {
+  const a = addNode(editor.graph, { x, y, th: 0 });
+  const b = addNode(a.graph, { x: x + 30, y: y + 10, th: 0 });
+  editor.graph = addEdge(b.graph, a.id, b.id);
 };
 
 /** A project with a road, saved by autosave. */
-export const withRoad = async ({ session, editor, camera }: Setup) => {
+export const withRoad = async ({ session, editor }: Setup) => {
   await session.start();
-  drawRoad(editor, camera);
+  drawRoad(editor);
   session.changed();
   await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + 1);
 };

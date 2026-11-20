@@ -3,7 +3,8 @@ import type { EdgeRef } from '../curves/path';
 import { sweeps } from '../curves/piece';
 import type { Arc } from '../curves/types';
 import { add, dist, mul, onCircle, sub, unitOr, type Vec } from '../curves/vec';
-import { text, toScreen, type Frame, type Palette } from './paint';
+import { text, type Frame, type Palette } from './paint';
+import { toScreen } from './strokes';
 import type { RadFocus } from './guides';
 
 const LINE_PX = 13;

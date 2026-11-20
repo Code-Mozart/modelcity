@@ -1,7 +1,7 @@
 import { batchSizes, type History, type Step } from '../editor/history';
-import { historyHints, type Hidden, type Hint } from '../hints/hints';
-import { sameSelection } from '../editor/selection';
-import { selectionName } from '../editor/stepNames';
+import { composeDeltas } from '../editor/selection';
+import { historyHints } from '../hints/historyControls';
+import type { Hint } from '../hints/hints';
 
 /** How many rows the recent history panel shows, and the most of them that are undone (^107, 7 and 3: the user's numbers). */
 export const WINDOW = 7;
@@ -26,6 +26,10 @@ export interface PanelGroup {
   rows: PanelRow[];
 }
 
+type Item = { step: Step; undone: boolean };
+
+const nodes = (n: number) => (n === 1 ? 'node' : `${n} nodes`);
+
 /**
  * The steps in the order they happened, as rows. A run of selection steps of one batch that are
  * all done (or all undone) is one row, `select 3 nodes`, named by what it changed in the end; a
@@ -33,17 +37,17 @@ export interface PanelGroup {
  * steps are still in the history.
  */
 function rowsOf(h: History): PanelRow[] {
-  const steps = [
+  const items: Item[] = [
     ...h.past.map((step) => ({ step, undone: false })),
     ...[...h.future].reverse().map((step) => ({ step, undone: true })),
   ];
   const rows: PanelRow[] = [];
-  let run: typeof steps = [];
+  let run: Item[] = [];
   const flush = () => {
-    if (run.length) rows.push(...collapse(run));
+    rows.push(...collapse(run));
     run = [];
   };
-  for (const item of steps) {
+  for (const item of items) {
     const joins = item.step.kind === 'select' && run[0]?.step.batch === item.step.batch;
     if (!joins || run[0]!.undone !== item.undone) flush();
     if (item.step.kind === 'select') run.push(item);
@@ -53,11 +57,18 @@ function rowsOf(h: History): PanelRow[] {
   return rows;
 }
 
-function collapse(run: { step: Step; undone: boolean }[]): PanelRow[] {
-  const [first, last] = [run[0]!, run.at(-1)!];
-  const [from, to] = [first.step.before.selection, last.step.after.selection];
-  if (sameSelection(from, to)) return [];
-  return [{ step: first.step, name: selectionName(from, to), undone: first.undone }];
+/** A run of selection steps as a row: named by what it changed altogether (a step that holds only changes does not know the state before it, so the name is made from them). */
+function collapse(run: Item[]): PanelRow[] {
+  if (!run.length) return [];
+  const net = composeDeltas(run.map((i) => i.step.selection));
+  if (!net.added.length && !net.removed.length) return [];
+  const name =
+    run.at(-1)!.step.selectedAfter === 0
+      ? 'deselect all'
+      : net.added.length
+        ? `select ${nodes(net.added.length)}`
+        : `deselect ${nodes(net.removed.length)}`;
+  return [{ step: run[0]!.step, name, undone: run[0]!.undone }];
 }
 
 /**
@@ -67,9 +78,12 @@ function collapse(run: { step: Step; undone: boolean }[]): PanelRow[] {
  */
 export function panelView(h: History): PanelGroup[] {
   const all = rowsOf(h);
-  const undone = Math.min(all.filter((r) => r.undone).length, MAX_UNDONE);
-  const done = all.filter((r) => !r.undone);
-  const rows = [...done.slice(-(WINDOW - undone)), ...all.filter((r) => r.undone).slice(0, undone)];
+  const undone = all.filter((r) => r.undone);
+  const shown = Math.min(undone.length, MAX_UNDONE);
+  const rows = [
+    ...all.filter((r) => !r.undone).slice(-(WINDOW - shown)),
+    ...undone.slice(0, shown),
+  ];
   const groups: PanelRow[][] = [];
   for (const row of rows) {
     const last = groups.at(-1);
@@ -92,14 +106,16 @@ function describe(h: History, group: PanelRow[]): PanelGroup {
  * say. A select followed by a deselect changed nothing and has no row, though there is a step to
  * undo; hints with no step beside them would be lonely (^241).
  */
-export function panelHints(h: History, hidden: Hidden): Hint[] {
+export function panelHints(h: History, hidden: (id: NonNullable<Hint['id']>) => boolean): Hint[] {
   if (!panelView(h).length) return [];
   const size = batchSizes(h);
-  const state = {
-    undo: h.past.length > 0,
-    redo: h.future.length > 0,
-    undoBatch: size.undo > 1,
-    redoBatch: size.redo > 1,
-  };
-  return historyHints(state, hidden);
+  return historyHints(
+    {
+      undo: h.past.length > 0,
+      redo: h.future.length > 0,
+      undoBatch: size.undo > 1,
+      redoBatch: size.redo > 1,
+    },
+    hidden,
+  );
 }

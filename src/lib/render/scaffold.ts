@@ -1,119 +1,58 @@
-import { dist } from '../curves/vec';
+import { ARROW_PX } from '../curves/handles';
 import type { EdgeRef } from '../curves/path';
-import { distanceToPiece, isDegenerate } from '../curves/piece';
-import type { RoadHandle } from '../editor/chains';
-import { belongsToEdge, touchesEdge, type Focus } from '../editor/focus';
-import { CURVE_NEAR_PX, HANDLE_NEAR_PX, type Pointer } from '../editor/proximity';
+import type { PathNode } from '../curves/types';
+import { fromAngle, type Vec } from '../curves/vec';
+import { drawCircles, drawCorners, drawGuides, type RadFocus } from './guides';
+import { drawMeasures } from './measures';
+import type { Frame, Palette } from './paint';
+import { barbs, dot, screenDir, segment, toScreen } from './strokes';
 
 /**
- * The scaffold of a road segment (the curve between two nodes) is all its construction and
- * control gizmos: the orange lines, circle, ticks and control points, the heading arrows, the
- * yellow lines and points (filled or hollow), and the orange control point with its label. What
- * is always shown is the skeleton: the curves and the node dots. The scaffold is all or nothing
- * per segment, and only ever shown for a single segment at a time (^60, ^66).
+ * The scaffold that is shown (^9, ^60, ^66, `main`'s `drawRoad` and `drawHandles`): of the segments
+ * that show it, the heading lines, circles, corners and measurements; the heading arrows of their
+ * nodes (and of nodes with no segment, always); and their control points, the hovered or dragged
+ * one as large as a selected node (^230).
  */
-export interface ScaffoldInput {
-  roads: { edges: EdgeRef[] }[];
-  handles: RoadHandle[];
-  focus: Focus | null;
-  pointer: Pointer | null;
+export interface ScaffoldView {
+  refs: (EdgeRef & { rad: RadFocus | null })[];
+  arrows: PathNode[];
+  points: (Vec & { type: 'head' | 'ctrl' | 'rad'; focused: boolean })[];
 }
 
-export interface SegmentRef {
-  road: number;
-  edge: number;
+export const NO_SCAFFOLD: ScaffoldView = { refs: [], arrows: [], points: [] };
+
+const ARROW_STROKE_PX = 2;
+const HEAD = { size: 11, spread: 0.5, width: ARROW_STROKE_PX };
+const NODE_DOT_PX = 5.5;
+const RAD_DOT_PX = 6.5;
+const FOCUSED_DOT_PX = NODE_DOT_PX * 1.5;
+
+/** Under the curves: the heading lines and the circles of the arcs. */
+export function drawScaffoldUnder(f: Frame, v: ScaffoldView, pal: Palette) {
+  for (const ref of v.refs) {
+    drawGuides(f, ref, pal);
+    drawCircles(f, ref, pal);
+  }
 }
 
-/** Distances, in screen pixels, from the pointer to a segment's curve and to its control points. */
-interface Scores {
-  ref: SegmentRef;
-  curve: number;
-  points: number;
+/** Over the curves, under the node dots: the corners, the measurements, the heading arrows and the control points. */
+export function drawScaffoldOver(f: Frame, v: ScaffoldView, pal: Palette) {
+  for (const ref of v.refs) {
+    drawCorners(f, ref, pal);
+    drawMeasures(f, ref, pal, ref.rad);
+  }
+  for (const n of v.arrows) arrow(f, n, pal.orange);
+  for (const h of v.points) {
+    const size = h.focused ? FOCUSED_DOT_PX : h.type === 'rad' ? RAD_DOT_PX : NODE_DOT_PX;
+    dot(f.ctx, toScreen(f, h), size, pal.orange);
+  }
 }
 
-function scoresOf(input: ScaffoldInput, ref: SegmentRef, pointer: Pointer): Scores {
-  const edge = input.roads[ref.road]!.edges[ref.edge]!;
-  const { pt, scale } = pointer;
-  const curve = Math.min(
-    ...edge.E.pieces.filter((p) => !isDegenerate(p)).map((p) => distanceToPiece(p, pt)),
-  );
-  const points = Math.min(
-    ...input.handles
-      .filter((h) => h.road === ref.road && belongsToEdge(h, ref.edge))
-      .map((h) => dist(h, pt)),
-  );
-  return { ref, curve: curve * scale, points: points * scale };
-}
-
-const allSegments = ({ roads }: ScaffoldInput): SegmentRef[] =>
-  roads.flatMap((r, road) => r.edges.map((e) => ({ road, edge: e.i })));
-
-const closest = (list: Scores[], by: (s: Scores) => number): Scores | undefined =>
-  list.reduce<Scores | undefined>((best, s) => (!best || by(s) < by(best) ? s : best), undefined);
-
-/**
- * The segment of the hovered or dragged handle. An orange or yellow point belongs to one
- * segment; a node or heading control point to two, then the one whose curve is closer to the pointer
- * (without a pointer, the one that starts at the node).
- */
-function focusedSegment(input: ScaffoldInput): SegmentRef | null {
-  const { focus, pointer } = input;
-  if (!focus) return null;
-  const exists = (edge: number) => input.roads[focus.road]?.edges.some((e) => e.i === edge);
-  const options = [focus.i, focus.i - 1]
-    .filter((edge) => touchesEdge(focus, focus.road, edge) && exists(edge))
-    .map((edge) => ({ road: focus.road, edge }));
-  if (options.length < 2 || !pointer) return options[0] ?? null;
-  const scores = options.map((ref) => scoresOf(input, ref, pointer));
-  return closest(scores, (s) => s.curve)?.ref ?? null;
-}
-
-/**
- * The one segment whose scaffold is shown (^66), or null. A hovered or dragged control point
- * decides. Otherwise the segment the pointer is on (within 20 px of its curve) wins, the closest
- * curve first; otherwise the segment with the closest control point within 48 px, nearer curves
- * breaking ties.
- */
-export function activeSegment(input: ScaffoldInput): SegmentRef | null {
-  const focused = focusedSegment(input);
-  if (focused || !input.pointer) return focused;
-  const scores = allSegments(input).map((ref) => scoresOf(input, ref, input.pointer!));
-  const onCurve = closest(
-    scores.filter((s) => s.curve <= CURVE_NEAR_PX),
-    (s) => s.curve,
-  );
-  if (onCurve) return onCurve.ref;
-  const near = scores.filter((s) => s.points <= HANDLE_NEAR_PX);
-  return closest(near, (s) => s.points + s.curve * 1e-6)?.ref ?? null;
-}
-
-/** Which segments of each road show their scaffold: at most one overall. */
-export function activeFlags(input: ScaffoldInput): boolean[][] {
-  const active = activeSegment(input);
-  return input.roads.map((r, road) =>
-    r.edges.map((e) => active?.road === road && active.edge === e.i),
-  );
-}
-
-/**
- * With several segments selected (both their nodes), they show their scaffold all together or not
- * at all: all of them when the segment that shows it is one of them (^133).
- */
-export function withSelectedTogether(
-  flags: boolean[][],
-  selected: { road: number; i: number }[],
-): boolean[][] {
-  if (selected.length < 2 || !selected.some((s) => flags[s.road]?.[s.i])) return flags;
-  return flags.map((row, road) =>
-    row.map((on, i) => on || selected.some((s) => s.road === road && s.i === i)),
-  );
-}
-
-/**
- * A node's heading arrow belongs to the scaffold of the segments on both sides of the node; a node
- * without any segment (a road with its first node only) always shows its arrow.
- */
-export function arrowShown(active: boolean[], node: number): boolean {
-  if (active.length === 0) return true;
-  return active[node - 1] === true || active[node] === true;
+/** The heading arrow of a node: the control point sits half way on its stem (^126). */
+function arrow(f: Frame, node: PathNode, color: string) {
+  const a = toScreen(f, node);
+  const t = screenDir(f, fromAngle(node.th));
+  const tip = { x: a.x + t.x * 2 * ARROW_PX, y: a.y + t.y * 2 * ARROW_PX };
+  segment(f.ctx, a, tip, { color, width: ARROW_STROKE_PX });
+  barbs(f.ctx, tip, node.th + f.view.rot, { ...HEAD, color });
 }

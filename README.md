@@ -4,7 +4,7 @@ modelcity is an editor to create Google Maps-like maps for fictional cities.
 
 ## Getting started
 
-Requires [bun](https://bun.sh).
+Requires [bun](https://bun.sh) 1.4.4 (pinned in `.bun-version` and `package.json`; CI uses the same one).
 
 ```bash
 bun install

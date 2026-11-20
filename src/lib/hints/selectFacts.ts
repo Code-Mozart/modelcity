@@ -1,0 +1,28 @@
+import { branchOf } from '../editor/branchOf';
+import type { Editor } from '../editor/editor.svelte';
+import { hoverKind } from '../editor/pick';
+import { onSelection } from '../editor/deleting';
+import { allSelected } from '../editor/selection';
+import type { LoadedMap } from '../map/hit';
+import { networkOf } from '../map/network';
+import type { SelectFacts } from './selectControls';
+
+/** What the hints of select mode need to know of the editor (^181). */
+export function selectFactsOf(editor: Editor, map: LoadedMap): SelectFacts {
+  const { hover, selection: sel } = editor;
+  return {
+    mode: editor.mode,
+    hovered: hoverKind(hover),
+    hoveredSelected:
+      hover?.kind === 'node'
+        ? sel.has(hover.id)
+        : hover?.kind === 'segment' && hover.nodes.every((id) => sel.has(id)),
+    selected: sel.size,
+    onSelection: onSelection(sel, hover),
+    // A branch with more nodes than are selected cannot be all selected: it is not walked further than that.
+    branchSelected:
+      hover !== null &&
+      sel.size > 0 &&
+      allSelected(sel, branchOf(networkOf(map), hover, sel.size).nodes),
+  };
+}
