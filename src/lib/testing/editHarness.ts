@@ -1,6 +1,8 @@
 import { connectEditor } from '../edit/connect';
 import { Editor } from '../editor/editor.svelte';
 import { SelectPress } from '../editor/selectPress';
+import { DrawPress } from '../editor/drawPress';
+import { withIdsOf } from '../project/persist';
 import type { Size, View } from '../camera/view';
 import { MapMemory } from '../map/mapMemory.svelte';
 import { buildIndex } from '../map/segmentIndex';
@@ -31,20 +33,26 @@ export async function editing(
   await settle();
   const editor = new Editor();
   editor.told = (_, text) => void told.push(text);
+  // The id counters are past every id of the rows, and follow what is written (^1224).
+  const past = (rows: [number, ...unknown[]][]) => rows.reduce((m, r) => Math.max(m, r[0] + 1), 0);
+  let header = { ...file(), nextNodeId: past(nodes), nextEdgeId: past(edges) };
+  editor.ids = () => ({ node: header.nextNodeId, edge: header.nextEdgeId });
   connectEditor(editor, {
     storage,
     memory,
     project: () => 'p',
-    commit: (change, index) => storage.patch('p', file(), change, index),
+    commit: (change, index) => {
+      header = { ...header, ...withIdsOf(change, header) };
+      return storage.patch('p', header, change, index);
+    },
   });
-  const press = new SelectPress(editor, {
-    map: () => editor.loaded!(),
-    screen: () => ({ view, size }),
-  });
+  const around = { map: () => editor.loaded!(), screen: () => ({ view, size }) };
+  const press = new SelectPress(editor, around);
+  const draw = new DrawPress(editor, around);
   const rows = async () => {
     const f = (await storage.load('p')) as unknown as { nodes: NodeRow[]; edges: EdgeRow[] };
     const sorted = <R extends [number, ...unknown[]]>(r: R[]) => [...r].sort((a, b) => a[0] - b[0]);
     return { nodes: sorted(f.nodes), edges: sorted(f.edges) };
   };
-  return { storage, memory, editor, press, rows, settle };
+  return { storage, memory, editor, press, draw, rows, settle };
 }
