@@ -1,5 +1,4 @@
 import type { Editor } from '../editor/editor.svelte';
-import type { LoadedMap } from '../map/hit';
 import type { MapMemory } from '../map/mapMemory.svelte';
 import type { IndexChange, MapChange, ProjectStorage } from '../project/storage';
 import { toMapChange, type RowChange } from './change';
@@ -28,11 +27,7 @@ export function connectEditor(
     commit: (change: MapChange, index: IndexChange) => Promise<void>;
   },
 ) {
-  editor.loaded = (): LoadedMap => ({
-    chunks: memory.chunks,
-    nodeOf: memory.index.nodeOf,
-    edgesAt: memory.index.edgesAt,
-  });
+  editor.loaded = () => memory.loaded();
   editor.source = () => ({
     nodes: (ids) => storage.nodesByIds(project(), ids),
     edgesAt: (ids) => storage.edgesOf(project(), ids),

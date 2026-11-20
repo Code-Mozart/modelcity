@@ -7,9 +7,8 @@ import { cameraOf, exportText, ProjectFileError, type CameraState, type Project 
 import { lastId, remember, uid } from './browserMemory';
 import { download, exportName } from './download';
 import { openStored } from './open';
-import { headerFor, persist, withIdsOf } from './persist';
+import { createEmpty, headerFor, persist, withIdsOf } from './persist';
 import type { NextIds } from '../edit/graphPiece';
-import { INDEX_VERSION } from '../map/segmentIndex';
 import { importStream, type ImportProgress } from './streamImport';
 import { piecesOfFile, piecesOfText } from './textPieces';
 import {
@@ -178,6 +177,9 @@ export class ProjectSession extends ProjectModal {
     await this.storage.patch(this.id, header, change, index);
   }
 
+  /** Told when a blank map became a project (^189), before it is the open one: its index is complete and its map empty. Set by the app. */
+  onCreated: ((id: string) => void) | null = null;
+
   /** The ids the next node and segment of the open project get (^1224); 0 for a blank map. */
   nextIds(): NextIds {
     return { node: this.header?.nextNodeId ?? 0, edge: this.header?.nextEdgeId ?? 0 };
@@ -185,14 +187,13 @@ export class ProjectSession extends ProjectModal {
 
   /** The blank map becomes a project, stored with no rows and a complete index, before the first change is written to it (^189, ^1262). */
   private async create() {
-    const [id, stamp] = [uid(), this.now()];
+    const stamp = this.now();
     const p = { ...this.project(), title: UNTITLED, createdAt: stamp, lastUpdatedAt: stamp };
-    const header = headerFor(p, null);
-    await this.storage.create(id, header);
-    await this.storage.markIndexed(id, INDEX_VERSION);
+    const { id, header } = await createEmpty(this.storage, p);
     [this.title, this.createdAt, this.lastUpdatedAt] = [p.title, stamp, stamp];
     this.stored = this.saved = this.editor.graph;
     this.header = header;
+    this.onCreated?.(id);
     this.id = id;
     remember(id);
     await this.refresh();

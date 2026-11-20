@@ -12,11 +12,11 @@ const [N0, N1, N2] = [
   { x: 300, y: 150 },
 ] as [Pt, Pt, Pt];
 
-/** The middle of the second segment of the sample (a curve between its second and third node, radius 12.5 m). */
+/** A point of the second segment of the sample (a curve between its second and third node, radius 12.5 m), a quarter along its first piece: not a control point, which a click would hold instead (^128). */
 const MIDDLE = (() => {
   const piece = buildEdge({ x: 300, y: 50, th: 2.3 }, { x: 300, y: 150, th: 1.5708 }, 12.5)
     .pieces[0]!;
-  const at = pointOn(piece, 0.5);
+  const at = pointOn(piece, 0.25);
   return { x: at.x, y: at.y };
 })();
 

@@ -30,6 +30,13 @@ export class IndexBuild {
   ) {}
 
   /** Check the index of a project, and build what is missing. Another project (or none, '') stops the build of the one before. */
+  /** A project that was just made with a complete (empty) index: it is ready at once, without a look into the storage. */
+  madeComplete(project: string) {
+    this.stop(false);
+    ++this.generation;
+    [this.project, this.status, this.error, this.done, this.total] = [project, 'ready', null, 0, 0];
+  }
+
   async ensure(project: string) {
     this.stop(false);
     const generation = ++this.generation;

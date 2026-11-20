@@ -18,6 +18,8 @@ export interface LoadedMap {
   nodeOf(id: number): NodeRow | undefined;
   /** The loaded segments that start or end at a node (^1258). */
   edgesAt(node: number): EdgeRow[];
+  /** There is no project, only a blank map (^189): there is nothing to load, so everything is there. */
+  blank?: boolean;
 }
 
 const toM = (mm: number) => mm / 1000;
@@ -46,6 +48,7 @@ const around = (pt: Vec, reach: number): ChunkRange =>
  * and the one found in the chunks that are loaded would be the wrong one.
  */
 export function interactable(map: LoadedMap, pt: Vec, reach = 0): boolean {
+  if (map.blank) return true;
   const r = around(pt, reach);
   for (let cy = r.cy0; cy <= r.cy1; cy++)
     for (let cx = r.cx0; cx <= r.cx1; cx++) if (!readyChunk(map, cx, cy)) return false;

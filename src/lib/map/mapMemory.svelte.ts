@@ -3,6 +3,7 @@ import type { ProjectStorage } from '../project/storage';
 import { ChunkIndex } from './chunkIndex';
 import { ChunkLoader, type Chunk } from './chunkLoader';
 import type { Box } from '../curves/hull';
+import type { LoadedMap } from './hit';
 import { countOf, idsWhere, rangeOfIds, type ChunkRange } from './chunks';
 import { patchChunk, type ChunkPatch } from './chunkPatch';
 
@@ -81,8 +82,35 @@ export class MapMemory {
 
   constructor(private storage: ProjectStorage) {}
 
-  /** The open project is another one (or none, ''): nothing of the earlier one is kept, and its reads are stopped. */
+  /** The map as it is loaded, for what is under the pointer and for the operations. */
+  loaded(): LoadedMap {
+    return {
+      chunks: this.chunks,
+      nodeOf: this.index.nodeOf,
+      edgesAt: this.index.edgesAt,
+      blank: this.project === '',
+    };
+  }
+
+  /**
+   * A project that was made just now from a blank map, with no rows yet (^189, ^1263): it is open,
+   * and the chunks that were asked for are there at once, empty (there is nothing to read). What is
+   * written to it next is patched into them.
+   */
+  openEmpty(project: string) {
+    this.open(project);
+    const last = this.last;
+    if (!last) return;
+    for (const id of idsWhere(last.range, last.near)) {
+      const chunk = { id, nodes: [], edges: [], ends: [] };
+      this.chunks.set(id, { status: 'ready', chunk });
+      this.rows += CHUNK_COST;
+    }
+  }
+
+  /** The open project is another one (or none, ''): nothing of the earlier one is kept, and its reads are stopped. The project that is open already stays as it is. */
   open(project: string) {
+    if (project && project === this.project) return;
     this.generation++;
     this.reading.forEach((r) => r.abort());
     this.reading.clear();

@@ -206,6 +206,11 @@ export class DrawPress {
     return { ...shaped, change: changeOfGraphs(before, shaped.graph) };
   }
 
+  /** The press became a drag of what it was on (`MovePress`): it is no click any more, and what the drag shows stays. */
+  forget() {
+    this.pressed = null;
+  }
+
   /** Esc or a second finger: the press is forgotten, nothing is written (^295); true if there was one. */
   cancel(): boolean {
     const was = this.pressed !== null;

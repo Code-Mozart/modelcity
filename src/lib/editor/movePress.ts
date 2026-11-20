@@ -1,7 +1,7 @@
 import { screenToWorld, type Point } from '../camera/view';
 import type { Vec } from '../curves/vec';
 import { changeOfGraphs, graphOfRows, readPiece, type NextIds } from '../edit/graphPiece';
-import { nodeAt, segmentAt } from '../map/hit';
+import { nodeAt, segmentAt, type LoadedMap } from '../map/hit';
 import { edgeOfId, nodeOf, type Graph } from '../model/graph';
 import type { Editor, Planned } from './editor.svelte';
 import { dragged, droppedNode, gripNodes, type Drop, type Grip } from './moving';
@@ -115,13 +115,8 @@ export class MovePress {
   private dropAt(h: Held): Drop | null {
     if (h.grip.type !== 'node') return null;
     const { view } = this.around.screen();
-    const map = this.around.map();
     const skip = new Set([h.grip.node, ...h.group]);
-    const reach = reachOf(false, view.scale);
-    const node = nodeAt(map, h.pt, reach, skip);
-    if (node) return { node: node[0] };
-    const seg = segmentAt(map, h.pt, reach, skip);
-    return seg ? { edge: seg.edge[0], nodes: [seg.edge[1], seg.edge[2]], at: seg.at } : null;
+    return dropOf(this.around.map(), h.pt, skip, reachOf(false, view.scale));
   }
 
   /** The nodes the drag works on: those it moves, and those of where it would merge. */
@@ -225,3 +220,16 @@ function validDrop(g: Graph, drop: Drop): boolean {
 /** What a press holds on to, of what is under the pointer: a node or a control point, else nothing. */
 export const gripOf = (on: Hover | null): Grip | null =>
   on?.kind === 'node' ? { type: 'node', node: on.id } : on?.kind === 'handle' ? on.handle : null;
+
+/** The node or curve under a point that a dragged node merges into when it is let go there (^248, ^268); the moving nodes and their segments are left out. */
+export function dropOf(
+  map: LoadedMap,
+  pt: Vec,
+  skip: ReadonlySet<number>,
+  reach: number,
+): Drop | null {
+  const node = nodeAt(map, pt, reach, skip);
+  if (node) return { node: node[0] };
+  const seg = segmentAt(map, pt, reach, skip);
+  return seg ? { edge: seg.edge[0], nodes: [seg.edge[1], seg.edge[2]], at: seg.at } : null;
+}

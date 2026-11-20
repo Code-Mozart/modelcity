@@ -86,11 +86,7 @@
     }),
   );
 
-  const loadedMap = (): LoadedMap => ({
-    chunks: memory.chunks,
-    nodeOf: memory.index.nodeOf,
-    edgesAt: memory.index.edgesAt,
-  });
+  const loadedMap = (): LoadedMap => memory.loaded();
 
   /** The segments of the chunks that are loaded, each once; what the progress of a chunk does is not looked at here. */
   const found = $derived.by(() => {
@@ -255,7 +251,7 @@
   function leftMove(at: Point, e: PointerEvent) {
     if (movePress.move(at, e.ctrlKey || e.metaKey)) {
       press.forget();
-      drawPress.cancel();
+      drawPress.forget();
     } else if (press.active) press.move(at);
     else if (drawPress.active) drawPress.move(at, e.ctrlKey || e.metaKey);
   }

@@ -31,10 +31,15 @@ export type Under =
   | { kind: 'segment'; edge: number; at: Sample }
   | { kind: 'void'; pt: Vec };
 
-const whole = (m: DrawModel): Graph => graphOfRows(m.rows.nodes, m.rows.edges, m.next);
+export const whole = (m: Pick<DrawModel, 'rows' | 'next'>): Graph =>
+  graphOfRows(m.rows.nodes, m.rows.edges, m.next);
 
 /** The rows of a whole graph, with the next ids after it. */
-function rowsOf(before: Graph, after: Graph, m: DrawModel): Pick<DrawModel, 'rows' | 'next'> {
+export function rowsOf(
+  before: Graph,
+  after: Graph,
+  m: Pick<DrawModel, 'rows'>,
+): Pick<DrawModel, 'rows' | 'next'> {
   const c = changeOfGraphs(before, after);
   const nodes = new Map(m.rows.nodes.map((n) => [n[0], n]));
   const edges = new Map(m.rows.edges.map((e) => [e[0], e]));

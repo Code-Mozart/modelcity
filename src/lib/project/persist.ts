@@ -1,4 +1,6 @@
 import type { Graph } from '../model/graph';
+import { INDEX_VERSION } from '../map/segmentIndex';
+import { uid } from './browserMemory';
 import { mapChange, toFile, toHeader, type Project } from './file';
 import type { Header, MapChange, ProjectStorage } from './storage';
 
@@ -41,4 +43,13 @@ export function withIdsOf(change: MapChange, header: Header): Header {
     nextNodeId: past(change.nodes, header.nextNodeId),
     nextEdgeId: past(change.edges, header.nextEdgeId),
   };
+}
+
+/** A project with no rows and a complete index (the index of nothing), in the list of projects: what a blank map becomes at its first change (^189, ^1263). */
+export async function createEmpty(storage: ProjectStorage, p: Project) {
+  const id = uid();
+  const header = headerFor(p, null);
+  await storage.create(id, header);
+  await storage.markIndexed(id, INDEX_VERSION);
+  return { id, header };
 }

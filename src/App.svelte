@@ -70,15 +70,16 @@
   });
 
   // The chunks of the selected nodes stay in memory (^1257); if there is no room for them the selection goes, and the user is told.
-  const loaded = $derived<LoadedMap>({
-    chunks: memory.chunks,
-    nodeOf: memory.index.nodeOf,
-    edgesAt: memory.index.edgesAt,
-  });
+  const loaded = $derived<LoadedMap>(memory.loaded());
   // A blank map can be drawn on: its first change makes it a project (^189, ^1262).
   editor.canEdit = () =>
     session.noProject || (index.status === 'ready' && memory.project === session.id);
   editor.ids = () => session.nextIds();
+  // A blank map that became a project has a complete index and no rows: nothing has to be read (^1263).
+  session.onCreated = (id) => {
+    index.madeComplete(id);
+    memory.openEmpty(id);
+  };
   connectEditor(editor, {
     storage,
     memory,
