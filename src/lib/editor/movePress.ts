@@ -2,7 +2,8 @@ import { screenToWorld, type Point } from '../camera/view';
 import type { Vec } from '../curves/vec';
 import { changeOfGraphs, graphOfRows, readPiece, type NextIds } from '../edit/graphPiece';
 import { nodeAt, segmentAt, type LoadedMap } from '../map/hit';
-import { edgeOfId, nodeOf, type Graph } from '../model/graph';
+import { edgeOfId, nodeOf, turnedAround, type Graph } from '../model/graph';
+import { armRows } from '../edit/armRows';
 import type { Editor, Planned } from './editor.svelte';
 import { dragged, droppedNode, gripNodes, type Drop, type Grip } from './moving';
 import { reachOf, type Hover } from './pick';
@@ -26,6 +27,8 @@ interface Held {
   /** The heading before the drag: the angle steps count from it (^315). */
   from: number;
   drop: Drop | null;
+  /** `Alt` was held: a click on a heading point flips the arm (^234, ^466). */
+  alt: boolean;
 }
 
 /**
@@ -64,7 +67,7 @@ export class MovePress {
     return !!this.held?.moved;
   }
 
-  grab(grip: Grip, at: Point, shift: boolean) {
+  grab(grip: Grip, at: Point, shift: boolean, alt = false) {
     const { editor } = this;
     const selecting = editor.mode === 'select';
     const selection = selecting ? selectionOnGrab(editor.selection, grip, shift) : null;
@@ -84,6 +87,7 @@ export class MovePress {
       ctrl: false,
       from: row?.[3] ?? 0,
       drop: null,
+      alt,
     };
   }
 
@@ -152,14 +156,34 @@ export class MovePress {
     this.editor.draft = g ? changeOfGraphs(g, this.shaped(h, g)) : null;
   }
 
-  /** The button is released: true if it was a drag, which is written in its turn; false for a click. */
-  up(): boolean {
+  /** The button is released: a drag, or an `Alt` click on a heading point (a flip), are written in their turn; any other click is the press of the mode's (null). */
+  up(): 'drag' | 'flip' | null {
     const h = this.held;
     this.held = null;
     this.editor.drag = null;
-    if (!h?.moved) return false;
+    if (h && !h.moved && h.alt && h.grip.type === 'head') {
+      const node = h.grip.node;
+      void this.editor.drawStep(() => this.planFlip(node));
+      return 'flip';
+    }
+    if (!h?.moved) return null;
     void this.editor.drawStep(() => this.plan(h));
-    return true;
+    return 'drag';
+  }
+
+  /** Flip the arm of a node (^234): every node connected to it heads the other way, the segments between them run the other way; the road drawn goes on the other way if it is in it. */
+  private async planFlip(node: number): Promise<Planned | null> {
+    const { editor } = this;
+    const [source, next] = [editor.source?.(), editor.ids?.()];
+    if (!source || !next) return null;
+    const arm = await armRows(source, node);
+    const before = graphOfRows(arm.nodes, arm.edges, next);
+    const ids = arm.nodes.map((n) => n[0]);
+    const draw = editor.draw;
+    const flips = draw.active !== null && ids.includes(draw.active);
+    const end = flips ? (draw.end === 'end' ? 'start' : 'end') : draw.end;
+    const change = changeOfGraphs(before, turnedAround(before, ids));
+    return { name: 'flip arm', change, draw: { ...draw, end } };
   }
 
   /** `Esc` (^295): the drag is forgotten; true if there was one. */

@@ -17,7 +17,7 @@ const isHeld = (k: HoverKind): k is Held => k !== null && k !== 'segment';
 
 /**
  * `LMB` drag on a node or a control point, in select and draw mode (`main`'s `dragRow`, ^488, ^697,
- * ^695, ^696): rows for the table of a mode, which says where it exists (`on`).
+ * ^695, ^696), and `Alt`+`LMB` on a heading point (^466): rows for the table of a mode, which says where it exists (`on`).
  */
 export function dragRows<F extends { hovered: HoverKind }>(on: (f: F) => boolean): Control<F>[] {
   const row = (hat: number, kind: Held): Control<F> => ({
@@ -28,7 +28,14 @@ export function dragRows<F extends { hovered: HoverKind }>(on: (f: F) => boolean
     listens: yes,
     says: () => DRAG_TEXT[kind],
   });
-  return [row(488, 'node'), row(697, 'head'), row(695, 'ctrl'), row(696, 'rad')];
+  const flip: Control<F> = {
+    hat: 466,
+    input: mouse('lmb', false, 'alt'),
+    on: (f) => on(f) && f.hovered === 'head',
+    listens: yes,
+    says: () => 'flip arm',
+  };
+  return [row(488, 'node'), row(697, 'head'), row(695, 'ctrl'), row(696, 'rad'), flip];
 }
 
 /** While something is dragged: what it holds, and whether letting it go merges (^286). */

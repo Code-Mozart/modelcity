@@ -174,6 +174,16 @@ export function sameGraph(a: Graph, b: Graph): boolean {
   return same(a.nodes, b.nodes) && same(a.edges, b.edges) && same(lanes(a), lanes(b));
 }
 
+/** Turn the nodes around (^234): each heads the other way, and a segment between two of them runs the other way; the curves stay. */
+export function turnedAround(g: Graph, ids: readonly number[]): Graph {
+  const set = new Set(ids);
+  const nodes = g.nodes.map((n) => (set.has(n.id) ? { ...n, th: n.th + Math.PI } : n));
+  const edges = g.edges.map((e) =>
+    set.has(e.start) && set.has(e.end) ? { ...e, start: e.end, end: e.start } : e,
+  );
+  return { ...g, nodes, edges };
+}
+
 const mm = (m: number) => Math.round(m * 1000) / 1000;
 
 /**

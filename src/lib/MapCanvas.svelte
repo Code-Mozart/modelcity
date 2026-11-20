@@ -242,7 +242,7 @@
     if (editor.mode === 'view') return;
     // A node or a control point can be dragged (^1265); without a drag the press of the mode makes it a click.
     const grip = gripOf(press.pickAt(at));
-    if (grip) movePress.grab(grip, at, e.shiftKey);
+    if (grip) movePress.grab(grip, at, e.shiftKey, e.altKey);
     if (editor.mode === 'select' && !editor.busy) press.down(at, e.shiftKey, e.altKey);
     else if (editor.mode === 'draw') drawPress.down(at, e.altKey);
   }
@@ -283,7 +283,12 @@
     if (e.pointerType === 'touch') camera.touchUp(e.pointerId);
     else if (e.button === 0) {
       camera.releaseChip();
-      if (movePress.up()) return onUse('move');
+      const held = movePress.up();
+      if (held) {
+        press.forget();
+        drawPress.forget();
+        return onUse('move');
+      }
       if (drawPress.active) return drawPress.up();
       const did = press.up();
       if (did === 'click') onUse('select');

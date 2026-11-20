@@ -50,3 +50,13 @@ describe('what a click does to the selection (^71 to ^75, ^690, ^691)', () => {
     expect(nodesOf(null)).toEqual([]);
   });
 });
+
+describe('a click on a control point (^74, ^1265)', () => {
+  const head = { type: 'head' as const, node: 3, x: 0, y: 0 };
+  const ctrl = { type: 'ctrl' as const, edge: 7, nodes: [1, 2] as [number, number], x: 0, y: 0 };
+  it('on a heading point selects its node; on a bend point leaves the selection', () => {
+    expect([...afterClick(sel(1), { kind: 'handle', handle: head }, false)]).toEqual([3]);
+    expect([...afterClick(sel(1), { kind: 'handle', handle: head }, true)]).toEqual([1, 3]);
+    expect([...afterClick(sel(1, 2), { kind: 'handle', handle: ctrl }, false)]).toEqual([1, 2]);
+  });
+});

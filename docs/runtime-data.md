@@ -21,6 +21,12 @@ What the app holds in memory, operation by operation. Since ^1232 (the tabula ra
 - `Editor.splitUndo`: the node a split on a curve inserted with its change, so that finishing at once gives the curve back (^237); gone with the next step, undo or redo.
 - The id counters are the header's (`ProjectSession.header`), raised with every change written (`withIdsOf`).
 
+## Moving (^1265)
+
+- What is under the pointer: the control points near it are made from the loaded rows at each pointer move (`editor/handles.ts`, within 48 px), kept nowhere.
+- `MovePress` (`editor/movePress.ts`): what the left button holds, the nodes that move with it, where it would merge; the draft of the drag is `Editor.draft`, `Editor.drag` says what is held for the hints.
+- The scaffold (`editor/scaffold.ts`, `render/scaffoldOf.ts`): which segments show it and their guides, made from the pointer and the loaded rows when either changes (also at each frame of the camera while the pointer is over the map); kept nowhere.
+
 ## The segment index (^1239, ^1248)
 
 - Stored in IndexedDB with the project (`segments`, one record per segment); derived from the nodes and segments, rebuildable (`Ctrl+Comma`). `IndexBuild` (`map/indexBuild.svelte.ts`): `status` (none, building, ready, stopped, failed), `project`, `done` and `total`, `error`; the build runs in a worker. The map is shown only when the status is ready.

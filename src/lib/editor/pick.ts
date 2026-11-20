@@ -34,6 +34,9 @@ export function pick(map: LoadedMap, pt: Vec, at: { scale: number; touch: boolea
 /** The selection after a click without moving (^71 to ^75): on a node, on a segment, or on nothing. */
 export function afterClick(sel: Selection, on: Hover | null, shift: boolean): Selection {
   if (on?.kind === 'node') return afterNodeClick(sel, on.id, shift);
+  // A heading point selects its node (^74); a bend or radius point leaves the selection.
+  if (on?.kind === 'handle')
+    return on.handle.type === 'head' ? afterNodeClick(sel, on.handle.node, shift) : sel;
   if (on?.kind === 'segment') return afterSegmentClick(sel, on.nodes, shift);
   return afterVoidClick(sel, shift);
 }
