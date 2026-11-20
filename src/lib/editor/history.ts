@@ -1,4 +1,5 @@
 import type { RowChange } from '../edit/change';
+import type { DrawState } from './drawing';
 import type { SelectionDelta } from './selection';
 
 /**
@@ -25,6 +26,8 @@ export interface Step {
   selectedAfter: number;
   /** What the step changed on the map, if it did (^1260): the rows as they were and are, so that undo and redo can write them again. */
   map?: RowChange;
+  /** The road being drawn before and after the step, if it was drawn before or after it (^1262): undo and redo go back to drawing it. */
+  draw?: { before: DrawState; after: DrawState };
 }
 
 export interface History {

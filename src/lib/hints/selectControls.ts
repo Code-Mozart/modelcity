@@ -9,7 +9,7 @@ const DEL = key('Del');
  * the state of the selection and the history. `hovered` is a node, a segment, or nothing.
  */
 export interface SelectFacts {
-  mode: 'view' | 'select';
+  mode: 'view' | 'select' | 'draw';
   hovered: 'node' | 'segment' | null;
   /** The hovered node is selected, or both nodes of the hovered segment are. */
   hoveredSelected: boolean;
@@ -37,7 +37,7 @@ export const SELECT_CONTROLS: Control<SelectFacts>[] = [
   {
     hat: 395,
     input: key('Tab'),
-    on: (f) => !picking(f),
+    on: (f) => f.mode === 'view',
     listens: yes,
     says: () => 'select mode',
   },
@@ -93,6 +93,13 @@ export const SELECT_CONTROLS: Control<SelectFacts>[] = [
     on: (f) => picking(f) && f.hovered !== null && f.selected > 0,
     listens: yes,
     says: (f) => (f.branchSelected ? 'deselect branch' : 'add branch to selection'),
+  },
+  {
+    hat: 393,
+    input: mouse('lmb'),
+    on: (f) => onVoid(f) && f.selected === 0,
+    listens: yes,
+    says: () => 'draw mode',
   },
   {
     hat: 495,

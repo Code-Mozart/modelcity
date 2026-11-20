@@ -4,6 +4,7 @@ import { ChunkIndex } from './chunkIndex';
 import { ChunkLoader, type Chunk } from './chunkLoader';
 import type { Box } from '../curves/hull';
 import { countOf, idsWhere, rangeOfIds, type ChunkRange } from './chunks';
+import { patchChunk, type ChunkPatch } from './chunkPatch';
 
 /** More chunks than this are not loaded: so much of the map at once needs a level of detail that is not built yet (^1238). */
 export const MAX_CHUNKS = 400;
@@ -132,30 +133,22 @@ export class MapMemory {
   }
 
   /**
-   * An edit changed the map (^1260): the rows that are gone leave the loaded chunks at once, and the
-   * chunks that the change touches (`touched`, `'wide'` for a segment that is in all of them) are read
-   * again, each in place: it stays as it is shown until the new one is there, and it is not shown as loading.
+   * An edit was written (^1260, ^1262): each loaded chunk it touches (`touched`, `'wide'` for a
+   * segment that is in all of them) is brought up to date at once from what was written
+   * (`patchChunk`), so the next operation and the next frame see it. A chunk that is on its way, one
+   * that is being read again, or one that needs a far end the change does not know is read again in
+   * place instead: it stays as it is shown until the new one is there.
    */
-  edited(gone: { nodes: number[]; edges: number[] }, touched: string[]) {
-    this.forget(new SvelteSet(gone.nodes), new SvelteSet(gone.edges));
-    for (const id of touched.includes('wide') ? [...this.chunks.keys()] : touched) this.reread(id);
-  }
-
-  private forget(nodes: ReadonlySet<number>, edges: ReadonlySet<number>) {
-    const without = <R extends [number, ...unknown[]]>(rows: R[], gone: ReadonlySet<number>) =>
-      rows.filter((r) => !gone.has(r[0]));
-    for (const [id, state] of [...this.chunks]) {
-      if (state.status !== 'ready') continue;
-      const c = state.chunk;
-      const next: Chunk = {
-        id,
-        nodes: without(c.nodes, nodes),
-        ends: without(c.ends, nodes),
-        edges: without(c.edges, edges),
-      };
-      if (this.costOf(next) !== this.costOf(c) || next.ends.length !== c.ends.length)
-        this.swap(c, next);
+  edited(patch: ChunkPatch, touched: string[]) {
+    for (const id of touched.includes('wide') ? [...this.chunks.keys()] : touched) {
+      const state = this.chunks.get(id);
+      if (!state) continue;
+      const next =
+        state.status === 'ready' && !this.fresh.has(id) && patchChunk(state.chunk, patch);
+      if (next) this.swap(state.chunk, next);
+      else this.reread(id);
     }
+    this.evict();
   }
 
   private swap(old: Chunk, next: Chunk) {

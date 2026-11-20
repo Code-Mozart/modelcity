@@ -4,6 +4,8 @@ import { worldToScreen } from '../camera/view';
 import { text, type Frame, type Palette } from './paint';
 import type { SkeletonEdge } from '../map/curve';
 import { drawCurves } from './skeleton';
+import { drawGhost } from './ghost';
+import type { Ghost } from '../editor/drawGhost';
 import { drawBand, drawMarksHalos, drawMarksUnder, NO_MARKS, type Marks } from './marks';
 
 /** One chunk of the map as it is drawn: where it is, and its nodes, or null while it is not loaded (^1238). */
@@ -22,6 +24,10 @@ export interface MapScene {
   marks?: Marks;
   /** So much of the map is in view that nothing of it is loaded (no level of detail yet). */
   tooMuch: boolean;
+  /** The nodes an operation in progress makes or moves (^1262); its segments are among `edges`. */
+  draftNodes?: readonly NodeRow[];
+  /** The preview of draw mode (^40). */
+  ghost?: Ghost | null;
 }
 
 const NODE_RADIUS_PX = 5.5;
@@ -155,9 +161,10 @@ export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
   drawMarksHalos(f, marks, pal);
   drawNodes(
     f,
-    scene.chunks.flatMap((c) => (c.nodes ? [c.nodes] : [])),
+    [...scene.chunks.flatMap((c) => (c.nodes ? [c.nodes] : [])), scene.draftNodes ?? []],
     pal,
   );
+  drawGhost(f, scene.ghost ?? null, pal);
   drawBand(f, marks, pal);
   if (scene.tooMuch)
     text(

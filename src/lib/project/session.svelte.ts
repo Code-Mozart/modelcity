@@ -7,7 +7,9 @@ import { cameraOf, exportText, ProjectFileError, type CameraState, type Project 
 import { lastId, remember, uid } from './browserMemory';
 import { download, exportName } from './download';
 import { openStored } from './open';
-import { headerFor, persist } from './persist';
+import { headerFor, persist, withIdsOf } from './persist';
+import type { NextIds } from '../edit/graphPiece';
+import { INDEX_VERSION } from '../map/segmentIndex';
 import { importStream, type ImportProgress } from './streamImport';
 import { piecesOfFile, piecesOfText } from './textPieces';
 import {
@@ -168,11 +170,32 @@ export class ProjectSession extends ProjectModal {
    * (^1236), only the header is kept in step.
    */
   async commitMap(change: MapChange, index: IndexChange) {
-    // A change of a map that is in no project cannot be kept: that is a mistake, not something to ignore.
+    // A change of a blank map makes it a project (^189): stored with an empty, complete index first.
+    if (!this.id) await this.create();
     if (!this.id) throw new Error('there is no open project to write the change to');
     this.lastUpdatedAt = this.now();
-    const header = (this.header = headerFor(this.project(), this.header));
+    const header = (this.header = withIdsOf(change, headerFor(this.project(), this.header)));
     await this.storage.patch(this.id, header, change, index);
+  }
+
+  /** The ids the next node and segment of the open project get (^1224); 0 for a blank map. */
+  nextIds(): NextIds {
+    return { node: this.header?.nextNodeId ?? 0, edge: this.header?.nextEdgeId ?? 0 };
+  }
+
+  /** The blank map becomes a project, stored with no rows and a complete index, before the first change is written to it (^189, ^1262). */
+  private async create() {
+    const [id, stamp] = [uid(), this.now()];
+    const p = { ...this.project(), title: UNTITLED, createdAt: stamp, lastUpdatedAt: stamp };
+    const header = headerFor(p, null);
+    await this.storage.create(id, header);
+    await this.storage.markIndexed(id, INDEX_VERSION);
+    [this.title, this.createdAt, this.lastUpdatedAt] = [p.title, stamp, stamp];
+    this.stored = this.saved = this.editor.graph;
+    this.header = header;
+    this.id = id;
+    remember(id);
+    await this.refresh();
   }
 
   /** Write the project to the browser now. Only a change of the map counts as an update, not a rename or the camera. */

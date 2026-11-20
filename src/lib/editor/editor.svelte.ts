@@ -1,7 +1,9 @@
 import type { Point } from '../camera/view';
-import { compose, inverse, isEmpty, type RowChange } from '../edit/change';
-import { branchEdgesOf } from '../edit/branchRows';
-import { deleteEdges, deleteNodes, type RowSource } from '../edit/deleteNodes';
+import { compose, inverse, isEmpty, NO_CHANGE, type RowChange } from '../edit/change';
+import type { NextIds } from '../edit/graphPiece';
+import { NOT_DRAWING, sameDraw, type DrawState } from './drawing';
+import type { RowSource } from '../edit/deleteNodes';
+import { planDelete, type DeletePlan } from './deletePlan';
 import { emptyGraph, type Graph } from '../model/graph';
 import {
   NO_HISTORY,
@@ -25,8 +27,20 @@ import {
   type Selection,
 } from './selection';
 
-/** View mode only moves the camera; select mode also picks (^394, ^395). */
-export type Mode = 'view' | 'select';
+/** View mode only moves the camera; select mode also picks (^394, ^395); draw mode places nodes (^40, ^1262). */
+export type Mode = 'view' | 'select' | 'draw';
+
+/** What the mode display shows (^119, ^120): extend mode is draw mode while a road is being drawn. */
+export type Phase = Mode | 'extend';
+
+/** An operation of the drawing as planned: its name, what it changes on the map, and the road being drawn after it. */
+export interface Planned {
+  name: string;
+  change: RowChange;
+  draw: DrawState;
+  /** The node a split on a curve inserted: finishing at once gives the curve back (^237). */
+  split?: number;
+}
 
 /** The box that is being dragged, in pixels of the screen (^495). */
 export interface Band {
@@ -43,6 +57,13 @@ export interface Band {
 export class Editor {
   graph = $state.raw<Graph>(emptyGraph());
   mode = $state<Mode>('select');
+  /** The road being drawn (^1262). */
+  draw = $state.raw<DrawState>(NOT_DRAWING);
+  phase = $derived<Phase>(this.mode === 'draw' && this.draw.active !== null ? 'extend' : this.mode);
+  /** What the operation in progress would change, drawn over the map until it is written (^1262). */
+  draft = $state.raw<RowChange | null>(null);
+  /** The ids the next node and segment get (^1224): from the header of the open project. Set by the app. */
+  ids: (() => NextIds) | null = null;
   /** The nodes that are selected. */
   selection = $state.raw<Selection>(NOTHING);
   /** Alt is held: a click picks the branch, and the hover shows it (^99, ^128). */
@@ -69,6 +90,8 @@ export class Editor {
   private waiting = 0;
   /** Counts the projects that were open: what was asked for an earlier one is not done in the one that is open now. */
   private epoch = 0;
+  /** The node a split on a curve inserted, with the change that did it: finishing at once gives the curve back (^237). */
+  private splitUndo: { node: number; change: RowChange } | null = null;
   private chain: Promise<void> = Promise.resolve();
 
   /** Replace the map by that of a project: nothing of the project before stays selected or can be undone. */
@@ -76,16 +99,92 @@ export class Editor {
     this.epoch++;
     this.graph = graph;
     this.selection = NOTHING;
+    this.draw = NOT_DRAWING;
+    this.draft = null;
+    if (this.mode === 'draw') this.mode = 'select';
     this.hover = null;
     this.band = null;
     this.history = NO_HISTORY;
     this.event = null;
   }
 
+  /** `Tab` (^104): to view mode from any mode (a road being drawn is finished), and back to select mode. */
   toggleMode() {
-    this.mode = this.mode === 'select' ? 'view' : 'select';
+    if (this.mode !== 'view') this.finishRoad();
+    this.mode = this.mode === 'view' ? 'select' : 'view';
     this.hover = null;
     this.band = null;
+  }
+
+  /** Enter draw mode (a click on the void with nothing selected, ^120): the next click places the first node of a road. */
+  enterDraw() {
+    this.mode = 'draw';
+    this.hover = null;
+  }
+
+  /**
+   * Finish the road being drawn (^432): draw mode goes on without one; `toSelect` (`Esc`) goes to
+   * select mode as well, as on `main`. A road of its first node only is cancelled: the node goes (^437).
+   */
+  finishRoad(toSelect = false) {
+    if (this.mode !== 'draw') return;
+    if (toSelect) this.mode = 'select';
+    if (this.draw.active !== null) void this.drawStep(() => this.planFinish());
+  }
+
+  /** The step that finishes the road: right after a split on a curve it gives the curve back (^237); a road of its first node only loses that node (^437). */
+  private async planFinish(): Promise<Planned | null> {
+    const [source, active] = [this.source?.(), this.draw.active];
+    if (!source || active === null) return null;
+    const split = this.splitUndo;
+    if (split?.node === active)
+      return { name: 'finish road', change: inverse(split.change), draw: NOT_DRAWING };
+    const edges = await source.edgesAt([active]);
+    if (edges.length) return { name: 'finish road', change: NO_CHANGE, draw: NOT_DRAWING };
+    const nodes = await source.nodes([active]);
+    const change = {
+      nodes: nodes.map((n) => ({ before: n, after: null })),
+      edges: [],
+      context: [],
+    };
+    return { name: 'cancel first node', change, draw: NOT_DRAWING };
+  }
+
+  /**
+   * An operation of the drawing (^1262), in its turn (`queued`): planned from what it finds then,
+   * written, and one step that holds the change and the road being drawn before and after it. A
+   * step while a road is drawn joins the batch of the steps before (^216).
+   */
+  drawStep(plan: () => Promise<Planned | null>): Promise<void> {
+    const writer = this.writer;
+    if (!writer) return Promise.resolve();
+    const epoch = this.epoch;
+    return this.queued(async () => {
+      const p = await plan();
+      if (!p) return;
+      if (!isEmpty(p.change)) await writer(p.change);
+      if (epoch === this.epoch) this.drawn(p);
+    });
+  }
+
+  /** A planned operation of the drawing was written: the road being drawn after it, and its step. */
+  private drawn(p: Planned) {
+    const before = this.draw;
+    this.draw = p.draw;
+    this.draft = null;
+    this.splitUndo = p.split !== undefined ? { node: p.split, change: p.change } : null;
+    if (isEmpty(p.change) && sameDraw(before, p.draw)) return;
+    const drawing = before.active !== null || p.draw.active !== null;
+    this.history = record(this.history, {
+      name: p.name,
+      kind: drawing ? 'draw' : null,
+      continues: before.active !== null,
+      selection: deltaOf(this.selection, this.selection),
+      selectedAfter: this.selection.size,
+      ...(isEmpty(p.change) ? {} : { map: p.change }),
+      ...(drawing ? { draw: { before, after: p.draw } } : {}),
+    });
+    this.event = { seq: ++this.seq, kind: 'step', steps: this.history.past.slice(-1) };
   }
 
   /** The selection while a box is dragged: it follows the box, and the step is taken when it ends (`select`). */
@@ -119,39 +218,34 @@ export class Editor {
     this.event = null;
   }
 
-  /** Delete nodes or segments (^434, ^920): the change is worked out from the storage, written, and then it is one step. */
+  /** Delete nodes or segments (^434, ^920): the change is worked out from the storage, written, and then it is one step; the road being drawn follows (^70). */
   async delete(doing: Doing) {
     const [source, writer] = [this.source, this.writer];
     if (!source || !writer) return;
     const epoch = this.epoch;
     await this.queued(async () => {
-      const change = await this.plan(doing, source());
-      if (isEmpty(change)) return;
-      await writer(change);
+      const plan = await planDelete(doing, source(), this.draw);
+      if (isEmpty(plan.change)) return;
+      await writer(plan.change);
       // The project was changed while it was written: the step belongs to the other one.
-      if (epoch === this.epoch) this.took(doing.name, change);
+      if (epoch === this.epoch) this.took(doing.name, plan);
     });
   }
 
-  /** The change that a delete makes: what is deleted is worked out from the storage. */
-  private plan(doing: Doing, source: RowSource): Promise<RowChange> {
-    if (doing.kind === 'nodes') return deleteNodes(source, doing.ids);
-    if (doing.kind === 'segments') return deleteEdges(source, doing.edges);
-    return branchEdgesOf(source, doing.edge).then((edges) => deleteEdges(source, edges));
-  }
-
   /** The step of a change that was written: nothing is selected any more, as on `main` (a removal ends with `selection: []`, ^434). */
-  private took(name: string, change: RowChange) {
+  private took(name: string, { change, draw }: DeletePlan) {
     const [before, after] = [this.selection, NOTHING];
-    this.selection = after;
-    this.hover = null;
+    const drawn = this.draw;
+    const drawing = drawn.active !== null || draw.active !== null;
+    [this.selection, this.draw, this.hover, this.splitUndo] = [after, draw, null, null];
     this.history = record(this.history, {
       name,
-      kind: null,
-      continues: false,
+      kind: drawing ? 'draw' : null,
+      continues: drawing,
       selection: deltaOf(before, after),
       selectedAfter: 0,
       map: change,
+      ...(drawing ? { draw: { before: drawn, after: draw } } : {}),
     });
     this.event = { seq: ++this.seq, kind: 'step', steps: this.history.past.slice(-1) };
   }
@@ -182,11 +276,13 @@ export class Editor {
     return done;
   }
 
-  /** A click of the right button (^489, ^699, ^920): deletes what is under the pointer, or the selection if the pointer is on it. */
+  /** A click of the right button (^489, ^699, ^920): deletes what is under the pointer, or the selection if the pointer is on it; on nothing it finishes the road being drawn (^43, ^720). */
   async rightClick(on: Hover | null, alt: boolean) {
     const map = this.loaded?.();
-    const doing = map && this.mode === 'select' ? byClick(this.selection, on, alt, map) : null;
+    if (this.mode === 'view') return;
+    const doing = map ? byClick(this.selection, on, alt, map) : null;
     if (doing) await this.delete(doing);
+    else this.finishRoad();
   }
 
   undo(whole = false) {
@@ -230,6 +326,12 @@ export class Editor {
       (s, step) => applyDelta(s, step.selection, undo),
       this.selection,
     );
+    // The road being drawn goes back to how it was before the oldest step undone, or after the newest one done again.
+    const drawn = moved.steps.filter((s) => s.draw).at(-1)?.draw;
+    if (drawn) this.draw = undo ? drawn.before : drawn.after;
+    if (this.draw.active !== null) this.mode = 'draw';
+    this.splitUndo = null;
+    this.draft = null;
     this.history = moved.history;
     this.event = { seq: ++this.seq, kind: undo ? 'undo' : 'redo', steps: moved.steps };
   }

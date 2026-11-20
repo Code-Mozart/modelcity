@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { toMapChange } from '../edit/change';
 import { deleteNodes } from '../edit/deleteNodes';
-import { affectedChunks, indexChangeOf } from '../edit/indexChange';
+import { written } from '../edit/connect';
 import { MemoryStorage, type EdgeRow, type NodeRow } from '../project/storage';
 import { file } from '../testing/storageFixtures';
 import { MapMemory } from './mapMemory.svelte';
@@ -61,9 +60,9 @@ async function deleteAndShow(storage: MemoryStorage, memory: MapMemory, ids: num
     edgesAt: (n: number[]) => storage.edgesOf('p', n),
   };
   const change = await deleteNodes(source, ids);
-  await storage.patch('p', file(), toMapChange(change), indexChangeOf(change));
-  const map = toMapChange(change);
-  memory.edited({ nodes: map.removedNodes, edges: map.removedEdges }, affectedChunks(change));
+  const w = written(change);
+  await storage.patch('p', file(), w.map, w.index);
+  memory.edited(w.patch, w.touched);
   return change;
 }
 
@@ -178,9 +177,9 @@ describe('what shows after an edit is read again, and after it is undone (^1260)
       edges: change.edges.map((p) => ({ before: p.after, after: p.before })),
       context: change.context,
     };
-    await storage.patch('p', file(), toMapChange(back), indexChangeOf(back));
-    const map = toMapChange(back);
-    memory.edited({ nodes: map.removedNodes, edges: map.removedEdges }, affectedChunks(back));
+    const w = written(back);
+    await storage.patch('p', file(), w.map, w.index);
+    memory.edited(w.patch, w.touched);
     await vi.advanceTimersByTimeAsync(50);
     expect(memory.index.nodeOf(2)).toBeDefined();
     expect(
@@ -282,9 +281,9 @@ describe('a segment that is in every chunk (too large to be listed in each, ^123
       edges: change.edges.map((p) => ({ before: p.after, after: p.before })),
       context: change.context,
     };
-    await storage.patch('p', file(), toMapChange(back), indexChangeOf(back));
-    const map = toMapChange(back);
-    memory.edited({ nodes: map.removedNodes, edges: map.removedEdges }, affectedChunks(back));
+    const w = written(back);
+    await storage.patch('p', file(), w.map, w.index);
+    memory.edited(w.patch, w.touched);
     await vi.advanceTimersByTimeAsync(50);
     expect(inChunks()).toEqual([10, 10]);
   });

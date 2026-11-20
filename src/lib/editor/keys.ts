@@ -1,4 +1,4 @@
-import { byKey } from './deleting';
+import { byKey, type Doing } from './deleting';
 import type { Editor } from './editor.svelte';
 import type { ControlId } from '../hints/hints';
 import { actionFor, keyOf, type Action } from './keymap';
@@ -13,11 +13,11 @@ type KeyEventLike = {
 };
 
 const DO: Record<Action, (editor: Editor) => void> = {
-  escape: (e) => e.mode === 'select' && e.deselectAll(),
+  escape: (e) => (e.mode === 'draw' ? e.finishRoad(true) : e.mode === 'select' && e.deselectAll()),
   view: (e) => e.toggleMode(),
   delete: (e) => {
     const map = e.loaded?.();
-    const doing = map && e.mode === 'select' ? byKey(e.selection, e.hover, map) : null;
+    const doing = map && e.mode === 'select' ? byKey(e.selection, e.hover, map) : drawKey(e);
     if (doing) void e.delete(doing);
   },
   undo: (e) => e.undo(),
@@ -52,3 +52,9 @@ export function isTyping(target: EventTarget | null): boolean {
   if (typeof HTMLElement === 'undefined' || !(target instanceof HTMLElement)) return false;
   return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
+
+/** `Del` in draw mode deletes the node being drawn from (`main`: it is the selection there), and the road goes on from the one before (^70). */
+const drawKey = (e: Editor): Doing | null =>
+  e.mode === 'draw' && e.draw.active !== null
+    ? { kind: 'nodes', ids: [e.draw.active], name: 'delete node' }
+    : null;

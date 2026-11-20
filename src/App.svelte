@@ -18,6 +18,8 @@
   import { appHints } from './lib/hints/appControls';
   import { selectHints } from './lib/hints/selectControls';
   import { selectFactsOf } from './lib/hints/selectFacts';
+  import { drawHints } from './lib/hints/drawControls';
+  import { drawFactsOf } from './lib/hints/drawFacts';
   import { Usage } from './lib/hints/usage.svelte';
   import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
@@ -72,7 +74,10 @@
     nodeOf: memory.index.nodeOf,
     edgesAt: memory.index.edgesAt,
   });
-  editor.canEdit = () => index.status === 'ready' && memory.project === session.id;
+  // A blank map can be drawn on: its first change makes it a project (^189, ^1262).
+  editor.canEdit = () =>
+    session.noProject || (index.status === 'ready' && memory.project === session.id);
+  editor.ids = () => session.nextIds();
   connectEditor(editor, {
     storage,
     memory,
@@ -126,7 +131,12 @@
   const hints = $derived(
     session.modalOpen
       ? modalHints(session.row?.mode ?? 'list', session.over)
-      : [...selectHints(selectFactsOf(editor, loaded), usage.hidden), ...appHints(usage.hidden)],
+      : [
+          ...(editor.mode === 'draw'
+            ? drawHints(drawFactsOf(editor, loaded), usage.hidden)
+            : selectHints(selectFactsOf(editor, loaded), usage.hidden)),
+          ...appHints(usage.hidden),
+        ],
   );
 
   /** The keys of the projects: `Ctrl+S` saves, `Ctrl+Shift+S` exports, `P` and `Ctrl+O` open (^168, ^222, ^223, ^226, ^746). */
@@ -180,7 +190,7 @@
 
 <main>
   <MapCanvas {camera} {memory} {editor} {frames} onUse={(id) => usage.mark(id)} />
-  <ModeFrame mode={editor.mode} />
+  <ModeFrame mode={editor.phase} />
   <IndexPanel build={index} title={session.title} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />

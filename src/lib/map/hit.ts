@@ -1,5 +1,5 @@
 import { screenToWorld, worldToScreen, type Point, type Size, type View } from '../camera/view';
-import { distanceToPiece, isDegenerate, nearestParam, pointOn } from '../curves/piece';
+import { distanceToPiece, isDegenerate, nearestParam, pointOn, type Sample } from '../curves/piece';
 import { dist, type Vec } from '../curves/vec';
 import type { EdgeRow, NodeRow } from '../project/storage';
 import { chunkId, chunkOf, chunksOf, idsWhere, rangeOfIds, type ChunkRange } from './chunks';
@@ -69,7 +69,8 @@ export function nodeAt(map: LoadedMap, pt: Vec, reach: number): NodeRow | null {
 export interface SegmentHit {
   edge: EdgeRow;
   nodes: [NodeRow, NodeRow];
-  at: Vec;
+  /** The point of the curve, with its direction there. */
+  at: Sample;
   d: number;
 }
 

@@ -11,6 +11,10 @@
   import type { Editor } from './editor/editor.svelte';
   import { branchOf } from './editor/branchOf';
   import { SelectPress } from './editor/selectPress';
+  import { DrawPress, cursorOf } from './editor/drawPress';
+  import { ghostOf } from './editor/drawGhost';
+  import { draftViewOf } from './edit/draftView';
+  import { withTip } from './render/marksOf';
   import type { LoadedMap } from './map/hit';
   import { networkOf } from './map/network';
   import { marksOf } from './render/marksOf';
@@ -97,7 +101,28 @@
     }
     return out;
   });
-  const edges = $derived([...found.values()].map((f) => f.edge));
+  /** What an operation in progress would change, drawn over the map (^1262). */
+  const draft = $derived.by(() => {
+    void found;
+    return draftViewOf(editor.draft, memory.index.nodeOf);
+  });
+  const edges = $derived([
+    ...[...found.values()].filter((f) => !draft.hiddenEdges.has(f.row[0])).map((f) => f.edge),
+    ...draft.edges,
+  ]);
+  /** The node the road being drawn goes on from (^65): marked like a selected node, as on `main`. */
+  const tip = $derived.by(() => {
+    void found;
+    const id = editor.draw.active;
+    return id === null ? undefined : memory.index.nodeOf(id);
+  });
+  /** Where the pointer is on the screen, for the preview of draw mode. */
+  let pointer = $state<Point | null>(null);
+  const ghost = $derived.by(() => {
+    if (editor.mode !== 'draw' || !pointer || editor.draft) return null;
+    const target = drawPress.ghostTarget(pointer, editor.hover);
+    return target ? ghostOf(editor.draw, tip, target) : null;
+  });
 
   /** The branch under the pointer while `Alt` is held: not worked out again at every frame of the camera, only when the pointer, `Alt` or what is loaded changes. */
   const hoverBranch = $derived(
@@ -105,15 +130,18 @@
   );
 
   const marks = $derived(
-    marksOf(
-      {
-        selection: editor.selection,
-        hover: editor.hover,
-        band: editor.band,
-        branch: hoverBranch,
-      },
-      { nodes: chunkViews.flatMap((c) => (c.nodes ? [c.nodes] : [])), edges: found },
-      memory.index.nodeOf,
+    withTip(
+      marksOf(
+        {
+          selection: editor.selection,
+          hover: editor.hover,
+          band: editor.band,
+          branch: hoverBranch,
+        },
+        { nodes: chunkViews.flatMap((c) => (c.nodes ? [c.nodes] : [])), edges: found },
+        memory.index.nodeOf,
+      ),
+      tip,
     ),
   );
 
@@ -122,6 +150,8 @@
     edges,
     marks,
     tooMuch: seen === null || memory.tooMuch,
+    draftNodes: draft.nodes,
+    ghost,
   });
 
   // Redraw whenever the camera or the map in memory changes.
@@ -149,12 +179,19 @@
     camera.zoomWheel(e.deltaY * unit * (e.ctrlKey ? PINCH_BOOST : 1), localPoint(e));
   }
 
-  const press = $derived(
-    new SelectPress(editor, {
-      map: loadedMap,
-      screen: () => ({ view: camera.view, size: camera.size }),
-    }),
-  );
+  const around = {
+    map: loadedMap,
+    screen: () => ({ view: camera.view, size: camera.size }),
+  };
+  const press = $derived(new SelectPress(editor, around));
+  const drawPress = $derived(new DrawPress(editor, around));
+
+  /** The left button: the compass while the view is turned, else what the mode does with it. */
+  function leftDown(at: Point, e: PointerEvent) {
+    if (camera.rotating) camera.compassClick(at);
+    else if (editor.mode === 'select' && !editor.busy) press.down(at, e.shiftKey, e.altKey);
+    else if (editor.mode === 'draw') drawPress.down(at, e.altKey);
+  }
 
   function onPointerDown(e: PointerEvent) {
     canvas.setPointerCapture(e.pointerId);
@@ -162,9 +199,7 @@
     camera.cursor = at;
     editor.alt = e.altKey;
     if (e.pointerType === 'touch') camera.touchDown(e.pointerId, at);
-    else if (e.button === 0 && camera.rotating) camera.compassClick(at);
-    else if (e.button === 0 && editor.mode === 'select' && !editor.busy)
-      press.down(at, e.shiftKey, e.altKey);
+    else if (e.button === 0) leftDown(at, e);
     else if (e.button === 1) camera.startRotate(at);
     else if (e.button === 2) camera.startPan(at);
   }
@@ -177,13 +212,16 @@
     if (camera.rotating) camera.moveRotate(at);
     else if (camera.panning) camera.movePan(at);
     else if (press.active) press.move(at);
-    else if (editor.mode === 'select') editor.hover = press.pickAt(at, e.pointerType === 'touch');
+    else if (drawPress.active) drawPress.move(at, e.ctrlKey || e.metaKey);
+    else if (editor.mode !== 'view') editor.hover = press.pickAt(at, e.pointerType === 'touch');
+    pointer = at;
   }
 
   function onPointerUp(e: PointerEvent) {
     if (e.pointerType === 'touch') camera.touchUp(e.pointerId);
     else if (e.button === 0) {
       camera.releaseChip();
+      if (drawPress.active) return drawPress.up();
       const did = press.up();
       if (did === 'click') onUse('select');
       else if (did === 'box') onUse('box');
@@ -212,13 +250,13 @@
       ? 'none'
       : camera.panning
         ? 'grabbing'
-        : 'default'}
+        : cursorOf(editor.mode, editor.hover)}
   onwheel={onWheel}
   onpointerdown={onPointerDown}
   onpointermove={onPointerMove}
   onpointerup={onPointerUp}
   onpointercancel={onPointerUp}
-  onpointerleave={() => (editor.hover = null)}
+  onpointerleave={() => ((editor.hover = null), (pointer = null))}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
   oncontextmenu={(e) => e.preventDefault()}
 ></canvas>

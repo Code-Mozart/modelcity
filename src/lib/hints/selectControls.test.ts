@@ -132,6 +132,12 @@ const DOES: Record<number, () => unknown> = {
     press.up();
     return [...editor.selection].sort().join() === '1,2';
   },
+  393: () => {
+    const { editor, press } = editorWith();
+    press.down(at(150, 150), false);
+    press.up();
+    return editor.mode === 'draw';
+  },
   691: () => {
     const { editor, press } = editorWith([3]);
     press.down(at(0, 1), true);
@@ -210,8 +216,8 @@ describe('the controls of select mode (^394, ^395, ^454, ^456, ^490 to ^495, ^68
 });
 
 describe('what the hints of select mode say in each state (^181)', () => {
-  it('on nothing with nothing selected: box and view mode', () => {
-    expect(texts(facts())).toEqual(['view mode', 'select']);
+  it('on nothing with nothing selected: draw mode, box and view mode', () => {
+    expect(texts(facts())).toEqual(['view mode', 'draw mode', 'select']);
   });
 
   it('on nothing with a selection: box, add to the selection, deselect all (click and Esc)', () => {
@@ -285,7 +291,7 @@ describe('what the hints of select mode say on a segment and in view mode (^181)
   });
 
   it('the hints of controls that were used lately are hidden (^110)', () => {
-    expect(texts(facts(), (id) => id === 'box')).toEqual(['view mode']);
-    expect(texts(facts(), (id) => id === 'view')).toEqual(['select']);
+    expect(texts(facts(), (id) => id === 'box')).toEqual(['view mode', 'draw mode']);
+    expect(texts(facts(), (id) => id === 'view')).toEqual(['draw mode', 'select']);
   });
 });

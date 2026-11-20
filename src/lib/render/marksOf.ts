@@ -37,3 +37,7 @@ export function marksOf(
     .filter((e): e is SkeletonEdge => e !== undefined);
   return { selected: picked.nodes, selectedEdges: picked.edges, hoverNodes, hoverEdges, band };
 }
+
+/** The node the road being drawn goes on from is marked like a selected node (^65; on `main` it was the selection). */
+export const withTip = (marks: Marks, tip: NodeRow | undefined): Marks =>
+  tip ? { ...marks, selected: [...marks.selected, tip] } : marks;

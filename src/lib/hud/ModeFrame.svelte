@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { Mode } from '../editor/editor.svelte';
+  import type { Phase } from '../editor/editor.svelte';
   import Icon from '../ui/Icon.svelte';
   import { MODES, shownIn } from './modes';
 
   /** The frame round the screen and the icons of the modes, the current one lit (^104, ^119). */
-  let { mode }: { mode: Mode } = $props();
+  let { mode }: { mode: Phase } = $props();
   const look = $derived(MODES[mode]);
 </script>
 

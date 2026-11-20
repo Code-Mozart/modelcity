@@ -88,9 +88,16 @@ export class SelectPress {
       return 'box';
     }
     if (p.moved) return null;
-    if (p.alt && p.on) this.branchClick(p.on, p);
-    else editor.select(afterClick(p.began, p.on, p.shift), p.began);
+    this.clicked(p);
     return 'click';
+  }
+
+  /** A click without moving: a click on the void with nothing selected enters draw mode (^393, ^120); else it picks. */
+  private clicked(p: Pressed) {
+    const { editor } = this;
+    if (!p.on && !p.shift && !p.began.size) editor.enterDraw();
+    else if (p.alt && p.on) this.branchClick(p.on, p);
+    else editor.select(afterClick(p.began, p.on, p.shift), p.began);
   }
 
   /** Alt+click (^128, ^244): the branch of what is under the pointer; only what is loaded is followed (^1258). */
