@@ -4,7 +4,7 @@ export type { Input } from './inputs';
 
 /** The controls whose hints are hidden after the user used them, each on its own (^110). Rebuilt with the operations (^1232). */
 export type ControlId =
-  'pan' | 'zoom' | 'rotate' | 'select' | 'box' | 'view' | 'undo' | 'redo' | 'branch';
+  'pan' | 'zoom' | 'rotate' | 'select' | 'box' | 'view' | 'undo' | 'redo' | 'branch' | 'move';
 
 /** A control hint: the inputs (alternatives) and what they do, e.g. [Esc] or [RMB]: finish. */
 export interface Hint {

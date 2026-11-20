@@ -103,25 +103,24 @@ export class DrawPress {
   /** What is under a point of the screen. */
   pickAt(at: Point, touch = false): Hover | null {
     const { view } = this.around.screen();
-    return pick(this.around.map(), this.world(at), reachOf(touch, view.scale));
+    return pick(this.around.map(), this.world(at), { scale: view.scale, touch });
   }
 
   private degree = (id: number) => this.around.map().edgesAt(id).length;
 
   /** What is under the pointer for the preview (^40, ^125): a node and whether a click merges into it, a point of a curve, or the void. */
   ghostTarget(at: Point, on: Hover | null): GhostTarget | null {
-    if (on?.kind === 'node') {
-      const node = this.around.map().nodeOf(on.id);
-      const act = this.actOn(on.id);
-      return node ? { kind: 'node', node, merges: act === 'merge' || act === 'close' } : null;
-    }
-    if (on?.kind === 'segment') {
-      const hit = this.segmentHit(at);
-      return hit && curveAction(this.editor.draw) === 'merge'
-        ? { kind: 'curve', at: hit.at }
-        : null;
-    }
-    return { kind: 'void', pt: this.world(at) };
+    if (on?.kind === 'node') return this.nodeTarget(on.id);
+    if (on?.kind === 'handle') return null;
+    if (on?.kind !== 'segment') return { kind: 'void', pt: this.world(at) };
+    const hit = this.segmentHit(at);
+    return hit && curveAction(this.editor.draw) === 'merge' ? { kind: 'curve', at: hit.at } : null;
+  }
+
+  private nodeTarget(id: number): GhostTarget | null {
+    const node = this.around.map().nodeOf(id);
+    const act = this.actOn(id);
+    return node ? { kind: 'node', node, merges: act === 'merge' || act === 'close' } : null;
   }
 
   /** What a click on a node does now. */
@@ -142,6 +141,8 @@ export class DrawPress {
       this.pressed = { ...base, kind: 'node', id: on.id };
       return;
     }
+    // A control point is dragged (`MovePress`); a click on it does nothing in draw mode.
+    if (on?.kind === 'handle') return;
     const hit = on?.kind === 'segment' ? this.segmentHit(at) : null;
     this.pressed = hit
       ? { ...base, kind: 'curve', pt: hit.at, edge: hit.edge, th: null }

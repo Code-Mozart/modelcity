@@ -1,5 +1,7 @@
+import type { HoverKind } from '../editor/pick';
 import type { NodeAction } from '../editor/drawing';
 import { hintsOf, type Control } from './controls';
+import { dragRows } from './moveControls';
 import type { Hint } from './hints';
 import { ESC, key, mouse } from './inputs';
 
@@ -15,7 +17,7 @@ export interface DrawFacts {
   firstNodeOnly: boolean;
   /** The road is drawn backwards: reaching a node splits rather than merges (^916). */
   backwards: boolean;
-  hovered: 'node' | 'segment' | null;
+  hovered: HoverKind;
   /** What a click on the hovered node does. */
   act: NodeAction | null;
   /** The way a click on the hovered leaf node extends (^916). */
@@ -73,6 +75,7 @@ export const DRAW_CONTROLS: Control<DrawFacts>[] = [
     f.extending ? 'place node and set heading' : 'place first node and set heading',
   ),
   row(708, mouse('lmb', true), onCurve, () => 'insert and set heading'),
+  ...dragRows<DrawFacts>(draw),
   row(489, rmb, onNode, () => 'delete node'),
   row(709, rmb, onCurve, () => 'delete segment'),
   row(710, mouse('rmb', false, 'alt'), onCurve, () => 'delete branch'),

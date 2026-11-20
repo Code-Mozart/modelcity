@@ -1,3 +1,5 @@
+import { curveOf } from '../map/curve';
+import { isDegenerate, pointOn } from '../curves/piece';
 import { chunkId, chunkOf } from '../map/chunks';
 import type { Chunk } from '../map/chunkLoader';
 import type { LoadedMap } from '../map/hit';
@@ -39,4 +41,11 @@ export function loaded(nodes: NodeRow[], edges: EdgeRow[], loading: string[] = [
     nodeOf: (id) => all.get(id),
     edgesAt: (n) => placed.filter((e) => e[1] === n || e[2] === n),
   };
+}
+
+/** A point on the curve of a segment, on its first piece that has a length, at `t` of it: a place to click the segment that is no control point. */
+export function pointOnEdge(e: EdgeRow, p: NodeRow, q: NodeRow, t: number) {
+  const piece = curveOf(e, p, q).pieces.find((x) => !isDegenerate(x))!;
+  const s = pointOn(piece, t);
+  return { x: s.x, y: s.y };
 }

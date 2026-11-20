@@ -18,7 +18,7 @@ export interface Handle extends Vec {
 }
 
 export const ARROW_PX = 40;
-const HIT_PX = { mouse: 11, touch: 20 };
+export const HIT_PX = { mouse: 11, touch: 20 };
 /** How near (screen pixels) the pointer must be to a node, and to a curve (^137). */
 export const NODE_HIT_PX = { mouse: 9, touch: 16 };
 

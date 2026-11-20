@@ -51,7 +51,7 @@ describe('the left button in select mode (^1257)', () => {
 
   it('a click on a segment selects its two nodes, a click on nothing deselects all', () => {
     const { editor, press } = setup();
-    click(press, at(0, 2));
+    click(press, at(20, 2));
     expect([...editor.selection].sort()).toEqual([1, 2]);
     click(press, at(0, -100));
     expect(editor.selection.size).toBe(0);

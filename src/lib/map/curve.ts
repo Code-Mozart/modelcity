@@ -1,4 +1,5 @@
 import { buildEdge } from '../curves/edge';
+import type { Edge } from '../curves/types';
 import { boxAround, type Box } from '../curves/hull';
 import type { Piece } from '../curves/types';
 import type { EdgeRow, NodeRow } from '../project/storage';
@@ -8,6 +9,8 @@ export interface SkeletonEdge {
   id: number;
   pieces: Piece[];
   box: Box;
+  /** The curve as the curve code makes it, with its kind, radius and bend point (the scaffold needs them, ^1265). */
+  E: Edge;
 }
 
 const toM = (mm: number) => mm / 1000;
@@ -22,8 +25,8 @@ const curves = new WeakMap<EdgeRow, { p: NodeRow; q: NodeRow; edge: SkeletonEdge
 export function curveOf(row: EdgeRow, p: NodeRow, q: NodeRow): SkeletonEdge {
   const kept = curves.get(row);
   if (kept && kept.p === p && kept.q === q) return kept.edge;
-  const pieces = buildEdge(node(p), node(q), row[3] === null ? null : toM(row[3])).pieces;
-  const edge = { id: row[0], pieces, box: boxAround(pieces) };
+  const E = buildEdge(node(p), node(q), row[3] === null ? null : toM(row[3]));
+  const edge = { id: row[0], pieces: E.pieces, box: boxAround(E.pieces), E };
   curves.set(row, { p, q, edge });
   return edge;
 }

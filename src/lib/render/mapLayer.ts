@@ -5,6 +5,7 @@ import { text, type Frame, type Palette } from './paint';
 import type { SkeletonEdge } from '../map/curve';
 import { drawCurves } from './skeleton';
 import { drawGhost } from './ghost';
+import { drawScaffoldOver, drawScaffoldUnder, NO_SCAFFOLD, type ScaffoldView } from './scaffold';
 import type { Ghost } from '../editor/drawGhost';
 import { drawBand, drawMarksHalos, drawMarksUnder, NO_MARKS, type Marks } from './marks';
 
@@ -28,6 +29,8 @@ export interface MapScene {
   draftNodes?: readonly NodeRow[];
   /** The preview of draw mode (^40). */
   ghost?: Ghost | null;
+  /** The scaffold of the segments that show it (^60). */
+  scaffold?: ScaffoldView;
 }
 
 const NODE_RADIUS_PX = 5.5;
@@ -157,7 +160,10 @@ export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
   for (const c of scene.chunks) if (!c.nodes) drawLoading(f, c.box, c.progress, pal);
   const marks = scene.marks ?? NO_MARKS;
   drawMarksUnder(f, marks, pal);
+  const scaffold = scene.scaffold ?? NO_SCAFFOLD;
+  drawScaffoldUnder(f, scaffold, pal);
   drawCurves(f, scene.edges, pal);
+  drawScaffoldOver(f, scaffold, pal);
   drawMarksHalos(f, marks, pal);
   drawNodes(
     f,

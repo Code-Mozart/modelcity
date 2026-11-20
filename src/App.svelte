@@ -20,6 +20,7 @@
   import { selectFactsOf } from './lib/hints/selectFacts';
   import { drawHints } from './lib/hints/drawControls';
   import { drawFactsOf } from './lib/hints/drawFacts';
+  import { dragHints } from './lib/hints/moveControls';
   import { Usage } from './lib/hints/usage.svelte';
   import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
@@ -133,12 +134,14 @@
   const hints = $derived(
     session.modalOpen
       ? modalHints(session.row?.mode ?? 'list', session.over)
-      : [
-          ...(editor.mode === 'draw'
-            ? drawHints(drawFactsOf(editor, loaded), usage.hidden)
-            : selectHints(selectFactsOf(editor, loaded), usage.hidden)),
-          ...appHints(usage.hidden),
-        ],
+      : editor.drag
+        ? dragHints({ held: editor.drag.grip.type, merges: editor.drag.merges })
+        : [
+            ...(editor.mode === 'draw'
+              ? drawHints(drawFactsOf(editor, loaded), usage.hidden)
+              : selectHints(selectFactsOf(editor, loaded), usage.hidden)),
+            ...appHints(usage.hidden),
+          ],
   );
 
   /** The keys of the projects: `Ctrl+S` saves, `Ctrl+Shift+S` exports, `P` and `Ctrl+O` open (^168, ^222, ^223, ^226, ^746). */

@@ -9,7 +9,7 @@ describe('delete branch (^160)', () => {
 
   it('takes all segments of a branch that is longer than the one under the pointer, and the nodes', async () => {
     const { editor, rows, press } = await editing(road, chain);
-    await editor.rightClick(press.pickAt(at(-150, 0)), true);
+    await editor.rightClick(press.pickAt(at(-130, 0)), true);
     const now = await rows();
     expect([now.nodes.length, now.edges.length]).toEqual([0, 0]);
     expect(editor.history.past.at(-1)?.name).toBe('delete branch');
@@ -19,7 +19,7 @@ describe('delete branch (^160)', () => {
     const told: string[] = [];
     const split = [...road, node(6, 100, 100)];
     const { editor, rows, press } = await editing(split, [...chain, edge(14, 4, 6)], told);
-    await editor.rightClick(press.pickAt(at(-150, 0)), true);
+    await editor.rightClick(press.pickAt(at(-130, 0)), true);
     // The branch is 1 - 2 - 3 - 4, where the road splits: node 4 stays with its two other segments.
     expect((await rows()).edges.map((e) => e[0])).toEqual([13, 14]);
     expect(told).toEqual([]);

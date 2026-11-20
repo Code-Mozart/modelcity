@@ -1,5 +1,5 @@
 import { curveOf, type SkeletonEdge } from '../map/curve';
-import type { NodeRow } from '../project/storage';
+import type { EdgeRow, NodeRow } from '../project/storage';
 import type { RowChange } from './change';
 
 /** What an operation in progress shows over the map (^1262): the segments and nodes it would make or change, and the ids of the loaded segments and nodes it hides. */
@@ -39,4 +39,21 @@ export function draftViewOf(
     hiddenEdges: new Set(c.edges.map(id)),
     hiddenNodes: new Set(c.nodes.map(id)),
   };
+}
+
+/** The segments in view as they are drawn: the loaded ones the draft does not hide, and those of the draft (for the marks of the selection and the hover). */
+export function edgesWithDraft<T extends { row: EdgeRow; edge: SkeletonEdge }>(
+  found: ReadonlyMap<number, T>,
+  view: DraftView,
+  c: RowChange | null,
+): ReadonlyMap<number, { row: EdgeRow; edge: SkeletonEdge }> {
+  if (!c) return found;
+  const out = new Map<number, { row: EdgeRow; edge: SkeletonEdge }>(
+    [...found].filter(([id]) => !view.hiddenEdges.has(id)),
+  );
+  for (const p of c.edges) {
+    const edge = p.after && view.edges.find((e) => e.id === p.after![0]);
+    if (p.after && edge) out.set(edge.id, { row: p.after, edge });
+  }
+  return out;
 }

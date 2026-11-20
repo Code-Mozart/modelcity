@@ -2,6 +2,7 @@ import type { Point } from '../camera/view';
 import { compose, inverse, isEmpty, NO_CHANGE, type RowChange } from '../edit/change';
 import type { NextIds } from '../edit/graphPiece';
 import { NOT_DRAWING, sameDraw, type DrawState } from './drawing';
+import type { Grip } from './moving';
 import type { RowSource } from '../edit/deleteNodes';
 import { planDelete, type DeletePlan } from './deletePlan';
 import { emptyGraph, type Graph } from '../model/graph';
@@ -40,6 +41,8 @@ export interface Planned {
   draw: DrawState;
   /** The node a split on a curve inserted: finishing at once gives the curve back (^237). */
   split?: number;
+  /** The selection after it, where it changes (a dragged node is selected, ^72). */
+  selection?: Selection;
 }
 
 /** The box that is being dragged, in pixels of the screen (^495). */
@@ -62,6 +65,8 @@ export class Editor {
   phase = $derived<Phase>(this.mode === 'draw' && this.draw.active !== null ? 'extend' : this.mode);
   /** What the operation in progress would change, drawn over the map until it is written (^1262). */
   draft = $state.raw<RowChange | null>(null);
+  /** What is being dragged, if anything, and whether letting it go merges (for the hints, ^286). */
+  drag = $state.raw<{ grip: Grip; group: number; merges: boolean } | null>(null);
   /** Forget the press of the left button, if there is one (`Esc` while it is down, ^295); true if there was one. Set by the canvas. */
   cancelPress: (() => boolean) | null = null;
   /** The ids the next node and segment get (^1224): from the header of the open project. Set by the app. */
@@ -177,16 +182,18 @@ export class Editor {
   /** A planned operation of the drawing was written: the road being drawn after it, and its step. */
   private drawn(p: Planned) {
     const before = this.draw;
+    const was = this.selection;
+    if (p.selection) this.selection = p.selection;
     this.draw = p.draw;
     this.draft = null;
     this.splitUndo = p.split !== undefined ? { node: p.split, change: p.change } : null;
-    if (isEmpty(p.change) && sameDraw(before, p.draw)) return;
+    if (isEmpty(p.change) && sameDraw(before, p.draw) && sameSelection(was, this.selection)) return;
     const drawing = before.active !== null || p.draw.active !== null;
     this.history = record(this.history, {
       name: p.name,
       kind: drawing ? 'draw' : null,
       continues: before.active !== null,
-      selection: deltaOf(this.selection, this.selection),
+      selection: deltaOf(was, this.selection),
       selectedAfter: this.selection.size,
       ...(isEmpty(p.change) ? {} : { map: p.change }),
       ...(drawing ? { draw: { before, after: p.draw } } : {}),

@@ -7,14 +7,18 @@
   import type { ChunkView } from './render/mapLayer';
   import type { FrameStats } from './hud/frameStats.svelte';
   import { curveOf, type SkeletonEdge } from './map/curve';
-  import type { Point } from './camera/view';
   import type { Editor } from './editor/editor.svelte';
   import { branchOf } from './editor/branchOf';
   import { SelectPress } from './editor/selectPress';
   import { DrawPress, cursorOf } from './editor/drawPress';
+  import { MovePress, gripOf } from './editor/movePress';
   import { ghostOf } from './editor/drawGhost';
-  import { draftViewOf } from './edit/draftView';
+  import { draftViewOf, edgesWithDraft } from './edit/draftView';
   import { withTip } from './render/marksOf';
+  import { NO_SCAFFOLD } from './render/scaffold';
+  import { scaffoldOf } from './render/scaffoldOf';
+  import { shownSegments } from './editor/scaffold';
+  import { screenToWorld, type Point } from './camera/view';
   import type { LoadedMap } from './map/hit';
   import { networkOf } from './map/network';
   import { marksOf } from './render/marksOf';
@@ -129,6 +133,18 @@
     editor.alt && editor.hover ? branchOf(networkOf(loadedMap()), editor.hover) : null,
   );
 
+  /** The chunks as they are drawn: without the nodes the draft moves or takes away (^1265). */
+  const shownChunks = $derived(
+    draft.hiddenNodes.size
+      ? chunkViews.map((c) =>
+          c.nodes ? { ...c, nodes: c.nodes.filter((n) => !draft.hiddenNodes.has(n[0])) } : c,
+        )
+      : chunkViews,
+  );
+  /** A node as it is drawn: as the draft has it, else as it is loaded. */
+  const rowOfNode = (id: number) => draft.nodes.find((n) => n[0] === id) ?? memory.index.nodeOf(id);
+  const shownEdges = $derived(edgesWithDraft(found, draft, editor.draft));
+
   const marks = $derived(
     withTip(
       marksOf(
@@ -138,20 +154,53 @@
           band: editor.band,
           branch: hoverBranch,
         },
-        { nodes: chunkViews.flatMap((c) => (c.nodes ? [c.nodes] : [])), edges: found },
+        {
+          nodes: [...shownChunks.flatMap((c) => (c.nodes ? [c.nodes] : [])), draft.nodes],
+          edges: shownEdges,
+        },
         memory.index.nodeOf,
       ),
       tip,
     ),
   );
 
+  /** The nodes in view with no segment: their heading arrows always show (^60). */
+  const lone = $derived.by(() => {
+    void found;
+    return shownChunks.flatMap((c) =>
+      (c.nodes ?? []).filter((n) => memory.index.edgesAt(n[0]).length === 0),
+    );
+  });
+  /** The scaffold that is shown (^60, ^66): none in view mode, in extend mode, and while several nodes are moved (^78). */
+  const scaffold = $derived.by(() => {
+    const drag = editor.drag;
+    if (editor.phase === 'view' || editor.phase === 'extend' || (drag && drag.group > 0))
+      return NO_SCAFFOLD;
+    const hovered = editor.hover?.kind === 'handle' ? editor.hover.handle : null;
+    const focus = drag?.grip ?? hovered;
+    const at = pointer && screenToWorld(camera.view, camera.size, pointer);
+    const map = { ...loadedMap(), nodeOf: rowOfNode };
+    const shown = shownSegments({
+      map,
+      pt: at,
+      scale: camera.view.scale,
+      focus,
+      selected: marks.selectedEdges.map((e) => e.id),
+    });
+    const rows = shown
+      .map((id) => shownEdges.get(id)?.row)
+      .filter((r): r is EdgeRow => r !== undefined);
+    return scaffoldOf(rows, lone, rowOfNode, { scale: camera.view.scale, focus });
+  });
+
   const scene = $derived({
-    chunks: chunkViews,
+    chunks: shownChunks,
     edges,
     marks,
     tooMuch: seen === null || memory.tooMuch,
     draftNodes: draft.nodes,
     ghost,
+    scaffold,
   });
 
   // Redraw whenever the camera or the map in memory changes.
@@ -185,16 +234,30 @@
   };
   const press = $derived(new SelectPress(editor, around));
   const drawPress = $derived(new DrawPress(editor, around));
+  const movePress = $derived(new MovePress(editor, around));
   $effect(() => {
-    const p = drawPress;
-    editor.cancelPress = () => p.cancel();
+    const [d, m] = [drawPress, movePress];
+    editor.cancelPress = () => m.cancel() || d.cancel();
   });
 
   /** The left button: the compass while the view is turned, else what the mode does with it. */
   function leftDown(at: Point, e: PointerEvent) {
-    if (camera.rotating) camera.compassClick(at);
-    else if (editor.mode === 'select' && !editor.busy) press.down(at, e.shiftKey, e.altKey);
+    if (camera.rotating) return camera.compassClick(at);
+    if (editor.mode === 'view') return;
+    // A node or a control point can be dragged (^1265); without a drag the press of the mode makes it a click.
+    const grip = gripOf(press.pickAt(at));
+    if (grip) movePress.grab(grip, at, e.shiftKey);
+    if (editor.mode === 'select' && !editor.busy) press.down(at, e.shiftKey, e.altKey);
     else if (editor.mode === 'draw') drawPress.down(at, e.altKey);
+  }
+
+  /** The left button moved while it is down: a drag of what it holds, or what the press of the mode does. */
+  function leftMove(at: Point, e: PointerEvent) {
+    if (movePress.move(at, e.ctrlKey || e.metaKey)) {
+      press.forget();
+      drawPress.cancel();
+    } else if (press.active) press.move(at);
+    else if (drawPress.active) drawPress.move(at, e.ctrlKey || e.metaKey);
   }
 
   function onPointerDown(e: PointerEvent) {
@@ -215,8 +278,7 @@
     if (e.pointerType === 'touch' && camera.touchMove(e.pointerId, at)) return;
     if (camera.rotating) camera.moveRotate(at);
     else if (camera.panning) camera.movePan(at);
-    else if (press.active) press.move(at);
-    else if (drawPress.active) drawPress.move(at, e.ctrlKey || e.metaKey);
+    else if (movePress.active || press.active || drawPress.active) leftMove(at, e);
     else if (editor.mode !== 'view') editor.hover = press.pickAt(at, e.pointerType === 'touch');
     pointer = at;
   }
@@ -225,6 +287,7 @@
     if (e.pointerType === 'touch') camera.touchUp(e.pointerId);
     else if (e.button === 0) {
       camera.releaseChip();
+      if (movePress.up()) return onUse('move');
       if (drawPress.active) return drawPress.up();
       const did = press.up();
       if (did === 'click') onUse('select');

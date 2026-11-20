@@ -12,11 +12,11 @@ const ORIGINAL = {
 describe('drawing through the edit pipeline (^1263)', () => {
   it('a split on a curve finished at once gives the curve back (^237); one that goes on keeps the node', async () => {
     const d = await drawing();
-    await d.click(50, 0);
+    await d.click(70, 0);
     await d.key('Escape');
     expect(await d.ids()).toEqual(ORIGINAL);
     const kept = await drawing();
-    await kept.click(50, 0);
+    await kept.click(70, 0);
     await kept.click(50, 60);
     await kept.key('Escape');
     expect((await kept.ids()).edges).toEqual([
@@ -32,8 +32,8 @@ describe('undo and redo while drawing (^1263, ^81, ^103)', () => {
   it('undo goes back node by node and to drawing the road; redo forward; Alt undoes the road at once', async () => {
     const d = await drawing();
     await d.click(50, 50);
-    await d.click(100, 50);
     await d.click(150, 50);
+    await d.click(250, 50);
     await d.key('Escape');
     expect(d.editor.history.past.map((s) => s.name)).toEqual([
       'place node',
@@ -62,9 +62,9 @@ describe('ids, cancelling and deleting while drawing (^1263, ^1224, ^437, ^70)',
   it('a node placed after an undo gets a new id: ids are never given twice (^1224)', async () => {
     const d = await drawing();
     await d.click(50, 50);
-    await d.click(100, 50);
+    await d.click(150, 50);
     await d.editor.undo();
-    await d.click(100, 80);
+    await d.click(150, 90);
     expect((await d.ids()).nodes).toEqual([1, 2, 3, 4, 5, 7]);
     expect((await d.ids()).edges.at(-1)).toEqual([13, 5, 7]);
   });
@@ -83,7 +83,7 @@ describe('ids, cancelling and deleting while drawing (^1263, ^1224, ^437, ^70)',
   it('Del while drawing deletes the node drawn from; the road goes on from the one before, which stays even with no segment (^70)', async () => {
     const d = await drawing();
     await d.click(50, 50);
-    await d.click(100, 50);
+    await d.click(150, 50);
     await d.key('Delete');
     expect(d.editor.draw.active).toBe(5);
     await d.key('Delete');
@@ -118,7 +118,7 @@ describe('extending, splitting and merging, and what is shown (^1263)', () => {
   it('the chunks in memory show every written node and segment at once', async () => {
     const d = await drawing();
     await d.click(50, 50);
-    await d.click(100, 50);
+    await d.click(150, 50);
     expect(d.memory.index.nodeOf(6)).toBeDefined();
     expect(d.memory.index.edgesAt(6).map((e) => e[0])).toEqual([12]);
   });
@@ -126,7 +126,7 @@ describe('extending, splitting and merging, and what is shown (^1263)', () => {
   it('what a press would do is shown before it is written, and nothing is left shown after', async () => {
     const d = await drawing();
     await d.click(50, 50);
-    d.draw.down({ x: 300, y: 250 }, false);
+    d.draw.down({ x: 400, y: 250 }, false);
     expect(d.editor.draft?.edges.map((p) => p.after?.[0])).toEqual([12]);
     d.draw.up();
     await d.settle();

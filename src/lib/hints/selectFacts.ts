@@ -1,5 +1,6 @@
 import { branchOf } from '../editor/branchOf';
 import type { Editor } from '../editor/editor.svelte';
+import { hoverKind } from '../editor/pick';
 import { onSelection } from '../editor/deleting';
 import { allSelected } from '../editor/selection';
 import type { LoadedMap } from '../map/hit';
@@ -11,7 +12,7 @@ export function selectFactsOf(editor: Editor, map: LoadedMap): SelectFacts {
   const { hover, selection: sel } = editor;
   return {
     mode: editor.mode,
-    hovered: hover?.kind ?? null,
+    hovered: hoverKind(hover),
     hoveredSelected:
       hover?.kind === 'node'
         ? sel.has(hover.id)

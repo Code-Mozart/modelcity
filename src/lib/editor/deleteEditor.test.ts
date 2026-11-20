@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { at } from '../testing/editHarness';
+import { edge, node, pointOnEdge } from '../testing/loadedMap';
 import { ids, key, setup } from '../testing/deleteFixture';
 import { editorKey } from './keys';
 
@@ -27,7 +28,7 @@ describe('Del deletes the selection, or what is hovered when nothing is selected
 
   it('a hovered segment is deleted, in a step named delete segment, with Alt a whole branch', async () => {
     const { editor, rows, hover } = await setup();
-    hover(50, 0);
+    hover(70, 0);
     editorKey(editor, key('Backspace'));
     await new Promise((r) => setTimeout(r, 0));
     expect(ids((await rows()).edges)).toEqual([10, 12, 13]);
@@ -47,14 +48,17 @@ describe('Del deletes the selection, or what is hovered when nothing is selected
   });
 });
 
+/** A point on segment 12 (B to D) that is no control point. */
+const ON_12 = pointOnEdge(edge(12, 2, 4), node(2, 0, 0), node(4, 0, 100), 0.3);
+
 describe('the right button deletes what is under the pointer (^489, ^699, ^920, ^160)', () => {
   it('a node, or a segment, or with Alt the branch of a segment', async () => {
     const { editor, rows, press } = await setup();
     await editor.rightClick(press.pickAt(at(100, 100)), false);
     expect(ids((await rows()).nodes)).toEqual([1, 2, 3, 4]);
-    await editor.rightClick(press.pickAt(at(-50, 0)), false);
+    await editor.rightClick(press.pickAt(at(-30, 0)), false);
     expect(ids((await rows()).edges)).toEqual([11, 12]);
-    await editor.rightClick(press.pickAt(at(0, 50)), true);
+    await editor.rightClick(press.pickAt(at(ON_12.x, ON_12.y)), true);
     // Node 2 has two segments left, so its branch runs through it: both go, and the nodes with them.
     const now = await rows();
     expect(ids(now.edges)).toEqual([]);

@@ -63,12 +63,22 @@ export function compose(changes: RowChange[]): RowChange {
       if (kept) kept.after = p.after;
       else by.set(id, { before: p.before, after: p.after });
     }
-    return changed([...by.values()]);
+    return [...by.values()];
   };
   const context = new Map(changes.flatMap((c) => c.context).map((n) => [n[0], n]));
-  return {
-    nodes: merge(changes.map((c) => c.nodes)),
-    edges: merge(changes.map((c) => c.edges)),
-    context: [...context.values()],
-  };
+  const nodes = changed(merge(changes.map((c) => c.nodes)));
+  const edges = withCurves(merge(changes.map((c) => c.edges)), nodes);
+  return { nodes, edges, context: [...context.values()] };
+}
+
+/**
+ * The segments that changed, and those whose rows are the same but one of whose nodes changed
+ * (^1265): their curves and boxes did, so the index and the chunks have to hear of them.
+ */
+export function withCurves(edges: Pair<EdgeRow>[], nodes: Pair<NodeRow>[]): Pair<EdgeRow>[] {
+  const moved = new Set(nodes.map((p) => (p.before ?? p.after)![0]));
+  return edges.filter(
+    (p) =>
+      !same(p.before, p.after) || (p.after && (moved.has(p.after[1]) || moved.has(p.after[2]))),
+  );
 }

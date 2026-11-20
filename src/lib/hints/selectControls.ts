@@ -1,4 +1,6 @@
+import type { HoverKind } from '../editor/pick';
 import { hintsOf, type Control } from './controls';
+import { dragRows } from './moveControls';
 import type { Hint } from './hints';
 import { ESC, key, mouse } from './inputs';
 
@@ -10,7 +12,7 @@ const DEL = key('Del');
  */
 export interface SelectFacts {
   mode: 'view' | 'select' | 'draw';
-  hovered: 'node' | 'segment' | null;
+  hovered: HoverKind;
   /** The hovered node is selected, or both nodes of the hovered segment are. */
   hoveredSelected: boolean;
   selected: number;
@@ -94,6 +96,7 @@ export const SELECT_CONTROLS: Control<SelectFacts>[] = [
     listens: yes,
     says: (f) => (f.branchSelected ? 'deselect branch' : 'add branch to selection'),
   },
+  ...dragRows<SelectFacts>(picking),
   {
     hat: 393,
     input: mouse('lmb'),

@@ -45,6 +45,8 @@ function underOf(e: Harness, pt: { x: number; y: number }): Under | null {
   const world = screenToWorld(view, size, pt);
   // Where the map is not loaded nothing is placed (a curve can bulge out of the chunks that are).
   if (!interactable(e.editor.loaded!(), world, reachOf(false, view.scale))) return null;
+  // A control point is dragged, not clicked: a click on it places nothing.
+  if (hover?.kind === 'handle') return null;
   if (hover?.kind === 'node') return { kind: 'node', id: hover.id };
   if (hover?.kind === 'segment') {
     const hit = segmentAt(e.editor.loaded!(), world, reachOf(false, view.scale))!;

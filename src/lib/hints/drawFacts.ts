@@ -1,5 +1,6 @@
 import { leafWay, nodeAction } from '../editor/drawing';
 import type { Editor } from '../editor/editor.svelte';
+import { hoverKind } from '../editor/pick';
 import type { LoadedMap } from '../map/hit';
 import type { DrawFacts } from './drawControls';
 
@@ -13,7 +14,7 @@ export function drawFactsOf(editor: Editor, map: LoadedMap): DrawFacts {
     extending: draw.active !== null,
     firstNodeOnly: draw.active !== null && degree(draw.active) === 0,
     backwards: draw.end === 'start',
-    hovered: hover?.kind ?? null,
+    hovered: hoverKind(hover),
     act: node === null ? null : nodeAction(draw, node, degree),
     way: node === null ? null : leafWay(map.edgesAt(node).filter((e) => e[1] === node).length),
   };

@@ -2,6 +2,7 @@ import { connectEditor } from '../edit/connect';
 import { Editor } from '../editor/editor.svelte';
 import { SelectPress } from '../editor/selectPress';
 import { DrawPress } from '../editor/drawPress';
+import { MovePress } from '../editor/movePress';
 import { withIdsOf } from '../project/persist';
 import type { Size, View } from '../camera/view';
 import { MapMemory } from '../map/mapMemory.svelte';
@@ -49,10 +50,11 @@ export async function editing(
   const around = { map: () => editor.loaded!(), screen: () => ({ view, size }) };
   const press = new SelectPress(editor, around);
   const draw = new DrawPress(editor, around);
+  const move = new MovePress(editor, around);
   const rows = async () => {
     const f = (await storage.load('p')) as unknown as { nodes: NodeRow[]; edges: EdgeRow[] };
     const sorted = <R extends [number, ...unknown[]]>(r: R[]) => [...r].sort((a, b) => a[0] - b[0]);
     return { nodes: sorted(f.nodes), edges: sorted(f.edges) };
   };
-  return { storage, memory, editor, press, draw, rows, settle };
+  return { storage, memory, editor, press, draw, move, rows, settle };
 }

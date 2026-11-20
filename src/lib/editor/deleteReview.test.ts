@@ -37,7 +37,7 @@ describe('what the review found (^1260)', () => {
 describe('what the review found about keys and stale rows (^1260)', () => {
   it('Alt+Del on a segment deletes the segment only: Alt is for the right button (as on main)', async () => {
     const { editor, rows, hover } = await setup();
-    hover(-50, 0);
+    hover(-30, 0);
     editor.alt = true;
     editorKey(editor, key('Delete', { altKey: true }));
     await new Promise((r) => setTimeout(r, 0));

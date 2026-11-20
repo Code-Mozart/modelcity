@@ -1,3 +1,4 @@
+import { moveScenarios } from '../testing/moveFixture';
 import { describe, expect, it } from 'vitest';
 import type { Size, View } from '../camera/view';
 import { Editor } from '../editor/editor.svelte';
@@ -58,7 +59,7 @@ function deletes(): Record<number, () => Promise<boolean>> {
     },
     920: async () => {
       const { editor, press, edges } = await deleted();
-      editor.hover = press.pickAt(at(0, 1));
+      editor.hover = press.pickAt(at(20, 1));
       editorKey(editor, key('Delete'));
       await new Promise((r) => setTimeout(r, 0));
       return (await edges()) === '';
@@ -67,7 +68,7 @@ function deletes(): Record<number, () => Promise<boolean>> {
       const { editor, press, edges } = await deleted();
       press.down(at(0, 60), false);
       press.up();
-      await editor.rightClick(press.pickAt(at(0, 1)), false);
+      await editor.rightClick(press.pickAt(at(20, 1)), false);
       return (await edges()) === '';
     },
   };
@@ -78,12 +79,12 @@ function deletesByClick(): Record<number, () => Promise<boolean>> {
   return {
     160: async () => {
       const { editor, press, edges } = await deleted();
-      await editor.rightClick(press.pickAt(at(0, 1)), true);
+      await editor.rightClick(press.pickAt(at(20, 1)), true);
       return (await edges()) === '';
     },
     699: async () => {
       const { editor, press, nodes } = await deleted();
-      press.down(at(0, 1), false);
+      press.down(at(20, 1), false);
       press.up();
       await editor.rightClick(press.pickAt(at(-50, 0)), false);
       return (await nodes()) === '3';
@@ -101,6 +102,7 @@ function deletesByClick(): Record<number, () => Promise<boolean>> {
 
 /** Each control of the table, done on the real thing, with the state its hint is shown in (^783): what the hint says it does. */
 const DOES: Record<number, () => unknown> = {
+  ...moveScenarios('select'),
   ...deletes(),
   ...deletesByClick(),
   394: () => {
@@ -128,7 +130,7 @@ const DOES: Record<number, () => unknown> = {
   },
   690: () => {
     const { editor, press } = editorWith();
-    press.down(at(0, 1), false);
+    press.down(at(20, 1), false);
     press.up();
     return [...editor.selection].sort().join() === '1,2';
   },
@@ -140,7 +142,7 @@ const DOES: Record<number, () => unknown> = {
   },
   691: () => {
     const { editor, press } = editorWith([3]);
-    press.down(at(0, 1), true);
+    press.down(at(20, 1), true);
     press.up();
     return [...editor.selection].join() === '3,1,2';
   },
@@ -152,7 +154,7 @@ const DOES: Record<number, () => unknown> = {
   },
   692: () => {
     const { editor, press } = editorWith([3]);
-    press.down(at(0, 1), false, true);
+    press.down(at(20, 1), false, true);
     press.up();
     return [...editor.selection].sort().join() === '1,2';
   },
@@ -238,6 +240,7 @@ describe('what the hints of select mode say on a node (^181)', () => {
       'view mode',
       'select',
       'select branch',
+      'move node',
       'delete node',
     ]);
     expect(texts(facts({ hovered: 'node', selected: 2 }))).toEqual([
@@ -246,6 +249,7 @@ describe('what the hints of select mode say on a node (^181)', () => {
       'add to selection',
       'select branch',
       'add branch to selection',
+      'move node',
       'deselect all',
       'delete node',
       'delete selected',
@@ -256,6 +260,7 @@ describe('what the hints of select mode say on a node (^181)', () => {
       'deselect',
       'select branch',
       'add branch to selection',
+      'move node',
       'deselect all',
       'delete node',
       'delete selected',

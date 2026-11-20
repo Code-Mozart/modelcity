@@ -37,13 +37,17 @@ function segments(
 
 /** Whether the pointer is on the selection, which has several nodes: on one of them or on a segment between them (^290, ^699, ^779). */
 export function onSelection(sel: Selection, on: Hover | null): boolean {
-  if (sel.size < 2 || !on) return false;
+  if (sel.size < 2 || !on || on.kind === 'handle') return false;
   return on.kind === 'node' ? sel.has(on.id) : on.nodes.every((id) => sel.has(id));
 }
 
+/** What a delete works on: a node or a segment; a control point of the scaffold is nothing to delete (as on `main`: a right click there finishes the road). */
+const deletable = (on: Hover | null) => (on?.kind === 'handle' ? null : on);
+
 /** `Del` or `Backspace` (^687, ^757, ^920): the selection, else what is hovered, as a right click does but never a branch (`Alt` is not for `Del`, as on `main`). */
-export function byKey(sel: Selection, on: Hover | null, map: LoadedMap): Doing | null {
+export function byKey(sel: Selection, hover: Hover | null, map: LoadedMap): Doing | null {
   if (sel.size) return nodes([...sel]);
+  const on = deletable(hover);
   if (on?.kind === 'node') return nodes([on.id]);
   return on ? segments(map, on, false) : null;
 }
@@ -51,11 +55,12 @@ export function byKey(sel: Selection, on: Hover | null, map: LoadedMap): Doing |
 /** A click of the right button on something (^489, ^699, ^920): the selection if the pointer is on it, else what is under the pointer. */
 export function byClick(
   sel: Selection,
-  on: Hover | null,
+  hover: Hover | null,
   alt: boolean,
   map: LoadedMap,
 ): Doing | null {
-  if (onSelection(sel, on)) return nodes([...sel]);
+  if (onSelection(sel, hover)) return nodes([...sel]);
+  const on = deletable(hover);
   if (on?.kind === 'node') return nodes([on.id]);
   return on ? segments(map, on, alt) : null;
 }

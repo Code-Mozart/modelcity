@@ -4,18 +4,20 @@ import { afterClick, nodesOf, pick, reachOf, type Hover } from './pick';
 import type { Selection } from './selection';
 
 const sel = (...ids: number[]): Selection => new Set(ids);
+/** The scale at which the reach of a mouse is 5 m. */
+const AT = { scale: 9 / 5, touch: false };
 const map = loaded([node(1, 0, 0), node(2, 100, 0), node(3, 100, 3)], [edge(7, 1, 2)]);
 
 describe('what the pointer is on (^1257, ^883)', () => {
   it('is a node before a segment, and a segment before nothing', () => {
-    expect(pick(map, { x: 1, y: 1 }, 5)).toEqual({ kind: 'node', id: 1 });
-    expect(pick(map, { x: 50, y: 2 }, 5)).toEqual({ kind: 'segment', edge: 7, nodes: [1, 2] });
-    expect(pick(map, { x: 50, y: 40 }, 5)).toBeNull();
+    expect(pick(map, { x: 1, y: 1 }, AT)).toEqual({ kind: 'node', id: 1 });
+    expect(pick(map, { x: 50, y: 2 }, AT)).toEqual({ kind: 'segment', edge: 7, nodes: [1, 2] });
+    expect(pick(map, { x: 50, y: 40 }, AT)).toBeNull();
   });
 
   it('is the node where a node and a segment are both near', () => {
     // Node 3 is 3 m from the segment: with a reach of 5 m both are near.
-    expect(pick(map, { x: 100, y: 2 }, 5)).toEqual({ kind: 'node', id: 3 });
+    expect(pick(map, { x: 100, y: 2 }, AT)).toEqual({ kind: 'node', id: 3 });
   });
 
   it('has a reach in meters that is a number of pixels, a larger one for a finger', () => {

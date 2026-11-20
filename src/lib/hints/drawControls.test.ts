@@ -1,3 +1,4 @@
+import { moveScenarios } from '../testing/moveFixture';
 import { describe, expect, it } from 'vitest';
 import { drawing } from '../testing/drawFixture';
 import { DRAW_CONTROLS, drawHints, type DrawFacts } from './drawControls';
@@ -8,11 +9,12 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
 /** Each control of the table, done in the editor in a state where its hint shows: what the hint says it does (^783). */
 const DOES: Record<number, () => Promise<boolean>> = {
+  ...moveScenarios('draw'),
   771: run(async (d) => (await d.key('Tab'), d.editor.mode === 'view')),
   410: run(async (d) => {
     await d.click(50, 50);
     const first = d.editor.draw.active === 5 && d.editor.phase === 'extend';
-    await d.click(100, 50);
+    await d.click(150, 50);
     return first && same((await d.ids()).edges.at(-1), [12, 5, 6]);
   }),
   411: run(async (d) => {
@@ -21,7 +23,7 @@ const DOES: Record<number, () => Promise<boolean>> = {
     return Math.abs(r.nodes.find((n) => n[0] === 5)![3] - Math.PI / 2) < 1e-9;
   }),
   707: run(async (d) => {
-    await d.click(50, 0);
+    await d.click(70, 0);
     const { edges } = await d.ids();
     return (
       d.editor.draw.active === 5 &&
@@ -34,20 +36,20 @@ const DOES: Record<number, () => Promise<boolean>> = {
   }),
   715: run(async (d) => {
     await d.click(50, 50);
-    await d.click(-50, 0);
+    await d.click(-30, 0);
     const { edges } = await d.ids();
     return d.editor.draw.active === null && same(edges.at(-1), [13, 5, 6]);
   }),
   708: run(async (d) => {
-    await d.drag(50, 0, { x: 50, y: 40 });
+    await d.drag(70, 0, { x: 70, y: 40 });
     const r = await d.rows();
     const n = r.nodes.find((x) => x[0] === 5);
     return d.editor.draw.active === null && !!n && Math.abs(n[3] - Math.PI / 2) < 1e-9;
   }),
   412: run(async (d) => {
     await d.click(100, 0);
-    await d.click(150, 0);
-    await d.click(150, 0);
+    await d.click(200, 0);
+    await d.click(200, 0);
     return d.editor.draw.active === null && (await d.ids()).nodes.includes(5);
   }),
   436: run(async (d) => {
@@ -82,11 +84,11 @@ const DOES: Record<number, () => Promise<boolean>> = {
     return name === 'close road' && same((await d.ids()).edges.at(-1), [13, 6, 5]);
   }),
   489: run(async (d) => (await d.right(0, 100), !(await d.ids()).nodes.includes(4))),
-  709: run(async (d) => (await d.right(50, 0), same((await d.ids()).edges, [[10, 1, 2]]))),
-  710: run(async (d) => (await d.right(50, 0, true), (await d.ids()).edges.length === 0)),
+  709: run(async (d) => (await d.right(70, 0), same((await d.ids()).edges, [[10, 1, 2]]))),
+  710: run(async (d) => (await d.right(70, 0, true), (await d.ids()).edges.length === 0)),
   1264: run(async (d) => {
     await d.click(50, 50);
-    await d.click(100, 50);
+    await d.click(150, 50);
     await d.key('Delete');
     const { nodes } = await d.ids();
     return d.editor.draw.active === 5 && nodes.includes(5) && !nodes.includes(6);

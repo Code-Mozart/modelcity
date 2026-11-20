@@ -3,7 +3,7 @@ import { screenToWorld, type Point, type Size, type View } from '../camera/view'
 import { nodesInBox, type LoadedMap } from '../map/hit';
 import type { Editor } from './editor.svelte';
 import { branchOf } from './branchOf';
-import { afterClick, pick, reachOf, type Hover } from './pick';
+import { afterClick, pick, type Hover } from './pick';
 import { afterBox, afterBranchAdd, afterBranchClick, type Selection } from './selection';
 
 /** The pointer has to move this far (pixels) before a press is a drag and not a click. */
@@ -46,7 +46,7 @@ export class SelectPress {
   /** What is under a point of the screen: a node or a segment of what is loaded. */
   pickAt(at: Point, touch = false): Hover | null {
     const { view, size } = this.around.screen();
-    return pick(this.around.map(), screenToWorld(view, size, at), reachOf(touch, view.scale));
+    return pick(this.around.map(), screenToWorld(view, size, at), { scale: view.scale, touch });
   }
 
   down(at: Point, shift: boolean, alt = false) {
@@ -73,6 +73,11 @@ export class SelectPress {
     p.waited = box.waiting > 0;
     this.editor.band = { a: p.at, b: at };
     this.editor.follow(afterBox(p.began, box.nodes, p.shift));
+  }
+
+  /** The press became a drag of what it was on (`MovePress`): it is no click any more. */
+  forget() {
+    this.pressed = null;
   }
 
   /** The button is released: what it did, a click that picked, a box, or nothing. */

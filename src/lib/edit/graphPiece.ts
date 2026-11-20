@@ -1,6 +1,6 @@
 import { emptyGraph, roundToMm, type GEdge, type GNode, type Graph } from '../model/graph';
 import type { EdgeRow, NodeRow } from '../project/storage';
-import { changed, type Pair, type RowChange } from './change';
+import { changed, withCurves, type Pair, type RowChange } from './change';
 import type { RowSource } from './deleteNodes';
 
 /** The ids that the next node and the next segment get (^1224): larger than every id in use. */
@@ -65,16 +65,15 @@ export function changeOfGraphs(before: Graph, after: Graph): RowChange {
     const was = new Map(a.map((t) => [t.id, t]));
     const now = new Map(b.map((t) => [t.id, t]));
     const ids = new Set([...was.keys(), ...now.keys()]);
-    return changed(
-      [...ids].map((id) => {
-        const [p, q] = [was.get(id), now.get(id)];
-        return { before: p ? row(p) : null, after: q ? row(q) : null };
-      }),
-    );
+    return [...ids].map((id) => {
+      const [p, q] = [was.get(id), now.get(id)];
+      return { before: p ? row(p) : null, after: q ? row(q) : null };
+    });
   };
   const [a, b] = [roundToMm(before), roundToMm(after)];
-  const nodes = pairs(a.nodes, b.nodes, rowOfNode);
-  const edges = pairs(a.edges, b.edges, rowOfEdge);
+  const nodes = changed(pairs(a.nodes, b.nodes, rowOfNode));
+  // A segment at a node that moved or turned has another curve, also when its row is the same.
+  const edges = withCurves(pairs(a.edges, b.edges, rowOfEdge), nodes);
   const touched = new Set(nodes.map((p) => (p.after ?? p.before)![0]));
   const ends = new Set(
     edges.flatMap((p) => [p.before, p.after].flatMap((e) => (e ? [e[1], e[2]] : []))),

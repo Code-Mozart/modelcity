@@ -52,13 +52,21 @@ export function interactable(map: LoadedMap, pt: Vec, reach = 0): boolean {
   return true;
 }
 
-/** The node nearest to a point, if one is within `reach` meters. */
-export function nodeAt(map: LoadedMap, pt: Vec, reach: number): NodeRow | null {
+const NONE: ReadonlySet<number> = new Set();
+
+/** The node nearest to a point, if one is within `reach` meters, other than those to `skip`. */
+export function nodeAt(
+  map: LoadedMap,
+  pt: Vec,
+  reach: number,
+  skip: ReadonlySet<number> = NONE,
+): NodeRow | null {
   if (!interactable(map, pt, reach)) return null;
   let best: NodeRow | null = null;
   let bestD = reach;
   for (const chunk of readyIn(map, around(pt, reach)))
     for (const n of chunk.nodes) {
+      if (skip.has(n[0])) continue;
       const d = dist(at(n), pt);
       if (d <= bestD) [best, bestD] = [n, d];
     }
@@ -78,9 +86,17 @@ export interface SegmentHit {
  * The segment whose curve is nearest to a point, if one is within `reach` meters. Both of its
  * nodes are loaded when it is: a chunk holds the far ends of its segments (^1231).
  */
-export function segmentAt(map: LoadedMap, pt: Vec, reach: number): SegmentHit | null {
+export function segmentAt(
+  map: LoadedMap,
+  pt: Vec,
+  reach: number,
+  skip: ReadonlySet<number> = NONE,
+): SegmentHit | null {
   if (!interactable(map, pt, reach)) return null;
-  const seen = new Set<number>();
+  // The segments at a node that is left out are left out too.
+  const seen = new Set<number>(
+    skip.size ? [...skip].flatMap((n) => map.edgesAt(n).map((e) => e[0])) : [],
+  );
   let best: SegmentHit | null = null;
   for (const chunk of readyIn(map, around(pt, reach)))
     for (const edge of chunk.edges) {
