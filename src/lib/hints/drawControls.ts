@@ -71,6 +71,13 @@ export const DRAW_CONTROLS: Control<DrawFacts>[] = [
     () => 'split',
   ),
   row(715, lmb, (f) => onCurve(f) && f.extending, joinWord),
+  // A click on a radius point works like a click on the curve there (^278).
+  row(
+    711,
+    lmb,
+    (f) => draw(f) && f.hovered === 'rad',
+    (f) => (f.extending ? joinWord(f) : 'split'),
+  ),
   row(411, mouse('lmb', true), onVoid, (f) =>
     f.extending ? 'place node and set heading' : 'place first node and set heading',
   ),

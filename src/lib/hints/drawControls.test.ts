@@ -1,4 +1,5 @@
-import { moveScenarios } from '../testing/moveFixture';
+import { moveScenarios, moving } from '../testing/moveFixture';
+import { at } from '../testing/editHarness';
 import { describe, expect, it } from 'vitest';
 import { drawing } from '../testing/drawFixture';
 import { DRAW_CONTROLS, drawHints, type DrawFacts } from './drawControls';
@@ -10,6 +11,16 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 /** Each control of the table, done in the editor in a state where its hint shows: what the hint says it does (^783). */
 const DOES: Record<number, () => Promise<boolean>> = {
   ...moveScenarios('draw'),
+  711: async () => {
+    // A click on the radius point of the bend splits there: a node is inserted and drawn from.
+    const m = await moving('draw');
+    const rad = m.bend().find((h) => h.type === 'rad' && h.t === 0.5)!;
+    m.draw.down(at(rad.x, rad.y), false);
+    m.draw.up();
+    for (let i = 0; i < 20 && (m.editor.busy || i < 3); i++) await m.settle();
+    const edges = (await m.rows()).edges.map((e) => e.slice(0, 3));
+    return m.editor.draw.active === 4 && JSON.stringify(edges) === '[[10,1,4],[11,3,1],[12,4,2]]';
+  },
   771: run(async (d) => (await d.key('Tab'), d.editor.mode === 'view')),
   410: run(async (d) => {
     await d.click(50, 50);

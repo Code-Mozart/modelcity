@@ -126,6 +126,8 @@ test('Ctrl+Period shows the frame times while the view moves, and hides them aga
     }
   });
   await expect(readout).toContainText(/draw [\d.]+ ms .* frames per second/);
+  // With the coordinates of the pointer and what it is on (^833, ^871).
+  await expect(readout).toContainText(/x -?[\d.]+ m, y -?[\d.]+ m/);
   await page.keyboard.press('Control+Period');
   await expect(readout).toBeHidden();
 });

@@ -21,6 +21,8 @@
   import { drawHints } from './lib/hints/drawControls';
   import { drawFactsOf } from './lib/hints/drawFacts';
   import { dragHints } from './lib/hints/moveControls';
+  import { coordinatesText, hoverText } from './lib/hud/pointerText';
+  import { screenToWorld } from './lib/camera/view';
   import { Usage } from './lib/hints/usage.svelte';
   import { modalHints } from './lib/project/modalHints';
   import MapCanvas from './lib/MapCanvas.svelte';
@@ -76,6 +78,15 @@
     session.noProject || (index.status === 'ready' && memory.project === session.id);
   editor.ids = () => session.nextIds();
   const laneWidth = (lane: number) => session.laneWidth(lane);
+  /** Where the pointer is and what it is on, under the frame times (^833, ^871). */
+  const pointerLines = $derived(
+    frames.visible
+      ? [
+          coordinatesText(screenToWorld(camera.view, camera.size, camera.cursor)),
+          hoverText(editor.hover),
+        ]
+      : [],
+  );
   // A blank map that became a project has a complete index and no rows: nothing has to be read (^1263).
   session.onCreated = (id) => {
     index.madeComplete(id);
@@ -201,7 +212,7 @@
   <IndexPanel build={index} title={session.title} />
   <Hints {hints} />
   <VersionText visible={banner.visible} />
-  <FrameTimes stats={frames} />
+  <FrameTimes stats={frames} lines={pointerLines} />
   <div class="right">
     <div class="toasts"><ToastList {toasts} /></div>
     {#if recent.visible}<HistoryPanel groups={panel} hints={historyRows} />{/if}

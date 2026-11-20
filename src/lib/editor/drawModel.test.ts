@@ -11,6 +11,7 @@ import { checkAgainst, dice, type Dice, randomMap } from '../testing/editModel';
 import { clicked, finished, type DrawModel, type Under } from '../testing/drawModel';
 import { NOT_DRAWING } from './drawing';
 import { reachOf } from './pick';
+import type { RowHandle } from './handles';
 
 globalThis.IDBKeyRange = IDBKeyRange;
 
@@ -45,14 +46,22 @@ function underOf(e: Harness, pt: { x: number; y: number }): Under | null {
   const world = screenToWorld(view, size, pt);
   // Where the map is not loaded nothing is placed (a curve can bulge out of the chunks that are).
   if (!interactable(e.editor.loaded!(), world, reachOf(false, view.scale))) return null;
-  // A control point is dragged, not clicked: a click on it places nothing.
-  if (hover?.kind === 'handle') return null;
+  // A click on a radius point is a click on the curve there (^278); on any other control point it places nothing.
+  if (hover?.kind === 'handle') return radiusUnder(e, hover.handle);
   if (hover?.kind === 'node') return { kind: 'node', id: hover.id };
   if (hover?.kind === 'segment') {
     const hit = segmentAt(e.editor.loaded!(), world, reachOf(false, view.scale))!;
     return { kind: 'segment', edge: hit.edge[0], at: hit.at };
   }
   return { kind: 'void', pt: world };
+}
+
+function radiusUnder(e: Harness, h: RowHandle): Under | null {
+  if (h.type !== 'rad') return null;
+  const map = e.editor.loaded!();
+  const row = map.edgesAt(h.nodes[0]).find((x) => x[0] === h.edge)!;
+  const piece = curveOf(row, map.nodeOf(h.nodes[0])!, map.nodeOf(h.nodes[1])!).pieces[h.k]!;
+  return { kind: 'segment', edge: h.edge, at: pointOn(piece, h.t) };
 }
 
 const sameStep = (a: DrawModel, b: DrawModel) =>

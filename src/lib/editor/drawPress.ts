@@ -4,6 +4,9 @@ import type { Sample } from '../curves/piece';
 import type { Vec } from '../curves/vec';
 import { changeOfGraphs, graphOfRows, readPiece } from '../edit/graphPiece';
 import { interactable, segmentAt } from '../map/hit';
+import { curveOf } from '../map/curve';
+import { pointOn } from '../curves/piece';
+import type { RowHandle } from './handles';
 import { branchOfNode } from '../map/branch';
 import { networkOf } from '../map/network';
 import {
@@ -135,19 +138,40 @@ export class DrawPress {
       this.editor.told?.('warning', LOADING_TEXT);
       return;
     }
+    this.pressed = this.pressOf(at, alt);
+    // A press on the void or a curve shows what it does at once; one on a node or a radius point does not (it may be a drag).
+    if (this.pressed?.kind === 'place' || (this.pressed?.kind === 'curve' && !this.onHandle(at)))
+      this.preview();
+  }
+
+  private onHandle = (at: Point) => this.pickAt(at)?.kind === 'handle';
+
+  /**
+   * What a press is, by what is under it: a node; a radius point, which a click makes a press on
+   * the curve there (^278; a drag moves it, `MovePress`); another control point, nothing; a curve;
+   * or the void.
+   */
+  private pressOf(at: Point, alt: boolean): Pressed | null {
     const on = this.pickAt(at);
     const base = { at, moved: false, alt };
-    if (on?.kind === 'node') {
-      this.pressed = { ...base, kind: 'node', id: on.id };
-      return;
+    if (on?.kind === 'node') return { ...base, kind: 'node', id: on.id };
+    if (on?.kind === 'handle') {
+      const r = on.handle.type === 'rad' ? this.radiusPoint(on.handle) : null;
+      return r && { ...base, kind: 'curve', pt: r.pt, edge: r.edge, th: null };
     }
-    // A control point is dragged (`MovePress`); a click on it does nothing in draw mode.
-    if (on?.kind === 'handle') return;
     const hit = on?.kind === 'segment' ? this.segmentHit(at) : null;
-    this.pressed = hit
+    return hit
       ? { ...base, kind: 'curve', pt: hit.at, edge: hit.edge, th: null }
       : { ...base, kind: 'place', pt: this.world(at), th: null, angleFrom: null };
-    this.preview();
+  }
+
+  /** A radius point as a point of its curve, with the curve's direction there. */
+  private radiusPoint(h: Extract<RowHandle, { type: 'rad' }>) {
+    const map = this.around.map();
+    const edge = map.edgesAt(h.nodes[0]).find((e) => e[0] === h.edge);
+    const [p, q] = [map.nodeOf(h.nodes[0]), map.nodeOf(h.nodes[1])];
+    const piece = edge && p && q ? curveOf(edge, p, q).pieces[h.k] : undefined;
+    return piece && edge ? { pt: pointOn(piece, h.t), edge } : null;
   }
 
   private segmentHit(at: Point) {
