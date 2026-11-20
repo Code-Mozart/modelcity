@@ -13,7 +13,11 @@ type KeyEventLike = {
 };
 
 const DO: Record<Action, (editor: Editor) => void> = {
-  escape: (e) => (e.mode === 'draw' ? e.finishRoad(true) : e.mode === 'select' && e.deselectAll()),
+  escape: (e) => {
+    if (e.cancelPress?.()) return;
+    if (e.mode === 'draw') e.finishRoad(true);
+    else if (e.mode === 'select') e.deselectAll();
+  },
   view: (e) => e.toggleMode(),
   delete: (e) => {
     const map = e.loaded?.();

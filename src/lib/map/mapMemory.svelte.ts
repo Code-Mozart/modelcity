@@ -261,7 +261,9 @@ export class MapMemory {
         signal: control.signal,
         onProgress: (progress) => generation === this.generation && this.step(id, progress),
       });
-      if (generation === this.generation && this.wanted.has(id)) this.arrived(chunk, began);
+      // A read that was stopped (the chunk was dropped, and maybe asked for again) is let go, whatever it found.
+      if (generation === this.generation && this.wanted.has(id) && !control.signal.aborted)
+        this.arrived(chunk, began);
     } catch (e) {
       if (generation === this.generation && !aborted(e)) {
         console.error(`[modelcity] chunk ${id} could not be read`, e);
@@ -269,7 +271,8 @@ export class MapMemory {
         this.progress.delete(id);
       }
     } finally {
-      if (generation === this.generation) {
+      // Only this read is forgotten: a read of the same chunk that started after it was stopped goes on.
+      if (generation === this.generation && this.reading.get(id) === control) {
         this.reading.delete(id);
         this.pump();
       }

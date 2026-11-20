@@ -62,6 +62,8 @@ export class Editor {
   phase = $derived<Phase>(this.mode === 'draw' && this.draw.active !== null ? 'extend' : this.mode);
   /** What the operation in progress would change, drawn over the map until it is written (^1262). */
   draft = $state.raw<RowChange | null>(null);
+  /** Forget the press of the left button, if there is one (`Esc` while it is down, ^295); true if there was one. Set by the canvas. */
+  cancelPress: (() => boolean) | null = null;
   /** The ids the next node and segment get (^1224): from the header of the open project. Set by the app. */
   ids: (() => NextIds) | null = null;
   /** The nodes that are selected. */
@@ -133,7 +135,7 @@ export class Editor {
   }
 
   /** The step that finishes the road: right after a split on a curve it gives the curve back (^237); a road of its first node only loses that node (^437). */
-  private async planFinish(): Promise<Planned | null> {
+  async planFinish(): Promise<Planned | null> {
     const [source, active] = [this.source?.(), this.draw.active];
     if (!source || active === null) return null;
     const split = this.splitUndo;
@@ -160,10 +162,15 @@ export class Editor {
     if (!writer) return Promise.resolve();
     const epoch = this.epoch;
     return this.queued(async () => {
-      const p = await plan();
-      if (!p) return;
-      if (!isEmpty(p.change)) await writer(p.change);
-      if (epoch === this.epoch) this.drawn(p);
+      try {
+        const p = await plan();
+        if (!p) return;
+        if (!isEmpty(p.change)) await writer(p.change);
+        if (epoch === this.epoch) this.drawn(p);
+      } finally {
+        // What the press showed goes, also when it was not written.
+        this.draft = null;
+      }
     });
   }
 

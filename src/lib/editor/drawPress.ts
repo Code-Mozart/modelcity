@@ -3,10 +3,20 @@ import { dragHeading } from '../curves/drag';
 import type { Sample } from '../curves/piece';
 import type { Vec } from '../curves/vec';
 import { changeOfGraphs, graphOfRows, readPiece } from '../edit/graphPiece';
-import { segmentAt } from '../map/hit';
+import { interactable, segmentAt } from '../map/hit';
 import { branchOfNode } from '../map/branch';
 import { networkOf } from '../map/network';
-import { nodeOf, withNode, type Graph } from '../model/graph';
+import {
+  edgeOfId,
+  edgesAt,
+  edgesOut,
+  nodeOf,
+  withNode,
+  type GEdge,
+  type Graph,
+} from '../model/graph';
+import { NO_CHANGE } from '../edit/change';
+import type { EdgeRow } from '../project/storage';
 import {
   curveAction,
   extendFrom,
@@ -19,10 +29,17 @@ import {
   type DrawState,
   type NodeAction,
 } from './drawing';
-import type { Editor, Mode } from './editor.svelte';
+import type { Editor, Mode, Planned } from './editor.svelte';
 import type { GhostTarget } from './drawGhost';
 import { DRAG_PX, type Surroundings } from './selectPress';
 import { pick, reachOf, type Hover } from './pick';
+
+/** Whether a segment of a piece is still the row that was clicked: same nodes and radius. */
+const sameEdge = (e: GEdge | undefined, row: EdgeRow) =>
+  !!e &&
+  e.start === row[1] &&
+  e.end === row[2] &&
+  (e.radius === null ? row[3] === null : Math.round(e.radius * 1000) === row[3]);
 
 /** How far (pixels) the pointer has to be from a node that is placed before its heading follows the pointer (^40). */
 const HEADING_PX = 6;
@@ -46,9 +63,9 @@ type Pressed = {
   moved: boolean;
   alt: boolean;
 } & (
-  | { kind: 'node'; id: number; act: NodeAction }
+  | { kind: 'node'; id: number }
   | { kind: 'place'; pt: Vec; th: number | null; angleFrom: number | null }
-  | { kind: 'curve'; pt: Sample; edge: number; th: number | null }
+  | { kind: 'curve'; pt: Sample; edge: EdgeRow; th: number | null }
 );
 
 /** The heading of a node at `n` turned towards the pointer, with the angle steps unless `Ctrl` holds them off (^251, ^315, ^316). */
@@ -113,10 +130,16 @@ export class DrawPress {
   }
 
   down(at: Point, alt: boolean) {
+    const { view } = this.around.screen();
+    // Nothing is placed where the map is still loading: a node of it may be right there (^1257).
+    if (!interactable(this.around.map(), this.world(at), reachOf(false, view.scale))) {
+      this.editor.told?.('warning', LOADING_TEXT);
+      return;
+    }
     const on = this.pickAt(at);
     const base = { at, moved: false, alt };
     if (on?.kind === 'node') {
-      this.pressed = { ...base, kind: 'node', id: on.id, act: this.actOn(on.id) };
+      this.pressed = { ...base, kind: 'node', id: on.id };
       return;
     }
     const hit = on?.kind === 'segment' ? this.segmentHit(at) : null;
@@ -129,7 +152,7 @@ export class DrawPress {
   private segmentHit(at: Point) {
     const { view } = this.around.screen();
     const hit = segmentAt(this.around.map(), this.world(at), reachOf(false, view.scale));
-    return hit && { at: hit.at, edge: hit.edge[0] };
+    return hit && { at: hit.at, edge: hit.edge };
   }
 
   /** The pointer moved: a press that has moved far enough sets the heading of its node (`ctrl`: without the angle steps). */
@@ -156,52 +179,45 @@ export class DrawPress {
     return nodeOf(this.shape({ ...p, th: null }, g, false).graph, next.node);
   }
 
-  /** The button is released: the press is written, in its turn. */
+  /**
+   * The button is released: the press is written, in its turn (`Editor.drawStep`), worked out
+   * then from the road being drawn and the rows stored then: a press that came while an earlier
+   * one was written goes on from where that one left the map.
+   */
   up() {
     const p = this.pressed;
     this.pressed = null;
     if (!p) return;
     if (p.kind === 'node') {
-      if (!p.moved) this.clickNode(p.id, p.act, p.alt);
+      if (!p.moved) void this.editor.drawStep(() => this.planNodeClick(p.id, p.alt));
       return;
     }
-    const click = !p.moved;
-    const ids = this.idsOf(p);
-    const source = this.editor.source?.();
-    const next = this.editor.ids?.();
-    if (!source || !next) return;
-    void this.editor.drawStep(async () => {
-      const before = await readPiece(source, ids, next);
-      const shaped = this.shape(p, before, click);
-      return { ...shaped, change: changeOfGraphs(before, shaped.graph) };
-    });
+    void this.editor.drawStep(() => this.planPress(p, !p.moved));
   }
 
-  /** Esc or a second finger: the press is forgotten, nothing is written. */
-  cancel() {
+  private async planPress(p: Exclude<Pressed, { kind: 'node' }>, click: boolean) {
+    const [source, next] = [this.editor.source?.(), this.editor.ids?.()];
+    if (!source || !next) return null;
+    const before = await readPiece(source, this.idsOf(p), next);
+    // The curve was changed by a step written meanwhile: the point clicked is not on it any more.
+    if (p.kind === 'curve' && !sameEdge(edgeOfId(before, p.edge[0]), p.edge)) return null;
+    const shaped = this.shape(p, before, click);
+    return { ...shaped, change: changeOfGraphs(before, shaped.graph) };
+  }
+
+  /** Esc or a second finger: the press is forgotten, nothing is written (^295); true if there was one. */
+  cancel(): boolean {
+    const was = this.pressed !== null;
     this.pressed = null;
     this.editor.draft = null;
+    return was;
   }
 
   /** The nodes whose rows (with their segments) the press works on. */
   private idsOf(p: Pressed): number[] {
     const active = this.editor.draw.active;
-    if (p.kind === 'curve') return [...(active === null ? [] : [active]), ...this.endsOf(p.edge)];
+    if (p.kind === 'curve') return [...(active === null ? [] : [active]), p.edge[1], p.edge[2]];
     return active === null ? [] : [active];
-  }
-
-  private endsOf(edge: number): number[] {
-    const row = this.edgeRow(edge);
-    return row ? [row[1], row[2]] : [];
-  }
-
-  private edgeRow(edge: number) {
-    for (const s of this.around.map().chunks.values())
-      if (s.status === 'ready') {
-        const row = s.chunk.edges.find((e) => e[0] === edge);
-        if (row) return row;
-      }
-    return undefined;
   }
 
   /** What the press does to a piece of the map: a node placed or inserted, its heading, and on a curve what a click does there (^133, ^191). */
@@ -211,7 +227,7 @@ export class DrawPress {
       const r = placeNode(g, draw, { pt: p.pt, th: p.th });
       return { name: 'place node', graph: r.graph, draw: r.draw };
     }
-    const r = insertAt(g, p.edge, p.pt);
+    const r = insertAt(g, p.edge[0], p.pt);
     const graph = p.th === null ? r.graph : withNode(r.graph, r.id, { th: p.th });
     if (!click) return { name: 'insert node', graph, draw };
     if (curveAction(draw) === 'split')
@@ -244,39 +260,37 @@ export class DrawPress {
     this.editor.draft = g ? changeOfGraphs(g, this.shape(p, g, false).graph) : null;
   }
 
-  /** A click on a node in draw mode (^23, ^65, ^162, ^916): what `act` says. */
-  private clickNode(id: number, act: NodeAction, alt: boolean) {
-    if (act === 'finish' || act === 'cancel') this.editor.finishRoad();
-    else if (act === 'extend') this.stepOnly('extend road', this.extended(id, alt));
-    else if (act === 'split') this.stepOnly('split road', splitFrom(id));
-    else this.merge(id, act === 'close' ? 'close road' : 'merge road');
-  }
-
-  /** The road being drawn ends at a node (^23, ^162): a segment to it, and draw mode goes on without a road. */
-  private merge(id: number, name: string) {
+  /** A click on a node in draw mode (^23, ^65, ^162, ^916): what it does is decided in its turn, from the road being drawn and the segments stored at the node then. */
+  private async planNodeClick(id: number, alt: boolean): Promise<Planned | null> {
     const { editor } = this;
-    const [draw, source, next] = [editor.draw, editor.source?.(), editor.ids?.()];
-    const active = draw.active;
-    if (!source || !next || active === null) return;
-    void editor.drawStep(async () => {
-      const before = await readPiece(source, [active, id], next);
-      const after = mergeInto(before, draw, id);
-      return { name, change: changeOfGraphs(before, after), draw: NOT_DRAWING };
-    });
+    const [source, next, draw] = [editor.source?.(), editor.ids?.(), editor.draw];
+    if (!source || !next) return null;
+    const before = await readPiece(source, draw.active === null ? [id] : [draw.active, id], next);
+    if (!nodeOf(before, id)) return null;
+    const act = nodeAction(draw, id, (n) => edgesAt(before, n).length);
+    return act === 'finish' || act === 'cancel'
+      ? editor.planFinish()
+      : this.planAct(act, { id, alt }, before, draw);
   }
 
-  private stepOnly(name: string, draw: DrawState) {
-    void this.editor.drawStep(async () => ({
-      name,
-      change: { nodes: [], edges: [], context: [] },
-      draw,
-    }));
+  /** What a click on a node does, other than finishing: extend, split, merge or close. */
+  private planAct(
+    act: Exclude<NodeAction, 'finish' | 'cancel'>,
+    { id, alt }: { id: number; alt: boolean },
+    before: Graph,
+    draw: DrawState,
+  ): Planned {
+    const only = (name: string, d: DrawState) => ({ name, change: NO_CHANGE, draw: d });
+    if (act === 'extend') return only('extend road', this.extended(id, alt, before));
+    if (act === 'split') return only('split road', splitFrom(id));
+    const name = act === 'close' ? 'close road' : 'merge road';
+    return { name, change: changeOfGraphs(before, mergeInto(before, draw, id)), draw: NOT_DRAWING };
   }
 
   /** Extend from a leaf node (^65, ^916): the road started at the other end of its branch, as far as it is loaded. */
-  private extended(id: number, alt: boolean): DrawState {
+  private extended(id: number, alt: boolean, g: Graph): DrawState {
     const net = networkOf(this.around.map());
-    const out = net.edgesAt(id).filter((e) => e[1] === id).length;
+    const out = edgesOut(g, id).length;
     const branch = branchOfNode(net, id);
     const ends = branch.nodes.filter((n) => n !== id && net.edgesAt(n).length !== 2);
     return extendFrom(id, out, alt, ends[0] ?? branch.nodes.at(-1) ?? id);
@@ -289,3 +303,5 @@ export function cursorOf(mode: Mode, hover: Hover | null): string {
   if (hover?.kind === 'node') return 'pointer';
   return hover?.kind === 'segment' ? 'copy' : 'crosshair';
 }
+
+export const LOADING_TEXT = 'The map here is still loading: nothing was placed.';

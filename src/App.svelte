@@ -93,7 +93,9 @@
     );
   };
   $effect(() => {
-    const sel = editor.selection;
+    // The node a road is drawn from stays in memory as well (^1263).
+    const active = editor.draw.active;
+    const sel = active === null ? editor.selection : new Set([...editor.selection, active]);
     untrack(() => {
       const chunks = pins.pinnedFor(sel, memory.index.nodeOf);
       for (const id of memory.pinned) if (!chunks.has(id)) memory.pinned.delete(id);

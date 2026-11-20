@@ -185,6 +185,10 @@
   };
   const press = $derived(new SelectPress(editor, around));
   const drawPress = $derived(new DrawPress(editor, around));
+  $effect(() => {
+    const p = drawPress;
+    editor.cancelPress = () => p.cancel();
+  });
 
   /** The left button: the compass while the view is turned, else what the mode does with it. */
   function leftDown(at: Point, e: PointerEvent) {

@@ -288,3 +288,50 @@ describe('a segment that is in every chunk (too large to be listed in each, ^123
     expect(inChunks()).toEqual([10, 10]);
   });
 });
+
+/** A storage whose first read of the far end 2 waits until it is let through, and then finds it with another heading (9). */
+async function gated() {
+  const storage = new MemoryStorage();
+  await storage.put({ id: 'p', file: { ...file(), nodes, edges } });
+  await buildIndex(storage, 'p');
+  let release: () => void = () => {};
+  const gate = new Promise<void>((r) => (release = r));
+  let first = true;
+  const ends = storage.nodesByIds.bind(storage);
+  storage.nodesByIds = async (id, ids) => {
+    const rows = await ends(id, ids);
+    if (!first || !ids.includes(2)) return rows;
+    first = false;
+    await gate;
+    return rows.map((n): NodeRow => [n[0], n[1], n[2], 9]);
+  };
+  return { storage, release: () => release() };
+}
+
+describe('a chunk that is dropped while it is read (^1263)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('a read that was stopped after its last check never replaces the read that followed it', async () => {
+    const { storage, release } = await gated();
+    const memory = new MapMemory(storage);
+    memory.open('p');
+    memory.show({ cx0: 0, cx1: 0, cy0: 0, cy1: 0 });
+    await vi.advanceTimersByTimeAsync(10);
+    // An edit touches the chunk while it is read: it is read again from the start.
+    const source = {
+      nodes: (n: number[]) => storage.nodesByIds('p', n),
+      edgesAt: (n: number[]) => storage.edgesOf('p', n),
+    };
+    const w = written(await deleteNodes(source, [4]));
+    await storage.patch('p', file(), w.map, w.index);
+    memory.edited(w.patch, ['0,0']);
+    await vi.advanceTimersByTimeAsync(10);
+    release();
+    await vi.advanceTimersByTimeAsync(10);
+    const s = memory.chunks.get('0,0');
+    // The far end 2 is as stored (heading 0), not as the stopped read found it.
+    const end = s?.status === 'ready' ? s.chunk.ends.find((n) => n[0] === 2) : undefined;
+    expect(end?.[3]).toBe(0);
+  });
+});

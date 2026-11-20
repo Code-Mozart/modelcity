@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { screenToWorld } from '../camera/view';
 import { pointOn } from '../curves/piece';
 import { curveOf } from '../map/curve';
-import { segmentAt } from '../map/hit';
+import { interactable, segmentAt } from '../map/hit';
 import { IndexedDbStorage } from '../project/indexedDb';
 import { MemoryStorage, type ProjectStorage } from '../project/storage';
 import { at, editing, size, view } from '../testing/editHarness';
@@ -40,9 +40,11 @@ function pointFor(op: Op, m: DrawModel, rand: Dice) {
 }
 
 /** What the editor finds under a point, as the model takes it. */
-function underOf(e: Harness, pt: { x: number; y: number }): Under {
+function underOf(e: Harness, pt: { x: number; y: number }): Under | null {
   const hover = e.draw.pickAt(pt);
   const world = screenToWorld(view, size, pt);
+  // Where the map is not loaded nothing is placed (a curve can bulge out of the chunks that are).
+  if (!interactable(e.editor.loaded!(), world, reachOf(false, view.scale))) return null;
   if (hover?.kind === 'node') return { kind: 'node', id: hover.id };
   if (hover?.kind === 'segment') {
     const hit = segmentAt(e.editor.loaded!(), world, reachOf(false, view.scale))!;
@@ -66,23 +68,27 @@ class History {
   future: DrawModel[] = [];
 }
 
-/** One operation on the editor and the model; true when it was a step. */
+/** Undo or redo, on the editor and the model: the road drawn goes back with the rows; the next ids never go back. */
+async function moved({ e, h }: Run, op: 'undo' | 'redo', m: DrawModel) {
+  const [from, to] = op === 'undo' ? [h.past, h.future] : [h.future, h.past];
+  const back = from.pop();
+  await (op === 'undo' ? e.editor.undo() : e.editor.redo());
+  if (!back) return m;
+  to.push(m);
+  return { ...back, next: m.next, split: null };
+}
+
+/** One operation on the editor and the model: the model after it. */
 async function operate({ e, h, rand }: Run, op: Op, m: DrawModel) {
-  if (op === 'undo' || op === 'redo') {
-    const [from, to] = op === 'undo' ? [h.past, h.future] : [h.future, h.past];
-    const back = from.pop();
-    await (op === 'undo' ? e.editor.undo() : e.editor.redo());
-    if (!back) return m;
-    to.push(m);
-    return { ...back, next: m.next, split: null };
-  }
+  if (op === 'undo' || op === 'redo') return moved({ e, h, rand }, op, m);
   let next: DrawModel | null;
   if (op === 'finish') {
     next = finished(m);
     await e.editor.rightClick(null, false);
   } else {
     const pt = pointFor(op, m, rand);
-    next = clicked(m, underOf(e, pt), false);
+    const under = underOf(e, pt);
+    next = under && clicked(m, under, false);
     e.draw.down(pt, false);
     e.draw.up();
   }
