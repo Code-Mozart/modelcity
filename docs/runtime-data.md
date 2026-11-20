@@ -13,6 +13,14 @@ What the app holds in memory, operation by operation. Since ^1232 (the tabula ra
 - `Camera` (`camera/camera.svelte.ts`): the view (centre, scale, rotation, grid centre), the size of the canvas, the cursor, panning, rotating, the pressed compass chip, the recent-zoom flag of the scale bar, the touches of a two-finger gesture.
 - The projects list (headers only), the modal (open, row mode, rename draft, hover), the toasts, the version banner.
 
+## Drawing (^1263)
+
+- `Editor.draw` (`editor/editor.svelte.ts`): the road being drawn, its node (`active`), which way (`end`) and where it started (`origin`); a step of the history holds it before and after.
+- `Editor.draft`: what the press of the left button would change, as a `RowChange`, worked out on the loaded rows at each move and drawn over the map (`edit/draftView.ts`: its curves and nodes, and the ids of the loaded rows it hides); gone when the press is written or cancelled.
+- The preview (`editor/drawGhost.ts`): made from the node drawn from, the pointer and what is under it, at each frame it is needed; kept nowhere.
+- `Editor.splitUndo`: the node a split on a curve inserted with its change, so that finishing at once gives the curve back (^237); gone with the next step, undo or redo.
+- The id counters are the header's (`ProjectSession.header`), raised with every change written (`withIdsOf`).
+
 ## The segment index (^1239, ^1248)
 
 - Stored in IndexedDB with the project (`segments`, one record per segment); derived from the nodes and segments, rebuildable (`Ctrl+Comma`). `IndexBuild` (`map/indexBuild.svelte.ts`): `status` (none, building, ready, stopped, failed), `project`, `done` and `total`, `error`; the build runs in a worker. The map is shown only when the status is ready.
@@ -21,6 +29,7 @@ What the app holds in memory, operation by operation. Since ^1232 (the tabula ra
 
 - `MapMemory` (`map/mapMemory.svelte.ts`): `chunks`, one reactive state per chunk asked for: loading (with its progress, real: rows read of rows there are) or ready (the chunk: its node and segment rows as stored), `tooMuch`, `project`. Asked for from the camera: the view and one ring. Chunks are read one at a time each, 4 at the same time, the one nearest the middle of the view first; a read of a chunk that left the view is stopped. Over a budget of rows (`ROW_BUDGET`, 500,000, provisional) chunks are let go (^1246): not asked for now, not pinned, the one asked for longest ago first, then the farthest from the view, down to 80%. `MapMemory.edited` (^1260) takes the rows of an edit that are gone out of the chunks at once and reads the chunks it touches again, each in place (never shown as loading). `ChunkIndex.edgesAt` gives the loaded segments at a node (^1258). The chunks of selected nodes are pinned (`editor/pins.ts`): they are asked for and never let go (^1257); if the pinned chunks alone are over the budget, `onSqueezed` clears the selection.
 - `ChunkLoader` (`map/chunkLoader.ts`): reads one chunk (its nodes, the segments of those, the nodes at their far ends); keeps nothing.
+- After an edit the loaded chunks it touches are patched from what was written (`map/chunkPatch.ts`, ^1262); one that is loading, being read again, or that needs a far end the change does not know is read again.
 - `ChunkIndex` (`map/chunkIndex.ts`, as `MapMemory.index`): the rows of the loaded chunks by id, shared (one row for a segment that two chunks know, counted, let go with the last chunk that has it).
 - `curveOf` (`render/skeleton.ts`): the curve and box of a segment, kept per row (`WeakMap`); `progress` of each chunk that is loading is apart from `chunks`.
 - Drawn from it, so far: the curves of the segments with chevrons, the node dots, and the placeholder of a chunk that is not loaded.
