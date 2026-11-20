@@ -75,6 +75,7 @@
   editor.canEdit = () =>
     session.noProject || (index.status === 'ready' && memory.project === session.id);
   editor.ids = () => session.nextIds();
+  const laneWidth = (lane: number) => session.laneWidth(lane);
   // A blank map that became a project has a complete index and no rows: nothing has to be read (^1263).
   session.onCreated = (id) => {
     index.madeComplete(id);
@@ -195,7 +196,7 @@
 />
 
 <main>
-  <MapCanvas {camera} {memory} {editor} {frames} onUse={(id) => usage.mark(id)} />
+  <MapCanvas {camera} {memory} {editor} {frames} onUse={(id) => usage.mark(id)} {laneWidth} />
   <ModeFrame mode={editor.phase} />
   <IndexPanel build={index} title={session.title} />
   <Hints {hints} />

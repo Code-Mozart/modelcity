@@ -8,6 +8,7 @@ import { lastId, remember, uid } from './browserMemory';
 import { download, exportName } from './download';
 import { openStored } from './open';
 import { createEmpty, headerFor, persist, withIdsOf } from './persist';
+import { LANE_WIDTH_M } from '../curves/lane';
 import type { NextIds } from '../edit/graphPiece';
 import { importStream, type ImportProgress } from './streamImport';
 import { piecesOfFile, piecesOfText } from './textPieces';
@@ -53,7 +54,7 @@ export class ProjectSession extends ProjectModal {
   private lastUpdatedAt = '';
   private saved: Graph | null = null;
   /** The header of the open project as it is stored: what of it is not the session's own (the lane configurations, the id counters) is kept as it is (^1236). */
-  private header: Header | null = null;
+  private header = $state.raw<Header | null>(null);
   /** The map as it is in the storage; null: the project is not there yet. */
   private stored: Graph | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -155,9 +156,8 @@ export class ProjectSession extends ProjectModal {
   }
 
   /** The first save of a map without a project makes it one (^189). */
-  private begin(title = UNTITLED) {
-    const stamp = this.now();
-    this.id = uid();
+  private begin(title = UNTITLED, id = uid(), stamp = this.now()) {
+    this.id = id;
     this.stored = this.header = null;
     [this.title, this.createdAt, this.lastUpdatedAt] = [title, stamp, stamp];
     remember(this.id);
@@ -180,6 +180,11 @@ export class ProjectSession extends ProjectModal {
   /** Told when a blank map became a project (^189), before it is the open one: its index is complete and its map empty. Set by the app. */
   onCreated: ((id: string) => void) | null = null;
 
+  /** The width (meters) of the road of a lane configuration of the open project (^945); the default of a lane for one it does not have. */
+  laneWidth(lane: number): number {
+    return (this.header?.laneConfigurations[String(lane)]?.width ?? LANE_WIDTH_M * 1000) / 1000;
+  }
+
   /** The ids the next node and segment of the open project get (^1224); 0 for a blank map. */
   nextIds(): NextIds {
     return { node: this.header?.nextNodeId ?? 0, edge: this.header?.nextEdgeId ?? 0 };
@@ -190,12 +195,9 @@ export class ProjectSession extends ProjectModal {
     const stamp = this.now();
     const p = { ...this.project(), title: UNTITLED, createdAt: stamp, lastUpdatedAt: stamp };
     const { id, header } = await createEmpty(this.storage, p);
-    [this.title, this.createdAt, this.lastUpdatedAt] = [p.title, stamp, stamp];
-    this.stored = this.saved = this.editor.graph;
-    this.header = header;
     this.onCreated?.(id);
-    this.id = id;
-    remember(id);
+    this.begin(UNTITLED, id, stamp);
+    [this.header, this.stored, this.saved] = [header, this.editor.graph, this.editor.graph];
     await this.refresh();
   }
 

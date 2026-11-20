@@ -5,6 +5,7 @@ import { text, type Frame, type Palette } from './paint';
 import type { SkeletonEdge } from '../map/curve';
 import { drawCurves } from './skeleton';
 import { drawGhost } from './ghost';
+import { drawSurface, type SurfaceEdge } from './surface';
 import { drawScaffoldOver, drawScaffoldUnder, NO_SCAFFOLD, type ScaffoldView } from './scaffold';
 import type { Ghost } from '../editor/drawGhost';
 import { drawBand, drawMarksHalos, drawMarksUnder, NO_MARKS, type Marks } from './marks';
@@ -31,6 +32,10 @@ export interface MapScene {
   ghost?: Ghost | null;
   /** The scaffold of the segments that show it (^60). */
   scaffold?: ScaffoldView;
+  /** The segments of the road surface, with their widths (^945). */
+  surface?: readonly SurfaceEdge[];
+  /** View mode shows the surface only (^104, ^946). */
+  viewing?: boolean;
 }
 
 const NODE_RADIUS_PX = 5.5;
@@ -158,6 +163,8 @@ function drawNodes(f: Frame, chunks: readonly (readonly NodeRow[])[], pal: Palet
 /** The map: the chunks that are not loaded, the curves of the segments, and the nodes of the chunks that are loaded. */
 export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
   for (const c of scene.chunks) if (!c.nodes) drawLoading(f, c.box, c.progress, pal);
+  drawSurface(f, scene.surface ?? [], pal);
+  if (scene.viewing) return drawTooMuch(f, scene, pal);
   const marks = scene.marks ?? NO_MARKS;
   drawMarksUnder(f, marks, pal);
   const scaffold = scene.scaffold ?? NO_SCAFFOLD;
@@ -172,11 +179,11 @@ export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
   );
   drawGhost(f, scene.ghost ?? null, pal);
   drawBand(f, marks, pal);
-  if (scene.tooMuch)
-    text(
-      f.ctx,
-      'zoom in to see the map',
-      { x: f.size.width / 2, y: f.size.height / 2 },
-      { color: pal.muted, align: 'center' },
-    );
+  drawTooMuch(f, scene, pal);
+}
+
+function drawTooMuch(f: Frame, scene: MapScene, pal: Palette) {
+  if (!scene.tooMuch) return;
+  const at = { x: f.size.width / 2, y: f.size.height / 2 };
+  text(f.ctx, 'zoom in to see the map', at, { color: pal.muted, align: 'center' });
 }

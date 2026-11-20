@@ -14,20 +14,20 @@ const SPACING_PX = 72;
 /** A curve this far outside the screen is not drawn (its stroke and chevrons reach in), in pixels. */
 const MARGIN_PX = 12;
 
-/** Trace pieces that follow each other into the current path of the canvas. */
-export function trace(f: Frame, pieces: Piece[]) {
+/** Trace pieces that follow each other into a path: the current path of the canvas, or another one (a `Path2D`). */
+export function trace(f: Frame, pieces: Piece[], to: CanvasPath = f.ctx) {
   const first = pieces[0];
   if (!first) return;
   const a = worldToScreen(f.view, f.size, first.P);
-  f.ctx.moveTo(a.x, a.y);
+  to.moveTo(a.x, a.y);
   for (const piece of pieces) {
     if (piece.type === 'line') {
       const b = worldToScreen(f.view, f.size, piece.Q);
-      f.ctx.lineTo(b.x, b.y);
+      to.lineTo(b.x, b.y);
     } else {
       const c = worldToScreen(f.view, f.size, piece.c);
       const a0 = piece.a0 + f.view.rot;
-      f.ctx.arc(c.x, c.y, piece.r * f.view.scale, a0, a0 + piece.da, piece.da < 0);
+      to.arc(c.x, c.y, piece.r * f.view.scale, a0, a0 + piece.da, piece.da < 0);
     }
   }
 }

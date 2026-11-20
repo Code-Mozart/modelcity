@@ -27,6 +27,11 @@ What the app holds in memory, operation by operation. Since ^1232 (the tabula ra
 - `MovePress` (`editor/movePress.ts`): what the left button holds, the nodes that move with it, where it would merge; the draft of the drag is `Editor.draft`, `Editor.drag` says what is held for the hints.
 - The scaffold (`editor/scaffold.ts`, `render/scaffoldOf.ts`): which segments show it and their guides, made from the pointer and the loaded rows when either changes (also at each frame of the camera while the pointer is over the map); kept nowhere.
 
+## The surface (^1267)
+
+- Nothing is kept: at each frame the curves in view (kept per row, `curveOf`) are stroked as two paths per road width (`render/surface.ts`); the widths come from the lane configurations of the header (`ProjectSession.laneWidth`).
+- What the canvas draws is derived part by part in `render/mapView.svelte.ts` (`MapView`): the chunks in view, their segments, the draft, the marks, the preview, the scaffold and the surface.
+
 ## The segment index (^1239, ^1248)
 
 - Stored in IndexedDB with the project (`segments`, one record per segment); derived from the nodes and segments, rebuildable (`Ctrl+Comma`). `IndexBuild` (`map/indexBuild.svelte.ts`): `status` (none, building, ready, stopped, failed), `project`, `done` and `total`, `error`; the build runs in a worker. The map is shown only when the status is ready.
