@@ -207,3 +207,7 @@ Frames at 100,000 nodes (headless, software drawing), 3,549 nodes in view select
 
 Checked against looking at everything (`map/hit.property.test`): the nearest node and the nearest segment equal what a search of all nodes and segments finds, with a reach larger than a chunk, and the nodes in a box equal the nodes whose screen position is in it, with the view turned and at any scale.
 
+
+### Draw mode and move (^1263, ^1265)
+
+The chunks in memory are patched from what was written instead of being read again (^1262): the node just placed is there for the next click without a read. Headless at 100,000 nodes (2026-11-20, the same machine and run for both), the commit before draw mode against the one after move: established pan 77 / 76 fps, zoom 73 / 71, rotate 40 / 37, pan with the loaded nodes selected 28 / 27: the same within what the machine varies (this machine was slower that day than in the selection round above). The benchmark does not hover: the control points and the scaffold are made from the rows near the pointer when it moves, and the scaffold again at each frame of the camera while the pointer is over the map.
