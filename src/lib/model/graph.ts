@@ -35,7 +35,7 @@ export interface Graph {
   nextEdgeId: number;
 }
 
-const DEFAULT_LANE = 1;
+export const DEFAULT_LANE = 1;
 
 export const emptyGraph = (): Graph => ({
   nodes: [],

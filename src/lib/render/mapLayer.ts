@@ -5,6 +5,8 @@ import { text, type Frame, type Palette } from './paint';
 import type { SkeletonEdge } from '../map/curve';
 import { drawCurves } from './skeleton';
 import { drawGhost } from './ghost';
+import { drawDerived } from './derivedDots';
+import type { Vec } from '../curves/vec';
 import { drawSurface, type SurfaceEdge } from './surface';
 import { drawScaffoldOver, drawScaffoldUnder, NO_SCAFFOLD, type ScaffoldView } from './scaffold';
 import type { Ghost } from '../editor/drawGhost';
@@ -36,6 +38,8 @@ export interface MapScene {
   surface?: readonly SurfaceEdge[];
   /** View mode shows the surface only (^104, ^946). */
   viewing?: boolean;
+  /** The derived nodes in view (^821). */
+  derived?: readonly Vec[];
 }
 
 const NODE_RADIUS_PX = 5.5;
@@ -171,6 +175,12 @@ export function drawMap(f: Frame, scene: MapScene, pal: Palette) {
   drawScaffoldUnder(f, scaffold, pal);
   drawCurves(f, scene.edges, pal);
   drawScaffoldOver(f, scaffold, pal);
+  drawDerived(
+    f,
+    scene.derived ?? [],
+    scene.chunks.flatMap((c) => (c.nodes ? [c.nodes] : [])),
+    pal,
+  );
   drawMarksHalos(f, marks, pal);
   drawNodes(
     f,

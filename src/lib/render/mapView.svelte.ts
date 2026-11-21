@@ -17,6 +17,7 @@ import type { ChunkView, MapScene } from './mapLayer';
 import { marksOf, withTip } from './marksOf';
 import { NO_SCAFFOLD } from './scaffold';
 import { scaffoldOf } from './scaffoldOf';
+import { DerivedMemory } from '../derive/derivedMemory';
 
 /** What the view needs besides the camera, the chunks and the editor. */
 export interface MapViewDeps {
@@ -40,6 +41,14 @@ export class MapView {
   pointer = $state<Point | null>(null);
 
   constructor(private deps: MapViewDeps) {}
+
+  private derivedMemory = new DerivedMemory();
+  /** The derived nodes of the chunks in view (^821, ^1268), kept per chunk; none in view mode. */
+  derived = $derived.by(() => {
+    const { memory, editor } = this.deps;
+    if (editor.mode === 'view') return [];
+    return (this.seen ?? []).flatMap((id) => this.derivedMemory.of(id, memory.chunks) ?? []);
+  });
 
   /** The chunks the screen touches as it is turned (not all of the box round it), or null when that is more than can be shown. */
   seen = $derived.by(() => {
@@ -195,5 +204,6 @@ export class MapView {
     scaffold: this.scaffold,
     surface: this.surface,
     viewing: this.deps.editor.mode === 'view',
+    derived: this.derived,
   }));
 }
