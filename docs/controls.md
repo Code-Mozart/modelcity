@@ -1,3 +1,5 @@
+> **Since ^1232 this describes the old app, removed in the tabula rasa (PR #60). It is the list of what is to be built again; the tests it names are gone.** Built again so far (hint, scenario test in `src/lib/hints/appControls.test.ts`): ^722, ^723, ^725, ^400. Hidden controls (no hint): `Ctrl+Comma` builds the segment index again (^1248; `src/lib/map/rebuildKey.test.ts`, `e2e/segmentIndex.spec.ts`); `Ctrl+Period` shows the frame times (^1252; `src/lib/hud/frameStats.test.ts`, `e2e/map.spec.ts`).
+
 # Controls and features (^371)
 
 **Status: incomplete, on purpose (^371, ^783).** The audit (^371) found every control and gave it a hat, but the *conditions* of each control (in which state it listens, what it says, what it does) are only written down in part: the user's table by context, the walked controls and the controls found in the code but not walked. The full reference comes from the milestone ^783 (controls as data, one table that the code and the hints both read). Until then a new or changed control gets its row in *Controls by context* in the same PR (^786), and `src/lib/testing/controlsMatrix.test.ts` can run the editor over the combinations to compare (its docblock says how). The old file before the audit is in the Git history (`git show origin/main:docs/controls.md` before the merge of ^371).
@@ -80,6 +82,7 @@ The review table of the project owner (`docs/please-remove-me.md`, removed), wit
 | = ^689 | select mode | selected node hovered | Alt+Shift+LMB | add branch to selection | toggle branch selection | control hints panel | yes |
 | ^774 | select mode | unselected node hovered & something selected | LMB | select instead | set selected node | control hints panel | yes |
 | = ^833 | every mode | - | Ctrl+Period | (no hint, hidden on purpose) | switch the pointer coordinates and what is hovered (^871) on or off | under the version, top center | no |
+| = ^1264 | extend mode | - | Del | delete node | delete the node drawn from; the road goes on from the node before | control hints panel | yes |
 | = ^824 | select mode, pointer on a derived node | `LMB` drag | realize node | make the derived node a real node (the segment is split there, its curve does not change) and drag it | control hints panel | no |
 
 ## Controls

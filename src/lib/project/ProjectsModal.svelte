@@ -46,7 +46,12 @@
   /** The cards below the list. */
   const actions = $derived([
     { target: 'import', label: 'Import file…', run: () => file?.click(), current: false },
-    { target: 'export', label: 'Export JSON', run: () => session.exportJson(), current: false },
+    {
+      target: 'export',
+      label: 'Export JSON',
+      run: () => void session.exportJson(),
+      current: false,
+    },
     {
       target: 'new',
       label: 'New project',
@@ -77,8 +82,8 @@
       role="dialog"
       aria-modal="true"
       aria-label="Projects"
-      aria-busy={session.busy}
-      inert={session.busy}
+      aria-busy={session.busy || session.importing !== null}
+      inert={session.busy || session.importing !== null}
       tabindex="-1"
       onpointerdown={(e) => e.stopPropagation()}
     >
@@ -109,6 +114,14 @@
           <ProjectCard {session} {project} {over} />
         {/snippet}
       </FilterList>
+      {#if session.importing}
+        <div class="gap">
+          <Notice kind="info">
+            Importing… {session.importing.nodes.toLocaleString('en')} nodes and
+            {session.importing.edges.toLocaleString('en')} segments stored
+          </Notice>
+        </div>
+      {/if}
       {#if session.error}<div class="gap"><Notice kind="error">{session.error}</Notice></div>{/if}
       <ul class="actions">
         {#each actions as a (a.target)}

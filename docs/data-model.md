@@ -10,7 +10,7 @@ The stored model is a **directed graph with radii and headings**. What is stored
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "title": "modelcity demo map",
   "createdAt": "2026-10-31T06:00:00Z",
   "lastUpdatedAt": "2026-10-31T06:01:00Z",
@@ -20,11 +20,26 @@ The stored model is a **directed graph with radii and headings**. What is stored
     [1, 300000, 50000, 2.3]
   ],
   "edges": [[0, 0, 1, null, 1]],
-  "laneConfigurations": { "1": { "name": "default", "width": 3000 } }
+  "laneConfigurations": { "1": { "name": "default", "width": 3000 } },
+  "nextNodeId": 2,
+  "nextEdgeId": 1
 }
 ```
 
-An export file is exactly one such project object; the browser stores one record per project in the same format (^163 to ^168).
+An export file is exactly one such project object (^163, ^164). The browser keeps the same data in another layout (^1228, below); the file format is not the storage layout.
+
+## The browser storage: IndexedDB (^1228)
+
+The persisted data has **no chunks** and no other spatial structure of its own: only records and the indexes of the database. Database `modelcity`, version 2:
+
+- `projects`, key `id`: `{ id, header }`, the header being the project without `nodes` and `edges` (title, dates, version, camera, lane configurations, the two id counters). The list of projects reads only these.
+- `nodes`, key `[project, id]`: one record `{ p, id, x, y, th }` per node (millimeters). No other index: the nodes of a part of the map are found with the index below (^1250).
+- `edges`, key `[project, id]`: `{ p, id, start, end, radius, lane }`. Indexes: `[project, start]` and `[project, end]`: the segments of a node.
+- `nodecells`, key `[project, id]` (^1250): the cell of each node (the chunk its position is in) with its row, `{ p, id, v, x, y, th, cell: [p, cx, cy] }`, found by an exact lookup of `cell`; derived like `segments`, built with it and rebuildable. Database version 4.
+- `segments`, key `[project, id]` (^1239, ^1248): the segment index, derived from the rows above and rebuildable, never part of the file: `{ p, id, v, box, cells }`; a multi-entry index `cell` finds the segments a chunk is touched by, an index on `[p, v]` counts the records of a version of the derivation.
+- An edit writes the header and the rows that changed (found by id), not the project, in one transaction (^1260). With the change it brings what it does to the index (`IndexChange`: the records and cells that are new or different, the ids of those that are gone), and a complete index of the current version is kept and brought up to date in the same step (a project's marker stays); a change without it, or when the index is not complete, throws the index away as before. The rows are what an operation read from the storage, so the storage is the map; the index is derived and an edit that keeps it current is tested to give what a build gives (`edit/indexMaintenance.test`).
+- Records of the first layout, `{ id, file }` (the whole file in one record), are still read; they are written in this layout when they are read. A damaged file (rows that are not rows) stays in one record, so that it is refused when it is opened (^229).
+- The nodes and segments of a project come back in the order of their ids.
 
 ## Conventions
 
@@ -32,18 +47,19 @@ An export file is exactly one such project object; the browser stores one record
 - **Angles are radians.** A heading of 0 points east (+x); positive turns clockwise on the screen (y is down), so 1.5708 points south. A heading is the direction of travel.
 - **Camera:** `x`, `y` is the world point at the center of the viewport; `scale` is pixels per meter (float); `rotation` is the rotation of the world about that center, positive clockwise on the screen, and 0 has north (-y) at the top (as `View` in `src/lib/camera/view.ts`, whose field is called `rot`).
 - **Dates** are ISO 8601 UTC strings; `version` is an integer.
-- **Ids** are integers. A new id is the largest id of its kind in the project plus 1 (no counters are stored).
+- **Ids** are integers and may have gaps (removing leaves a hole; the id is a key, not the list index). A new node or edge takes `nextNodeId` or `nextEdgeId` and the counter goes up by 1, so an id is never reused (^1224). Each counter is above every id of its kind.
+- **Version 2** (^1224) added the two counters. Migration 1 to 2: the largest id of the kind + 1 (0 if none).
 
-## Nodes: `[id, x, y, heading]` (densely packed)
+## Nodes: `[id, x, y, heading]` (a list of rows, ids may have gaps)
 
 One heading per node. A node is shared by all edges that meet there.
 
-## Edges: `[id, startNodeId, endNodeId, radius, laneConfigurationId]` (densely packed)
+## Edges: `[id, startNodeId, endNodeId, radius, laneConfigurationId]` (a list of rows, ids may have gaps)
 
 - The edge runs from the start to the end node; that is its direction of travel.
 - `radius` is an integer in millimeters, or `null` for automatic (the largest that fits, ^8). It is the only nullable element. The minimum is half the width of the lane configuration, 1.5 m for the default lane (^942, which replaces the 0.5 m of ^57). Only this constraint changed, not the structure of the file: a project that stores a smaller radius is neither refused nor repaired, it loads as it is and the editor draws it with the minimum (^942).
 - There is no shape tag: the shape is derived from the two positions, the two headings and the radius (^172).
 
-## Lane configurations: `{ "<id>": { "name": string, "width": mm } }` (not densely packed)
+## Lane configurations: `{ "<id>": { "name": string, "width": mm } }` (keyed by id)
 
 A named set of lane properties that edges refer to. Today only `name` and `width` (the default is 3000, ^90).

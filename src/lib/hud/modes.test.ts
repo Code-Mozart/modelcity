@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MODES } from './modes';
+import { MODES, shownIn } from './modes';
 
 describe('mode labels (^119)', () => {
   it('each mode has a lower case name and its own color', () => {
@@ -9,6 +9,12 @@ describe('mode labels (^119)', () => {
       'extend mode',
       'view mode',
     ]);
-    expect(new Set(Object.values(MODES).map((m) => m.color)).size).toBe(3);
+    // Draw mode and view mode share the ink, as on `main`; each has its own icon.
+    expect(new Set(Object.values(MODES).map((m) => m.icon)).size).toBe(4);
+  });
+
+  it('view mode shows itself and select mode, its way out (^104)', () => {
+    expect(shownIn('view')).toEqual(['view', 'select']);
+    expect(shownIn('select')).toEqual(['view', 'select', 'draw', 'extend']);
   });
 });

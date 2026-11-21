@@ -1,88 +1,129 @@
 import { describe, expect, it } from 'vitest';
-import type { Snapshot } from './types';
-import { emptyGraph } from '../model/graph';
-import { lastBatchSize } from '../testing/editorHelpers';
 import {
+  batchSizes,
   MAX_STEPS,
   NO_HISTORY,
   record,
   redoStep,
   undoStep,
   type History,
-  type StepKind,
+  type NewStep,
 } from './history';
+import {
+  applyDelta,
+  deltaOf,
+  NOTHING,
+  sameSelection,
+  selectionName,
+  type Selection,
+} from './selection';
 
-const snap = (n: number): Snapshot => ({
-  graph: emptyGraph(),
-  active: n,
-  end: 'end',
-  origin: null,
-  selection: [],
+const pick = (...ids: number[]): Selection => new Set(ids);
+
+/** The history after a step from one selection to another: it is a selection step, and continues a batch. */
+function take(h: History, before: Selection, after: Selection, extra: Partial<NewStep> = {}) {
+  return record(h, {
+    name: selectionName(before, after),
+    kind: 'select',
+    continues: true,
+    selection: deltaOf(before, after),
+    selectedAfter: after.size,
+    ...extra,
+  });
+}
+
+/** The selection after steps are undone (newest first) or done again. */
+const through = (
+  sel: Selection,
+  steps: { selection: ReturnType<typeof deltaOf> }[],
+  undo: boolean,
+) => steps.reduce((s, step) => applyDelta(s, step.selection, undo), sel);
+
+describe('the history (^81, ^103, ^216)', () => {
+  it('goes back one step and forward again', () => {
+    let h = take(NO_HISTORY, NOTHING, pick(1));
+    h = take(h, pick(1), pick(1, 2));
+    const back = undoStep(h)!;
+    expect(back.steps.map((s) => s.name)).toEqual(['select node']);
+    expect(through(pick(1, 2), back.steps, true)).toEqual(pick(1));
+    const again = redoStep(back.history)!;
+    expect(through(pick(1), again.steps, false)).toEqual(pick(1, 2));
+    expect(redoStep(again.history)).toBeNull();
+    expect(undoStep(NO_HISTORY)).toBeNull();
+  });
+
+  it('puts the steps of a run of selections in one batch, which Alt moves at once', () => {
+    let h = take(NO_HISTORY, NOTHING, pick(1));
+    h = take(h, pick(1), pick(1, 2));
+    h = take(h, pick(1, 2), pick(1, 2, 3));
+    expect(batchSizes(h)).toEqual({ undo: 3, redo: 0 });
+    const back = undoStep(h, true)!;
+    expect(back.steps).toHaveLength(3);
+    expect(through(pick(1, 2, 3), back.steps, true).size).toBe(0);
+    expect(batchSizes(back.history)).toEqual({ undo: 0, redo: 3 });
+    const forth = redoStep(back.history, true)!;
+    expect(through(NOTHING, forth.steps, false)).toEqual(pick(1, 2, 3));
+  });
 });
 
-/** Take a step from state `n` to `n + 1`. */
-const take = (h: History, n: number, kind: StepKind = null, continues = true): History =>
-  record(h, { name: `step ${n}`, kind, before: snap(n), after: snap(n + 1), continues }).history;
-
-describe('history (^81)', () => {
-  it('undoes and redoes steps in order', () => {
-    const h = take(take(NO_HISTORY, 1), 2);
-    const u1 = undoStep(h)!;
-    expect(u1.to.active).toBe(2);
-    const u2 = undoStep(u1.history)!;
-    expect(u2.to.active).toBe(1);
-    expect(undoStep(u2.history)).toBeNull();
-    const r = redoStep(u2.history)!;
-    expect(r.to.active).toBe(2);
-    expect(r.history.past.map((s) => s.name)).toEqual(['step 1']);
+describe('the batches of the history (^216)', () => {
+  it('starts a batch of its own after an undo, and a step of another kind does not join', () => {
+    let h = take(NO_HISTORY, NOTHING, pick(1));
+    h = undoStep(h)!.history;
+    h = take(h, NOTHING, pick(2));
+    h = take(h, pick(2), pick(2, 3));
+    expect(batchSizes(h).undo).toBe(2);
+    h = take(h, pick(2, 3), pick(2, 3), { kind: null, name: 'move node', continues: false });
+    h = take(h, pick(2, 3), NOTHING);
+    expect(batchSizes(h).undo).toBe(1);
   });
 
-  it('a new step clears what could be redone', () => {
-    const u = undoStep(take(NO_HISTORY, 1))!;
-    expect(u.history.future).toHaveLength(1);
-    expect(take(u.history, 5).future).toEqual([]);
-  });
-
-  it('keeps a limited number of steps', () => {
-    let h = NO_HISTORY;
-    for (let i = 0; i < MAX_STEPS + 10; i++) h = take(h, i);
+  it('forgets what was undone when a new step is taken, and keeps the last MAX_STEPS', () => {
+    let h = take(NO_HISTORY, NOTHING, pick(1));
+    h = undoStep(h)!.history;
+    h = take(h, NOTHING, pick(2));
+    expect(h.future).toEqual([]);
+    for (let i = 0; i < MAX_STEPS + 10; i++) h = take(h, pick(i), pick(i + 1));
     expect(h.past).toHaveLength(MAX_STEPS);
-    expect(h.past[0]!.before.active).toBe(10);
   });
 });
 
-describe('batches (^103, ^216)', () => {
-  const selects = (n: number) => {
-    let h = NO_HISTORY;
-    for (let i = 0; i < n; i++) h = take(h, i, 'select');
-    return h;
-  };
+/** A run of random selection steps: the history and the selection at its end. */
+function randomRun(rand: (n: number) => number) {
+  let h: History = NO_HISTORY;
+  let sel: Selection = NOTHING;
+  for (let i = 0; i < 1 + rand(20); i++) {
+    const next = new Set(Array.from({ length: rand(5) }, () => rand(8)));
+    h = take(h, sel, next, { continues: rand(2) === 0 });
+    sel = next;
+  }
+  return { h, sel };
+}
 
-  it('consecutive steps of one kind are one batch; other steps and kinds are not', () => {
-    expect(lastBatchSize(selects(3).past)).toBe(3);
-    expect(lastBatchSize(take(selects(3), 3, null).past)).toBe(1);
-    expect(lastBatchSize(take(selects(3), 3, 'draw').past)).toBe(1);
-    expect(lastBatchSize(take(selects(3), 3, 'select', false).past)).toBe(1);
-  });
+/** Undo (or redo) until nothing is left, one step or a batch at a time as the dice say. */
+function walk(
+  start: { h: History; sel: Selection },
+  move: typeof undoStep,
+  undo: boolean,
+  rand: (n: number) => number,
+) {
+  let { h, sel } = start;
+  for (let m = move(h, rand(2) === 0); m; m = move(h, rand(2) === 0)) {
+    sel = through(sel, m.steps, undo);
+    h = m.history;
+  }
+  return { h, sel };
+}
 
-  it('a whole batch is undone and redone at once, a single step one by one', () => {
-    const h = selects(3);
-    const u = undoStep(h, true)!;
-    expect(u.steps).toHaveLength(3);
-    expect(u.to.active).toBe(0);
-    expect(u.history.past).toEqual([]);
-    const r = redoStep(u.history, true)!;
-    expect(r.steps.map((s) => s.name)).toEqual(['step 0', 'step 1', 'step 2']);
-    expect(r.to.active).toBe(3);
-    const one = undoStep(h)!;
-    expect(one.steps.map((s) => s.name)).toEqual(['step 2']);
-    expect(redoStep(one.history)!.to.active).toBe(3);
-    expect(lastBatchSize(one.history.future)).toBe(1);
-  });
-
-  it('a step after an undo starts a batch of its own', () => {
-    const u = undoStep(selects(2))!;
-    const h = take(u.history, 1, 'select');
-    expect(lastBatchSize(h.past)).toBe(1);
+describe('the history of any run of selections (^216)', () => {
+  it('undoing all of it gives the start, and doing it again the end (random runs)', () => {
+    let seed = 7;
+    const rand = (n: number) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+    for (let run = 0; run < 50; run++) {
+      const made = randomRun(rand);
+      const back = walk(made, undoStep, true, rand);
+      expect(sameSelection(back.sel, NOTHING)).toBe(true);
+      expect(sameSelection(walk(back, redoStep, false, rand).sel, made.sel)).toBe(true);
+    }
   });
 });

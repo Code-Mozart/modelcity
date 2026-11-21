@@ -1,50 +1,35 @@
 <script lang="ts">
-  import { cornersOf, hullsOf } from './editor/corners';
-  import { segmentSigns } from './editor/signs';
-  import { markingsOf } from './editor/markings';
-  import { dotsOf, holesOf, patched, surfaceFrom } from './editor/surface';
-  import { laneChangeLines, laneChangesOf } from './editor/laneChanges';
-  import { laneArrows } from './editor/laneArrows';
-  import { junctionEdgeIds, laneFactsOf } from './editor/laneFacts';
-  import { incompleteArrows, waitLines } from './editor/priorityMarks';
-  import { laneHull } from './editor/laneHull';
-  import { goresOf } from './editor/gores';
-  import { dropOf, dropPreview, roadsShown } from './editor/drop';
-  import { turningOf } from './editor/turning';
-  import { headingSourceOrigins } from './editor/hintState';
-  import { snapOrigins } from './snap/heading';
-  import { scaffoldHidden } from './editor/phase';
-  import { followingTower } from './editor/sharedRadius';
-  import { barsOf, towersOf } from './editor/towers';
-  import { withDerived } from './editor/derived';
-  import { windowOf } from './editor/window.svelte';
-  import { previousPlaces } from './editor/snapping';
   import { onMount, untrack } from 'svelte';
   import type { Camera } from './camera/camera.svelte';
-  import type { Editor, PointerInfo } from './editor/editor.svelte';
   import { FEATURES } from './features';
-  import type { ControlId } from './hints/hints';
-  import { chainSelection } from './editor/chains';
   import { render } from './render/render';
-  import { screenToWorld, worldToScreen, type Point } from './camera/view';
+  import { MapView } from './render/mapView.svelte';
+  import type { FrameStats } from './hud/frameStats.svelte';
+  import type { Editor } from './editor/editor.svelte';
+  import { SelectPress } from './editor/selectPress';
+  import { DrawPress, cursorOf } from './editor/drawPress';
+  import { MovePress, gripOf } from './editor/movePress';
+  import type { Point } from './camera/view';
+  import type { ControlId } from './hints/hints';
+  import { CHUNK_M } from './map/chunks';
+  import { chunksInView, overlapsView } from './map/inView';
+  import type { MapMemory } from './map/mapMemory.svelte';
 
   let {
-    editor,
     camera,
+    memory,
+    editor,
+    frames,
     onUse,
-    debug = false,
-    walk = 0,
-    physical = false,
+    laneWidth,
   }: {
-    editor: Editor;
     camera: Camera;
+    memory: MapMemory;
+    editor: Editor;
+    frames: FrameStats;
     onUse: (id: ControlId) => void;
-    /** The debug layer is on: the hulls and corners are drawn (^925). */
-    debug?: boolean;
-    /** How far the dots of the debug layer have walked along their polygons, in meters (^948). */
-    walk?: number;
-    /** Physical lane markings (meters) instead of the logical ones (pixels), ^1040. */
-    physical?: boolean;
+    /** The width (meters) of the road of a lane configuration (^945). */
+    laneWidth: (lane: number) => number;
   } = $props();
 
   const LINE_PX = 16;
@@ -61,155 +46,48 @@
     canvas.height = Math.round(camera.size.height * dpr);
   }
 
-  // Keep the camera on the content (^37); also re-checks when the window size changes.
+  // The chunks the screen touches and one ring round them are asked for (^1238).
   $effect(() => {
-    const anchors = editor.anchors;
-    void camera.size;
-    untrack(() => camera.setAnchors(anchors));
+    void memory.project;
+    // The chunks of the selection are asked for as well (^1257): they change with the selection.
+    void memory.pinned.size;
+    const range = chunksInView(camera.view, camera.size, CHUNK_M);
+    const near = overlapsView(camera.view, camera.size, CHUNK_M);
+    untrack(() => void memory.show(range, near));
   });
 
-  /** The window on the map (^1216): the view with room round it, in steps, so that panning a little does not make the road again. A text, so that an equal window is not a new value. */
-  const windowKey = $derived(windowOf(camera.view, camera.size));
-  $effect.pre(() => {
-    editor.view.source = () => windowKey;
-  });
-
-  /** The derived nodes, the graph with them in it, and the towers and bars of that, all derived from the graph (^350, ^822). */
-  const derivedAll = $derived(editor.view.derived);
-  const seen = $derived(withDerived(editor.view.shown, derivedAll));
-  const bars = $derived(barsOf(seen));
-  /** The hulls of the segments, the road surface round them (^945) and, while the debug layer is on, the hulls and corners (^925). */
-  const allHulls = $derived(hullsOf(editor.view.shown));
-  /** The lane changes (extensions and merges, ^1056), the gores between their lanes (^1065) and the arrows of the lanes that end (^1029). */
-  const changes = $derived(laneChangesOf(seen));
-  const gores = $derived(goresOf(seen, changes, allHulls));
-  const rawSurface = $derived(
-    surfaceFrom(
-      allHulls,
-      gores.map((w) => w.loop),
-    ),
-  );
-  /** The surface with its tiny holes patched (^1042). */
-  const surface = $derived(patched(rawSurface));
-  /** What can be said about each lane in (^1101): the give-way lines (^1074, ^1075) and the arrows where a turn is missing (^1076). */
-  const facts = $derived(laneFactsOf(editor.view.shown));
-  const arrows = $derived([...laneArrows(seen, changes), ...incompleteArrows(facts)]);
-  /** The hull round what the lane in that the pointer is on meets, in the debug layer (^1102). */
-  const hoveredHull = $derived.by(() => {
-    const h = editor.hover;
-    const node = debug && h?.kind === 'handle' && h.handle.type === 'node' ? h.handle.id : null;
-    const f = facts.find((x) => x.node.id === node);
-    return f ? laneHull(editor.view.shown, f) : [];
-  });
-  const hulls = $derived(
-    debug
-      ? {
-          hulls: allHulls.map((h) => h.hull),
-          corners: cornersOf(allHulls).map((c) => c.at),
-          dots: dotsOf(surface, walk),
-          signs: segmentSigns(editor.view.shown, seen),
-          holes: holesOf(rawSurface),
-          junction: hoveredHull,
-        }
-      : null,
-  );
-  /** The lane markings, derived from the graph with the derived nodes in it (^956), and the dashed lines through the lane changes (^1057). */
-  const markings = $derived(
-    markingsOf(seen, {
-      physical,
-      extra: [...laneChangeLines(seen, changes), ...gores.flatMap((w) => w.markings)],
-      surface,
-      inside: junctionEdgeIds(editor.view.shown),
+  /** What the canvas draws, derived part by part (`MapView`). */
+  const view = $derived(
+    new MapView({
+      camera,
+      memory,
+      editor,
+      laneWidth: (lane) => laneWidth(lane),
+      ghostTarget: (at, hover) => drawPress.ghostTarget(at, hover),
     }),
   );
-  /** Everything painted on the road surface (^949, ^1029). */
-  const marks = $derived({ markings, waitLines: waitLines(facts), arrows, physical });
-  const towers = $derived(
-    towersOf(seen).map((t) => ({ nodes: t, derived: t.every((n) => n.id < 0) })),
-  );
+  const loadedMap = () => memory.loaded();
 
-  /** Where a node would be dropped, if one is being dragged. */
-  const drop = $derived(dropOf(editor.graph, editor.press, editor.snapped, editor.view.of));
-  /** The zoom alone: panning changes the view but not this, so what depends on it only is not made again (^940). */
-  const scale = $derived(camera.view.scale);
-  const handles = $derived(editor.handles(scale));
-  /** Everything of the scene that does not depend on the camera: made when the editor changes, not every frame of a pan (^940). */
-  const sceneBase = $derived({
-    roads: roadsShown(editor.chains, editor.graph, editor.press, drop),
-    selection: chainSelection(editor.chains, editor.selection),
-    band: editor.band,
-    drawing: editor.drawing,
-    viewing: editor.viewing,
-    selectedSegments: editor.selectedSegments,
-    outline: editor.hoverSegments,
-    hideScaffold: scaffoldHidden({
-      phase: editor.phase,
-      movingGroup: editor.movingGroup,
-      ctrl: editor.pointer?.ctrl === true,
-      dropping: drop !== null,
-    }),
-    hover: editor.hover,
-    mergePreview: editor.mergePreview,
-    focus: editor.focus,
-    pointer: editor.pointer,
-    snap: editor.snapped,
-    previous: editor.pointer?.ctrl ? [] : previousPlaces(editor.press),
-    nearby: editor.nearbyPoints,
-    dropPreview: dropPreview(editor.graph, editor.press, drop),
-    pinned: chainSelection(editor.chains, editor.pins.list),
-    headingFrom: headingSourceOrigins(editor),
-    snapFrom: snapOrigins(editor.snapped),
-    bars: bars,
-    towers: towers,
-    derived: derivedAll,
-    surface,
-    ...marks,
-    hulls,
-    tower: followingTower(editor.graph, editor.chains, editor.focus, editor.selection),
-    turning: turningOf(editor.chains, editor.press),
-  });
-
-  // Redraw whenever the camera or anything the editor exposes changes.
+  // Redraw whenever the camera or the map in memory changes.
   $effect(() => {
-    const scene = { ...sceneBase, handles };
-    const frame = { ctx: canvas.getContext('2d')!, view: camera.view, size: camera.size };
-    render(frame, dpr, scene, { showGrid: FEATURES.grid, showScaleBar: camera.scaleBarVisible });
+    const began = performance.now();
+    // A plain copy of the view: the numbers are read for every node, and reading them through the state of the camera is slow (^1249).
+    const frame = {
+      ctx: canvas.getContext('2d')!,
+      view: { ...camera.view },
+      size: { ...camera.size },
+    };
+    render(frame, dpr, view.scene, {
+      showGrid: FEATURES.grid,
+      showScaleBar: camera.scaleBarVisible,
+    });
+    frames.record(began, performance.now());
   });
 
   function localPoint(e: MouseEvent): Point {
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
-
-  /** Where the pointer last was on the canvas, and with what keys, to find it again when the view moves. */
-  let last: Pick<PointerInfo, 'screen' | 'touch' | 'shift' | 'alt' | 'ctrl'> | null = null;
-
-  function infoAt(at: NonNullable<typeof last>): PointerInfo {
-    return {
-      ...at,
-      pt: screenToWorld(camera.view, camera.size, at.screen),
-      project: (p) => worldToScreen(camera.view, camera.size, p),
-      scale: camera.view.scale,
-    };
-  }
-
-  function info(e: PointerEvent | MouseEvent): PointerInfo {
-    const touch = 'pointerType' in e && e.pointerType === 'touch';
-    last = {
-      screen: localPoint(e),
-      touch,
-      shift: e.shiftKey,
-      alt: e.altKey,
-      ctrl: e.ctrlKey || e.metaKey,
-    };
-    return infoAt(last);
-  }
-
-  // The view moved (wheel, pan, rotate, keys): the pointer is over another place now (^238).
-  $effect(() => {
-    void camera.view;
-    untrack(() => last && editor.look(infoAt(last)));
-  });
 
   function onWheel(e: WheelEvent) {
     e.preventDefault();
@@ -218,24 +96,45 @@
     camera.zoomWheel(e.deltaY * unit * (e.ctrlKey ? PINCH_BOOST : 1), localPoint(e));
   }
 
-  /** Left press: creates or edits, or spans the selection box (^70). */
-  function leftDown(e: PointerEvent, at: Point) {
-    if (camera.rotating) camera.compassClick(at);
-    else editor.pointerDown(info(e));
+  const around = {
+    map: loadedMap,
+    screen: () => ({ view: camera.view, size: camera.size }),
+  };
+  const press = $derived(new SelectPress(editor, around));
+  const drawPress = $derived(new DrawPress(editor, around));
+  const movePress = $derived(new MovePress(editor, around));
+  $effect(() => {
+    const [d, m] = [drawPress, movePress];
+    editor.cancelPress = () => m.cancel() || d.cancel();
+  });
+
+  /** The left button: the compass while the view is turned, else what the mode does with it. */
+  function leftDown(at: Point, e: PointerEvent) {
+    if (camera.rotating) return camera.compassClick(at);
+    if (editor.mode === 'view') return;
+    // A node or a control point can be dragged (^1265); without a drag the press of the mode makes it a click.
+    const grip = gripOf(press.pickAt(at));
+    if (grip) movePress.grab(grip, at, e.shiftKey, e.altKey);
+    if (editor.mode === 'select' && !editor.busy) press.down(at, e.shiftKey, e.altKey);
+    else if (editor.mode === 'draw') drawPress.down(at, e.altKey);
   }
 
-  /** One finger is the left button; a second finger turns the gesture into a camera move. */
-  function touchDown(e: PointerEvent, at: Point) {
-    if (camera.touchDown(e.pointerId, at) >= 2) editor.cancelPress();
-    else editor.pointerDown(info(e));
+  /** The left button moved while it is down: a drag of what it holds, or what the press of the mode does. */
+  function leftMove(at: Point, e: PointerEvent) {
+    if (movePress.move(at, e.ctrlKey || e.metaKey)) {
+      press.forget();
+      drawPress.forget();
+    } else if (press.active) press.move(at);
+    else if (drawPress.active) drawPress.move(at, e.ctrlKey || e.metaKey);
   }
 
   function onPointerDown(e: PointerEvent) {
     canvas.setPointerCapture(e.pointerId);
     const at = localPoint(e);
     camera.cursor = at;
-    if (e.pointerType === 'touch') touchDown(e, at);
-    else if (e.button === 0) leftDown(e, at);
+    editor.alt = e.altKey;
+    if (e.pointerType === 'touch') camera.touchDown(e.pointerId, at);
+    else if (e.button === 0) leftDown(at, e);
     else if (e.button === 1) camera.startRotate(at);
     else if (e.button === 2) camera.startPan(at);
   }
@@ -243,28 +142,36 @@
   function onPointerMove(e: PointerEvent) {
     const at = localPoint(e);
     camera.cursor = at;
-    // Also while the view moves, so that the preview follows the pointer over the map (^277).
-    const pointer = info(e);
+    editor.alt = e.altKey;
     if (e.pointerType === 'touch' && camera.touchMove(e.pointerId, at)) return;
     if (camera.rotating) camera.moveRotate(at);
     else if (camera.panning) camera.movePan(at);
-    else editor.pointerMove(pointer);
+    else if (movePress.active || press.active || drawPress.active) leftMove(at, e);
+    else if (editor.mode !== 'view') editor.hover = press.pickAt(at, e.pointerType === 'touch');
+    view.pointer = at;
   }
 
   function onPointerUp(e: PointerEvent) {
-    if (e.pointerType === 'touch') {
-      camera.touchUp(e.pointerId);
-      editor.pointerUp();
-    } else if (e.button === 0) {
+    if (e.pointerType === 'touch') camera.touchUp(e.pointerId);
+    else if (e.button === 0) {
       camera.releaseChip();
-      editor.pointerUp();
+      const held = movePress.up();
+      if (held) {
+        press.forget();
+        drawPress.forget();
+        return onUse('move');
+      }
+      if (drawPress.active) return drawPress.up();
+      const did = press.up();
+      if (did === 'click') onUse('select');
+      else if (did === 'box') onUse('box');
     } else if (e.button === 1) {
       camera.endRotate();
       onUse('rotate');
     } else if (e.button === 2) {
-      // A right click without movement removes a node or a segment, or finishes the road; a right drag only pans.
-      if (!camera.endPan()) editor.rightClick(info(e));
-      else onUse('pan');
+      // Pulled: a pan. Not moved: a click, which deletes what is under the pointer (^489, ^920).
+      if (camera.endPan()) onUse('pan');
+      else void editor.rightClick(press.pickAt(localPoint(e)), e.altKey);
     }
   }
 
@@ -277,13 +184,19 @@
 
 <canvas
   bind:this={canvas}
-  style:cursor={camera.rotating ? 'none' : camera.panning ? 'grabbing' : editor.cursor}
+  style:cursor={editor.busy
+    ? 'progress'
+    : camera.rotating
+      ? 'none'
+      : camera.panning
+        ? 'grabbing'
+        : cursorOf(editor.mode, editor.hover)}
   onwheel={onWheel}
   onpointerdown={onPointerDown}
   onpointermove={onPointerMove}
   onpointerup={onPointerUp}
   onpointercancel={onPointerUp}
-  onpointerleave={() => editor.look(null)}
+  onpointerleave={() => ((editor.hover = null), (view.pointer = null))}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
   oncontextmenu={(e) => e.preventDefault()}
 ></canvas>

@@ -77,3 +77,137 @@ What it found, and what was done:
 
 - **Two real changes of behaviour**, both of the optimizations and both fixed: derived nodes were counted as touching nodes, and the point-in-surface test counted the crossings of the loops that hold the point only (it now also takes the box and the band of the ray with the tolerance). The test `editor/derivedOrder.test` and the 8000 random points of `curves/insideOf.test` keep them from coming back. The derived nodes, towers, bars, hulls, surface, lane facts, give-way lines, arrows and markings (logical and physical) of the junction, priority and small T grounds are now **identical to the base, to the last digit**.
 - **The pictures are not pixel for pixel the same**, only because of what is not drawn off the screen (^939): the surface fill of fewer loops gives anti-aliasing that differs by one level of 255 on a few pixels in about 180 of the 411 views, and leaving out marks and lines off the screen changes the state the canvas keeps for the next one (the dash pattern), so that a dash of a give-way line starts a fraction of a pixel elsewhere in 13 views. With the surface culling switched off 13 of the 411 views differed, and with the culling of marks switched off as well the three of them that were tried were identical; a full run with all culling off was not made.
+
+## The chunked map (PR #60, ^1249)
+
+Measured in a real browser (headless Chromium on a 4-core container with 16 GB), on the production build, one big connected road network (`bench/chunks.spec.ts`, `bun run bench`, `NODES=100000`; rows of straight roads 40 m apart joined by S-curves at every 8th column; about 1.12 segments per node). The view is 1200 x 800 m at 1 px per meter: 48 chunks (the screen and one ring). Compare on one machine only (^930).
+
+| | 20,000 nodes | 100,000 nodes |
+|---|---|---|
+| Import of the file (parse, check, write all rows) | 2.6 s | 11.7 s |
+| Build of the segment index (in the worker) | 2.9 s | 15.5 s |
+| Storage used by the project | 26 MB | 141 MB |
+| Open a project (header, count of the index) | 0.04 s | 0.05 s (0.07 s with the count) |
+| First view: all 48 chunks loaded | 2.4 s | 3.2 s |
+| Read of one chunk (median) | 0.22 s | 0.29 s |
+| Rows in a chunk | 97 | 99 |
+| Pan at 300 m/s for 10 s: median frame | 17 ms | 17 ms |
+| ... frames over 50 ms | 10 of 124 (3 s) | 50 of 299 |
+| JS heap | 3.7 MB | 4.6 MB |
+
+What was found, and done:
+
+- **A cursor reads a row per request and was 20 times slower than a few requests that ask for parts at once.** The nodes of a chunk are now read in up to 8 parts, all at once, and the nodes and the segments of a chunk are asked at the same time (a read of a chunk went from 0.50 s to 0.29 s at 100k).
+- **A dev build is much slower than the production one** in the reactivity of Svelte (a stack is captured for every read of a reactive map): the benchmarks run on the production build (`VITE_TEST_HOOK=1`, names of the functions kept).
+- **The drawing of the nodes read the view through the proxy of the state of the camera for every number of every node** (0.6 s of 10 s of panning, plus 0.6 s of reads of the reactivity): a plain copy of the view, the projection worked out once, one path for all dots (the JS time of the pan went from about 2.2 s to 0.5 s).
+- **The id of a project was a UUID, in the key of every record and every entry of every index: half of the storage.** New projects have 8 characters (26 MB instead of 52 MB at 20k; 141 MB instead of 261 MB at 100k). Projects that have a UUID keep it.
+
+What is left (not within the limits yet; 300,000 nodes is not tried before this is):
+
+- **(Done, ^1250: see below.) The nodes of a chunk were found by the strip of the index on x (or on y) that holds fewer: 2,200 rows for the 99 that are in the chunk, 22 times too many** (the strip grows with the square root of the number of nodes). Reading the rows of the chunk alone is 0.9 ms against 15 ms for the strip, and four reads at the same time are 2 ms against 49 ms: the strips are what blocks the main thread for 50 to 117 ms (the structured clone of the rows), which are the frames over 50 ms while panning.
+- Import 12 s and the build of the index 16 s per 100,000 nodes (about 65 and 140 microseconds a row): about 6 to 7 minutes for 2,000,000 nodes. One request per row.
+- 1.4 KB of storage per node, with its segment and the index: 2.8 GB for 2,000,000 nodes.
+
+### Nodes found by their cell (^1250)
+
+The nodes of a chunk are one exact lookup of their cell in a derived store (`nodecells`, built with the index of the segments), and the indexes on x and y of the nodes are gone. At 100,000 nodes, same map and machine:
+
+| | strip of the index on x or y | cell of the node |
+|---|---|---|
+| Read of one chunk (median) | 288 ms | 101 ms |
+| First view (48 chunks) | 3.2 s | 1.2 s |
+| Pan 300 m/s: frames in 10 s | 299 | 529 |
+| ... frame time, 95th percentile / worst | 117 / 133 ms | 33 / 67 ms |
+| ... frames over 50 ms | 50 | 14 |
+| Build of the index | 15.5 s | 28 s (twice the rows) |
+| Storage | 141 MB | 160 MB (+13.5%) |
+| Import | 11.7 s | 10.8 s |
+
+### The established view (^1251)
+
+After the chunks of the view are loaded (`bench/established.spec.ts`, 5 s each, the frame rate limit of the browser lifted, headless Chromium on the production build, no GPU: the canvas is rasterized by software), at 1 px per meter:
+
+| | 20,000 nodes | 100,000 nodes |
+|---|---|---|
+| Pan 80 m back and forth: frames per second | 88 | 78 |
+| ... median / 95th percentile frame | 11.3 / 13.5 ms | 11.8 / 19.8 ms |
+| Zoom 15%: frames per second | 84 | 72 |
+| Rotate 0.4 rad: frames per second | 26 | 34 |
+| ... median frame | 24.5 ms | 25 ms |
+| Rows in view (nodes and segments) | 4,725 | 4,805 |
+
+The same at both sizes, within what the machine varies: the established view does not depend on the size of the map. The profile of a pan: the main thread is in the browser's own code (the rasterization) for 4.3 s of 5 s, JavaScript is about 0.6 s (about 1 ms a frame). Rotating costs about twice: the box of the view that is round the turned screen is larger than the screen, so more chunks are asked for (in the test 9 to 24 more reads, which are the frames over 50 ms) and more curves are drawn than are on the screen.
+
+Culling by the turned screen instead of the box round it (`overlapsView`): chunks to ask for, chunks to show and curves to draw are those that the screen as it is turned touches. Rotating at 100,000 nodes: 34 to 36 frames per second, median frame 25 to 23.7 ms, 9 to 5 new chunk reads, 7,106 to 6,630 rows loaded. Less than expected (I expected about half the cost): rotating is slow in this browser because of the software rasterization of lines that are not along the pixel rows and columns, not because of what is drawn off the screen. The test for it is `src/lib/map/chunks.test.ts`.
+
+### Where the time of the import goes, and what was done (^1253)
+
+Measured in a browser profile on disk (the earlier tables were measured on a profile in memory: the storage is not compressed there, 160 MB for 100,000 nodes against 40 MB on disk, and the writes are faster).
+
+Writing 100,000 small rows to IndexedDB, headless Chromium, profile on disk (`/tmp` probe, not kept):
+
+| One transaction, a put for each row, key and value as stored | 6.3 s |
+| The same with two indexes on the store | 10.1 s |
+| Durability `relaxed` | 8.1 s |
+| Two stores written at the same time | 7.5 s |
+| Ten transactions at the same time on one store | 8.3 s |
+| A key that is a number and a value that is a number | 6.3 s |
+| **Blocks of 100 rows, a put for each block** | **0.3 s** |
+
+So a put costs about 65 microseconds whatever it is given, and only the number of puts counts. Reads: 20,000 rows by 20,000 `get`s 817 ms, by one `getAll` of the range 131 ms, `getAllKeys` 78 ms; the count of a store of 100,000 rows 171 ms (a count scans).
+
+100,000 nodes, 112,000 segments (`bench/report.spec.ts`, headless, no GPU), before and after reading in ranges and the mark that the index is complete:
+
+| | before | after |
+|---|---|---|
+| Import (212,000 puts: at the floor) | 18.1 s | 17.2 s |
+| Build of the index (212,000 records and their reads) | 47.9 s | 31.1 s |
+| Open: the check of the index | 1,826 ms | 83 ms |
+| First view | 3.8 s | 1.5 s |
+| Read of one chunk (median) | 179 ms | 129 ms |
+
+What is left is the number of puts: 4,250,000 rows (2,000,000 nodes, 2,250,000 segments) for the import and as many records for the index. Blocks of rows (^1254) are the only thing that changes that.
+
+### Streaming import and the log of the benchmark (^1256)
+
+The import used to hold the whole file at once: its text, the parsed object, the checked copy, and one transaction with every row. At 800,000 nodes that is hundreds of megabytes (and the benchmark made the whole text in a string, which cannot be longer than about 512 MB: 2,000,000 nodes do not fit). Now `project/jsonRows.ts` reads the text in pieces of about 1 MB and gives the rows of `nodes` and `edges` in batches of 5,000, `project/streamImport.ts` checks each row and writes the batch (`ProjectStorage.append`) and creates the project (`create`, which gives it its header, so it appears in the list) when all is read and checked. In memory at any time: one piece, one batch, the set of node ids (for the checks of the segments' ends) and the ends of the segments as numbers, never the rows. A file that is refused is removed again (`remove`). The checks and their hats are those of `readProject` (^229); the ones that need the whole map (^204 to ^207) are made at the end. Measured (100,000 nodes, headless): the JS heap stays at 5 to 12 MB while importing (it was the size of the file several times), the time is the same (15 s: the puts are the floor, ^1253).
+
+Left to do: a project whose import is stopped by closing the tab leaves rows without a header in the browser (they are not listed); cleaning those up is not built.
+
+The benchmark makes its map in pieces, too (`bench/makeMap.ts`), and writes a log line by line to `bench/out/progress-*.log`: what it is doing, and every 5 seconds what the page says (rows imported, index progress, chunks, JS heap), errors and crashes of the page, and a line when the page does not answer. A run that hangs shows where in that file.
+
+### Rows in blocks of ids: tried, measured, reverted (^1254)
+
+Nodes and segments in records of 128 ids (key: the id divided by 128) make the import 5 to 8 times faster **when the ids follow the map** (the generated map of the benchmark: rows of nodes in order): 1.8 s for 100,000 nodes. A map drawn by hand has ids in the order of drawing, which say nothing of the places. `SCRAMBLE=1 bun run bench` spreads the ids over the map; the same 100,000 nodes, headless, profile on disk:
+
+| | one record for each row (kept) | blocks of 128 ids |
+|---|---|---|
+| Import | 16 s | 39.7 s |
+| Build of the index | 31 s | 22.9 s |
+| Storage used | 58.7 MB | 64.9 MB |
+| First view | 1.15 s | 1.89 s |
+| Read of one chunk (median, 12 reads at a time) | 299 ms | 499 ms |
+| Pan along a row, chunks loading | 89 fps | 77 fps |
+
+The nodes and segments of a chunk lie in many blocks when the ids are spread, so each read gets many blocks, and each block of the import is read and written again by every batch. Reverted; the priority is operation speed and render speed over the time of the index (^1254). Reads of a chunk at 12 at a time show about three times the time of 4 at a time (the storage serves them one after the other); the first view takes the same.
+
+### Selection (^1257)
+
+`bun run bench:selection` (seeded, repeatable, `bench/selection.ts`) measures the work that the pointer and a frame ask for, on the rows that a view holds; `bun run bench` has a part with every loaded node selected. 2026-11-18, linux x64 in a container, no GPU:
+
+| | 5,000 nodes in view | 20,000 | 80,000 |
+|---|---|---|---|
+| Pick at the pointer (node and segment), ms | < 0.01 | < 0.01 | < 0.01 |
+| of which the segment, ms | 0.04 | 0.07 | 0.15 |
+| Box over the whole screen (turned), ms | 0.56 | 1.55 | 4.98 |
+
+A selection of 1,000, 20,000 or 100,000 nodes: the marks of a frame (which of the nodes in view are selected) 1.6 to 2.5 ms for 20,000 nodes in view; the pins 0.3 to 6.8 ms; a history step 0.03 to 0.24 ms; 200 steps of 1,000 nodes in the history: the panel 19 ms (once for each step, not for each frame).
+
+Frames at 100,000 nodes (headless, software drawing), 3,549 nodes in view selected: pan 91 fps without a selection, 27 with the first way of drawing it (a stroked ring on each node, thick curves over the skeleton), 34 with the second (a filled halo under each dot, the thick curves under the skeleton); zoom 75, 28, 36; rotate 45, 25, 29. The profile of a frame says that 80% of the time is the browser drawing (`(program)`), the JavaScript of the selection is below 2%: the cost is in the pixels of the highlight. On a machine with a GPU the drawing is not the limit (the 100,000-node run on an M1 laptop showed 700 to 1,000 fps without a selection, ^1253).
+
+Checked against looking at everything (`map/hit.property.test`): the nearest node and the nearest segment equal what a search of all nodes and segments finds, with a reach larger than a chunk, and the nodes in a box equal the nodes whose screen position is in it, with the view turned and at any scale.
+
+
+### Draw mode and move (^1263, ^1265)
+
+The chunks in memory are patched from what was written instead of being read again (^1262): the node just placed is there for the next click without a read. Headless at 100,000 nodes (2026-11-20, the same machine and run for both), the commit before draw mode against the one after move: established pan 77 / 76 fps, zoom 73 / 71, rotate 40 / 37, pan with the loaded nodes selected 28 / 27: the same within what the machine varies (this machine was slower that day than in the selection round above). The benchmark does not hover: the control points and the scaffold are made from the rows near the pointer when it moves, and the scaffold again at each frame of the camera while the pointer is over the map.

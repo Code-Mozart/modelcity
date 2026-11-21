@@ -1,4 +1,6 @@
-import type { Snapshot } from './types';
+import type { RowChange } from '../edit/change';
+import type { DrawState } from './drawing';
+import type { SelectionDelta } from './selection';
 
 /**
  * Undo and redo (^81, ^103): the steps taken, oldest first, and the steps undone. Pure: every
@@ -6,6 +8,10 @@ import type { Snapshot } from './types';
  *
  * A *batch* (^216) is a run of consecutive steps of one kind: selection changes, or the steps of
  * one drawing session. `Ctrl+Z` moves one step, `Alt+Ctrl+Z` a whole batch.
+ *
+ * A step holds what it changed, not the state before and after (^1257): a selection of 100,000
+ * nodes in each of 200 steps would be 20 million ids. What it changed is enough to go both ways,
+ * and the changes of the map will be the same kind of thing (a `MapChange` that can be reversed).
  */
 export type StepKind = 'select' | 'draw' | null;
 
@@ -15,8 +21,13 @@ export interface Step {
   kind: StepKind;
   /** Steps of one batch share the number. */
   batch: number;
-  before: Snapshot;
-  after: Snapshot;
+  selection: SelectionDelta;
+  /** How many nodes are selected after the step: a run of selection steps that ends with none is named `deselect all` (^216). */
+  selectedAfter: number;
+  /** What the step changed on the map, if it did (^1260): the rows as they were and are, so that undo and redo can write them again. */
+  map?: RowChange;
+  /** The road being drawn before and after the step, if it was drawn before or after it (^1262): undo and redo go back to drawing it. */
+  draw?: { before: DrawState; after: DrawState };
 }
 
 export interface History {
@@ -50,31 +61,25 @@ export const batchSizes = (h: History) => ({
 });
 
 /** A new step was taken; what was undone can no longer be redone. */
-export function record(
-  h: History,
-  { continues, ...step }: NewStep,
-): { history: History; step: Step } {
+export function record(h: History, { continues, ...step }: NewStep): History {
   const last = h.past.at(-1);
   const joins = continues && !h.sealed && step.kind !== null && last?.kind === step.kind;
-  const batch = joins ? last!.batch : h.nextBatch;
-  const taken: Step = { ...step, batch };
-  const history = {
+  const taken: Step = { ...step, batch: joins ? last!.batch : h.nextBatch };
+  return {
     past: [...h.past, taken].slice(-MAX_STEPS),
     future: [],
     sealed: false,
     nextBatch: joins ? h.nextBatch : h.nextBatch + 1,
   };
-  return { history, step: taken };
 }
 
-/** What an undo or redo did: the state to show, the new history and the steps that moved. */
+/** What an undo or redo did: the new history and the steps that moved, in the order they are to be applied. */
 export interface Moved {
-  to: Snapshot;
   history: History;
   steps: Step[];
 }
 
-/** Go back one step, or a whole batch. */
+/** Go back one step, or a whole batch: the steps come newest first, each to be undone. */
 export function undoStep(h: History, whole = false): Moved | null {
   const steps = whole ? lastBatch(h.past) : h.past.slice(-1);
   if (!steps.length) return null;
@@ -84,10 +89,10 @@ export function undoStep(h: History, whole = false): Moved | null {
     future: [...h.future, ...[...steps].reverse()],
     sealed: true,
   };
-  return { to: steps[0]!.before, history, steps };
+  return { history, steps: [...steps].reverse() };
 }
 
-/** Go forward again, one step or a whole batch. */
+/** Go forward again, one step or a whole batch: the steps come oldest first, each to be done again. */
 export function redoStep(h: History, whole = false): Moved | null {
   const taken = whole ? lastBatch(h.future) : h.future.slice(-1);
   if (!taken.length) return null;
@@ -98,7 +103,7 @@ export function redoStep(h: History, whole = false): Moved | null {
     future: h.future.slice(0, h.future.length - taken.length),
     sealed: true,
   };
-  return { to: steps.at(-1)!.after, history, steps };
+  return { history, steps };
 }
 
 /** Something happened to the history: a step was taken, undone or redone (^107). */

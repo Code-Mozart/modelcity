@@ -1,16 +1,17 @@
 <script lang="ts">
-  import type { Phase } from '../editor/phase';
+  import type { Phase } from '../editor/editor.svelte';
   import Icon from '../ui/Icon.svelte';
   import { MODES, shownIn } from './modes';
 
-  let { phase }: { phase: Phase } = $props();
-  const mode = $derived(MODES[phase]);
+  /** The frame round the screen and the icons of the modes, the current one lit (^104, ^119). */
+  let { mode }: { mode: Phase } = $props();
+  const look = $derived(MODES[mode]);
 </script>
 
-<div class="frame" data-testid="mode-frame" data-mode={phase} style:--mode={mode.outline}></div>
+<div class="frame" data-testid="mode-frame" data-mode={mode} style:--mode={look.outline}></div>
 <div class="modes" aria-hidden="true">
-  {#each shownIn(phase) as p (p)}
-    <span class="mode" class:on={p === phase} style:--mode={MODES[p].color}>
+  {#each shownIn(mode) as p (p)}
+    <span class="mode" class:on={p === mode} style:--mode={MODES[p].color}>
       <Icon name={MODES[p].icon} />
     </span>
   {/each}

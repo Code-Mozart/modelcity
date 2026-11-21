@@ -3,7 +3,7 @@
   import Icon from '../ui/Icon.svelte';
   import type { ProjectSession } from './session.svelte';
   import { titleOf, versionLabel } from './file';
-  import type { StoredProject } from './storage';
+  import type { StoredHeader } from './storage';
   import { formatAgo, formatLocalIso } from './time';
 
   /**
@@ -17,7 +17,7 @@
     over,
   }: {
     session: ProjectSession;
-    project: StoredProject;
+    project: StoredHeader;
     over: (target: ModalTarget) => Record<string, () => void>;
   } = $props();
 

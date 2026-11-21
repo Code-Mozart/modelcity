@@ -2,7 +2,8 @@ import type { Edge } from '../curves/types';
 import type { EdgeRef } from '../curves/path';
 import { sweeps } from '../curves/piece';
 import { fromAngle, type Vec } from '../curves/vec';
-import { extend, ring, screenDir, segment, toScreen, type Frame, type Palette } from './paint';
+import type { Frame, Palette } from './paint';
+import { extend, ring, screenDir, segment, toScreen } from './strokes';
 
 /** Construction geometry drawn behind the curve (^9): heading lines, circles, corner points. */
 const HEAD_REACH_PX = 28;
@@ -94,21 +95,4 @@ export function drawCorners(f: Frame, { E }: EdgeRef, pal: Palette) {
   for (const k of [E.k1, E.k2]) {
     if (k) ring(f.ctx, toScreen(f, k), 5.5, { color: pal.orange, width: 2 });
   }
-}
-
-/** The dashed orange line through the interlocked control points of parallel segments, with the other control points on it as rings (^344, ^361). */
-export function drawTowerLine(f: Frame, tower: TowerShape, pal: Palette) {
-  segment(f.ctx, toScreen(f, tower.p), toScreen(f, tower.q), {
-    color: pal.orange,
-    width: 2,
-    dash: [6, 5],
-  });
-  for (const at of tower.others) ring(f.ctx, toScreen(f, at), 6.5, { color: pal.orange, width: 2 });
-}
-
-/** The line and the other control points on it (^361). */
-export interface TowerShape {
-  p: Vec;
-  q: Vec;
-  others: Vec[];
 }

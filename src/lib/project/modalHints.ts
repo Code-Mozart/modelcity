@@ -21,7 +21,7 @@ export type ModalTarget =
   | 'typing';
 
 /** What the projects modal is doing and what the pointer is over: the facts its controls depend on. */
-export interface ModalFacts {
+interface ModalFacts {
   mode: ModalMode;
   over: ModalTarget | null;
 }
@@ -44,7 +44,7 @@ const click = (
 const ESC_TEXT: Record<ModalMode, string> = { list: 'close', rename: 'cancel', delete: 'cancel' };
 
 /** The controls while the projects modal is up (^168), in the order of the hints. */
-export const MODAL_CONTROLS: ModalControl[] = [
+const MODAL_CONTROLS: ModalControl[] = [
   click(733, 'card', () => 'open'),
   click(734, 'rename', () => 'rename'),
   click(737, 'delete', () => 'delete'),

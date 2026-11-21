@@ -1,0 +1,73 @@
+import { samplesAlong } from '../curves/arrows';
+import type { Piece } from '../curves/types';
+import type { SkeletonEdge } from '../map/curve';
+import { screenToWorld, worldToScreen } from '../camera/view';
+import { overlapsView } from '../map/inView';
+import type { Frame, Palette } from './paint';
+
+/** The skeleton of the map (^60, ^1240): the curves of the segments, with chevrons that point the way they run (^80), and the node dots. */
+
+const CURVE_PX = 2;
+const CHEVRON = { size: 6, spread: 0.7 };
+/** Distance between the chevrons along a curve, in pixels (^80). */
+const SPACING_PX = 72;
+/** A curve this far outside the screen is not drawn (its stroke and chevrons reach in), in pixels. */
+const MARGIN_PX = 12;
+
+/** Trace pieces that follow each other into a path: the current path of the canvas, or another one (a `Path2D`). */
+export function trace(f: Frame, pieces: Piece[], to: CanvasPath = f.ctx) {
+  const first = pieces[0];
+  if (!first) return;
+  const a = worldToScreen(f.view, f.size, first.P);
+  to.moveTo(a.x, a.y);
+  for (const piece of pieces) {
+    if (piece.type === 'line') {
+      const b = worldToScreen(f.view, f.size, piece.Q);
+      to.lineTo(b.x, b.y);
+    } else {
+      const c = worldToScreen(f.view, f.size, piece.c);
+      const a0 = piece.a0 + f.view.rot;
+      to.arc(c.x, c.y, piece.r * f.view.scale, a0, a0 + piece.da, piece.da < 0);
+    }
+  }
+}
+
+/** Chevrons along the curves at a constant pixel distance, pointing the way the road runs. All in one path. */
+function chevrons(f: Frame, edges: SkeletonEdge[]) {
+  const { ctx, view, size } = f;
+  // At the greatest zoom a road is a million pixels long: only what can be on the screen (^864).
+  const within = {
+    c: screenToWorld(view, size, { x: size.width / 2, y: size.height / 2 }),
+    r: (Math.hypot(size.width, size.height) / 2 + SPACING_PX) / view.scale,
+  };
+  ctx.beginPath();
+  for (const edge of edges) {
+    for (const s of samplesAlong(edge.pieces, SPACING_PX / view.scale, undefined, within)) {
+      const at = worldToScreen(view, size, s);
+      const t = worldToScreen(view, size, { x: s.x + s.tx, y: s.y + s.ty });
+      const dir = Math.atan2(t.y - at.y, t.x - at.x);
+      for (const side of [-1, 1]) {
+        const a = dir + Math.PI + side * CHEVRON.spread;
+        ctx.moveTo(at.x, at.y);
+        ctx.lineTo(at.x + CHEVRON.size * Math.cos(a), at.y + CHEVRON.size * Math.sin(a));
+      }
+    }
+  }
+  ctx.stroke();
+}
+
+/** The curves and their chevrons: what is on the screen only, each kind in one stroke. */
+export function drawCurves(f: Frame, edges: readonly SkeletonEdge[], pal: Palette) {
+  const { ctx, view } = f;
+  const seen = overlapsView(view, f.size, MARGIN_PX / view.scale);
+  const shown = edges.filter((e) => seen(e.box));
+  ctx.strokeStyle = pal.ink;
+  ctx.lineWidth = CURVE_PX;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  shown.forEach((e) => trace(f, e.pieces));
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+  chevrons(f, shown);
+}
